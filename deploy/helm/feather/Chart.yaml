@@ -1,0 +1,19 @@
+apiVersion: v2
+name: feather
+description: A high-performance, real-time feature store for machine learning
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - feature-store
+  - machine-learning
+  - ml
+  - real-time
+  - grpc
+  - kubernetes
+home: https://github.com/feather-store/feather
+sources:
+  - https://github.com/feather-store/feather
+maintainers:
+  - name: Feather Team
+    email: team@feather-store.io

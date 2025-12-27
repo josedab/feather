@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "feather.configmapName" . }}
+  labels:
+    {{- include "feather.labels" . | nindent 4 }}
+data:
+  # Server configuration
+  FEATHER_HTTP_PORT: {{ .Values.config.httpPort | quote }}
+  FEATHER_GRPC_PORT: {{ .Values.config.grpcPort | quote }}
+  FEATHER_METRICS_PORT: {{ .Values.config.metricsPort | quote }}
+  FEATHER_INGESTION_PORT: {{ .Values.config.ingestionPort | quote }}
+
+  # Logging configuration
+  FEATHER_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  FEATHER_LOG_FORMAT: {{ .Values.config.logFormat | quote }}
+
+  # Hot tier configuration
+  FEATHER_HOT_MAX_MEMORY: {{ .Values.storage.hotTier.maxMemory | quote }}
+  FEATHER_HOT_TTL: {{ .Values.storage.hotTier.ttl | quote }}
+
+  # Warm tier configuration
+  {{- if .Values.storage.warmTier.enabled }}
+  FEATHER_WARM_ENABLED: "true"
+  FEATHER_WARM_PATH: {{ .Values.storage.warmTier.path | quote }}
+  {{- else }}
+  FEATHER_WARM_ENABLED: "false"
+  {{- end }}
+
+  # Kafka configuration
+  {{- if .Values.kafka.enabled }}
+  FEATHER_KAFKA_ENABLED: "true"
+  FEATHER_KAFKA_BROKERS: {{ .Values.kafka.brokers | quote }}
+  FEATHER_KAFKA_GROUP_ID: {{ .Values.kafka.groupId | quote }}
+  {{- if .Values.kafka.topics }}
+  FEATHER_KAFKA_TOPICS: {{ join "," .Values.kafka.topics | quote }}
+  {{- end }}
+  {{- if .Values.kafka.sasl.enabled }}
+  FEATHER_KAFKA_SASL_ENABLED: "true"
+  FEATHER_KAFKA_SASL_MECHANISM: {{ .Values.kafka.sasl.mechanism | quote }}
+  FEATHER_KAFKA_SASL_USERNAME: {{ .Values.kafka.sasl.username | quote }}
+  {{- end }}
+  {{- if .Values.kafka.tls.enabled }}
+  FEATHER_KAFKA_TLS_ENABLED: "true"
+  {{- end }}
+  {{- else }}
+  FEATHER_KAFKA_ENABLED: "false"
+  {{- end }}
+
+  # Tracing configuration
+  {{- if .Values.tracing.enabled }}
+  FEATHER_TRACING_ENABLED: "true"
+  FEATHER_TRACING_ENDPOINT: {{ .Values.tracing.endpoint | quote }}
+  FEATHER_TRACING_SAMPLE_RATE: {{ .Values.tracing.sampleRate | quote }}
+  FEATHER_TRACING_INSECURE: {{ .Values.tracing.insecure | quote }}
+  {{- else }}
+  FEATHER_TRACING_ENABLED: "false"
+  {{- end }}
+
+  # TLS configuration
+  {{- if .Values.tls.enabled }}
+  FEATHER_TLS_ENABLED: "true"
+  FEATHER_TLS_CERT_FILE: "/etc/feather/tls/tls.crt"
+  FEATHER_TLS_KEY_FILE: "/etc/feather/tls/tls.key"
+  {{- else }}
+  FEATHER_TLS_ENABLED: "false"
+  {{- end }}

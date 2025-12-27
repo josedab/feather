@@ -1,0 +1,42 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: feather
+  namespace: feather-system
+  labels:
+    app.kubernetes.io/name: feather
+    app.kubernetes.io/component: rbac
+rules:
+  # Allow pods to read their own configmaps
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  # Allow pods to read secrets
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  # Allow pods to read endpoints for federation
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch"]
+  # Allow pods to read pods for discovery
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: feather
+  namespace: feather-system
+  labels:
+    app.kubernetes.io/name: feather
+    app.kubernetes.io/component: rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: feather
+subjects:
+  - kind: ServiceAccount
+    name: feather
+    namespace: feather-system

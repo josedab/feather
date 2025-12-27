@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: feather
+  namespace: feather-system
+  labels:
+    app.kubernetes.io/name: feather
+    app.kubernetes.io/component: networkpolicy
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: feather
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow HTTP traffic
+    - ports:
+        - protocol: TCP
+          port: 8080
+    # Allow gRPC traffic
+    - ports:
+        - protocol: TCP
+          port: 50051
+    # Allow metrics scraping (from Prometheus)
+    - ports:
+        - protocol: TCP
+          port: 9090
+    # Allow ingestion traffic
+    - ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow inter-pod communication for federation
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: feather
+    # Allow Kafka (if enabled)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    # Allow OTLP tracing (if enabled)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 4317
