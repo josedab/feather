@@ -1,3 +1,43 @@
+// Package storage implements Feather's tiered storage architecture.
+//
+// The storage layer uses a two-tier design optimized for both latency and durability:
+//
+//   - Hot Tier: In-memory LRU cache with 256 shards for sub-millisecond access (<1ms P99)
+//   - Warm Tier: BadgerDB-backed persistent storage with historical versioning (<10ms P99)
+//
+// # Architecture Overview
+//
+// The [Store] type coordinates reads and writes across both tiers:
+//
+//	┌─────────────────────────────────────────────────────────────┐
+//	│                         Store                                │
+//	│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
+//	│  │     Hot Tier        │    │        Warm Tier            │ │
+//	│  │  (Memory, 256 shards)│    │  (BadgerDB, persistent)    │ │
+//	│  │  • <1ms latency     │    │  • Historical versions     │ │
+//	│  │  • LRU eviction     │    │  • Point-in-time queries   │ │
+//	│  └─────────────────────┘    └─────────────────────────────┘ │
+//	└─────────────────────────────────────────────────────────────┘
+//
+// # Read Path
+//
+// Reads first check the hot tier, falling back to warm tier on cache miss:
+//
+//	features, err := store.Get("user:123", []string{"click_count", "purchase_total"})
+//
+// # Write Path
+//
+// Writes go to the hot tier synchronously and warm tier asynchronously:
+//
+//	err := store.Put("user:123", map[string]*domain.FeatureValue{
+//	    "click_count": {Value: 42, Timestamp: time.Now().UnixNano()},
+//	})
+//
+// # Point-in-Time Queries
+//
+// Historical feature values can be retrieved using GetAsOf:
+//
+//	features, err := store.GetAsOf("user:123", []string{"click_count"}, time.Now().Add(-24*time.Hour))
 package storage
 
 import (
@@ -8,7 +48,12 @@ import (
 	"github.com/feather-store/feather/internal/domain"
 )
 
-// Store provides feature storage with tiered architecture.
+// Store provides unified access to Feather's tiered storage architecture.
+//
+// Store coordinates reads and writes between the hot (memory) and warm (disk) tiers,
+// implementing read-through caching and async background writes for optimal latency.
+//
+// The store is safe for concurrent use from multiple goroutines.
 type Store struct {
 	hot     *HotTier
 	warm    *WarmTier
@@ -19,28 +64,47 @@ type Store struct {
 	cancel context.CancelFunc
 }
 
-// SchemaRegistry provides access to feature schemas.
+// SchemaRegistry provides access to feature group schemas for validation.
+//
+// Implementations must be safe for concurrent access.
 type SchemaRegistry interface {
+	// GetGroup returns the feature group with the given name.
 	GetGroup(name string) (*domain.FeatureGroup, error)
+	// GetFeatureSpec returns the specification for a feature by name.
 	GetFeatureSpec(featureName string) (*domain.FeatureSpec, error)
+	// ListGroups returns all registered feature groups.
 	ListGroups() []*domain.FeatureGroup
 }
 
-// StoreMetrics tracks store performance.
+// StoreMetrics contains aggregate performance statistics for the store.
+//
+// All counters are updated atomically and safe to read during operation.
 type StoreMetrics struct {
-	HotHits    int64
-	HotMisses  int64
-	WarmHits   int64
+	// HotHits is the number of successful hot tier lookups.
+	HotHits int64
+	// HotMisses is the number of hot tier cache misses.
+	HotMisses int64
+	// WarmHits is the number of successful warm tier lookups.
+	WarmHits int64
+	// WarmMisses is the number of warm tier misses (entity not found).
 	WarmMisses int64
-	Writes     int64
+	// Writes is the total number of write operations.
+	Writes int64
 }
 
-// StoreOptions configures the store.
+// StoreOptions configures the store's behavior and resource limits.
 type StoreOptions struct {
-	HotMaxSize       int64
-	WarmPath         string
+	// HotMaxSize is the maximum memory (in bytes) for the hot tier cache.
+	// Features are evicted using LRU when this limit is exceeded.
+	HotMaxSize int64
+	// WarmPath is the filesystem path for BadgerDB storage.
+	WarmPath string
+	// WarmSyncInterval controls how often BadgerDB syncs to disk.
 	WarmSyncInterval time.Duration
-	WarmInMemory     bool // For testing
+	// WarmInMemory enables in-memory mode for testing (data not persisted).
+	WarmInMemory bool
+	// TTLCheckInterval is how often to scan for and remove expired features.
+	// Defaults to 1 minute if not specified.
 	TTLCheckInterval time.Duration
 }
 
