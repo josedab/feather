@@ -26,14 +26,14 @@ func setupTestMiddleware(t *testing.T) (*Middleware, *APIKey, string) {
 	}
 
 	keyInfo, _ := ac.ValidateAPIKey(rawKey)
-	mw := NewMiddleware(ac)
+	mw := NewMiddleware(ac, nil)
 
 	return mw, keyInfo, rawKey
 }
 
 func TestNewMiddleware(t *testing.T) {
 	ac := NewAccessController()
-	mw := NewMiddleware(ac)
+	mw := NewMiddleware(ac, nil)
 
 	if mw == nil {
 		t.Fatal("NewMiddleware returned nil")
@@ -141,7 +141,7 @@ func TestMiddleware_Authenticate_RateLimited(t *testing.T) {
 		RateLimit: 2, // Very low rate limit
 	}, "admin")
 
-	mw := NewMiddleware(ac)
+	mw := NewMiddleware(ac, nil)
 
 	handler := mw.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -414,48 +414,7 @@ func TestRateLimiter_Refill(t *testing.T) {
 	// manually test the refill logic by checking the bucket state
 }
 
-func TestGetClientIP(t *testing.T) {
-	tests := []struct {
-		name       string
-		headers    map[string]string
-		remoteAddr string
-		expected   string
-	}{
-		{
-			name:       "X-Forwarded-For",
-			headers:    map[string]string{"X-Forwarded-For": "1.2.3.4, 5.6.7.8"},
-			remoteAddr: "9.9.9.9:1234",
-			expected:   "1.2.3.4",
-		},
-		{
-			name:       "X-Real-IP",
-			headers:    map[string]string{"X-Real-IP": "1.2.3.4"},
-			remoteAddr: "9.9.9.9:1234",
-			expected:   "1.2.3.4",
-		},
-		{
-			name:       "RemoteAddr fallback",
-			headers:    map[string]string{},
-			remoteAddr: "1.2.3.4:1234",
-			expected:   "1.2.3.4:1234",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/", nil)
-			req.RemoteAddr = tt.remoteAddr
-			for k, v := range tt.headers {
-				req.Header.Set(k, v)
-			}
-
-			got := getClientIP(req)
-			if got != tt.expected {
-				t.Errorf("getClientIP() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
+// TestGetClientIP is now in internal/clientip/resolver_test.go
 
 func TestMiddleware_AuditLogging(t *testing.T) {
 	ac := NewAccessController()
@@ -466,7 +425,7 @@ func TestMiddleware_AuditLogging(t *testing.T) {
 		Tenant: "tenant1",
 	}, "admin")
 
-	mw := NewMiddleware(ac)
+	mw := NewMiddleware(ac, nil)
 
 	handler := mw.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -510,7 +469,7 @@ func TestMiddleware_PermissionDenied_AuditLogging(t *testing.T) {
 		Permissions: []Permission{PermRead}, // Only read permission
 	}, "admin")
 
-	mw := NewMiddleware(ac)
+	mw := NewMiddleware(ac, nil)
 
 	handler := mw.Authenticate(mw.RequirePermission(PermAdmin)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -557,7 +516,7 @@ func TestMiddleware_ChainedMiddleware(t *testing.T) {
 		Features:    []string{"user_age"},
 	}, "admin")
 
-	mw := NewMiddleware(ac)
+	mw := NewMiddleware(ac, nil)
 
 	// Chain multiple middleware
 	handler := mw.Authenticate(

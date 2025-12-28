@@ -12,6 +12,7 @@
 // Example usage:
 //
 //	controller := auth.NewAccessController()
-//	middleware := auth.NewMiddleware(controller)
+//	ipResolver, _ := clientip.NewResolver([]string{"10.0.0.0/8"}) // trust private network proxies
+//	middleware := auth.NewMiddleware(controller, ipResolver)
 //	http.Handle("/v1/features", middleware.Authenticate(handler))
 package auth
