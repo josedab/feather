@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -94,31 +95,33 @@ func (h *HealthChecker) Check(ctx context.Context) *HealthCheckResult {
 		Components: make(map[string]*ComponentHealth),
 	}
 
-	// Check hot tier
-	hotHealth := h.checkHotTier(ctx)
-	result.Components["hot_tier"] = hotHealth
-	if hotHealth.Status != HealthStatusHealthy {
-		result.Status = hotHealth.Status
-	}
+	// Check all components
+	result.Components["hot_tier"] = h.checkHotTier(ctx)
+	result.Components["warm_tier"] = h.checkWarmTier(ctx)
+	result.Components["schema_registry"] = h.checkSchemaRegistry(ctx)
+	result.Components["aggregation_engine"] = h.checkAggregationEngine(ctx)
 
-	// Check warm tier
-	warmHealth := h.checkWarmTier(ctx)
-	result.Components["warm_tier"] = warmHealth
-	if warmHealth.Status == HealthStatusUnhealthy {
-		result.Status = HealthStatusUnhealthy
-	} else if warmHealth.Status == HealthStatusDegraded && result.Status == HealthStatusHealthy {
-		result.Status = HealthStatusDegraded
-	}
-
-	// Check schema registry
-	schemaHealth := h.checkSchemaRegistry(ctx)
-	result.Components["schema_registry"] = schemaHealth
-
-	// Check aggregation engine
-	aggHealth := h.checkAggregationEngine(ctx)
-	result.Components["aggregation_engine"] = aggHealth
+	// Aggregate status: use worst status from all components
+	result.Status = h.aggregateStatus(result.Components)
 
 	return result
+}
+
+// aggregateStatus returns the worst status from all components.
+// Priority: unhealthy > degraded > healthy
+func (h *HealthChecker) aggregateStatus(components map[string]*ComponentHealth) HealthStatus {
+	worst := HealthStatusHealthy
+
+	for _, comp := range components {
+		if comp.Status == HealthStatusUnhealthy {
+			return HealthStatusUnhealthy // Can't get worse, return early
+		}
+		if comp.Status == HealthStatusDegraded {
+			worst = HealthStatusDegraded
+		}
+	}
+
+	return worst
 }
 
 // checkHotTier verifies the hot tier is operational.
@@ -233,7 +236,7 @@ func (h *HealthChecker) checkAggregationEngine(ctx context.Context) *ComponentHe
 }
 
 func formatMessage(format string, args ...interface{}) string {
-	return format
+	return fmt.Sprintf(format, args...)
 }
 
 // LivenessCheck performs a simple liveness check.
