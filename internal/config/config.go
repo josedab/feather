@@ -144,9 +144,10 @@ type GRPCServingConfig struct {
 
 // HTTPServingConfig defines HTTP server settings.
 type HTTPServingConfig struct {
-	Port         int           `yaml:"port"`
-	ReadTimeout  time.Duration `yaml:"read_timeout"`
-	WriteTimeout time.Duration `yaml:"write_timeout"`
+	Port           int           `yaml:"port"`
+	ReadTimeout    time.Duration `yaml:"read_timeout"`
+	WriteTimeout   time.Duration `yaml:"write_timeout"`
+	TrustedProxies []string      `yaml:"trusted_proxies,omitempty"`
 }
 
 // SyncConfig defines sync configuration.
