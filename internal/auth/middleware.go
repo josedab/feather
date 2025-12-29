@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/feather-store/feather/internal/clientip"
+	"github.com/feather-store/feather/internal/logging"
 )
 
 // Middleware provides authentication and authorization middleware.
@@ -187,7 +189,9 @@ func (m *Middleware) Optional(next http.Handler) http.Handler {
 func writeAuthError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	if err := json.NewEncoder(w).Encode(map[string]string{"error": message}); err != nil {
+		logging.FromContext(context.Background(), nil).Error("failed to encode auth error response", "error", err)
+	}
 }
 
 // RateLimiter provides token bucket rate limiting.
