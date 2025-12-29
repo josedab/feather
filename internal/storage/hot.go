@@ -101,6 +101,8 @@ type HotTierMetrics struct {
 	Evictions int64
 	// TotalReads is the total number of Get operations.
 	TotalReads int64
+	// DroppedEvictionSignals is the number of eviction signals dropped due to channel full.
+	DroppedEvictionSignals int64
 }
 
 // NewHotTier creates a new hot tier with the given max memory size.
@@ -222,6 +224,8 @@ func (h *HotTier) Put(entityKey string, features map[string]*domain.FeatureValue
 		select {
 		case h.evictChan <- entityKey:
 		default:
+			// Channel full, track dropped signal
+			atomic.AddInt64(&h.metrics.DroppedEvictionSignals, 1)
 		}
 	}
 
