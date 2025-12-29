@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/graphql"
+	"github.com/feather-store/feather/internal/logging"
 )
 
 // GraphQLHandler handles GraphQL API requests.
@@ -51,7 +53,9 @@ func (h *GraphQLHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logging.FromContext(r.Context(), nil).Error("failed to encode GraphQL response", "error", err)
+	}
 }
 
 // handlePlayground handles GET /graphql - serves GraphQL playground
@@ -157,7 +161,9 @@ query {
 func (h *GraphQLHandler) writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(graphql.Response{
+	if err := json.NewEncoder(w).Encode(graphql.Response{
 		Errors: []graphql.Error{{Message: message}},
-	})
+	}); err != nil {
+		logging.FromContext(context.Background(), nil).Error("failed to encode GraphQL error response", "error", err)
+	}
 }

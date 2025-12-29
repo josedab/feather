@@ -335,11 +335,9 @@ func (h *QualityHandler) jsonToRule(j *ValidationRuleJSON) *quality.ValidationRu
 }
 
 func (h *QualityHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	writeJSONResponse(w, status, data)
 }
 
 func (h *QualityHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]string{"error": message})
+	writeJSONError(w, status, message)
 }

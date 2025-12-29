@@ -238,11 +238,9 @@ func generateSubscriptionID() string {
 }
 
 func (h *StreamingHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	writeJSONResponse(w, status, data)
 }
 
 func (h *StreamingHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]string{"error": message})
+	writeJSONError(w, status, message)
 }
