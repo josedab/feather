@@ -55,6 +55,8 @@ func New(ctx context.Context, config Config) (*Tracer, error) {
 	client := otlptracegrpc.NewClient(opts...)
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
+		// Shutdown the client to avoid resource leak
+		_ = client.Stop(ctx)
 		return nil, fmt.Errorf("creating OTLP exporter: %w", err)
 	}
 
@@ -68,6 +70,8 @@ func New(ctx context.Context, config Config) (*Tracer, error) {
 		resource.WithProcess(),
 	)
 	if err != nil {
+		// Shutdown the exporter to avoid resource leak
+		_ = exporter.Shutdown(ctx)
 		return nil, fmt.Errorf("creating resource: %w", err)
 	}
 
