@@ -56,9 +56,15 @@ fmt:
 vet:
 	$(GO) vet ./...
 
-# Generate protobuf (requires protoc and protoc-gen-go)
+# Generate protobuf (requires protoc, protoc-gen-go, and protoc-gen-go-grpc)
+# Install plugins: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#                  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 proto:
-	protoc --go_out=. --go-grpc_out=. api/proto/feather.proto
+	protoc --go_out=. --go_opt=paths=source_relative \
+		--go_opt=Mapi/proto/feather.proto=github.com/feather-store/feather/api/proto \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		--go-grpc_opt=Mapi/proto/feather.proto=github.com/feather-store/feather/api/proto \
+		api/proto/feather.proto
 
 # Development helpers
 dev: fmt vet test build

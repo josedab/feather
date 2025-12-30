@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	pb "github.com/feather-store/feather/api/proto"
 	"github.com/feather-store/feather/internal/aggregation"
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/storage"
@@ -81,13 +82,13 @@ func TestGRPCServer_GetFeatures(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		request    *GetFeaturesRequest
+		request    *pb.GetFeaturesRequest
 		wantErr    bool
 		wantEntity string
 	}{
 		{
 			name: "get single feature",
-			request: &GetFeaturesRequest{
+			request: &pb.GetFeaturesRequest{
 				Entities: []string{"user:123"},
 				Features: []string{"purchase_count"},
 			},
@@ -95,7 +96,7 @@ func TestGRPCServer_GetFeatures(t *testing.T) {
 		},
 		{
 			name: "get multiple features",
-			request: &GetFeaturesRequest{
+			request: &pb.GetFeaturesRequest{
 				Entities: []string{"user:123"},
 				Features: []string{"purchase_count", "total_spent"},
 			},
@@ -103,7 +104,7 @@ func TestGRPCServer_GetFeatures(t *testing.T) {
 		},
 		{
 			name: "get multiple entities",
-			request: &GetFeaturesRequest{
+			request: &pb.GetFeaturesRequest{
 				Entities: []string{"user:123", "user:456"},
 				Features: []string{"purchase_count"},
 			},
@@ -111,7 +112,7 @@ func TestGRPCServer_GetFeatures(t *testing.T) {
 		},
 		{
 			name: "missing entities",
-			request: &GetFeaturesRequest{
+			request: &pb.GetFeaturesRequest{
 				Entities: []string{},
 				Features: []string{"purchase_count"},
 			},
@@ -119,7 +120,7 @@ func TestGRPCServer_GetFeatures(t *testing.T) {
 		},
 		{
 			name: "missing features",
-			request: &GetFeaturesRequest{
+			request: &pb.GetFeaturesRequest{
 				Entities: []string{"user:123"},
 				Features: []string{},
 			},
@@ -157,15 +158,15 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		request     *PutFeaturesRequest
+		request     *pb.PutFeaturesRequest
 		wantSuccess bool
 	}{
 		{
 			name: "put single feature",
-			request: &PutFeaturesRequest{
+			request: &pb.PutFeaturesRequest{
 				EntityKey: "user:456",
-				Features: map[string]*FeatureValue{
-					"score": {DoubleValue: 0.95, HasDoubleValue: true},
+				Features: map[string]*pb.FeatureValue{
+					"score": {Value: &pb.FeatureValue_DoubleValue{DoubleValue: 0.95}},
 				},
 				Version: 1,
 			},
@@ -173,12 +174,12 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 		},
 		{
 			name: "put multiple features",
-			request: &PutFeaturesRequest{
+			request: &pb.PutFeaturesRequest{
 				EntityKey: "user:789",
-				Features: map[string]*FeatureValue{
-					"score":     {DoubleValue: 0.85, HasDoubleValue: true},
-					"rank":      {IntValue: 10, HasIntValue: true},
-					"is_active": {BoolValue: true, HasBoolValue: true},
+				Features: map[string]*pb.FeatureValue{
+					"score":     {Value: &pb.FeatureValue_DoubleValue{DoubleValue: 0.85}},
+					"rank":      {Value: &pb.FeatureValue_IntValue{IntValue: 10}},
+					"is_active": {Value: &pb.FeatureValue_BoolValue{BoolValue: true}},
 				},
 				Version: 1,
 			},
@@ -186,10 +187,10 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 		},
 		{
 			name: "put string feature",
-			request: &PutFeaturesRequest{
+			request: &pb.PutFeaturesRequest{
 				EntityKey: "user:111",
-				Features: map[string]*FeatureValue{
-					"name": {StringValue: "test user", HasStringValue: true},
+				Features: map[string]*pb.FeatureValue{
+					"name": {Value: &pb.FeatureValue_StringValue{StringValue: "test user"}},
 				},
 				Version: 1,
 			},
@@ -197,9 +198,9 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 		},
 		{
 			name: "put empty features",
-			request: &PutFeaturesRequest{
+			request: &pb.PutFeaturesRequest{
 				EntityKey: "user:222",
-				Features:  map[string]*FeatureValue{},
+				Features:  map[string]*pb.FeatureValue{},
 				Version:   1,
 			},
 			wantSuccess: true,
@@ -222,7 +223,7 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 
 	// Verify features were stored
 	t.Run("verify stored features", func(t *testing.T) {
-		resp, err := ts.GetFeatures(context.Background(), &GetFeaturesRequest{
+		resp, err := ts.GetFeatures(context.Background(), &pb.GetFeaturesRequest{
 			Entities: []string{"user:456"},
 			Features: []string{"score"},
 		})
@@ -240,8 +241,8 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 			t.Fatal("expected score feature in response")
 		}
 
-		if !scoreVal.HasDoubleValue || scoreVal.DoubleValue != 0.95 {
-			t.Errorf("score = %v, want 0.95", scoreVal.DoubleValue)
+		if scoreVal.GetDoubleValue() != 0.95 {
+			t.Errorf("score = %v, want 0.95", scoreVal.GetDoubleValue())
 		}
 	})
 }
@@ -256,12 +257,12 @@ func TestGRPCServer_GetFeaturesAsOf(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		request *GetFeaturesAsOfRequest
+		request *pb.GetFeaturesAsOfRequest
 		wantErr bool
 	}{
 		{
 			name: "get features as of future time",
-			request: &GetFeaturesAsOfRequest{
+			request: &pb.GetFeaturesAsOfRequest{
 				EntityKey:     "user:123",
 				Features:      []string{"purchase_count"},
 				AsOfTimestamp: time.Now().Add(time.Hour).UnixNano(),
@@ -270,7 +271,7 @@ func TestGRPCServer_GetFeaturesAsOf(t *testing.T) {
 		},
 		{
 			name: "get features as of past time",
-			request: &GetFeaturesAsOfRequest{
+			request: &pb.GetFeaturesAsOfRequest{
 				EntityKey:     "user:123",
 				Features:      []string{"purchase_count"},
 				AsOfTimestamp: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).UnixNano(),
@@ -279,7 +280,7 @@ func TestGRPCServer_GetFeaturesAsOf(t *testing.T) {
 		},
 		{
 			name: "get features for nonexistent entity",
-			request: &GetFeaturesAsOfRequest{
+			request: &pb.GetFeaturesAsOfRequest{
 				EntityKey:     "user:999",
 				Features:      []string{"purchase_count"},
 				AsOfTimestamp: time.Now().UnixNano(),
@@ -309,7 +310,7 @@ func TestGRPCServer_GetFeaturesAsOf(t *testing.T) {
 			// If we got a response, verify it has the expected structure
 			if resp != nil && resp.Entities != nil {
 				// Response is valid - the actual content depends on storage state
-				_ = resp.Entities[tt.request.EntityKey]
+				_ = resp.Entities[tt.request.GetEntityKey()]
 			}
 		})
 	}
@@ -321,28 +322,28 @@ func TestGRPCServer_HealthCheck(t *testing.T) {
 	tests := []struct {
 		name       string
 		service    string
-		wantStatus ServingStatus
+		wantStatus pb.HealthCheckResponse_ServingStatus
 	}{
 		{
 			name:       "check overall health",
 			service:    "",
-			wantStatus: ServingStatusServing,
+			wantStatus: pb.HealthCheckResponse_SERVING,
 		},
 		{
 			name:       "check feature service",
-			service:    "feather.FeatureService",
-			wantStatus: ServingStatusServing,
+			service:    "feather.v1.FeatureService",
+			wantStatus: pb.HealthCheckResponse_SERVING,
 		},
 		{
 			name:       "check unknown service",
 			service:    "unknown.Service",
-			wantStatus: ServingStatusServiceUnknown,
+			wantStatus: pb.HealthCheckResponse_SERVICE_UNKNOWN,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := ts.Check(context.Background(), &HealthCheckRequest{
+			resp, err := ts.Check(context.Background(), &pb.HealthCheckRequest{
 				Service: tt.service,
 			})
 			if err != nil {
@@ -370,7 +371,7 @@ func TestDomainToProtoValue(t *testing.T) {
 	tests := []struct {
 		name  string
 		input *domain.FeatureValue
-		check func(t *testing.T, pv *FeatureValue)
+		check func(t *testing.T, pv *pb.FeatureValue)
 	}{
 		{
 			name: "int64 value",
@@ -378,9 +379,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     int64(42),
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasIntValue || pv.IntValue != 42 {
-					t.Errorf("expected int value 42, got %v", pv.IntValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if pv.GetIntValue() != 42 {
+					t.Errorf("expected int value 42, got %v", pv.GetIntValue())
 				}
 			},
 		},
@@ -390,9 +391,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     int(100),
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasIntValue || pv.IntValue != 100 {
-					t.Errorf("expected int value 100, got %v", pv.IntValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if pv.GetIntValue() != 100 {
+					t.Errorf("expected int value 100, got %v", pv.GetIntValue())
 				}
 			},
 		},
@@ -402,9 +403,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     float64(3.14),
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasDoubleValue || pv.DoubleValue != 3.14 {
-					t.Errorf("expected double value 3.14, got %v", pv.DoubleValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if pv.GetDoubleValue() != 3.14 {
+					t.Errorf("expected double value 3.14, got %v", pv.GetDoubleValue())
 				}
 			},
 		},
@@ -414,9 +415,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     "hello",
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasStringValue || pv.StringValue != "hello" {
-					t.Errorf("expected string value 'hello', got %v", pv.StringValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if pv.GetStringValue() != "hello" {
+					t.Errorf("expected string value 'hello', got %v", pv.GetStringValue())
 				}
 			},
 		},
@@ -426,9 +427,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     true,
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasBoolValue || !pv.BoolValue {
-					t.Errorf("expected bool value true, got %v", pv.BoolValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if !pv.GetBoolValue() {
+					t.Errorf("expected bool value true, got %v", pv.GetBoolValue())
 				}
 			},
 		},
@@ -438,9 +439,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     []byte{1, 2, 3},
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasBytesValue || len(pv.BytesValue) != 3 {
-					t.Errorf("expected bytes value, got %v", pv.BytesValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if len(pv.GetBytesValue()) != 3 {
+					t.Errorf("expected bytes value, got %v", pv.GetBytesValue())
 				}
 			},
 		},
@@ -450,9 +451,9 @@ func TestDomainToProtoValue(t *testing.T) {
 				Value:     []float32{0.1, 0.2, 0.3},
 				Timestamp: 1000,
 			},
-			check: func(t *testing.T, pv *FeatureValue) {
-				if !pv.HasVectorValue || len(pv.VectorValue) != 3 {
-					t.Errorf("expected vector value, got %v", pv.VectorValue)
+			check: func(t *testing.T, pv *pb.FeatureValue) {
+				if pv.GetVectorValue() == nil || len(pv.GetVectorValue().GetValues()) != 3 {
+					t.Errorf("expected vector value, got %v", pv.GetVectorValue())
 				}
 			},
 		},
@@ -472,32 +473,32 @@ func TestDomainToProtoValue(t *testing.T) {
 func TestProtoToDomainValue(t *testing.T) {
 	tests := []struct {
 		name  string
-		input *FeatureValue
+		input *pb.FeatureValue
 		want  interface{}
 	}{
 		{
 			name:  "int value",
-			input: &FeatureValue{IntValue: 42, HasIntValue: true},
+			input: &pb.FeatureValue{Value: &pb.FeatureValue_IntValue{IntValue: 42}},
 			want:  int64(42),
 		},
 		{
 			name:  "double value",
-			input: &FeatureValue{DoubleValue: 3.14, HasDoubleValue: true},
+			input: &pb.FeatureValue{Value: &pb.FeatureValue_DoubleValue{DoubleValue: 3.14}},
 			want:  float64(3.14),
 		},
 		{
 			name:  "string value",
-			input: &FeatureValue{StringValue: "hello", HasStringValue: true},
+			input: &pb.FeatureValue{Value: &pb.FeatureValue_StringValue{StringValue: "hello"}},
 			want:  "hello",
 		},
 		{
 			name:  "bool value",
-			input: &FeatureValue{BoolValue: true, HasBoolValue: true},
+			input: &pb.FeatureValue{Value: &pb.FeatureValue_BoolValue{BoolValue: true}},
 			want:  true,
 		},
 		{
-			name:  "nil for no has flags",
-			input: &FeatureValue{},
+			name:  "nil for no value",
+			input: &pb.FeatureValue{},
 			want:  nil,
 		},
 	}

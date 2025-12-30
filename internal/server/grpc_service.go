@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	pb "github.com/feather-store/feather/api/proto"
 	"github.com/feather-store/feather/internal/aggregation"
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/metrics"
@@ -44,17 +45,8 @@ type StreamingGetFeaturesRequest struct {
 // StreamingGetFeaturesResponse represents a streaming response chunk.
 type StreamingGetFeaturesResponse struct {
 	EntityKey string
-	Features  map[string]*FeatureValue
+	Features  map[string]*pb.FeatureValue
 	Error     string
-}
-
-// FeatureServiceServer defines the gRPC service interface.
-type FeatureServiceServer interface {
-	GetFeatures(ctx context.Context, req *GetFeaturesRequest) (*GetFeaturesResponse, error)
-	GetFeaturesStream(req *StreamingGetFeaturesRequest, stream FeatureStream) error
-	GetFeaturesAsOf(ctx context.Context, req *GetFeaturesAsOfRequest) (*GetFeaturesResponse, error)
-	PutFeatures(ctx context.Context, req *PutFeaturesRequest) (*PutFeaturesResponse, error)
-	PutFeaturesStream(stream PutFeatureStream) error
 }
 
 // FeatureStream is the server stream for GetFeaturesStream.
@@ -65,8 +57,8 @@ type FeatureStream interface {
 
 // PutFeatureStream is the client stream for PutFeaturesStream.
 type PutFeatureStream interface {
-	Recv() (*PutFeaturesRequest, error)
-	SendAndClose(*PutFeaturesResponse) error
+	Recv() (*pb.PutFeaturesRequest, error)
+	SendAndClose(*pb.PutFeaturesResponse) error
 	Context() context.Context
 }
 
@@ -90,7 +82,7 @@ func (s *FeatureServiceImpl) GetFeaturesStream(req *StreamingGetFeaturesRequest,
 
 		resp := &StreamingGetFeaturesResponse{
 			EntityKey: entityKey,
-			Features:  make(map[string]*FeatureValue),
+			Features:  make(map[string]*pb.FeatureValue),
 		}
 
 		// Get features from storage
@@ -117,10 +109,9 @@ func (s *FeatureServiceImpl) GetFeaturesStream(req *StreamingGetFeaturesRequest,
 			if spec := s.aggregation.GetSpec(name); spec != nil {
 				val, err := s.aggregation.ComputeWithSpec(entityKey, name)
 				if err == nil {
-					resp.Features[name] = &FeatureValue{
-						DoubleValue:    val,
-						HasDoubleValue: true,
-						Timestamp:      time.Now().UnixNano(),
+					resp.Features[name] = &pb.FeatureValue{
+						Value:     &pb.FeatureValue_DoubleValue{DoubleValue: val},
+						Timestamp: time.Now().UnixNano(),
 					}
 				}
 			}
@@ -160,22 +151,22 @@ func (s *FeatureServiceImpl) PutFeaturesStream(stream PutFeatureStream) error {
 		features := make(map[string]*domain.FeatureValue)
 		timestamp := time.Now().UnixNano()
 
-		for name, val := range req.Features {
+		for name, val := range req.GetFeatures() {
 			features[name] = &domain.FeatureValue{
 				Value:     protoToDomainValue(val),
 				Timestamp: timestamp,
-				Version:   req.Version,
+				Version:   req.GetVersion(),
 			}
 
 			// Update aggregations
 			if s.aggregation.GetSpec(name) != nil {
 				if floatVal, ok := features[name].Value.(float64); ok {
-					s.aggregation.Update(req.EntityKey, name, floatVal, time.Now())
+					s.aggregation.Update(req.GetEntityKey(), name, floatVal, time.Now())
 				}
 			}
 		}
 
-		if err := s.store.Put(req.EntityKey, features); err != nil {
+		if err := s.store.Put(req.GetEntityKey(), features); err != nil {
 			errorCount++
 			continue
 		}
@@ -187,14 +178,14 @@ func (s *FeatureServiceImpl) PutFeaturesStream(stream PutFeatureStream) error {
 		s.metrics.RecordGRPCLatency("PutFeaturesStream", time.Since(start))
 	}
 
-	return stream.SendAndClose(&PutFeaturesResponse{
+	return stream.SendAndClose(&pb.PutFeaturesResponse{
 		Success: errorCount == 0,
 		Error:   fmt.Sprintf("processed %d, errors %d", successCount, errorCount),
 	})
 }
 
 // BatchGetFeatures retrieves features for multiple entities efficiently.
-func (s *FeatureServiceImpl) BatchGetFeatures(ctx context.Context, entities []string, features []string) (map[string]*EntityFeatures, error) {
+func (s *FeatureServiceImpl) BatchGetFeatures(ctx context.Context, entities []string, features []string) (map[string]*pb.EntityFeatures, error) {
 	start := time.Now()
 	defer func() {
 		if s.metrics != nil {
@@ -202,12 +193,12 @@ func (s *FeatureServiceImpl) BatchGetFeatures(ctx context.Context, entities []st
 		}
 	}()
 
-	results := make(map[string]*EntityFeatures, len(entities))
+	results := make(map[string]*pb.EntityFeatures, len(entities))
 
 	// Process in parallel for better performance
 	type result struct {
 		entityKey string
-		features  *EntityFeatures
+		features  *pb.EntityFeatures
 		err       error
 	}
 
@@ -237,14 +228,14 @@ func (s *FeatureServiceImpl) BatchGetFeatures(ctx context.Context, entities []st
 	return results, nil
 }
 
-func (s *FeatureServiceImpl) getEntityFeatures(ctx context.Context, entityKey string, featureNames []string) (*EntityFeatures, error) {
+func (s *FeatureServiceImpl) getEntityFeatures(ctx context.Context, entityKey string, featureNames []string) (*pb.EntityFeatures, error) {
 	features, err := s.store.Get(entityKey, featureNames)
 	if err != nil && !domain.IsNotFound(err) {
 		return nil, err
 	}
 
-	result := &EntityFeatures{
-		Features: make(map[string]*FeatureValue),
+	result := &pb.EntityFeatures{
+		Features: make(map[string]*pb.FeatureValue),
 	}
 
 	for name, val := range features {
@@ -260,10 +251,9 @@ func (s *FeatureServiceImpl) getEntityFeatures(ctx context.Context, entityKey st
 		if spec := s.aggregation.GetSpec(name); spec != nil {
 			val, err := s.aggregation.ComputeWithSpec(entityKey, name)
 			if err == nil {
-				result.Features[name] = &FeatureValue{
-					DoubleValue:    val,
-					HasDoubleValue: true,
-					Timestamp:      time.Now().UnixNano(),
+				result.Features[name] = &pb.FeatureValue{
+					Value:     &pb.FeatureValue_DoubleValue{DoubleValue: val},
+					Timestamp: time.Now().UnixNano(),
 				}
 			}
 		}
