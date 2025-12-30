@@ -241,19 +241,19 @@ func percentile(sorted []float64, p float64) float64 {
 
 // FreshnessChecker monitors feature freshness.
 type FreshnessChecker struct {
-	collector   *MetricsCollector
-	thresholds  map[string]time.Duration
-	defaultTTL  time.Duration
-	mu          sync.RWMutex
+	collector  *MetricsCollector
+	thresholds map[string]time.Duration
+	defaultTTL time.Duration
+	mu         sync.RWMutex
 }
 
 // FreshnessAlert represents a freshness violation.
 type FreshnessAlert struct {
-	Feature     string        `json:"feature"`
-	LastUpdate  time.Time     `json:"last_update"`
-	Threshold   time.Duration `json:"threshold"`
-	StaleDur    time.Duration `json:"stale_duration"`
-	Severity    string        `json:"severity"`
+	Feature    string        `json:"feature"`
+	LastUpdate time.Time     `json:"last_update"`
+	Threshold  time.Duration `json:"threshold"`
+	StaleDur   time.Duration `json:"stale_duration"`
+	Severity   string        `json:"severity"`
 }
 
 // NewFreshnessChecker creates a new freshness checker.
@@ -329,15 +329,15 @@ type usageHistory struct {
 
 // UsagePattern represents usage patterns for a feature.
 type UsagePattern struct {
-	Feature       string    `json:"feature"`
-	HourlyReads   []int64   `json:"hourly_reads"`
-	HourlyWrites  []int64   `json:"hourly_writes"`
-	DailyReads    []int64   `json:"daily_reads"`
-	DailyWrites   []int64   `json:"daily_writes"`
-	PeakHour      int       `json:"peak_hour"`
-	PeakDay       int       `json:"peak_day"`
-	AvgDailyReads float64   `json:"avg_daily_reads"`
-	TrendSlope    float64   `json:"trend_slope"`
+	Feature       string  `json:"feature"`
+	HourlyReads   []int64 `json:"hourly_reads"`
+	HourlyWrites  []int64 `json:"hourly_writes"`
+	DailyReads    []int64 `json:"daily_reads"`
+	DailyWrites   []int64 `json:"daily_writes"`
+	PeakHour      int     `json:"peak_hour"`
+	PeakDay       int     `json:"peak_day"`
+	AvgDailyReads float64 `json:"avg_daily_reads"`
+	TrendSlope    float64 `json:"trend_slope"`
 }
 
 // NewUsageTracker creates a new usage tracker.

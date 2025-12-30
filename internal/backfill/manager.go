@@ -17,8 +17,8 @@ type Job struct {
 	Source      DataSource             `json:"source"`
 	Features    []string               `json:"features"`
 	EntityType  string                 `json:"entity_type"`
-	StartTime   time.Time              `json:"start_time"`    // Historical start
-	EndTime     time.Time              `json:"end_time"`      // Historical end
+	StartTime   time.Time              `json:"start_time"` // Historical start
+	EndTime     time.Time              `json:"end_time"`   // Historical end
 	Status      JobStatus              `json:"status"`
 	Progress    JobProgress            `json:"progress"`
 	Config      JobConfig              `json:"config"`
@@ -32,11 +32,11 @@ type Job struct {
 
 // DataSource represents a source for backfill data.
 type DataSource struct {
-	Type       string                 `json:"type"`       // file, database, http, s3
-	URI        string                 `json:"uri"`        // Connection string or path
-	Format     string                 `json:"format"`     // csv, json, parquet
-	Options    map[string]interface{} `json:"options"`
-	Mapping    FieldMapping           `json:"mapping"`
+	Type    string                 `json:"type"`   // file, database, http, s3
+	URI     string                 `json:"uri"`    // Connection string or path
+	Format  string                 `json:"format"` // csv, json, parquet
+	Options map[string]interface{} `json:"options"`
+	Mapping FieldMapping           `json:"mapping"`
 }
 
 // FieldMapping maps source fields to feature fields.
@@ -50,25 +50,25 @@ type FieldMapping struct {
 type JobStatus string
 
 const (
-	StatusPending    JobStatus = "pending"
-	StatusRunning    JobStatus = "running"
-	StatusPaused     JobStatus = "paused"
-	StatusCompleted  JobStatus = "completed"
-	StatusFailed     JobStatus = "failed"
-	StatusCancelled  JobStatus = "cancelled"
+	StatusPending   JobStatus = "pending"
+	StatusRunning   JobStatus = "running"
+	StatusPaused    JobStatus = "paused"
+	StatusCompleted JobStatus = "completed"
+	StatusFailed    JobStatus = "failed"
+	StatusCancelled JobStatus = "cancelled"
 )
 
 // JobProgress tracks job progress.
 type JobProgress struct {
-	TotalRecords    int64     `json:"total_records"`
-	ProcessedRecords int64    `json:"processed_records"`
-	FailedRecords   int64     `json:"failed_records"`
-	SkippedRecords  int64     `json:"skipped_records"`
-	Percentage      float64   `json:"percentage"`
-	CurrentTime     time.Time `json:"current_time"`     // Current position in time range
-	RecordsPerSec   float64   `json:"records_per_sec"`
-	EstimatedETA    time.Time `json:"estimated_eta"`
-	LastCheckpoint  time.Time `json:"last_checkpoint"`
+	TotalRecords     int64     `json:"total_records"`
+	ProcessedRecords int64     `json:"processed_records"`
+	FailedRecords    int64     `json:"failed_records"`
+	SkippedRecords   int64     `json:"skipped_records"`
+	Percentage       float64   `json:"percentage"`
+	CurrentTime      time.Time `json:"current_time"` // Current position in time range
+	RecordsPerSec    float64   `json:"records_per_sec"`
+	EstimatedETA     time.Time `json:"estimated_eta"`
+	LastCheckpoint   time.Time `json:"last_checkpoint"`
 }
 
 // JobConfig configures job execution.
@@ -99,11 +99,11 @@ func DefaultJobConfig() JobConfig {
 
 // Manager manages backfill jobs.
 type Manager struct {
-	jobs       map[string]*Job
-	running    map[string]context.CancelFunc
+	jobs        map[string]*Job
+	running     map[string]context.CancelFunc
 	checkpoints map[string]*Checkpoint
-	writer     FeatureWriter
-	mu         sync.RWMutex
+	writer      FeatureWriter
+	mu          sync.RWMutex
 }
 
 // FeatureWriter interface for writing features during backfill.
@@ -122,11 +122,11 @@ type FeatureRecord struct {
 
 // Checkpoint stores job checkpoint for resumability.
 type Checkpoint struct {
-	JobID           string    `json:"job_id"`
-	ProcessedRecords int64    `json:"processed_records"`
-	LastTimestamp   time.Time `json:"last_timestamp"`
-	LastEntityID    string    `json:"last_entity_id"`
-	CreatedAt       time.Time `json:"created_at"`
+	JobID            string    `json:"job_id"`
+	ProcessedRecords int64     `json:"processed_records"`
+	LastTimestamp    time.Time `json:"last_timestamp"`
+	LastEntityID     string    `json:"last_entity_id"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // NewManager creates a new backfill manager.
@@ -534,8 +534,8 @@ func (m *Manager) GetStats() BackfillStats {
 	defer m.mu.RUnlock()
 
 	stats := BackfillStats{
-		TotalJobs:  len(m.jobs),
-		ByStatus:   make(map[JobStatus]int),
+		TotalJobs: len(m.jobs),
+		ByStatus:  make(map[JobStatus]int),
 	}
 
 	for _, job := range m.jobs {
@@ -550,9 +550,9 @@ func (m *Manager) GetStats() BackfillStats {
 
 // BackfillStats contains backfill statistics.
 type BackfillStats struct {
-	TotalJobs             int                `json:"total_jobs"`
-	ByStatus              map[JobStatus]int  `json:"by_status"`
-	TotalRecordsProcessed int64              `json:"total_records_processed"`
+	TotalJobs             int               `json:"total_jobs"`
+	ByStatus              map[JobStatus]int `json:"by_status"`
+	TotalRecordsProcessed int64             `json:"total_records_processed"`
 }
 
 // ExportJob exports job configuration to JSON.
@@ -582,14 +582,14 @@ func (m *Manager) ImportJob(data []byte) error {
 
 // Errors
 var (
-	ErrJobIDRequired      = errors.New("job ID is required")
-	ErrFeaturesRequired   = errors.New("features are required")
-	ErrJobExists          = errors.New("job already exists")
-	ErrJobNotFound        = errors.New("job not found")
-	ErrJobAlreadyRunning  = errors.New("job is already running")
-	ErrJobNotRunning      = errors.New("job is not running")
-	ErrJobNotPaused       = errors.New("job is not paused")
+	ErrJobIDRequired       = errors.New("job ID is required")
+	ErrFeaturesRequired    = errors.New("features are required")
+	ErrJobExists           = errors.New("job already exists")
+	ErrJobNotFound         = errors.New("job not found")
+	ErrJobAlreadyRunning   = errors.New("job is already running")
+	ErrJobNotRunning       = errors.New("job is not running")
+	ErrJobNotPaused        = errors.New("job is not paused")
 	ErrCannotDeleteRunning = errors.New("cannot delete running job")
-	ErrUnsupportedSource  = errors.New("unsupported data source type")
-	ErrEndOfData          = errors.New("end of data")
+	ErrUnsupportedSource   = errors.New("unsupported data source type")
+	ErrEndOfData           = errors.New("end of data")
 )

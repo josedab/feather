@@ -60,12 +60,12 @@ func TestNewResolver(t *testing.T) {
 
 func TestResolver_GetClientIP(t *testing.T) {
 	tests := []struct {
-		name          string
-		trustedCIDRs  []string
-		remoteAddr    string
-		xff           string
-		xRealIP       string
-		expectedIP    string
+		name         string
+		trustedCIDRs []string
+		remoteAddr   string
+		xff          string
+		xRealIP      string
+		expectedIP   string
 	}{
 		{
 			name:         "no trusted proxies - uses RemoteAddr",

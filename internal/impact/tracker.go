@@ -8,35 +8,35 @@ import (
 
 // FeatureUsage represents how a feature is being used.
 type FeatureUsage struct {
-	Feature       string            `json:"feature"`
-	Models        []string          `json:"models"`          // Models using this feature
-	AccessCount   int64             `json:"access_count"`
-	LastAccess    time.Time         `json:"last_access"`
-	FirstAccess   time.Time         `json:"first_access"`
-	AvgLatencyMs  float64           `json:"avg_latency_ms"`
-	ErrorCount    int64             `json:"error_count"`
-	NullCount     int64             `json:"null_count"`      // Times feature returned null
-	Dependencies  []string          `json:"dependencies"`    // Features this depends on
-	Dependents    []string          `json:"dependents"`      // Features depending on this
-	Tags          map[string]string `json:"tags"`
-	Deprecated    bool              `json:"deprecated"`
-	DeprecatedAt  *time.Time        `json:"deprecated_at,omitempty"`
-	DeprecatedBy  string            `json:"deprecated_by,omitempty"`
+	Feature      string            `json:"feature"`
+	Models       []string          `json:"models"` // Models using this feature
+	AccessCount  int64             `json:"access_count"`
+	LastAccess   time.Time         `json:"last_access"`
+	FirstAccess  time.Time         `json:"first_access"`
+	AvgLatencyMs float64           `json:"avg_latency_ms"`
+	ErrorCount   int64             `json:"error_count"`
+	NullCount    int64             `json:"null_count"`   // Times feature returned null
+	Dependencies []string          `json:"dependencies"` // Features this depends on
+	Dependents   []string          `json:"dependents"`   // Features depending on this
+	Tags         map[string]string `json:"tags"`
+	Deprecated   bool              `json:"deprecated"`
+	DeprecatedAt *time.Time        `json:"deprecated_at,omitempty"`
+	DeprecatedBy string            `json:"deprecated_by,omitempty"`
 }
 
 // ModelUsage represents which features a model uses.
 type ModelUsage struct {
-	ModelID       string            `json:"model_id"`
-	ModelVersion  string            `json:"model_version"`
-	Features      []string          `json:"features"`
-	Environment   string            `json:"environment"`     // prod, staging, dev
-	Endpoint      string            `json:"endpoint"`
-	LastInference time.Time         `json:"last_inference"`
-	InferenceCount int64            `json:"inference_count"`
-	AvgLatencyMs  float64           `json:"avg_latency_ms"`
-	P99LatencyMs  float64           `json:"p99_latency_ms"`
-	ErrorRate     float64           `json:"error_rate"`
-	Metadata      map[string]string `json:"metadata"`
+	ModelID        string            `json:"model_id"`
+	ModelVersion   string            `json:"model_version"`
+	Features       []string          `json:"features"`
+	Environment    string            `json:"environment"` // prod, staging, dev
+	Endpoint       string            `json:"endpoint"`
+	LastInference  time.Time         `json:"last_inference"`
+	InferenceCount int64             `json:"inference_count"`
+	AvgLatencyMs   float64           `json:"avg_latency_ms"`
+	P99LatencyMs   float64           `json:"p99_latency_ms"`
+	ErrorRate      float64           `json:"error_rate"`
+	Metadata       map[string]string `json:"metadata"`
 }
 
 // ImpactScore measures the impact of a feature.
@@ -54,25 +54,25 @@ type ImpactScore struct {
 
 // DeprecationRequest represents a request to deprecate a feature.
 type DeprecationRequest struct {
-	Feature      string    `json:"feature"`
-	Reason       string    `json:"reason"`
-	RequestedBy  string    `json:"requested_by"`
-	RequestedAt  time.Time `json:"requested_at"`
-	TargetDate   time.Time `json:"target_date"`
-	Replacement  string    `json:"replacement,omitempty"`
-	AffectedModels []string `json:"affected_models"`
-	Status       string    `json:"status"` // pending, approved, completed, rejected
+	Feature        string    `json:"feature"`
+	Reason         string    `json:"reason"`
+	RequestedBy    string    `json:"requested_by"`
+	RequestedAt    time.Time `json:"requested_at"`
+	TargetDate     time.Time `json:"target_date"`
+	Replacement    string    `json:"replacement,omitempty"`
+	AffectedModels []string  `json:"affected_models"`
+	Status         string    `json:"status"` // pending, approved, completed, rejected
 }
 
 // ImpactTracker tracks feature usage and impact.
 type ImpactTracker struct {
-	featureUsage    map[string]*FeatureUsage
-	modelUsage      map[string]*ModelUsage
-	impactScores    map[string]*ImpactScore
-	deprecations    map[string]*DeprecationRequest
-	latencyWindow   []latencyRecord
-	maxLatencyHist  int
-	mu              sync.RWMutex
+	featureUsage   map[string]*FeatureUsage
+	modelUsage     map[string]*ModelUsage
+	impactScores   map[string]*ImpactScore
+	deprecations   map[string]*DeprecationRequest
+	latencyWindow  []latencyRecord
+	maxLatencyHist int
+	mu             sync.RWMutex
 }
 
 type latencyRecord struct {
@@ -605,10 +605,10 @@ func (t *ImpactTracker) GetFeatureLineage(feature string) *FeatureLineage {
 	}
 
 	lineage := &FeatureLineage{
-		Feature:     feature,
-		Upstream:    t.getUpstream(feature, make(map[string]bool)),
-		Downstream:  t.getDownstream(feature, make(map[string]bool)),
-		Models:      usage.Models,
+		Feature:    feature,
+		Upstream:   t.getUpstream(feature, make(map[string]bool)),
+		Downstream: t.getDownstream(feature, make(map[string]bool)),
+		Models:     usage.Models,
 	}
 
 	return lineage
@@ -662,16 +662,16 @@ type FeatureLineage struct {
 
 // ImpactReport provides a summary report.
 type ImpactReport struct {
-	GeneratedAt       time.Time               `json:"generated_at"`
-	TotalFeatures     int                     `json:"total_features"`
-	TotalModels       int                     `json:"total_models"`
-	AvgImpactScore    float64                 `json:"avg_impact_score"`
-	TopFeatures       []*ImpactScore          `json:"top_features"`
-	LowImpactFeatures []*ImpactScore          `json:"low_impact_features"`
-	UnusedFeatures    []*FeatureUsage         `json:"unused_features"`
-	DeprecatedCount   int                     `json:"deprecated_count"`
+	GeneratedAt         time.Time             `json:"generated_at"`
+	TotalFeatures       int                   `json:"total_features"`
+	TotalModels         int                   `json:"total_models"`
+	AvgImpactScore      float64               `json:"avg_impact_score"`
+	TopFeatures         []*ImpactScore        `json:"top_features"`
+	LowImpactFeatures   []*ImpactScore        `json:"low_impact_features"`
+	UnusedFeatures      []*FeatureUsage       `json:"unused_features"`
+	DeprecatedCount     int                   `json:"deprecated_count"`
 	PendingDeprecations []*DeprecationRequest `json:"pending_deprecations"`
-	CriticalFeatures  int                     `json:"critical_features"`
+	CriticalFeatures    int                   `json:"critical_features"`
 }
 
 // GenerateReport generates an impact report.
@@ -743,16 +743,16 @@ func (t *ImpactTracker) GenerateReport() *ImpactReport {
 	}
 
 	return &ImpactReport{
-		GeneratedAt:        time.Now(),
-		TotalFeatures:      len(t.featureUsage),
-		TotalModels:        len(t.modelUsage),
-		AvgImpactScore:     avgScore,
-		TopFeatures:        topFeatures,
-		LowImpactFeatures:  lowImpact,
-		UnusedFeatures:     unused,
-		DeprecatedCount:    deprecatedCount,
+		GeneratedAt:         time.Now(),
+		TotalFeatures:       len(t.featureUsage),
+		TotalModels:         len(t.modelUsage),
+		AvgImpactScore:      avgScore,
+		TopFeatures:         topFeatures,
+		LowImpactFeatures:   lowImpact,
+		UnusedFeatures:      unused,
+		DeprecatedCount:     deprecatedCount,
 		PendingDeprecations: pending,
-		CriticalFeatures:   criticalCount,
+		CriticalFeatures:    criticalCount,
 	}
 }
 

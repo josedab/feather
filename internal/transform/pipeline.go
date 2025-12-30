@@ -55,10 +55,10 @@ type Transform struct {
 type ExecutionMode string
 
 const (
-	ModeOnRead   ExecutionMode = "on_read"   // Computed when feature is read
-	ModeOnWrite  ExecutionMode = "on_write"  // Computed when input features are written
-	ModeSchedule ExecutionMode = "schedule"  // Computed on a schedule
-	ModeBatch    ExecutionMode = "batch"     // Computed in batch jobs
+	ModeOnRead   ExecutionMode = "on_read"  // Computed when feature is read
+	ModeOnWrite  ExecutionMode = "on_write" // Computed when input features are written
+	ModeSchedule ExecutionMode = "schedule" // Computed on a schedule
+	ModeBatch    ExecutionMode = "batch"    // Computed in batch jobs
 )
 
 // Pipeline manages feature transformations.

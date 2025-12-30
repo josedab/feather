@@ -48,14 +48,14 @@ func DefaultConfig() Config {
 
 // FeatureMonitor tracks a single feature's distribution.
 type FeatureMonitor struct {
-	Name         string
-	Type         FeatureType
-	Reference    *Distribution
-	Current      *Distribution
-	LastAlert    time.Time
-	DriftScore   float64
-	DriftType    DriftType
-	SampleCount  int64
+	Name        string
+	Type        FeatureType
+	Reference   *Distribution
+	Current     *Distribution
+	LastAlert   time.Time
+	DriftScore  float64
+	DriftType   DriftType
+	SampleCount int64
 }
 
 // FeatureType indicates the data type of the feature.
@@ -70,11 +70,11 @@ const (
 type DriftType int
 
 const (
-	DriftNone DriftType = iota
-	DriftKS           // Kolmogorov-Smirnov
-	DriftPSI          // Population Stability Index
-	DriftMean         // Mean shift
-	DriftVariance     // Variance change
+	DriftNone     DriftType = iota
+	DriftKS                 // Kolmogorov-Smirnov
+	DriftPSI                // Population Stability Index
+	DriftMean               // Mean shift
+	DriftVariance           // Variance change
 )
 
 func (d DriftType) String() string {
@@ -108,7 +108,7 @@ type Distribution struct {
 	Total      int
 
 	// Histogram for PSI
-	Buckets    []int
+	Buckets     []int
 	BucketEdges []float64
 }
 
@@ -431,15 +431,15 @@ func (d *Detector) GetMonitorStatus() []MonitorStatus {
 
 // MonitorStatus represents the current state of a feature monitor.
 type MonitorStatus struct {
-	Feature        string
-	Type           FeatureType
-	SampleCount    int64
-	DriftType      DriftType
-	DriftScore     float64
-	LastAlert      time.Time
-	CurrentMean    float64
-	CurrentStdDev  float64
-	ReferenceMean  float64
+	Feature         string
+	Type            FeatureType
+	SampleCount     int64
+	DriftType       DriftType
+	DriftScore      float64
+	LastAlert       time.Time
+	CurrentMean     float64
+	CurrentStdDev   float64
+	ReferenceMean   float64
 	ReferenceStdDev float64
 }
 

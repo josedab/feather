@@ -345,7 +345,7 @@ func (h *BackfillHandler) handleImportJob(w http.ResponseWriter, r *http.Request
 
 	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"success": true,
-		"job":     job,
+		"job":     &job,
 	})
 }
 

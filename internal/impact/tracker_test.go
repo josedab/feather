@@ -11,8 +11,8 @@ func TestImpactTracker_RecordAccess(t *testing.T) {
 	// Record some accesses
 	tracker.RecordAccess("user_age", 1.5, false, false)
 	tracker.RecordAccess("user_age", 2.0, false, false)
-	tracker.RecordAccess("user_age", 1.0, true, false)  // error
-	tracker.RecordAccess("user_age", 0.5, false, true)  // null
+	tracker.RecordAccess("user_age", 1.0, true, false) // error
+	tracker.RecordAccess("user_age", 0.5, false, true) // null
 
 	usage := tracker.GetFeatureUsage("user_age")
 	if usage == nil {

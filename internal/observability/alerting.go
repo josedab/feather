@@ -47,17 +47,17 @@ type Alert struct {
 
 // AlertRule defines when to trigger alerts.
 type AlertRule struct {
-	Name        string                 `json:"name"`
-	Type        AlertType              `json:"type"`
-	Feature     string                 `json:"feature"`
-	Condition   string                 `json:"condition"` // lt, gt, eq, ne
-	Threshold   float64                `json:"threshold"`
-	Duration    time.Duration          `json:"duration"`
-	Severity    AlertSeverity          `json:"severity"`
-	Enabled     bool                   `json:"enabled"`
-	Cooldown    time.Duration          `json:"cooldown"`
-	LastFired   time.Time              `json:"last_fired"`
-	Labels      map[string]string      `json:"labels,omitempty"`
+	Name      string            `json:"name"`
+	Type      AlertType         `json:"type"`
+	Feature   string            `json:"feature"`
+	Condition string            `json:"condition"` // lt, gt, eq, ne
+	Threshold float64           `json:"threshold"`
+	Duration  time.Duration     `json:"duration"`
+	Severity  AlertSeverity     `json:"severity"`
+	Enabled   bool              `json:"enabled"`
+	Cooldown  time.Duration     `json:"cooldown"`
+	LastFired time.Time         `json:"last_fired"`
+	Labels    map[string]string `json:"labels,omitempty"`
 }
 
 // AlertHandler is called when an alert is triggered.
@@ -74,11 +74,11 @@ func (f AlertHandlerFunc) HandleAlert(ctx context.Context, alert *Alert) error {
 
 // AlertManager manages alerts and notifications.
 type AlertManager struct {
-	rules      map[string]*AlertRule
-	alerts     []*Alert
-	handlers   []AlertHandler
-	nextID     int64
-	mu         sync.RWMutex
+	rules    map[string]*AlertRule
+	alerts   []*Alert
+	handlers []AlertHandler
+	nextID   int64
+	mu       sync.RWMutex
 }
 
 // NewAlertManager creates a new alert manager.
@@ -294,12 +294,12 @@ func (m *AlertManager) Resolve(alertID string) bool {
 
 // ObservabilityStack combines all observability components.
 type ObservabilityStack struct {
-	Metrics    *MetricsCollector
-	Freshness  *FreshnessChecker
-	Usage      *UsageTracker
-	Quality    *QualityMonitor
-	Alerts     *AlertManager
-	stopCh     chan struct{}
+	Metrics   *MetricsCollector
+	Freshness *FreshnessChecker
+	Usage     *UsageTracker
+	Quality   *QualityMonitor
+	Alerts    *AlertManager
+	stopCh    chan struct{}
 }
 
 // NewObservabilityStack creates a complete observability stack.

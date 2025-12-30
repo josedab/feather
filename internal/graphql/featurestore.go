@@ -12,7 +12,7 @@ import (
 // FeatureStoreSchema creates a GraphQL schema for the feature store.
 type FeatureStoreSchema struct {
 	*Schema
-	store   *storage.Store
+	store    *storage.Store
 	registry storage.SchemaRegistry
 }
 

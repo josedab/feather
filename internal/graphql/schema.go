@@ -431,9 +431,9 @@ type Response struct {
 
 // Error represents a GraphQL error.
 type Error struct {
-	Message   string                 `json:"message"`
-	Locations []Location             `json:"locations,omitempty"`
-	Path      []interface{}          `json:"path,omitempty"`
+	Message    string                 `json:"message"`
+	Locations  []Location             `json:"locations,omitempty"`
+	Path       []interface{}          `json:"path,omitempty"`
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 

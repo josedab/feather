@@ -335,7 +335,7 @@ invalid json line
 			wantSuccess: 2,
 		},
 		{
-			name: "jsonl with timestamp",
+			name:  "jsonl with timestamp",
 			jsonl: `{"entity_id": "user:1", "score": 0.95, "ts": "2024-01-01T00:00:00Z"}`,
 			config: ImportConfig{
 				EntityKeyColumn: "entity_id",

@@ -57,14 +57,14 @@ var (
 type APIKey struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
-	KeyHash     string            `json:"-"`              // Hashed key (never expose)
-	Prefix      string            `json:"prefix"`         // First 8 chars for identification
+	KeyHash     string            `json:"-"`      // Hashed key (never expose)
+	Prefix      string            `json:"prefix"` // First 8 chars for identification
 	Tenant      string            `json:"tenant"`
 	Roles       []string          `json:"roles"`
-	Permissions []Permission      `json:"permissions"`    // Direct permissions (in addition to roles)
-	Namespaces  []string          `json:"namespaces"`     // Allowed namespaces (empty = all)
-	Features    []string          `json:"features"`       // Allowed features (empty = all)
-	RateLimit   int               `json:"rate_limit"`     // Requests per minute (0 = unlimited)
+	Permissions []Permission      `json:"permissions"` // Direct permissions (in addition to roles)
+	Namespaces  []string          `json:"namespaces"`  // Allowed namespaces (empty = all)
+	Features    []string          `json:"features"`    // Allowed features (empty = all)
+	RateLimit   int               `json:"rate_limit"`  // Requests per minute (0 = unlimited)
 	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
 	CreatedAt   time.Time         `json:"created_at"`
 	CreatedBy   string            `json:"created_by"`
@@ -87,11 +87,11 @@ type Tenant struct {
 
 // TenantQuotas defines resource limits for a tenant.
 type TenantQuotas struct {
-	MaxFeatures     int   `json:"max_features"`      // Max number of features
-	MaxNamespaces   int   `json:"max_namespaces"`    // Max number of namespaces
-	MaxAPIKeys      int   `json:"max_api_keys"`      // Max number of API keys
-	MaxRequestsPerMin int `json:"max_requests_per_min"` // Rate limit
-	MaxStorageBytes int64 `json:"max_storage_bytes"` // Storage quota
+	MaxFeatures       int   `json:"max_features"`         // Max number of features
+	MaxNamespaces     int   `json:"max_namespaces"`       // Max number of namespaces
+	MaxAPIKeys        int   `json:"max_api_keys"`         // Max number of API keys
+	MaxRequestsPerMin int   `json:"max_requests_per_min"` // Rate limit
+	MaxStorageBytes   int64 `json:"max_storage_bytes"`    // Storage quota
 }
 
 // AuditLog represents an audit log entry.
@@ -112,13 +112,13 @@ type AuditLog struct {
 
 // AccessController manages authentication and authorization.
 type AccessController struct {
-	apiKeys    map[string]*APIKey  // keyHash -> APIKey
-	keysByID   map[string]*APIKey  // id -> APIKey
-	tenants    map[string]*Tenant
-	roles      map[string]*Role
-	auditLogs  []AuditLog
+	apiKeys      map[string]*APIKey // keyHash -> APIKey
+	keysByID     map[string]*APIKey // id -> APIKey
+	tenants      map[string]*Tenant
+	roles        map[string]*Role
+	auditLogs    []AuditLog
 	maxAuditLogs int
-	mu         sync.RWMutex
+	mu           sync.RWMutex
 }
 
 // NewAccessController creates a new access controller.
@@ -533,16 +533,16 @@ func hashKey(key string) string {
 
 // Errors
 var (
-	ErrNameRequired       = errors.New("name is required")
-	ErrTenantRequired     = errors.New("tenant is required")
-	ErrTenantIDRequired   = errors.New("tenant ID is required")
-	ErrTenantNotFound     = errors.New("tenant not found")
-	ErrTenantExists       = errors.New("tenant already exists")
-	ErrInvalidAPIKey      = errors.New("invalid API key")
-	ErrAPIKeyDisabled     = errors.New("API key is disabled")
-	ErrAPIKeyExpired      = errors.New("API key has expired")
-	ErrAPIKeyNotFound     = errors.New("API key not found")
-	ErrRoleNotFound       = errors.New("role not found")
+	ErrNameRequired        = errors.New("name is required")
+	ErrTenantRequired      = errors.New("tenant is required")
+	ErrTenantIDRequired    = errors.New("tenant ID is required")
+	ErrTenantNotFound      = errors.New("tenant not found")
+	ErrTenantExists        = errors.New("tenant already exists")
+	ErrInvalidAPIKey       = errors.New("invalid API key")
+	ErrAPIKeyDisabled      = errors.New("API key is disabled")
+	ErrAPIKeyExpired       = errors.New("API key has expired")
+	ErrAPIKeyNotFound      = errors.New("API key not found")
+	ErrRoleNotFound        = errors.New("role not found")
 	ErrCannotModifyBuiltin = errors.New("cannot modify builtin role")
-	ErrPermissionDenied   = errors.New("permission denied")
+	ErrPermissionDenied    = errors.New("permission denied")
 )

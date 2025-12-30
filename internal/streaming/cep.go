@@ -24,11 +24,11 @@ type CEPPattern struct {
 
 // PatternStep defines a single step in a pattern.
 type PatternStep struct {
-	Name       string              `json:"name"`
-	EventType  string              `json:"event_type"`
-	Conditions []PatternCondition  `json:"conditions"`
-	Quantifier Quantifier          `json:"quantifier"`
-	Optional   bool                `json:"optional"`
+	Name       string             `json:"name"`
+	EventType  string             `json:"event_type"`
+	Conditions []PatternCondition `json:"conditions"`
+	Quantifier Quantifier         `json:"quantifier"`
+	Optional   bool               `json:"optional"`
 }
 
 // PatternCondition defines a condition for matching.

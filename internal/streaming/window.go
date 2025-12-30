@@ -9,33 +9,33 @@ import (
 
 // WindowManager manages windowed aggregations for a pipeline.
 type WindowManager struct {
-	mu             sync.RWMutex
-	config         WindowConfig
-	windows        map[string]*Window // keyed by entity ID
-	lateTolerance  time.Duration
+	mu            sync.RWMutex
+	config        WindowConfig
+	windows       map[string]*Window // keyed by entity ID
+	lateTolerance time.Duration
 }
 
 // Window represents a single window instance for an entity.
 type Window struct {
-	EntityID    string
-	Start       time.Time
-	End         time.Time
-	Events      []*Event
-	Aggregates  map[string]*AggregateState
+	EntityID   string
+	Start      time.Time
+	End        time.Time
+	Events     []*Event
+	Aggregates map[string]*AggregateState
 }
 
 // AggregateState holds the state for an aggregation.
 type AggregateState struct {
-	Config    AggregationConfig
-	Count     int64
-	Sum       float64
-	Min       float64
-	Max       float64
-	First     interface{}
-	Last      interface{}
-	Values    []float64
-	Distinct  map[interface{}]bool
-	HasFirst  bool
+	Config   AggregationConfig
+	Count    int64
+	Sum      float64
+	Min      float64
+	Max      float64
+	First    interface{}
+	Last     interface{}
+	Values   []float64
+	Distinct map[interface{}]bool
+	HasFirst bool
 }
 
 // WindowResult represents the result of a window computation.
@@ -371,9 +371,9 @@ func (wm *WindowManager) GetWindowStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"window_count":  len(wm.windows),
-		"total_events":  totalEvents,
-		"window_type":   wm.config.Type,
-		"window_size":   wm.config.Size.String(),
+		"window_count": len(wm.windows),
+		"total_events": totalEvents,
+		"window_type":  wm.config.Type,
+		"window_size":  wm.config.Size.String(),
 	}
 }

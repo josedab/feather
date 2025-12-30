@@ -122,11 +122,11 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 
 // SubscribeRequest represents a subscription request.
 type StreamSubscribeRequest struct {
-	ClientID   string              `json:"client_id"`
-	Features   []string            `json:"features,omitempty"`
-	EntityIDs  []string            `json:"entity_ids,omitempty"`
-	EventTypes []string            `json:"event_types,omitempty"`
-	Filters    map[string]string   `json:"filters,omitempty"`
+	ClientID   string            `json:"client_id"`
+	Features   []string          `json:"features,omitempty"`
+	EntityIDs  []string          `json:"entity_ids,omitempty"`
+	EventTypes []string          `json:"event_types,omitempty"`
+	Filters    map[string]string `json:"filters,omitempty"`
 }
 
 // handleSubscribe handles POST /v1/stream/subscribe

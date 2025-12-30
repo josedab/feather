@@ -8,20 +8,20 @@ import (
 // Error codes for API responses.
 const (
 	// Client errors (4xx)
-	ErrCodeBadRequest        = "BAD_REQUEST"
-	ErrCodeUnauthorized      = "UNAUTHORIZED"
-	ErrCodeForbidden         = "FORBIDDEN"
-	ErrCodeNotFound          = "NOT_FOUND"
-	ErrCodeConflict          = "CONFLICT"
-	ErrCodeValidationFailed  = "VALIDATION_FAILED"
-	ErrCodeRateLimited       = "RATE_LIMITED"
-	ErrCodeRequestTooLarge   = "REQUEST_TOO_LARGE"
+	ErrCodeBadRequest       = "BAD_REQUEST"
+	ErrCodeUnauthorized     = "UNAUTHORIZED"
+	ErrCodeForbidden        = "FORBIDDEN"
+	ErrCodeNotFound         = "NOT_FOUND"
+	ErrCodeConflict         = "CONFLICT"
+	ErrCodeValidationFailed = "VALIDATION_FAILED"
+	ErrCodeRateLimited      = "RATE_LIMITED"
+	ErrCodeRequestTooLarge  = "REQUEST_TOO_LARGE"
 
 	// Server errors (5xx)
-	ErrCodeInternal          = "INTERNAL_ERROR"
+	ErrCodeInternal           = "INTERNAL_ERROR"
 	ErrCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
-	ErrCodeStorageFull       = "STORAGE_FULL"
-	ErrCodeTimeout           = "TIMEOUT"
+	ErrCodeStorageFull        = "STORAGE_FULL"
+	ErrCodeTimeout            = "TIMEOUT"
 )
 
 // Sentinel errors for common cases.

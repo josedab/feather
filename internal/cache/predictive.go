@@ -17,17 +17,17 @@ type AccessPattern struct {
 	EntityID      string    `json:"entity_id"`
 	AccessCount   int64     `json:"access_count"`
 	LastAccess    time.Time `json:"last_access"`
-	AvgInterval   float64   `json:"avg_interval_ms"`  // Average time between accesses
+	AvgInterval   float64   `json:"avg_interval_ms"` // Average time between accesses
 	PredictedNext time.Time `json:"predicted_next"`
-	Score         float64   `json:"score"`            // Priority score for caching
+	Score         float64   `json:"score"` // Priority score for caching
 }
 
 // PatternTracker tracks access patterns for features.
 type PatternTracker struct {
-	patterns     map[string]*AccessPattern // key: entityID:feature
-	accessTimes  map[string][]time.Time    // Recent access times
-	maxHistory   int
-	mu           sync.RWMutex
+	patterns    map[string]*AccessPattern // key: entityID:feature
+	accessTimes map[string][]time.Time    // Recent access times
+	maxHistory  int
+	mu          sync.RWMutex
 }
 
 // NewPatternTracker creates a new pattern tracker.
@@ -62,8 +62,8 @@ func (t *PatternTracker) RecordAccess(entityID, feature string) {
 	pattern, ok := t.patterns[key]
 	if !ok {
 		pattern = &AccessPattern{
-			Feature:   feature,
-			EntityID:  entityID,
+			Feature:  feature,
+			EntityID: entityID,
 		}
 		t.patterns[key] = pattern
 	}
@@ -159,21 +159,21 @@ func (t *PatternTracker) GetPattern(entityID, feature string) *AccessPattern {
 
 // PredictiveCache provides intelligent cache warming.
 type PredictiveCache struct {
-	store         *storage.Store
-	tracker       *PatternTracker
-	warmingQueue  *warmingQueue
-	config        PredictiveCacheConfig
-	stopCh        chan struct{}
-	mu            sync.RWMutex
+	store        *storage.Store
+	tracker      *PatternTracker
+	warmingQueue *warmingQueue
+	config       PredictiveCacheConfig
+	stopCh       chan struct{}
+	mu           sync.RWMutex
 }
 
 // PredictiveCacheConfig configures the predictive cache.
 type PredictiveCacheConfig struct {
-	WarmingWindow    time.Duration // How far ahead to predict
-	WarmingInterval  time.Duration // How often to run warming
-	MaxWarmItems     int           // Maximum items to warm per cycle
-	MinScore         float64       // Minimum score to consider for warming
-	Enabled          bool
+	WarmingWindow   time.Duration // How far ahead to predict
+	WarmingInterval time.Duration // How often to run warming
+	MaxWarmItems    int           // Maximum items to warm per cycle
+	MinScore        float64       // Minimum score to consider for warming
+	Enabled         bool
 }
 
 // DefaultPredictiveCacheConfig returns default configuration.
@@ -302,14 +302,14 @@ func (c *PredictiveCache) GetStats() *PredictiveCacheStats {
 	predicted := c.tracker.GetPredictedAccesses(c.config.WarmingWindow)
 
 	return &PredictiveCacheStats{
-		TrackedPatterns:    len(patterns),
-		TotalAccesses:      totalAccess,
-		AverageScore:       avgScore,
-		PredictedNextHour:  len(predicted),
-		WarmingEnabled:     c.config.Enabled,
-		WarmingWindow:      c.config.WarmingWindow,
-		WarmingInterval:    c.config.WarmingInterval,
-		MaxWarmItems:       c.config.MaxWarmItems,
+		TrackedPatterns:   len(patterns),
+		TotalAccesses:     totalAccess,
+		AverageScore:      avgScore,
+		PredictedNextHour: len(predicted),
+		WarmingEnabled:    c.config.Enabled,
+		WarmingWindow:     c.config.WarmingWindow,
+		WarmingInterval:   c.config.WarmingInterval,
+		MaxWarmItems:      c.config.MaxWarmItems,
 	}
 }
 

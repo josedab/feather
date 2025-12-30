@@ -40,11 +40,11 @@ type HNSW struct {
 	mu sync.RWMutex
 
 	// Configuration
-	dim        int     // Vector dimension
-	m          int     // Max connections per node
-	mMax       int     // Max connections per node at level 0
-	efConstruct int    // Size of dynamic candidate list during construction
-	ml         float64 // Level multiplier
+	dim         int     // Vector dimension
+	m           int     // Max connections per node
+	mMax        int     // Max connections per node at level 0
+	efConstruct int     // Size of dynamic candidate list during construction
+	ml          float64 // Level multiplier
 
 	// Graph structure
 	nodes      map[string]*node
@@ -70,8 +70,8 @@ type DistanceFunc func(a, b []float32) float32
 type DistanceType string
 
 const (
-	DistanceCosine    DistanceType = "cosine"
-	DistanceEuclidean DistanceType = "euclidean"
+	DistanceCosine     DistanceType = "cosine"
+	DistanceEuclidean  DistanceType = "euclidean"
 	DistanceDotProduct DistanceType = "dot_product"
 )
 

@@ -16,16 +16,16 @@ import (
 
 // Engine processes streaming events and computes real-time features.
 type Engine struct {
-	mu          sync.RWMutex
-	pipelines   map[string]*Pipeline
-	windows     map[string]*WindowManager
-	cep         *CEPEngine
-	config      Config
-	logger      *slog.Logger
-	metrics     *Metrics
-	outputChan  chan *FeatureOutput
-	ctx         context.Context
-	cancel      context.CancelFunc
+	mu         sync.RWMutex
+	pipelines  map[string]*Pipeline
+	windows    map[string]*WindowManager
+	cep        *CEPEngine
+	config     Config
+	logger     *slog.Logger
+	metrics    *Metrics
+	outputChan chan *FeatureOutput
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
 // Config configures the streaming engine.
@@ -122,22 +122,22 @@ func (s PipelineState) String() string {
 
 // Stage represents a processing stage in the pipeline.
 type Stage struct {
-	Name       string
-	Type       StageType
-	Config     json.RawMessage
-	Processor  Processor
+	Name      string
+	Type      StageType
+	Config    json.RawMessage
+	Processor Processor
 }
 
 // StageType indicates the type of processing stage.
 type StageType string
 
 const (
-	StageTypeFilter     StageType = "filter"
-	StageTypeTransform  StageType = "transform"
-	StageTypeAggregate  StageType = "aggregate"
-	StageTypeJoin       StageType = "join"
-	StageTypeWindow     StageType = "window"
-	StageTypeEnrich     StageType = "enrich"
+	StageTypeFilter    StageType = "filter"
+	StageTypeTransform StageType = "transform"
+	StageTypeAggregate StageType = "aggregate"
+	StageTypeJoin      StageType = "join"
+	StageTypeWindow    StageType = "window"
+	StageTypeEnrich    StageType = "enrich"
 )
 
 // Processor processes events in a stage.
@@ -162,10 +162,10 @@ type WindowConfig struct {
 type WindowType string
 
 const (
-	WindowTypeTumbling  WindowType = "tumbling"
-	WindowTypeSliding   WindowType = "sliding"
-	WindowTypeSession   WindowType = "session"
-	WindowTypeGlobal    WindowType = "global"
+	WindowTypeTumbling WindowType = "tumbling"
+	WindowTypeSliding  WindowType = "sliding"
+	WindowTypeSession  WindowType = "session"
+	WindowTypeGlobal   WindowType = "global"
 )
 
 // AggregationConfig configures an aggregation function.
@@ -195,23 +195,23 @@ const (
 
 // PipelineMetrics tracks pipeline performance.
 type PipelineMetrics struct {
-	mu                sync.RWMutex
-	EventsProcessed   int64
-	EventsDropped     int64
-	LateEvents        int64
-	ProcessingErrors  int64
-	AvgLatencyMs      float64
-	LastEventTime     time.Time
-	WindowsComputed   int64
+	mu               sync.RWMutex
+	EventsProcessed  int64
+	EventsDropped    int64
+	LateEvents       int64
+	ProcessingErrors int64
+	AvgLatencyMs     float64
+	LastEventTime    time.Time
+	WindowsComputed  int64
 }
 
 // Metrics tracks engine-level metrics.
 type Metrics struct {
-	mu                sync.RWMutex
-	TotalEvents       int64
-	TotalOutputs      int64
-	ActivePipelines   int
-	TotalErrors       int64
+	mu              sync.RWMutex
+	TotalEvents     int64
+	TotalOutputs    int64
+	ActivePipelines int
+	TotalErrors     int64
 }
 
 // NewEngine creates a new streaming engine.

@@ -11,24 +11,24 @@ import (
 
 // QualityScore represents quality metrics for a feature.
 type QualityScore struct {
-	Feature          string    `json:"feature"`
-	Completeness     float64   `json:"completeness"`      // % of entities with this feature
-	Freshness        float64   `json:"freshness"`         // % within TTL
-	Consistency      float64   `json:"consistency"`       // % matching expected schema
-	Accuracy         float64   `json:"accuracy"`          // Based on validation rules
-	OverallScore     float64   `json:"overall_score"`     // Weighted average
-	LastCalculated   time.Time `json:"last_calculated"`
-	SampleSize       int       `json:"sample_size"`
+	Feature        string    `json:"feature"`
+	Completeness   float64   `json:"completeness"`  // % of entities with this feature
+	Freshness      float64   `json:"freshness"`     // % within TTL
+	Consistency    float64   `json:"consistency"`   // % matching expected schema
+	Accuracy       float64   `json:"accuracy"`      // Based on validation rules
+	OverallScore   float64   `json:"overall_score"` // Weighted average
+	LastCalculated time.Time `json:"last_calculated"`
+	SampleSize     int       `json:"sample_size"`
 }
 
 // QualityRule defines a validation rule for feature quality.
 type QualityRule struct {
-	Name       string                 `json:"name"`
-	Feature    string                 `json:"feature"`
-	RuleType   string                 `json:"rule_type"` // range, regex, enum, null_check, custom
-	Config     map[string]interface{} `json:"config"`
-	Severity   string                 `json:"severity"` // warning, error, critical
-	Enabled    bool                   `json:"enabled"`
+	Name     string                 `json:"name"`
+	Feature  string                 `json:"feature"`
+	RuleType string                 `json:"rule_type"` // range, regex, enum, null_check, custom
+	Config   map[string]interface{} `json:"config"`
+	Severity string                 `json:"severity"` // warning, error, critical
+	Enabled  bool                   `json:"enabled"`
 }
 
 // QualityViolation represents a quality rule violation.
@@ -366,14 +366,14 @@ func (m *QualityMonitor) GetRules(feature string) []*QualityRule {
 
 // FeatureProfile contains statistical profile of a feature.
 type FeatureProfile struct {
-	Feature     string             `json:"feature"`
-	DataType    domain.DataType    `json:"data_type"`
-	NullCount   int                `json:"null_count"`
-	UniqueCount int                `json:"unique_count"`
-	SampleSize  int                `json:"sample_size"`
-	NumericStats *NumericStats     `json:"numeric_stats,omitempty"`
-	StringStats  *StringStats      `json:"string_stats,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
+	Feature      string          `json:"feature"`
+	DataType     domain.DataType `json:"data_type"`
+	NullCount    int             `json:"null_count"`
+	UniqueCount  int             `json:"unique_count"`
+	SampleSize   int             `json:"sample_size"`
+	NumericStats *NumericStats   `json:"numeric_stats,omitempty"`
+	StringStats  *StringStats    `json:"string_stats,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
 // NumericStats contains statistics for numeric features.

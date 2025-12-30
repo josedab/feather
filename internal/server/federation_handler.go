@@ -48,17 +48,17 @@ func (h *FederationHandler) RegisterRoutes(mux *http.ServeMux) {
 
 // NodeJSON represents a node in JSON format.
 type NodeJSON struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Address     string              `json:"address"`
-	Role        string              `json:"role"`
-	State       string              `json:"state"`
-	Region      string              `json:"region"`
-	Tags        []string            `json:"tags,omitempty"`
-	Metadata    map[string]string   `json:"metadata,omitempty"`
-	JoinedAt    string              `json:"joined_at"`
-	LastSeen    string              `json:"last_seen"`
-	Version     string              `json:"version,omitempty"`
+	ID          string               `json:"id"`
+	Name        string               `json:"name"`
+	Address     string               `json:"address"`
+	Role        string               `json:"role"`
+	State       string               `json:"state"`
+	Region      string               `json:"region"`
+	Tags        []string             `json:"tags,omitempty"`
+	Metadata    map[string]string    `json:"metadata,omitempty"`
+	JoinedAt    string               `json:"joined_at"`
+	LastSeen    string               `json:"last_seen"`
+	Version     string               `json:"version,omitempty"`
 	Permissions *NodePermissionsJSON `json:"permissions,omitempty"`
 }
 
@@ -73,20 +73,20 @@ type NodePermissionsJSON struct {
 
 // FederatedFeatureJSON represents a federated feature in JSON.
 type FederatedFeatureJSON struct {
-	ID            string            `json:"id"`
-	Name          string            `json:"name"`
-	Description   string            `json:"description,omitempty"`
-	OwnerNode     string            `json:"owner_node"`
-	OwnerTeam     string            `json:"owner_team,omitempty"`
-	DataType      string            `json:"data_type,omitempty"`
-	Tags          []string          `json:"tags,omitempty"`
-	Visibility    string            `json:"visibility"`
+	ID            string             `json:"id"`
+	Name          string             `json:"name"`
+	Description   string             `json:"description,omitempty"`
+	OwnerNode     string             `json:"owner_node"`
+	OwnerTeam     string             `json:"owner_team,omitempty"`
+	DataType      string             `json:"data_type,omitempty"`
+	Tags          []string           `json:"tags,omitempty"`
+	Visibility    string             `json:"visibility"`
 	AccessControl *AccessControlJSON `json:"access_control,omitempty"`
-	Metadata      map[string]string `json:"metadata,omitempty"`
-	Version       int64             `json:"version"`
-	CreatedAt     string            `json:"created_at"`
-	UpdatedAt     string            `json:"updated_at"`
-	ReplicatedTo  []string          `json:"replicated_to,omitempty"`
+	Metadata      map[string]string  `json:"metadata,omitempty"`
+	Version       int64              `json:"version"`
+	CreatedAt     string             `json:"created_at"`
+	UpdatedAt     string             `json:"updated_at"`
+	ReplicatedTo  []string           `json:"replicated_to,omitempty"`
 }
 
 // AccessControlJSON represents access control in JSON.
@@ -155,13 +155,13 @@ func (h *FederationHandler) handleGetNode(w http.ResponseWriter, r *http.Request
 
 // JoinNodeRequest represents a request to join a node.
 type JoinNodeRequest struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Address     string              `json:"address"`
-	Role        string              `json:"role"`
-	Region      string              `json:"region"`
-	Tags        []string            `json:"tags,omitempty"`
-	Metadata    map[string]string   `json:"metadata,omitempty"`
+	ID          string               `json:"id"`
+	Name        string               `json:"name"`
+	Address     string               `json:"address"`
+	Role        string               `json:"role"`
+	Region      string               `json:"region"`
+	Tags        []string             `json:"tags,omitempty"`
+	Metadata    map[string]string    `json:"metadata,omitempty"`
 	Permissions *NodePermissionsJSON `json:"permissions,omitempty"`
 }
 
@@ -292,15 +292,15 @@ func (h *FederationHandler) handleGetFeature(w http.ResponseWriter, r *http.Requ
 
 // ShareFeatureRequest represents a request to share a feature.
 type ShareFeatureRequest struct {
-	ID            string            `json:"id"`
-	Name          string            `json:"name"`
-	Description   string            `json:"description,omitempty"`
-	OwnerTeam     string            `json:"owner_team,omitempty"`
-	DataType      string            `json:"data_type,omitempty"`
-	Tags          []string          `json:"tags,omitempty"`
-	Visibility    string            `json:"visibility"`
+	ID            string             `json:"id"`
+	Name          string             `json:"name"`
+	Description   string             `json:"description,omitempty"`
+	OwnerTeam     string             `json:"owner_team,omitempty"`
+	DataType      string             `json:"data_type,omitempty"`
+	Tags          []string           `json:"tags,omitempty"`
+	Visibility    string             `json:"visibility"`
 	AccessControl *AccessControlJSON `json:"access_control,omitempty"`
-	Metadata      map[string]string `json:"metadata,omitempty"`
+	Metadata      map[string]string  `json:"metadata,omitempty"`
 }
 
 // handleShareFeature handles POST /v1/federation/features
@@ -540,20 +540,20 @@ func (h *FederationHandler) handleReplicateFeature(w http.ResponseWriter, r *htt
 	}
 
 	h.writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success":      true,
+		"success":       true,
 		"replicated_to": req.TargetNodes,
 	})
 }
 
 // ReplicationPolicyRequest represents a replication policy request.
 type ReplicationPolicyRequest struct {
-	Mode              string   `json:"mode"`
-	TargetNodes       []string `json:"target_nodes,omitempty"`
-	TargetRegions     []string `json:"target_regions,omitempty"`
-	MinReplicas       int      `json:"min_replicas"`
-	MaxReplicas       int      `json:"max_replicas"`
-	SyncIntervalSecs  int      `json:"sync_interval_secs"`
-	ConflictResolution string  `json:"conflict_resolution"`
+	Mode               string   `json:"mode"`
+	TargetNodes        []string `json:"target_nodes,omitempty"`
+	TargetRegions      []string `json:"target_regions,omitempty"`
+	MinReplicas        int      `json:"min_replicas"`
+	MaxReplicas        int      `json:"max_replicas"`
+	SyncIntervalSecs   int      `json:"sync_interval_secs"`
+	ConflictResolution string   `json:"conflict_resolution"`
 }
 
 // handleSetReplicationPolicy handles PUT /v1/federation/features/{id}/policy
@@ -576,11 +576,11 @@ func (h *FederationHandler) handleSetReplicationPolicy(w http.ResponseWriter, r 
 	}
 
 	policy := &federation.ReplicationPolicy{
-		Mode:              federation.ReplicationMode(req.Mode),
-		TargetNodes:       req.TargetNodes,
-		TargetRegions:     req.TargetRegions,
-		MinReplicas:       req.MinReplicas,
-		MaxReplicas:       req.MaxReplicas,
+		Mode:               federation.ReplicationMode(req.Mode),
+		TargetNodes:        req.TargetNodes,
+		TargetRegions:      req.TargetRegions,
+		MinReplicas:        req.MinReplicas,
+		MaxReplicas:        req.MaxReplicas,
 		ConflictResolution: req.ConflictResolution,
 	}
 

@@ -16,8 +16,8 @@ import (
 
 // Connector-specific errors.
 var (
-	ErrConnectorNotFound   = errors.New("connector not found")
-	ErrConnectorExists     = errors.New("connector already exists")
+	ErrConnectorNotFound = errors.New("connector not found")
+	ErrConnectorExists   = errors.New("connector already exists")
 )
 
 // Connector represents a connection to an ML serving system.
@@ -79,11 +79,11 @@ type BatchPredictRequest struct {
 
 // BatchPredictResponse represents a batch prediction response.
 type BatchPredictResponse struct {
-	ModelName    string                   `json:"model_name"`
-	ModelVersion string                   `json:"model_version"`
-	Predictions  []interface{}            `json:"predictions"`
-	Latency      time.Duration            `json:"latency_ns"`
-	Metadata     map[string]interface{}   `json:"metadata,omitempty"`
+	ModelName    string                 `json:"model_name"`
+	ModelVersion string                 `json:"model_version"`
+	Predictions  []interface{}          `json:"predictions"`
+	Latency      time.Duration          `json:"latency_ns"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // ConnectorConfig contains common configuration for connectors.

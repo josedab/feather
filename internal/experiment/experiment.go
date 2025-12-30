@@ -15,7 +15,7 @@ import (
 type ExperimentType string
 
 const (
-	ExperimentTypeABTest      ExperimentType = "ab_test"
+	ExperimentTypeABTest       ExperimentType = "ab_test"
 	ExperimentTypeMultivariate ExperimentType = "multivariate"
 	ExperimentTypeFeatureFlag  ExperimentType = "feature_flag"
 	ExperimentTypeBandit       ExperimentType = "bandit"
@@ -36,9 +36,9 @@ const (
 type AllocationStrategy string
 
 const (
-	AllocationRandom     AllocationStrategy = "random"
+	AllocationRandom        AllocationStrategy = "random"
 	AllocationDeterministic AllocationStrategy = "deterministic"
-	AllocationSticky     AllocationStrategy = "sticky"
+	AllocationSticky        AllocationStrategy = "sticky"
 )
 
 // Experiment represents a feature experiment.
@@ -93,19 +93,19 @@ type AllocationConfig struct {
 
 // MetricConfig defines a metric to track.
 type MetricConfig struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Type        string  `json:"type"`
-	Query       string  `json:"query,omitempty"`
+	ID              string           `json:"id"`
+	Name            string           `json:"name"`
+	Type            string           `json:"type"`
+	Query           string           `json:"query,omitempty"`
 	SuccessCriteria *SuccessCriteria `json:"success_criteria,omitempty"`
 }
 
 // SuccessCriteria defines when a metric is considered successful.
 type SuccessCriteria struct {
-	MinLift        float64 `json:"min_lift,omitempty"`
-	MaxPValue      float64 `json:"max_p_value,omitempty"`
-	MinSampleSize  int     `json:"min_sample_size,omitempty"`
-	Direction      string  `json:"direction,omitempty"` // increase, decrease, any
+	MinLift       float64 `json:"min_lift,omitempty"`
+	MaxPValue     float64 `json:"max_p_value,omitempty"`
+	MinSampleSize int     `json:"min_sample_size,omitempty"`
+	Direction     string  `json:"direction,omitempty"` // increase, decrease, any
 }
 
 // ScheduleConfig defines experiment scheduling.

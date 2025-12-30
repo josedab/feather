@@ -23,11 +23,11 @@ type Client struct {
 	config     *ClientConfig
 
 	// Sub-clients
-	Features   *FeatureClient
-	Catalog    *CatalogClient
-	Transform  *TransformClient
-	Vectors    *VectorClient
-	Streaming  *StreamingClient
+	Features  *FeatureClient
+	Catalog   *CatalogClient
+	Transform *TransformClient
+	Vectors   *VectorClient
+	Streaming *StreamingClient
 }
 
 // ClientConfig contains client configuration options.
@@ -63,10 +63,10 @@ func NewClient(baseURL, apiKey string, config *ClientConfig) *Client {
 	httpClient := &http.Client{
 		Timeout: config.Timeout,
 		Transport: &http.Transport{
-			MaxIdleConns:        config.MaxIdleConns,
-			IdleConnTimeout:     config.IdleConnTimeout,
-			DisableCompression:  false,
-			DisableKeepAlives:   false,
+			MaxIdleConns:       config.MaxIdleConns,
+			IdleConnTimeout:    config.IdleConnTimeout,
+			DisableCompression: false,
+			DisableKeepAlives:  false,
 		},
 	}
 
@@ -439,7 +439,7 @@ func (v *VectorClient) CreateIndex(ctx context.Context, index *VectorIndex) erro
 // Upsert upserts vectors into an index.
 func (v *VectorClient) Upsert(ctx context.Context, indexName string, vectors map[string][]float64, metadata map[string]map[string]interface{}) error {
 	req := struct {
-		Vectors  map[string][]float64           `json:"vectors"`
+		Vectors  map[string][]float64              `json:"vectors"`
 		Metadata map[string]map[string]interface{} `json:"metadata,omitempty"`
 	}{
 		Vectors:  vectors,

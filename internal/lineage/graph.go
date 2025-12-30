@@ -31,10 +31,10 @@ const (
 
 // GraphEdge represents an edge in the dependency graph.
 type GraphEdge struct {
-	From     string   `json:"from"`
-	To       string   `json:"to"`
-	Type     EdgeType `json:"type"`
-	Label    string   `json:"label,omitempty"`
+	From  string   `json:"from"`
+	To    string   `json:"to"`
+	Type  EdgeType `json:"type"`
+	Label string   `json:"label,omitempty"`
 }
 
 // EdgeType indicates the type of relationship.
