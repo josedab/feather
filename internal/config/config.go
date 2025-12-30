@@ -107,10 +107,10 @@ type IngestionConfig struct {
 
 // KafkaIngestionConfig defines Kafka settings.
 type KafkaIngestionConfig struct {
-	Enabled       bool              `yaml:"enabled"`
-	Brokers       []string          `yaml:"brokers"`
-	Topic         string            `yaml:"topic"`
-	ConsumerGroup string            `yaml:"consumer_group"`
+	Enabled       bool                `yaml:"enabled"`
+	Brokers       []string            `yaml:"brokers"`
+	Topic         string              `yaml:"topic"`
+	ConsumerGroup string              `yaml:"consumer_group"`
 	Security      KafkaSecurityConfig `yaml:"security,omitempty"`
 }
 
@@ -250,7 +250,7 @@ func LoadFromEnv() *Config {
 			Endpoint:    getEnv("FEATHER_TRACING_ENDPOINT", "localhost:4317"),
 			ServiceName: getEnv("FEATHER_TRACING_SERVICE_NAME", "feather"),
 			SampleRate:  getEnvAsFloat("FEATHER_TRACING_SAMPLE_RATE", 0.1),
-			Insecure:    getEnvAsBool("FEATHER_TRACING_INSECURE", true),
+			Insecure:    getEnvAsBool("FEATHER_TRACING_INSECURE", false),
 		},
 		TLS: TLSConfig{
 			Enabled:    getEnvAsBool("FEATHER_TLS_ENABLED", false),
