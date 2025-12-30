@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -259,6 +260,13 @@ func LoadFromEnv() *Config {
 			MinVersion: getEnv("FEATHER_TLS_MIN_VERSION", "1.2"),
 			ClientAuth: getEnv("FEATHER_TLS_CLIENT_AUTH", "none"),
 		},
+		Sync: SyncConfig{
+			Enabled:        getEnvAsBool("FEATHER_SYNC_ENABLED", false),
+			Mode:           getEnv("FEATHER_SYNC_MODE", "edge"),
+			CentralAddress: getEnv("FEATHER_SYNC_CENTRAL_ADDRESS", ""),
+			SyncInterval:   getEnvAsDuration("FEATHER_SYNC_INTERVAL", 5*time.Second),
+			BatchSize:      getEnvAsInt("FEATHER_SYNC_BATCH_SIZE", 1000),
+		},
 	}
 }
 
@@ -356,7 +364,18 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 
 func getEnvAsSlice(key string, defaultVal []string) []string {
 	if val := os.Getenv(key); val != "" {
-		return []string{val} // Simple implementation, could split by comma
+		// Split by comma and trim whitespace from each element
+		parts := strings.Split(val, ",")
+		result := make([]string, 0, len(parts))
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				result = append(result, trimmed)
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
 	}
 	return defaultVal
 }
