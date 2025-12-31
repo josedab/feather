@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package feather.v1;
+
+option go_package = "github.com/feather-store/feather/api/proto;featherpb";
+
+// FeatureService provides feature serving APIs.
+service FeatureService {
+  // GetFeatures retrieves features for one or more entities.
+  rpc GetFeatures(GetFeaturesRequest) returns (GetFeaturesResponse);
+
+  // GetFeaturesStream retrieves features with server-side streaming for large results.
+  rpc GetFeaturesStream(GetFeaturesRequest) returns (stream EntityFeaturesResponse);
+
+  // GetFeaturesAsOf retrieves features as of a specific timestamp.
+  rpc GetFeaturesAsOf(GetFeaturesAsOfRequest) returns (GetFeaturesResponse);
+
+  // PutFeatures stores features for an entity.
+  rpc PutFeatures(PutFeaturesRequest) returns (PutFeaturesResponse);
+}
+
+// GetFeaturesRequest is the request to get features.
+message GetFeaturesRequest {
+  // Entity keys to retrieve features for.
+  repeated string entities = 1;
+
+  // Feature names to retrieve.
+  repeated string features = 2;
+}
+
+// GetFeaturesAsOfRequest retrieves historical features.
+message GetFeaturesAsOfRequest {
+  // Entity key to retrieve features for.
+  string entity_key = 1;
+
+  // Feature names to retrieve.
+  repeated string features = 2;
+
+  // Timestamp to retrieve features as of (Unix nanoseconds).
+  int64 as_of_timestamp = 3;
+}
+
+// GetFeaturesResponse is the response containing features.
+message GetFeaturesResponse {
+  // Features by entity key.
+  map<string, EntityFeatures> entities = 1;
+}
+
+// EntityFeaturesResponse is a streaming response for a single entity.
+message EntityFeaturesResponse {
+  // Entity key.
+  string entity_key = 1;
+
+  // Features for this entity.
+  EntityFeatures features = 2;
+}
+
+// EntityFeatures contains all features for an entity.
+message EntityFeatures {
+  // Features by name.
+  map<string, FeatureValue> features = 1;
+}
+
+// FeatureValue represents a single feature value.
+message FeatureValue {
+  // The value, stored as one of these types.
+  oneof value {
+    int64 int_value = 1;
+    double double_value = 2;
+    string string_value = 3;
+    bool bool_value = 4;
+    bytes bytes_value = 5;
+    VectorValue vector_value = 6;
+  }
+
+  // Timestamp when this value was set (Unix nanoseconds).
+  int64 timestamp = 10;
+}
+
+// VectorValue represents a float32 array.
+message VectorValue {
+  repeated float values = 1;
+}
+
+// PutFeaturesRequest stores features for an entity.
+message PutFeaturesRequest {
+  // Entity key.
+  string entity_key = 1;
+
+  // Features to store.
+  map<string, FeatureValue> features = 2;
+
+  // Version for conflict resolution (optional).
+  int64 version = 3;
+}
+
+// PutFeaturesResponse is the response after storing features.
+message PutFeaturesResponse {
+  // Whether the operation succeeded.
+  bool success = 1;
+
+  // Error message if failed.
+  string error = 2;
+}
