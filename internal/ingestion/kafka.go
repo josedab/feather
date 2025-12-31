@@ -378,4 +378,3 @@ func (k *KafkaConsumer) Metrics() IngestionMetrics {
 		LastMessageTime:  atomic.LoadInt64(&k.metrics.LastMessageTime),
 	}
 }
-
