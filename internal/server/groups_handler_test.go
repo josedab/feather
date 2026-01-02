@@ -296,7 +296,7 @@ func TestGroupsHandler_AddFeature(t *testing.T) {
 
 	feature := groups.GroupFeature{
 		Name:        "new_feature",
-		DataType:        "float",
+		DataType:    "float",
 		Description: "New feature",
 	}
 

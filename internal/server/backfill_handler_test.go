@@ -430,13 +430,13 @@ func TestBackfillHandler_ExportJob_NotFound(t *testing.T) {
 func TestBackfillHandler_ImportJob(t *testing.T) {
 	ts := newTestBackfillServer(t)
 
-	job := backfill.Job{
-		ID:         "import-job",
-		Name:       "Imported Job",
-		Features:   []string{"feature1"},
-		EntityType: "user",
-		StartTime:  time.Now().Add(-24 * time.Hour),
-		EndTime:    time.Now(),
+	job := map[string]interface{}{
+		"id":          "import-job",
+		"name":        "Imported Job",
+		"features":    []string{"feature1"},
+		"entity_type": "user",
+		"start_time":  time.Now().Add(-24 * time.Hour),
+		"end_time":    time.Now(),
 	}
 
 	rr := ts.postJSON("/v1/backfill/import", job)
@@ -459,9 +459,9 @@ func TestBackfillHandler_ImportJob_InvalidBody(t *testing.T) {
 func TestBackfillHandler_ImportJob_MissingID(t *testing.T) {
 	ts := newTestBackfillServer(t)
 
-	job := backfill.Job{
-		Name:     "No ID Job",
-		Features: []string{"feature1"},
+	job := map[string]interface{}{
+		"name":     "No ID Job",
+		"features": []string{"feature1"},
 	}
 
 	rr := ts.postJSON("/v1/backfill/import", job)
