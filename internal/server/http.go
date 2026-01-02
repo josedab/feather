@@ -5,16 +5,35 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/feather-store/feather/internal/aggregation"
+	"github.com/feather-store/feather/internal/autogen"
+	"github.com/feather-store/feather/internal/cluster"
+	"github.com/feather-store/feather/internal/composition"
 	"github.com/feather-store/feather/internal/config"
+	"github.com/feather-store/feather/internal/cost"
 	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/drift"
+	"github.com/feather-store/feather/internal/experiment"
+	"github.com/feather-store/feather/internal/federation"
+	"github.com/feather-store/feather/internal/freshness"
+	"github.com/feather-store/feather/internal/gitops"
+	"github.com/feather-store/feather/internal/graphql"
+	"github.com/feather-store/feather/internal/lineage"
 	"github.com/feather-store/feather/internal/logging"
 	"github.com/feather-store/feather/internal/metrics"
+	"github.com/feather-store/feather/internal/migration"
+	"github.com/feather-store/feather/internal/quality"
+	"github.com/feather-store/feather/internal/saas"
+	"github.com/feather-store/feather/internal/semantic"
+	"github.com/feather-store/feather/internal/sla"
 	"github.com/feather-store/feather/internal/storage"
 	"github.com/feather-store/feather/internal/vector"
+	"github.com/feather-store/feather/internal/warehouse"
+	"github.com/feather-store/feather/internal/wasm"
 )
 
 // HTTPServer provides HTTP REST API for feature serving.
@@ -64,6 +83,20 @@ type HTTPServerConfig struct {
 	EnableAutogen       bool
 	EnableExperiment    bool
 	EnableBenchmark     bool
+	EnableWarehouse     bool
+	EnableGovernance    bool
+	EnableEmbedding     bool
+	EnableTenant        bool
+	EnableModelServing  bool
+	EnableComposition   bool
+	EnableFreshness     bool
+	EnableMigration     bool
+	EnableSaaS          bool
+	EnableGitOps        bool
+	EnableCost          bool
+	EnableCluster       bool
+	EnableScheduler     bool
+	EnableSLA           bool
 
 	// Optional dependencies for extended handlers
 	// Handlers are only registered if both Enable* flag is true AND dependency is provided
@@ -92,6 +125,12 @@ type HTTPServerConfig struct {
 	GraphQLSchema interface {
 		Execute(string, map[string]interface{}) (interface{}, error)
 	}
+
+	// Cluster components
+	ClusterMembership   interface{ LocalNode() interface{} }
+	ClusterRing         interface{ NodeCount() int }
+	ClusterPartitionMap interface{ TotalPartitions() int }
+	ClusterRebalancer   interface{ Stats() interface{} }
 }
 
 // DefaultMaxRequestSize is the default maximum request body size (1MB).
@@ -181,47 +220,166 @@ func NewHTTPServer(
 		benchmarkHandler.RegisterRoutes(mux)
 	}
 
+	if cfg.EnableTenant {
+		tenantHandler := NewTenantHandler(4 * 1024 * 1024 * 1024) // 4GB default
+		tenantHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableModelServing {
+		modelServingHandler := NewModelServingHandler(store)
+		modelServingHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableWarehouse {
+		warehouseHandler := NewWarehouseHandler(WarehouseHandlerConfig{
+			Store:  store,
+			Schema: schema,
+		})
+		warehouseHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableGovernance {
+		governanceHandler := NewGovernanceHandler(GovernanceHandlerConfig{})
+		governanceHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableEmbedding {
+		embeddingHandler := NewEmbeddingHandler(EmbeddingHandlerConfig{})
+		embeddingHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableComposition {
+		compositionEngine := composition.NewEngine(composition.EngineConfig{
+			Store:          store,
+			ExecutorConfig: composition.DefaultExecutorConfig(),
+		})
+		compositionHandler := NewCompositionHandler(compositionEngine)
+		compositionHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableFreshness {
+		freshnessManager := freshness.NewManager(freshness.DefaultManagerConfig())
+		freshnessHandler := NewFreshnessHandler(freshnessManager)
+		freshnessHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableMigration {
+		migrationManager := migration.NewManager(migration.DefaultManagerConfig())
+		migrationHandler := NewMigrationHandler(migrationManager)
+		migrationHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableSaaS {
+		planRegistry := saas.NewPlanRegistry()
+		billingManager := saas.NewBillingManager(planRegistry)
+		provisioningManager := saas.NewProvisioningManager(planRegistry, billingManager)
+		saasHandler := NewSaaSHandler(planRegistry, billingManager, provisioningManager)
+		saasHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableGitOps {
+		schemaLoader := gitops.NewSchemaLoader(".")
+		policyEngine := gitops.NewPolicyEngine()
+		syncManager := gitops.NewSyncManager(schemaLoader, policyEngine, nil, ".gitops-state.json")
+		gitopsHandler := NewGitOpsHandler(schemaLoader, policyEngine, syncManager)
+		gitopsHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableCost {
+		costTracker := cost.NewTracker("USD")
+		budgetManager := cost.NewBudgetManager(costTracker)
+		chargebackManager := cost.NewChargebackManager(costTracker)
+		costHandler := NewCostHandler(costTracker, budgetManager, chargebackManager)
+		costHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableCluster {
+		// Create cluster handler with provided or default components
+		var membership *cluster.MembershipManager
+		var ring *cluster.HashRing
+		var partitionMap *cluster.PartitionMap
+		var rebalancer *cluster.Rebalancer
+
+		// The handler works with nil components, returning 503 for unconfigured endpoints
+		clusterHandler := NewClusterHandler(membership, ring, partitionMap, rebalancer)
+		clusterHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableScheduler {
+		scheduler := warehouse.NewCronScheduler(nil, slog.Default())
+		schedulerHandler := NewSchedulerHandler(scheduler)
+		schedulerHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableSLA {
+		slaManager := sla.NewManager(nil, sla.DefaultManagerConfig())
+		slaHandler := NewSLAHandler(slaManager)
+		slaHandler.RegisterRoutes(mux)
+	}
+
 	// Handlers that don't require dependencies
 	if cfg.EnableImpact {
 		impactHandler := NewImpactHandler()
 		impactHandler.RegisterRoutes(mux)
 	}
 
-	// Handlers that require external dependencies - only register if dependency provided
-	if cfg.EnableDrift && cfg.DriftDetector != nil {
-		// DriftHandler requires drift.Detector - skipped if not provided
+	// Handlers that can work with default instances if enabled
+	if cfg.EnableDrift {
+		driftDetector := drift.NewDetector(drift.DefaultConfig())
+		driftHandler := NewDriftHandler(driftDetector)
+		driftHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableLineage && cfg.LineageTracker != nil {
-		// LineageHandler requires lineage.Tracker - skipped if not provided
+	if cfg.EnableLineage {
+		lineageTracker := lineage.NewTracker()
+		lineageHandler := NewLineageHandler(lineageTracker)
+		lineageHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableSemantic && cfg.SemanticSearch != nil {
-		// SemanticHandler requires semantic.Search - skipped if not provided
+	if cfg.EnableSemantic {
+		// Use local embedder for semantic search (no external API needed)
+		embedder := semantic.NewLocalEmbedder(128)
+		semanticSearch := semantic.NewSearch(embedder, slog.Default())
+		semanticHandler := NewSemanticHandler(semanticSearch)
+		semanticHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableWASM && cfg.WASMRuntime != nil {
-		// WASMHandler requires wasm.Runtime - skipped if not provided
+	if cfg.EnableWASM {
+		wasmRuntime := wasm.NewRuntime(wasm.DefaultConfig(), slog.Default())
+		wasmHandler := NewWASMHandler(wasmRuntime)
+		wasmHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableFederation && cfg.FederationClient != nil {
-		// FederationHandler requires federation.Federation - skipped if not provided
+	if cfg.EnableFederation {
+		fed := federation.NewFederation(federation.DefaultConfig())
+		federationHandler := NewFederationHandler(fed)
+		federationHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableQuality && cfg.QualityValidator != nil {
-		// QualityHandler requires quality.Validator - skipped if not provided
+	if cfg.EnableQuality {
+		qualityValidator := quality.NewValidator()
+		qualityHandler := NewQualityHandler(qualityValidator)
+		qualityHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableGraphQL && cfg.GraphQLSchema != nil {
-		// GraphQLHandler requires graphql.FeatureStoreSchema - skipped if not provided
+	if cfg.EnableGraphQL && store != nil && schema != nil {
+		graphqlSchema, err := graphql.NewFeatureStoreSchema(store, schema)
+		if err == nil {
+			graphqlHandler := NewGraphQLHandler(graphqlSchema)
+			graphqlHandler.RegisterRoutes(mux)
+		}
 	}
 
-	if cfg.EnableAutogen && cfg.AutogenGenerator != nil {
-		// AutogenHandler requires autogen.Generator - skipped if not provided
+	if cfg.EnableAutogen {
+		autogenGen := autogen.NewGenerator(autogen.DefaultConfig())
+		autogenHandler := NewAutogenHandler(autogenGen)
+		autogenHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableExperiment && cfg.ExperimentEngine != nil {
-		// ExperimentHandler requires experiment.Engine - skipped if not provided
+	if cfg.EnableExperiment {
+		experimentEngine := experiment.NewEngine()
+		experimentHandler := NewExperimentHandler(experimentEngine)
+		experimentHandler.RegisterRoutes(mux)
 	}
 
 	// Wrap handler with middleware chain
