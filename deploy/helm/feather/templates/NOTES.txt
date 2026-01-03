@@ -1,0 +1,54 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+
+To get the application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "feather.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo "HTTP API: http://$NODE_IP:$NODE_PORT"
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  You can watch the status with:
+    kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "feather.fullname" . }}
+
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "feather.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo "HTTP API: http://$SERVICE_IP:{{ .Values.service.httpPort }}"
+  echo "gRPC API: $SERVICE_IP:{{ .Values.service.grpcPort }}"
+{{- else if contains "ClusterIP" .Values.service.type }}
+  To access the API locally, run:
+    kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "feather.fullname" . }} 8080:{{ .Values.service.httpPort }} &
+
+  Then access the API at:
+    HTTP: http://localhost:8080/v1/features
+    Health: http://localhost:8080/health
+
+  For gRPC access:
+    kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "feather.fullname" . }} 50051:{{ .Values.service.grpcPort }} &
+{{- end }}
+
+Quick verification:
+  # Check pods are running
+  kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "feather.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+  # Check health endpoint
+  kubectl exec -it --namespace {{ .Release.Namespace }} $(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "feather.name" . }}" -o jsonpath='{.items[0].metadata.name}') -- wget -qO- http://localhost:{{ .Values.config.httpPort }}/health
+
+{{- if .Values.monitoring.enabled }}
+
+Monitoring:
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+  A ServiceMonitor has been created for Prometheus Operator.
+  Ensure your Prometheus instance is configured to discover ServiceMonitors in this namespace.
+{{- else }}
+  Prometheus metrics are available at port {{ .Values.service.metricsPort }}.
+  You can port-forward to access them:
+    kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "feather.fullname" . }} 9090:{{ .Values.service.metricsPort }}
+{{- end }}
+{{- end }}
+
+For more information, visit: https://github.com/feather-store/feather

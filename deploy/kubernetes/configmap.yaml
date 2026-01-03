@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feather-config
+  namespace: feather-system
+  labels:
+    app.kubernetes.io/name: feather
+    app.kubernetes.io/component: config
+data:
+  # Server configuration
+  FEATHER_HTTP_PORT: "8080"
+  FEATHER_GRPC_PORT: "50051"
+  FEATHER_METRICS_PORT: "9090"
+  FEATHER_INGESTION_PORT: "8081"
+
+  # Logging configuration
+  FEATHER_LOG_LEVEL: "info"
+  FEATHER_LOG_FORMAT: "json"
+
+  # Hot tier configuration
+  FEATHER_HOT_MAX_MEMORY: "4Gi"
+  FEATHER_HOT_TTL: "1h"
+
+  # Warm tier configuration
+  FEATHER_WARM_ENABLED: "true"
+  FEATHER_WARM_PATH: "/var/lib/feather/data"
+
+  # Kafka configuration (disabled by default)
+  FEATHER_KAFKA_ENABLED: "false"
+
+  # Tracing configuration (disabled by default)
+  FEATHER_TRACING_ENABLED: "false"
+
+  # TLS configuration (disabled by default)
+  FEATHER_TLS_ENABLED: "false"
