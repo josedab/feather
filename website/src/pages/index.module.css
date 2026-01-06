@@ -1,0 +1,189 @@
+/**
+ * Feather Landing Page Styles
+ */
+
+.heroBanner {
+  padding: 6rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%);
+}
+
+.heroLogo {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.heroTagline {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Install Section */
+.installSection {
+  padding: 4rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+/* Features Section */
+.features {
+  padding: 4rem 0;
+  background: var(--ifm-background-color);
+}
+
+.featuresSubtitle {
+  font-size: 1.2rem;
+  color: var(--ifm-color-secondary-darkest);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.featureCol {
+  margin-bottom: 2rem;
+}
+
+.featureCard {
+  background: var(--ifm-card-background-color);
+  border-radius: 12px;
+  padding: 2rem;
+  height: 100%;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.featureIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* Performance Section */
+.performanceSection {
+  padding: 4rem 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.statCard {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.statNumber {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #66BB6A;
+  margin-bottom: 0.5rem;
+}
+
+.statLabel {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Architecture Section */
+.architectureSection {
+  padding: 4rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.architectureDiagram {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 2rem;
+  color: #e0e0e0;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+
+.architectureDiagram pre {
+  margin: 0;
+  white-space: pre;
+}
+
+/* SDK Section */
+.sdkSection {
+  padding: 4rem 0;
+  background: var(--ifm-background-color);
+}
+
+/* CTA Section */
+.ctaSection {
+  padding: 4rem 0;
+  background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%);
+  color: white;
+}
+
+.ctaSection h2 {
+  color: white;
+}
+
+.ctaSection p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+/* Responsive */
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 3rem 1rem;
+  }
+
+  .heroLogo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .statNumber {
+    font-size: 2rem;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  .buttons > * {
+    width: 100%;
+    margin: 0.5rem 0 !important;
+  }
+}
