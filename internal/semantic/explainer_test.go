@@ -3,6 +3,7 @@ package semantic
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -415,16 +416,16 @@ func TestExplainer_Explain_Recommendations(t *testing.T) {
 	hasUsageRec := false
 	hasRelatedRec := false
 	for _, rec := range explanation.Recommendations {
-		if contains(rec, "quality") {
+		if containsSubstr(rec, "quality") {
 			hasQualityRec = true
 		}
-		if contains(rec, "freshness") {
+		if containsSubstr(rec, "freshness") {
 			hasFreshnessRec = true
 		}
-		if contains(rec, "usage") || contains(rec, "Low") {
+		if containsSubstr(rec, "usage") || containsSubstr(rec, "Low") {
 			hasUsageRec = true
 		}
-		if contains(rec, "related") || contains(rec, "Related") {
+		if containsSubstr(rec, "related") || containsSubstr(rec, "Related") {
 			hasRelatedRec = true
 		}
 	}
@@ -746,16 +747,7 @@ func TestExplainer_UsagePopularityLevels(t *testing.T) {
 	}
 }
 
-// Helper function
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+// Helper function for substring checks in tests
+func containsSubstr(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
