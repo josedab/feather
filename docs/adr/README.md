@@ -18,32 +18,48 @@ This directory contains Architecture Decision Records (ADRs) for the Feather Fea
 | [ADR-0010](0010-opentelemetry-tracing.md) | OpenTelemetry for Distributed Tracing | Accepted |
 | [ADR-0011](0011-multi-language-sdk-generation.md) | Multi-Language SDK Generation from Protobuf | Accepted |
 | [ADR-0012](0012-graceful-shutdown.md) | Graceful Shutdown with Coordinated Lifecycle | Accepted |
+| [ADR-0013](0013-go-implementation-language.md) | Go as Primary Implementation Language | Accepted |
+| [ADR-0014](0014-point-in-time-versioned-keys.md) | Point-in-Time Queries via Versioned Keys | Accepted |
+| [ADR-0015](0015-hnsw-vector-similarity.md) | HNSW Algorithm for Vector Similarity Search | Accepted |
+| [ADR-0016](0016-object-pooling.md) | Object Pooling for High-Throughput Paths | Accepted |
+| [ADR-0017](0017-single-binary-deployment.md) | Single-Binary Self-Hosted Deployment Model | Accepted |
+| [ADR-0018](0018-prometheus-pull-metrics.md) | Prometheus Pull-Based Metrics | Accepted |
 
 ## Reading Order
 
 For new team members, we recommend reading the ADRs in this order to understand how the system evolved:
 
 ### Foundation (Start Here)
-1. **ADR-0001**: Tiered Storage - The core architectural pattern
-2. **ADR-0002**: Sharded Cache - How we achieve sub-millisecond latency
-3. **ADR-0003**: BadgerDB - Why we chose this for persistence
+1. **ADR-0013**: Go Language - Why we chose Go as implementation language
+2. **ADR-0017**: Single-Binary Deployment - Our self-hosted deployment philosophy
+3. **ADR-0001**: Tiered Storage - The core architectural pattern
+4. **ADR-0002**: Sharded Cache - How we achieve sub-millisecond latency
+5. **ADR-0003**: BadgerDB - Why we chose this for persistence
 
 ### Data Flow
-4. **ADR-0005**: Dual-Path Ingestion - How data enters the system
-5. **ADR-0004**: Dual Protocol API - How data is served
-6. **ADR-0006**: Sliding Window Aggregation - Real-time computations
+6. **ADR-0005**: Dual-Path Ingestion - How data enters the system
+7. **ADR-0004**: Dual Protocol API - How data is served
+8. **ADR-0014**: Point-in-Time Queries - How historical data access works
+9. **ADR-0006**: Sliding Window Aggregation - Real-time computations
+
+### ML Capabilities
+10. **ADR-0015**: HNSW Vector Search - Embedding similarity search
+
+### Performance
+11. **ADR-0016**: Object Pooling - High-throughput optimizations
 
 ### Code Organization
-7. **ADR-0007**: Modular Architecture - How the codebase is structured
-8. **ADR-0008**: Pluggable Handlers - How features are selectively enabled
+12. **ADR-0007**: Modular Architecture - How the codebase is structured
+13. **ADR-0008**: Pluggable Handlers - How features are selectively enabled
 
-### Operations
-9. **ADR-0009**: Structured Logging - Observability foundation
-10. **ADR-0010**: OpenTelemetry - Distributed tracing
-11. **ADR-0012**: Graceful Shutdown - Production reliability
+### Operations & Observability
+14. **ADR-0009**: Structured Logging - Observability foundation
+15. **ADR-0010**: OpenTelemetry - Distributed tracing
+16. **ADR-0018**: Prometheus Metrics - Pull-based instrumentation
+17. **ADR-0012**: Graceful Shutdown - Production reliability
 
 ### Ecosystem
-12. **ADR-0011**: SDK Generation - Multi-language client support
+18. **ADR-0011**: SDK Generation - Multi-language client support
 
 ## ADR Format
 
