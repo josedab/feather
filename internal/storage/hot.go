@@ -8,9 +8,10 @@ import (
 	"github.com/feather-store/feather/internal/domain"
 )
 
-// Object pools for reducing allocations in hot paths.
+// Object pools reduce allocations in hot paths by reusing slice memory.
+// These pools are used for temporary slices during batch operations.
 var (
-	// Pool for feature name slices used in batch operations
+	// featureNameSlicePool provides reusable slices for feature name lists.
 	featureNameSlicePool = sync.Pool{
 		New: func() interface{} {
 			s := make([]string, 0, 32)
@@ -18,7 +19,7 @@ var (
 		},
 	}
 
-	// Pool for entity key slices
+	// entityKeySlicePool provides reusable slices for entity key lists.
 	entityKeySlicePool = sync.Pool{
 		New: func() interface{} {
 			s := make([]string, 0, 64)
@@ -27,33 +28,78 @@ var (
 	}
 )
 
-// entityData holds all features for a single entity.
+// entityData holds all features for a single entity with its own mutex.
+// This enables fine-grained locking at the entity level within a shard.
 type entityData struct {
 	features map[string]*domain.FeatureValue
 	mu       sync.RWMutex
 }
 
-// HotTier provides in-memory feature storage optimized for low-latency access.
+// HotTier provides in-memory feature storage optimized for sub-millisecond access.
+//
+// # Sharding Strategy
+//
+// The hot tier uses 256 shards to minimize lock contention. Entity keys are
+// distributed across shards using FNV-1a hashing. Each shard has its own
+// RWMutex, allowing concurrent reads across different shards.
+//
+// # Lock Hierarchy
+//
+// Two levels of locking are used:
+//  1. Shard-level RWMutex: Protects the entity map within the shard
+//  2. Entity-level RWMutex: Protects the feature map within the entity
+//
+// This allows multiple goroutines to read different entities concurrently,
+// even within the same shard.
+//
+// # Memory Management
+//
+// Memory usage is tracked approximately (100 bytes per feature value).
+// When the configured maximum size is exceeded, the eviction channel is
+// signaled to trigger LRU eviction.
+//
+// # Metrics
+//
+// All metrics (hits, misses, evictions) are tracked using atomic counters,
+// providing lock-free observability without impacting read latency.
 type HotTier struct {
-	// Sharded map for reduced lock contention
-	shards    [256]*shard
-	arena     *Arena
-	maxSize   int64
-	curSize   int64
+	// shards contains 256 independent hash buckets for concurrent access.
+	// The shard index is computed as: fnvHash(entityKey) % 256
+	shards [256]*shard
+
+	// arena provides pooled memory allocation for reducing GC pressure.
+	arena *Arena
+
+	// maxSize is the maximum allowed memory usage in bytes.
+	maxSize int64
+
+	// curSize tracks the current approximate memory usage (atomic).
+	curSize int64
+
+	// evictChan receives entity keys when memory limit is exceeded.
 	evictChan chan string
-	metrics   *HotTierMetrics
+
+	// metrics contains atomic counters for observability.
+	metrics *HotTierMetrics
 }
 
+// shard represents one of 256 hash buckets in the hot tier.
+// Each shard has independent locking for concurrent access.
 type shard struct {
 	data map[string]*entityData
 	mu   sync.RWMutex
 }
 
-// HotTierMetrics tracks hot tier performance.
+// HotTierMetrics contains performance counters for the hot tier.
+// All fields are updated atomically and safe to read during operation.
 type HotTierMetrics struct {
-	Hits       int64
-	Misses     int64
-	Evictions  int64
+	// Hits is the number of successful feature lookups.
+	Hits int64
+	// Misses is the number of feature lookup misses.
+	Misses int64
+	// Evictions is the number of entities removed due to memory pressure.
+	Evictions int64
+	// TotalReads is the total number of Get operations.
 	TotalReads int64
 }
 
