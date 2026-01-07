@@ -1,0 +1,104 @@
+/**
+ * 404 Page Styles
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.content {
+  max-width: 600px;
+}
+
+.errorCode {
+  font-size: 8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.description {
+  font-size: 1.2rem;
+  color: var(--ifm-color-secondary-darkest);
+  margin-bottom: 2rem;
+}
+
+.links {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 3rem;
+}
+
+.helpSection {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding-top: 2rem;
+}
+
+.helpText {
+  font-size: 1rem;
+  color: var(--ifm-color-secondary-darkest);
+  margin-bottom: 1rem;
+}
+
+.helpLinks {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.helpLinks li a {
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.helpLinks li a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 576px) {
+  .errorCode {
+    font-size: 5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .description {
+    font-size: 1rem;
+  }
+
+  .links {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .links a {
+    width: 100%;
+  }
+
+  .helpLinks {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
