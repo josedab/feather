@@ -15,6 +15,7 @@ import (
 	"github.com/feather-store/feather/internal/composition"
 	"github.com/feather-store/feather/internal/config"
 	"github.com/feather-store/feather/internal/cost"
+	"github.com/feather-store/feather/internal/dbt"
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/drift"
 	"github.com/feather-store/feather/internal/experiment"
@@ -31,6 +32,7 @@ import (
 	"github.com/feather-store/feather/internal/semantic"
 	"github.com/feather-store/feather/internal/sla"
 	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/ui"
 	"github.com/feather-store/feather/internal/vector"
 	"github.com/feather-store/feather/internal/warehouse"
 	"github.com/feather-store/feather/internal/wasm"
@@ -97,6 +99,11 @@ type HTTPServerConfig struct {
 	EnableCluster       bool
 	EnableScheduler     bool
 	EnableSLA           bool
+	EnableUI            bool
+	EnableDBT           bool
+
+	// Optional dbt configuration
+	DBTOptions *dbt.SyncOptions
 
 	// Optional dependencies for extended handlers
 	// Handlers are only registered if both Enable* flag is true AND dependency is provided
@@ -380,6 +387,20 @@ func NewHTTPServer(
 		experimentEngine := experiment.NewEngine()
 		experimentHandler := NewExperimentHandler(experimentEngine)
 		experimentHandler.RegisterRoutes(mux)
+	}
+
+	// Register UI handler for feature catalog
+	if cfg.EnableUI {
+		uiHandler, err := ui.NewHandler()
+		if err == nil {
+			uiHandler.RegisterRoutes(mux)
+		}
+	}
+
+	// Register dbt integration handler
+	if cfg.EnableDBT {
+		dbtHandler := NewDBTHandler(cfg.DBTOptions)
+		dbtHandler.RegisterRoutes(mux)
 	}
 
 	// Wrap handler with middleware chain

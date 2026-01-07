@@ -16,6 +16,7 @@ import (
 
 	"github.com/feather-store/feather/internal/aggregation"
 	"github.com/feather-store/feather/internal/config"
+	"github.com/feather-store/feather/internal/dbt"
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/ingestion"
 	"github.com/feather-store/feather/internal/logging"
@@ -297,6 +298,16 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			EnableImpact:        true,
 			EnableObservability: true,
 			EnableBenchmark:     true,
+			EnableUI:            cfg.UI.Enabled,
+			EnableDBT:           cfg.DBT.Enabled,
+			DBTOptions: &dbt.SyncOptions{
+				DefaultEntityType: cfg.DBT.DefaultEntityType,
+				Owner:             cfg.DBT.Owner,
+				Team:              cfg.DBT.Team,
+				IncludeSources:    cfg.DBT.IncludeSources,
+				IncludeMetrics:    cfg.DBT.IncludeMetrics,
+				EntityTypeMapping: cfg.DBT.EntityTypeMapping,
+			},
 			// Handlers below require external dependencies not yet initialized
 			// EnableDrift, EnableLineage, EnableSemantic, EnableWASM,
 			// EnableFederation, EnableQuality, EnableGraphQL, EnableAutogen,
