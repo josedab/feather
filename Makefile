@@ -8,6 +8,9 @@ MAIN_PATH := ./cmd/feather
 GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 build:
 	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
@@ -18,7 +21,10 @@ build-tui:
 build-mcp:
 	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME)-mcp ./cmd/feather-mcp
 
-build-all: build build-tui build-mcp
+build-cli:
+	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS) -X github.com/feather-store/feather/cmd/feather-cli/cmd.Version=$(VERSION) -X github.com/feather-store/feather/cmd/feather-cli/cmd.GitCommit=$(GIT_COMMIT) -X github.com/feather-store/feather/cmd/feather-cli/cmd.BuildDate=$(BUILD_DATE)" -o $(BUILD_DIR)/$(APP_NAME)-cli ./cmd/feather-cli
+
+build-all: build build-tui build-mcp build-cli
 
 build-race:
 	$(GO) build $(GOFLAGS) -race -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
