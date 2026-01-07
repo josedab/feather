@@ -8,6 +8,70 @@ import CodeBlock from '@theme/CodeBlock';
 
 import styles from './index.module.css';
 
+function BadgeBar() {
+  return (
+    <div className={styles.badgeBar} role="group" aria-label="Project badges">
+      <a
+        href="https://github.com/feather-store/feather"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Star Feather on GitHub">
+        <img
+          src="https://img.shields.io/github/stars/feather-store/feather?style=social"
+          alt="GitHub Stars"
+          aria-hidden="true"
+        />
+      </a>
+      <img
+        src="https://img.shields.io/badge/go-%3E%3D1.22-00ADD8?logo=go&logoColor=white"
+        alt="Requires Go version 1.22 or higher"
+        aria-label="Go version requirement: 1.22 or higher"
+      />
+      <img
+        src="https://img.shields.io/badge/license-MIT-green"
+        alt="MIT License"
+        aria-label="Licensed under MIT"
+      />
+      <img
+        src="https://img.shields.io/badge/PRs-welcome-brightgreen"
+        alt="PRs Welcome"
+        aria-label="Pull requests are welcome"
+      />
+    </div>
+  );
+}
+
+type BuiltForItem = {
+  icon: string;
+  title: string;
+  desc: string;
+};
+
+const builtForItems: BuiltForItem[] = [
+  { icon: '🤖', title: 'ML Engineers', desc: 'Real-time inference' },
+  { icon: '📊', title: 'Data Scientists', desc: 'Training datasets' },
+  { icon: '⚙️', title: 'Platform Teams', desc: 'Easy to operate' },
+  { icon: '🚀', title: 'Startups', desc: 'Ship faster' },
+];
+
+function BuiltForSection() {
+  return (
+    <section className={styles.builtForSection}>
+      <div className="container">
+        <div className={styles.builtForGrid}>
+          {builtForItems.map((item, idx) => (
+            <div key={idx} className={styles.builtForItem}>
+              <div className={styles.builtForIcon}>{item.icon}</div>
+              <div className={styles.builtForTitle}>{item.title}</div>
+              <div className={styles.builtForDesc}>{item.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
@@ -25,6 +89,7 @@ function HomepageHeader() {
         <p className={styles.heroTagline}>
           Sub-millisecond P99 latency • Single binary deployment • No external dependencies
         </p>
+        <BadgeBar />
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
@@ -364,6 +429,7 @@ export default function Home(): ReactNode {
       description="Feather is a high-performance, real-time feature store for machine learning. Sub-millisecond latency, single binary deployment, no external dependencies.">
       <HomepageHeader />
       <main>
+        <BuiltForSection />
         <InstallSection />
         <FeaturesSection />
         <PerformanceSection />
