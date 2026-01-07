@@ -18,7 +18,6 @@ const config: Config = {
   projectName: 'feather',
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
 
   i18n: {
     defaultLocale: 'en',
@@ -27,6 +26,9 @@ const config: Config = {
 
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
 
   themes: [
@@ -41,6 +43,17 @@ const config: Config = {
       },
     ],
   ],
+
+  // TODO: Uncomment and add your Google Analytics tracking ID
+  // plugins: [
+  //   [
+  //     '@docusaurus/plugin-google-gtag',
+  //     {
+  //       trackingID: 'G-XXXXXXXXXX', // Replace with your GA4 measurement ID
+  //       anonymizeIP: true,
+  //     },
+  //   ],
+  // ],
 
   presets: [
     [
@@ -61,7 +74,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/feather-social-card.png',
+    image: 'img/docusaurus-social-card.jpg',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,
@@ -80,6 +93,7 @@ const config: Config = {
       logo: {
         alt: 'Feather Logo',
         src: 'img/logo.svg',
+        srcDark: 'img/logo.svg', // TODO: Create logo-dark.svg for optimized dark mode appearance
       },
       items: [
         {
@@ -149,6 +163,14 @@ const config: Config = {
             {
               label: 'GitHub Discussions',
               href: 'https://github.com/feather-store/feather/discussions',
+            },
+            {
+              label: 'Twitter',
+              href: 'https://twitter.com/feather_store', // TODO: Update with actual Twitter handle
+            },
+            {
+              label: 'Discord',
+              href: 'https://discord.gg/feather', // TODO: Update with actual Discord invite
             },
             {
               label: 'Contributing',
