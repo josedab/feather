@@ -1,0 +1,10 @@
+[package]
+name = "feather-quickstart"
+version = "1.0.0"
+edition = "2021"
+description = "Feather Rust Quickstart"
+
+[dependencies]
+feather-client = { path = ".." }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1.0"
