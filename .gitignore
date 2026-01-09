@@ -38,6 +38,7 @@ Thumbs.db
 
 # Build artifacts
 dist/
+**/target/
 
 # Logs
 *.log
