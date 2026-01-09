@@ -45,6 +45,22 @@ Feather provides multiple API interfaces for different use cases. This page serv
 | Create group | `POST /v1/schema/groups` |
 | Get group | `GET /v1/schema/groups/{name}` |
 
+### dbt Integration
+
+| Operation | HTTP |
+|-----------|------|
+| Sync manifest | `POST /v1/dbt/sync` |
+| Validate manifest | `POST /v1/dbt/validate` |
+| Get sync status | `GET /v1/dbt/status` |
+
+### Feature Catalog
+
+| Operation | HTTP |
+|-----------|------|
+| List features | `GET /v1/catalog/features` |
+| Get feature | `GET /v1/catalog/features/{name}` |
+| Get lineage | `GET /v1/catalog/features/{name}/lineage` |
+
 ### Monitoring
 
 | Operation | HTTP |
