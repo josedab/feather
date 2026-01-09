@@ -7,19 +7,35 @@ import (
 	"time"
 
 	"github.com/feather-store/feather/internal/dbt"
+	"github.com/feather-store/feather/internal/registry"
 )
 
 // DBTHandler handles dbt integration HTTP endpoints.
 type DBTHandler struct {
 	adapter    *dbt.Adapter
+	catalog    *registry.Catalog
 	lastSync   *dbt.SyncResult
 	lastSyncMu sync.RWMutex
+}
+
+// DBTHandlerConfig configures the DBT handler.
+type DBTHandlerConfig struct {
+	Options *dbt.SyncOptions
+	Catalog *registry.Catalog
 }
 
 // NewDBTHandler creates a new dbt handler.
 func NewDBTHandler(options *dbt.SyncOptions) *DBTHandler {
 	return &DBTHandler{
 		adapter: dbt.NewAdapter(options),
+	}
+}
+
+// NewDBTHandlerWithCatalog creates a new dbt handler with catalog persistence.
+func NewDBTHandlerWithCatalog(cfg DBTHandlerConfig) *DBTHandler {
+	return &DBTHandler{
+		adapter: dbt.NewAdapter(cfg.Options),
+		catalog: cfg.Catalog,
 	}
 }
 
@@ -74,8 +90,30 @@ func (h *DBTHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	h.lastSync = result
 	h.lastSyncMu.Unlock()
 
-	// TODO: Actually persist features to catalog
-	// For now, we just return the features that would be created
+	// Persist features to catalog if configured
+	if h.catalog != nil {
+		created, updated := 0, 0
+		for _, feature := range result.Features {
+			catalogDef := convertDBTFeatureToCatalog(feature)
+
+			// Check if feature exists to determine created vs updated
+			existing := h.catalog.Get(catalogDef.Name)
+			if err := h.catalog.Register(catalogDef, "dbt-sync"); err != nil {
+				result.Errors = append(result.Errors, dbt.SyncError{
+					ModelName: feature.Source.DBTModelName,
+					Message:   "failed to persist to catalog: " + err.Error(),
+				})
+				continue
+			}
+			if existing != nil {
+				updated++
+			} else {
+				created++
+			}
+		}
+		result.FeaturesCreated = created
+		result.FeaturesUpdated = updated
+	}
 
 	writeJSONResponse(w, http.StatusOK, result)
 }
@@ -156,4 +194,25 @@ func (h *DBTHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSONResponse(w, http.StatusOK, response)
+}
+
+// convertDBTFeatureToCatalog converts a dbt feature definition to a catalog feature definition.
+func convertDBTFeatureToCatalog(feature dbt.FeatureDefinition) *registry.FeatureDefinition {
+	return &registry.FeatureDefinition{
+		Name:        feature.Name,
+		Description: feature.Description,
+		DataType:    feature.DataType,
+		EntityType:  feature.EntityType,
+		Owner:       feature.Owner,
+		Team:        feature.Team,
+		Tags:        feature.Tags,
+		Category:    feature.Category,
+		Source: registry.FeatureSource{
+			Type:   "dbt",
+			System: feature.Source.DBTProject,
+			Table:  feature.Source.DBTModelName,
+		},
+		Metadata: feature.Metadata,
+		Status:   registry.StatusActive,
+	}
 }
