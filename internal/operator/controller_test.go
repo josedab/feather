@@ -3,396 +3,272 @@ package operator
 import (
 	"context"
 	"testing"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+	"time"
 )
 
-func TestReconciler_ReconcileFeatureStore(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
+func TestController_FeatureStore(t *testing.T) {
+	ctrl := NewController(2)
 
+	// Start controller in background
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ctrl.Start(ctx)
+
+	// Create a FeatureStore
 	store := &FeatureStore{
-		ObjectMeta: metav1.ObjectMeta{
+		TypeMeta: TypeMeta{
+			Kind:       "FeatureStore",
+			APIVersion: "feather.io/v1",
+		},
+		ObjectMeta: ObjectMeta{
 			Name:      "test-store",
 			Namespace: "default",
-			UID:       "test-uid",
 		},
 		Spec: FeatureStoreSpec{
 			Replicas: 3,
-			Version:  "1.0.0",
-			Image:    "feather/feather:1.0.0",
-			Config: FeatherConfig{
+			Config: FeatureStoreConfig{
 				HTTPPort:    8080,
 				GRPCPort:    50051,
 				MetricsPort: 9090,
-				LogLevel:    "info",
-			},
-			Resources: ResourceSpec{
-				CPURequest:    "500m",
-				CPULimit:      "2",
-				MemoryRequest: "1Gi",
-				MemoryLimit:   "4Gi",
-			},
-			Storage: StorageSpec{
-				HotTier: HotTierSpec{
-					MaxMemory: "2Gi",
-					TTL:       "1h",
-				},
-				WarmTier: WarmTierSpec{
-					StorageClass: "standard",
-					Size:         "100Gi",
-				},
 			},
 		},
 	}
 
-	ctx := context.Background()
-	result := reconciler.ReconcileFeatureStore(ctx, store)
-
-	if result.Error != nil {
-		t.Fatalf("ReconcileFeatureStore failed: %v", result.Error)
+	if err := ctrl.CreateFeatureStore(store); err != nil {
+		t.Fatalf("create feature store: %v", err)
 	}
 
-	if store.Status.Phase != PhaseRunning {
-		t.Errorf("expected phase Running, got %s", store.Status.Phase)
-	}
+	// Wait for reconciliation
+	time.Sleep(100 * time.Millisecond)
 
-	// Verify ConfigMap was created
-	cm, err := client.CoreV1().ConfigMaps("default").Get(ctx, "test-store-config", metav1.GetOptions{})
+	// Get and verify
+	retrieved, err := ctrl.GetFeatureStore("default", "test-store")
 	if err != nil {
-		t.Fatalf("ConfigMap not created: %v", err)
+		t.Fatalf("get feature store: %v", err)
 	}
 
-	if cm.Data["FEATHER_HTTP_PORT"] != "8080" {
-		t.Errorf("expected HTTP port 8080, got %s", cm.Data["FEATHER_HTTP_PORT"])
+	if retrieved.Status.Phase != PhaseRunning {
+		t.Errorf("expected phase Running, got %s", retrieved.Status.Phase)
 	}
 
-	// Verify Service was created
-	svc, err := client.CoreV1().Services("default").Get(ctx, "test-store", metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("Service not created: %v", err)
+	if retrieved.Status.ReadyReplicas != 3 {
+		t.Errorf("expected 3 ready replicas, got %d", retrieved.Status.ReadyReplicas)
 	}
 
-	if len(svc.Spec.Ports) != 3 {
-		t.Errorf("expected 3 service ports, got %d", len(svc.Spec.Ports))
+	// List
+	stores := ctrl.ListFeatureStores("default")
+	if len(stores) != 1 {
+		t.Errorf("expected 1 store, got %d", len(stores))
 	}
 
-	// Verify StatefulSet was created
-	sts, err := client.AppsV1().StatefulSets("default").Get(ctx, "test-store", metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("StatefulSet not created: %v", err)
+	// Delete
+	if err := ctrl.DeleteFeatureStore("default", "test-store"); err != nil {
+		t.Fatalf("delete feature store: %v", err)
 	}
 
-	if *sts.Spec.Replicas != 3 {
-		t.Errorf("expected 3 replicas, got %d", *sts.Spec.Replicas)
-	}
-
-	if sts.Spec.Template.Spec.Containers[0].Image != "feather/feather:1.0.0" {
-		t.Errorf("unexpected image: %s", sts.Spec.Template.Spec.Containers[0].Image)
+	stores = ctrl.ListFeatureStores("default")
+	if len(stores) != 0 {
+		t.Errorf("expected 0 stores after delete, got %d", len(stores))
 	}
 }
 
-func TestReconciler_ReconcileFeatureStore_WithAutoscaling(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
+func TestController_FeatureGroup(t *testing.T) {
+	ctrl := NewController(2)
 
-	store := &FeatureStore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "autoscale-store",
-			Namespace: "default",
-			UID:       "test-uid-2",
-		},
-		Spec: FeatureStoreSpec{
-			Replicas: 2,
-			Version:  "1.0.0",
-			Autoscaling: &AutoscalingSpec{
-				Enabled:              true,
-				MinReplicas:          2,
-				MaxReplicas:          10,
-				TargetCPUUtilization: 70,
-			},
-		},
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ctrl.Start(ctx)
 
-	ctx := context.Background()
-	result := reconciler.ReconcileFeatureStore(ctx, store)
-
-	if result.Error != nil {
-		t.Fatalf("ReconcileFeatureStore failed: %v", result.Error)
-	}
-}
-
-func TestReconciler_ReconcileFeatureStore_WithHA(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
-
-	minAvailable := int32(2)
-	store := &FeatureStore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ha-store",
-			Namespace: "default",
-			UID:       "test-uid-3",
-		},
-		Spec: FeatureStoreSpec{
-			Replicas: 3,
-			Version:  "1.0.0",
-			HighAvailability: &HASpec{
-				Enabled:      true,
-				AntiAffinity: true,
-				PodDisruptionBudget: &PDBSpec{
-					MinAvailable: &minAvailable,
-				},
-			},
-		},
-	}
-
-	ctx := context.Background()
-	result := reconciler.ReconcileFeatureStore(ctx, store)
-
-	if result.Error != nil {
-		t.Fatalf("ReconcileFeatureStore failed: %v", result.Error)
-	}
-
-	// Verify anti-affinity was set
-	sts, err := client.AppsV1().StatefulSets("default").Get(ctx, "ha-store", metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("StatefulSet not created: %v", err)
-	}
-
-	if sts.Spec.Template.Spec.Affinity == nil {
-		t.Error("expected affinity to be set")
-	}
-}
-
-func TestReconciler_ReconcileFeatureStore_Deletion(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
-
-	now := metav1.Now()
-	store := &FeatureStore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              "delete-store",
-			Namespace:         "default",
-			UID:               "test-uid-4",
-			DeletionTimestamp: &now,
-			Finalizers:        []string{"feather.io/finalizer"},
-		},
-		Spec: FeatureStoreSpec{
-			Replicas: 1,
-			Version:  "1.0.0",
-		},
-	}
-
-	ctx := context.Background()
-	result := reconciler.ReconcileFeatureStore(ctx, store)
-
-	if result.Error != nil {
-		t.Fatalf("ReconcileFeatureStore deletion failed: %v", result.Error)
-	}
-
-	if store.Status.Phase != PhaseDeleting {
-		t.Errorf("expected phase Deleting, got %s", store.Status.Phase)
-	}
-
-	// Finalizer should be removed
-	if containsString(store.ObjectMeta.Finalizers, "feather.io/finalizer") {
-		t.Error("finalizer should be removed after deletion")
-	}
-}
-
-func TestReconciler_ReconcileFeatureGroup(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
-
-	minVal := 0.0
-	maxVal := 100.0
 	group := &FeatureGroup{
-		ObjectMeta: metav1.ObjectMeta{
+		TypeMeta: TypeMeta{
+			Kind:       "FeatureGroup",
+			APIVersion: "feather.io/v1",
+		},
+		ObjectMeta: ObjectMeta{
 			Name:      "user-features",
 			Namespace: "default",
 		},
 		Spec: FeatureGroupSpec{
-			Store:       "test-store",
-			Name:        "user_features",
-			Description: "User behavior features",
-			Entity:      "user_id",
-			Owner:       "data-team",
+			FeatureStoreRef: "test-store",
+			EntityType:      "user",
 			Features: []FeatureSpec{
-				{
-					Name:        "purchase_count",
-					Type:        "int64",
-					Description: "Number of purchases",
-					Validation: &ValidationSpec{
-						Required: true,
-						Min:      &minVal,
-					},
-				},
-				{
-					Name:        "total_spend",
-					Type:        "float64",
-					Description: "Total spend in USD",
-					Validation: &ValidationSpec{
-						Min: &minVal,
-						Max: &maxVal,
-					},
-				},
-			},
-			Tags: map[string]string{
-				"team":     "data-science",
-				"priority": "high",
+				{Name: "click_count", Type: "int64"},
+				{Name: "last_seen", Type: "timestamp"},
 			},
 		},
 	}
 
-	ctx := context.Background()
-	result := reconciler.ReconcileFeatureGroup(ctx, group)
-
-	if result.Error != nil {
-		t.Fatalf("ReconcileFeatureGroup failed: %v", result.Error)
+	if err := ctrl.CreateFeatureGroup(group); err != nil {
+		t.Fatalf("create feature group: %v", err)
 	}
 
-	if group.Status.Phase != PhaseRunning {
-		t.Errorf("expected phase Running, got %s", group.Status.Phase)
+	time.Sleep(100 * time.Millisecond)
+
+	retrieved, err := ctrl.GetFeatureGroup("default", "user-features")
+	if err != nil {
+		t.Fatalf("get feature group: %v", err)
 	}
 
-	if group.Status.FeatureCount != 2 {
-		t.Errorf("expected 2 features, got %d", group.Status.FeatureCount)
+	if retrieved.Status.FeatureCount != 2 {
+		t.Errorf("expected 2 features, got %d", retrieved.Status.FeatureCount)
 	}
 
-	if group.Status.LastUpdated == nil {
-		t.Error("expected LastUpdated to be set")
+	groups := ctrl.ListFeatureGroups("default")
+	if len(groups) != 1 {
+		t.Errorf("expected 1 group, got %d", len(groups))
 	}
 }
 
-func TestReconciler_ReconcileFeatureView(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
+func TestController_FeatureView(t *testing.T) {
+	ctrl := NewController(2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ctrl.Start(ctx)
 
 	view := &FeatureView{
-		ObjectMeta: metav1.ObjectMeta{
+		TypeMeta: TypeMeta{
+			Kind:       "FeatureView",
+			APIVersion: "feather.io/v1",
+		},
+		ObjectMeta: ObjectMeta{
 			Name:      "user-view",
 			Namespace: "default",
 		},
 		Spec: FeatureViewSpec{
-			Store:       "test-store",
-			Name:        "user_feature_view",
-			Description: "Combined user features for ML",
-			Sources: []FeatureSourceSpec{
-				{
-					Group:    "user-features",
-					Features: []string{"purchase_count", "total_spend"},
-				},
-				{
-					Group:    "product-features",
-					Features: []string{"avg_rating"},
-					Alias: map[string]string{
-						"avg_rating": "user_avg_product_rating",
-					},
-				},
+			FeatureStoreRef: "test-store",
+			Features: []FeatureRef{
+				{Group: "user-features", Feature: "click_count"},
 			},
-			Transformations: []TransformationSpec{
-				{
-					Name:       "normalize_spend",
-					Type:       "normalize",
-					Expression: "(total_spend - min) / (max - min)",
-				},
-			},
-			Materialization: &MaterializationSpec{
-				Enabled:  true,
-				Schedule: "0 * * * *",
-				Mode:     "incremental",
-				Destination: MaterializationDestSpec{
-					Type: "both",
-					OnlineStore: &OnlineStoreSpec{
-						TTL: "24h",
-					},
-					OfflineStore: &OfflineStoreSpec{
-						Format: "parquet",
-						Path:   "/data/features/user_view",
-					},
-				},
-			},
+			Schedule: "0 * * * *",
 		},
 	}
 
-	ctx := context.Background()
-	result := reconciler.ReconcileFeatureView(ctx, view)
-
-	if result.Error != nil {
-		t.Fatalf("ReconcileFeatureView failed: %v", result.Error)
+	if err := ctrl.CreateFeatureView(view); err != nil {
+		t.Fatalf("create feature view: %v", err)
 	}
 
-	if view.Status.Phase != PhaseRunning {
-		t.Errorf("expected phase Running, got %s", view.Status.Phase)
+	time.Sleep(100 * time.Millisecond)
+
+	retrieved, err := ctrl.GetFeatureView("default", "user-view")
+	if err != nil {
+		t.Fatalf("get feature view: %v", err)
+	}
+
+	if retrieved.Status.Phase != "Ready" {
+		t.Errorf("expected phase Ready, got %s", retrieved.Status.Phase)
+	}
+
+	views := ctrl.ListFeatureViews("default")
+	if len(views) != 1 {
+		t.Errorf("expected 1 view, got %d", len(views))
 	}
 }
 
-func TestLabels(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	reconciler := NewReconciler(client, nil, "default")
+func TestController_Callbacks(t *testing.T) {
+	ctrl := NewController(2)
+
+	storeCalled := false
+	ctrl.OnFeatureStoreChange(func(store *FeatureStore) error {
+		storeCalled = true
+		return nil
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ctrl.Start(ctx)
 
 	store := &FeatureStore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-store",
+		ObjectMeta: ObjectMeta{
+			Name:      "callback-test",
+			Namespace: "default",
 		},
 		Spec: FeatureStoreSpec{
-			Version: "1.2.3",
+			Replicas: 1,
 		},
 	}
 
-	labels := reconciler.labels(store)
+	ctrl.CreateFeatureStore(store)
+	time.Sleep(100 * time.Millisecond)
 
-	if labels["app.kubernetes.io/name"] != "feather" {
-		t.Errorf("unexpected name label: %s", labels["app.kubernetes.io/name"])
-	}
-
-	if labels["app.kubernetes.io/instance"] != "test-store" {
-		t.Errorf("unexpected instance label: %s", labels["app.kubernetes.io/instance"])
-	}
-
-	if labels["app.kubernetes.io/version"] != "1.2.3" {
-		t.Errorf("unexpected version label: %s", labels["app.kubernetes.io/version"])
+	if !storeCalled {
+		t.Error("expected store callback to be called")
 	}
 }
 
-func TestDefaultControllerConfig(t *testing.T) {
-	config := DefaultControllerConfig()
+func TestController_Stats(t *testing.T) {
+	ctrl := NewController(2)
 
-	if config.Namespace != "default" {
-		t.Errorf("expected namespace 'default', got %s", config.Namespace)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ctrl.Start(ctx)
+
+	ctrl.CreateFeatureStore(&FeatureStore{
+		ObjectMeta: ObjectMeta{Name: "s1", Namespace: "default"},
+		Spec:       FeatureStoreSpec{Replicas: 1},
+	})
+
+	ctrl.CreateFeatureGroup(&FeatureGroup{
+		ObjectMeta: ObjectMeta{Name: "g1", Namespace: "default"},
+		Spec:       FeatureGroupSpec{EntityType: "user"},
+	})
+
+	time.Sleep(100 * time.Millisecond)
+
+	stats := ctrl.Stats()
+
+	if stats.FeatureStores != 1 {
+		t.Errorf("expected 1 feature store, got %d", stats.FeatureStores)
 	}
 
-	if config.Workers != 2 {
-		t.Errorf("expected 2 workers, got %d", config.Workers)
+	if stats.FeatureGroups != 1 {
+		t.Errorf("expected 1 feature group, got %d", stats.FeatureGroups)
 	}
 
-	if !config.LeaderElection {
-		t.Error("expected leader election to be enabled")
+	if stats.ReconcileCount < 2 {
+		t.Errorf("expected at least 2 reconciles, got %d", stats.ReconcileCount)
 	}
 }
 
-func TestContainsString(t *testing.T) {
-	slice := []string{"a", "b", "c"}
+func TestController_ValidationFailure(t *testing.T) {
+	ctrl := NewController(2)
 
-	if !containsString(slice, "b") {
-		t.Error("expected to find 'b'")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ctrl.Start(ctx)
+
+	// Create with invalid replicas
+	store := &FeatureStore{
+		ObjectMeta: ObjectMeta{
+			Name:      "invalid-store",
+			Namespace: "default",
+		},
+		Spec: FeatureStoreSpec{
+			Replicas: 0, // Invalid
+		},
 	}
 
-	if containsString(slice, "d") {
-		t.Error("did not expect to find 'd'")
+	ctrl.CreateFeatureStore(store)
+	time.Sleep(100 * time.Millisecond)
+
+	retrieved, _ := ctrl.GetFeatureStore("default", "invalid-store")
+	if retrieved.Status.Phase != PhaseFailed {
+		t.Errorf("expected phase Failed, got %s", retrieved.Status.Phase)
 	}
 }
 
-func TestRemoveString(t *testing.T) {
-	slice := []string{"a", "b", "c"}
-	result := removeString(slice, "b")
+func TestDefaultManagerConfig(t *testing.T) {
+	config := DefaultManagerConfig()
 
-	if len(result) != 2 {
-		t.Errorf("expected length 2, got %d", len(result))
+	if config.Workers != 4 {
+		t.Errorf("expected 4 workers, got %d", config.Workers)
 	}
 
-	if containsString(result, "b") {
-		t.Error("'b' should be removed")
+	if config.MetricsAddr != ":8081" {
+		t.Errorf("expected :8081, got %s", config.MetricsAddr)
+	}
+
+	if !config.LeaderElect {
+		t.Error("expected leader election enabled")
 	}
 }
