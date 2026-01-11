@@ -317,24 +317,11 @@ function ArchitectureSection() {
           </div>
           <div className="col col--6">
             <div className={styles.architectureDiagram}>
-              <pre>{`
-┌─────────────────────────────────────┐
-│           Client Request            │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│     HTTP :8080  /  gRPC :50051      │
-└──────────────┬──────────────────────┘
-               │
-    ┌──────────┴──────────┐
-    ▼                     ▼
-┌────────────┐     ┌─────────────────┐
-│  Hot Tier  │     │   Warm Tier     │
-│  (Memory)  │────▶│   (BadgerDB)    │
-│   <1ms     │     │    1-10ms       │
-└────────────┘     └─────────────────┘
-              `}</pre>
+              <img
+                src="/img/architecture-diagram.svg"
+                alt="Feather two-tier architecture diagram showing client requests flowing through HTTP and gRPC servers to hot and warm storage tiers"
+                style={{width: '100%', height: 'auto', borderRadius: '12px'}}
+              />
             </div>
           </div>
         </div>
@@ -395,6 +382,50 @@ print(features["clicks"])`}
   );
 }
 
+type UsedByItem = {
+  icon: string;
+  category: string;
+  description: string;
+};
+
+const usedByItems: UsedByItem[] = [
+  { icon: '🛒', category: 'E-Commerce', description: 'Personalization & Recommendations' },
+  { icon: '🏦', category: 'FinTech', description: 'Real-time Risk Scoring' },
+  { icon: '🎮', category: 'Gaming', description: 'Player Behavior Features' },
+  { icon: '🚗', category: 'Mobility', description: 'Dynamic Pricing & ETAs' },
+];
+
+function UsedBySection() {
+  return (
+    <section className={styles.usedBySection}>
+      <div className="container text--center">
+        <Heading as="h2">Built for Production ML</Heading>
+        <p className={styles.usedBySubtitle}>
+          Feather powers feature serving across industries
+        </p>
+        <div className={styles.usedByLogos}>
+          {usedByItems.map((item, idx) => (
+            <div key={idx} className={styles.usedByCard}>
+              <div className={styles.usedByIcon}>{item.icon}</div>
+              <div className={styles.usedByCategory}>{item.category}</div>
+              <div className={styles.usedByDesc}>{item.description}</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.usedByCTA}>
+          <p className={styles.usedByNote}>
+            Using Feather in production?{' '}
+            <Link to="https://github.com/feather-store/feather/discussions">
+              Share your story
+            </Link>{' '}
+            and get featured.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CTASection() {
   return (
     <section className={styles.ctaSection}>
@@ -435,6 +466,7 @@ export default function Home(): ReactNode {
         <PerformanceSection />
         <ArchitectureSection />
         <SDKSection />
+        <UsedBySection />
         <CTASection />
       </main>
     </Layout>
