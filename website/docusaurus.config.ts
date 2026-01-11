@@ -74,7 +74,7 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/feather-social-card.svg',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: false,
@@ -93,7 +93,7 @@ const config: Config = {
       logo: {
         alt: 'Feather Logo',
         src: 'img/logo.svg',
-        srcDark: 'img/logo.svg', // TODO: Create logo-dark.svg for optimized dark mode appearance
+        srcDark: 'img/logo-dark.svg',
       },
       items: [
         {
@@ -165,12 +165,8 @@ const config: Config = {
               href: 'https://github.com/feather-store/feather/discussions',
             },
             {
-              label: 'Twitter',
-              href: 'https://twitter.com/feather_store', // TODO: Update with actual Twitter handle
-            },
-            {
-              label: 'Discord',
-              href: 'https://discord.gg/feather', // TODO: Update with actual Discord invite
+              label: 'Stack Overflow',
+              href: 'https://stackoverflow.com/questions/tagged/feather-store',
             },
             {
               label: 'Contributing',
