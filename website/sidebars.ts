@@ -30,6 +30,11 @@ const sidebars: SidebarsConfig = {
         'guides/dbt-integration',
         'guides/langchain',
         'guides/llamaindex',
+        'guides/kubernetes-operator',
+        'guides/cloud-storage',
+        'guides/llm-embeddings',
+        'guides/streaming',
+        'guides/dashboard',
       ],
     },
     {

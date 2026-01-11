@@ -103,6 +103,10 @@ spec:
 
 ## Grafana Dashboards
 
+Feather ships with a pre-built Grafana dashboard that provides real-time visibility into your feature store's performance.
+
+![Feather Grafana Dashboard](/img/grafana-dashboard.svg)
+
 ### Importing the Dashboard
 
 1. Go to Grafana → Dashboards → Import
