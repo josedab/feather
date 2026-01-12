@@ -5,11 +5,42 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
+	"sync"
 
 	"github.com/xitongsys/parquet-go-source/local"
 	"github.com/xitongsys/parquet-go/writer"
 )
+
+var (
+	// privateTempDir is a process-private temp directory with restricted permissions
+	privateTempDir     string
+	privateTempDirOnce sync.Once
+	privateTempDirErr  error
+)
+
+// getPrivateTempDir returns a private temp directory for this process.
+// The directory is created with 0700 permissions (owner read/write/execute only).
+func getPrivateTempDir() (string, error) {
+	privateTempDirOnce.Do(func() {
+		// Create a private subdirectory in the system temp directory
+		baseTemp := os.TempDir()
+		privateTempDir = filepath.Join(baseTemp, fmt.Sprintf("feather-export-%d", os.Getpid()))
+
+		// Create with restrictive permissions (owner only)
+		if err := os.MkdirAll(privateTempDir, 0700); err != nil {
+			privateTempDirErr = fmt.Errorf("creating private temp dir: %w", err)
+			return
+		}
+
+		// Double-check permissions in case directory already existed
+		if err := os.Chmod(privateTempDir, 0700); err != nil {
+			privateTempDirErr = fmt.Errorf("setting temp dir permissions: %w", err)
+		}
+	})
+	return privateTempDir, privateTempDirErr
+}
 
 // FeatureRecord is the base struct for Parquet export.
 // Features are stored as JSON-encoded strings for flexibility.
@@ -25,9 +56,15 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 		return writeEmptyParquet(w)
 	}
 
+	// Get private temp directory with restricted permissions
+	tempDir, err := getPrivateTempDir()
+	if err != nil {
+		return err
+	}
+
 	// For parquet-go, we need to write to a file first, then copy to the writer
 	// This is because parquet-go requires seeking which io.Writer doesn't support
-	tmpFile, err := os.CreateTemp("", "feather-export-*.parquet")
+	tmpFile, err := os.CreateTemp(tempDir, "feather-export-*.parquet")
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
@@ -93,8 +130,14 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 }
 
 func writeEmptyParquet(w io.Writer) error {
+	// Get private temp directory with restricted permissions
+	tempDir, err := getPrivateTempDir()
+	if err != nil {
+		return err
+	}
+
 	// Create an empty parquet file with just schema
-	tmpFile, err := os.CreateTemp("", "feather-export-empty-*.parquet")
+	tmpFile, err := os.CreateTemp(tempDir, "feather-export-empty-*.parquet")
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
