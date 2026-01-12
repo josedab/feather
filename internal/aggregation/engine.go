@@ -41,11 +41,22 @@ func (e *Engine) GetSpec(featureName string) *domain.AggregationSpec {
 
 // Update adds a value to the aggregation.
 func (e *Engine) Update(entityKey, featureName string, value float64, timestamp time.Time) error {
+	wm, err := e.getOrCreateWindowManager(entityKey, featureName)
+	if err != nil {
+		return err
+	}
+	wm.Update(value, timestamp)
+	return nil
+}
+
+// getOrCreateWindowManager returns the WindowManager for an entity/feature pair,
+// creating it if necessary.
+func (e *Engine) getOrCreateWindowManager(entityKey, featureName string) (*WindowManager, error) {
 	e.mu.Lock()
 	spec, ok := e.specs[featureName]
 	if !ok {
 		e.mu.Unlock()
-		return fmt.Errorf("no aggregation spec for feature %s", featureName)
+		return nil, fmt.Errorf("no aggregation spec for feature %s", featureName)
 	}
 
 	entityWindows, ok := e.windows[entityKey]
@@ -61,38 +72,46 @@ func (e *Engine) Update(entityKey, featureName string, value float64, timestamp 
 	}
 	e.mu.Unlock()
 
-	wm.Update(value, timestamp)
-	return nil
+	return wm, nil
 }
 
 // Compute returns the aggregated value for a feature.
 func (e *Engine) Compute(entityKey, featureName string, function domain.AggFunction) (float64, error) {
+	wm, err := e.getWindowManager(entityKey, featureName)
+	if err != nil {
+		return 0, err
+	}
+	return wm.Compute(function)
+}
+
+// getWindowManager returns the WindowManager for an entity/feature pair.
+func (e *Engine) getWindowManager(entityKey, featureName string) (*WindowManager, error) {
 	e.mu.RLock()
 	entityWindows, ok := e.windows[entityKey]
 	if !ok {
 		e.mu.RUnlock()
-		return 0, domain.ErrEntityNotFound
+		return nil, domain.ErrEntityNotFound
 	}
 
 	wm, ok := entityWindows[featureName]
 	if !ok {
 		e.mu.RUnlock()
-		return 0, domain.ErrFeatureNotFound
+		return nil, domain.ErrFeatureNotFound
 	}
 	e.mu.RUnlock()
 
-	return wm.Compute(function)
+	return wm, nil
 }
 
 // ComputeWithSpec computes using the registered spec's function.
 func (e *Engine) ComputeWithSpec(entityKey, featureName string) (float64, error) {
 	e.mu.RLock()
 	spec, ok := e.specs[featureName]
+	e.mu.RUnlock()
+
 	if !ok {
-		e.mu.RUnlock()
 		return 0, fmt.Errorf("no aggregation spec for feature %s", featureName)
 	}
-	e.mu.RUnlock()
 
 	return e.Compute(entityKey, featureName, spec.Function)
 }
