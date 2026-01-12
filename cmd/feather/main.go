@@ -243,12 +243,13 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			WriteTimeout: 10 * time.Second,
 		}
 
-		// Configure TLS if enabled
+		// Configure TLS if enabled (fail-closed: TLS errors are fatal when TLS is enabled)
 		if cfg.TLS.Enabled {
 			tlsConfig, err := cfg.TLS.BuildTLSConfig()
 			if err != nil {
-				logger.Error("failed to build TLS config for metrics server", "error", err)
-			} else if tlsConfig != nil {
+				return fmt.Errorf("failed to build TLS config for metrics server: %w", err)
+			}
+			if tlsConfig != nil {
 				metricsServer.TLSConfig = tlsConfig
 			}
 		}
@@ -334,12 +335,13 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			WriteTimeout: 30 * time.Second,
 		}
 
-		// Configure TLS if enabled
+		// Configure TLS if enabled (fail-closed: TLS errors are fatal when TLS is enabled)
 		if cfg.TLS.Enabled {
 			tlsConfig, err := cfg.TLS.BuildTLSConfig()
 			if err != nil {
-				logger.Error("failed to build TLS config for ingestion server", "error", err)
-			} else if tlsConfig != nil {
+				return fmt.Errorf("failed to build TLS config for ingestion server: %w", err)
+			}
+			if tlsConfig != nil {
 				ingestionServer.TLSConfig = tlsConfig
 			}
 		}
@@ -381,7 +383,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				SSLCertFile:      cfg.Ingestion.Kafka.Security.SSLCertFile,
 				SSLKeyFile:       cfg.Ingestion.Kafka.Security.SSLKeyFile,
 			},
-			store, agg,
+			store, agg, logger,
 		)
 		if err != nil {
 			logger.Warn("failed to create Kafka consumer", "error", err)
@@ -412,8 +414,8 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	// Shutdown all managed servers in parallel
 	serverMgr.shutdownAll(shutdownCtx)
 
-	// Stop gRPC server (has its own graceful shutdown)
-	grpcServer.Stop()
+	// Stop gRPC server with timeout
+	grpcServer.Stop(shutdownCtx)
 
 	// Close Kafka consumer
 	if kafkaConsumer != nil {

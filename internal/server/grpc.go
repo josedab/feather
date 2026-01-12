@@ -96,9 +96,22 @@ func (s *GRPCServer) Start() error {
 	return s.server.Serve(lis)
 }
 
-// Stop gracefully stops the server.
-func (s *GRPCServer) Stop() {
-	s.server.GracefulStop()
+// Stop gracefully stops the server with a timeout.
+// If the context expires, it forces an immediate stop.
+func (s *GRPCServer) Stop(ctx context.Context) {
+	done := make(chan struct{})
+	go func() {
+		s.server.GracefulStop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Graceful shutdown completed
+	case <-ctx.Done():
+		// Timeout reached, force stop
+		s.server.Stop()
+	}
 }
 
 // IsTLSEnabled returns true if the server is configured to use TLS.
