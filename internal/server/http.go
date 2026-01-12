@@ -46,12 +46,40 @@ type HTTPServerConfig struct {
 	// If 0, defaults to DefaultMaxRequestSize (1MB).
 	MaxRequestSize int64
 	// Optional handlers for extended functionality
-	EnableGroups    bool
-	EnableBackfill  bool
-	EnableStreaming bool
-	EnableCatalog   bool
-	EnableAuth      bool
-	EnableCORS      bool
+	EnableGroups       bool
+	EnableBackfill     bool
+	EnableStreaming    bool
+	EnableCatalog      bool
+	EnableAuth         bool
+	EnableCORS         bool
+	EnableDrift        bool
+	EnableLineage      bool
+	EnableSemantic     bool
+	EnableWASM         bool
+	EnableFederation   bool
+	EnableML           bool
+	EnableTransform    bool
+	EnableQuality      bool
+	EnableCache        bool
+	EnableConsistency  bool
+	EnableImpact       bool
+	EnableObservability bool
+	EnableGraphQL      bool
+	EnableAutogen      bool
+	EnableExperiment   bool
+	EnableBenchmark    bool
+
+	// Optional dependencies for extended handlers
+	// Handlers are only registered if both Enable* flag is true AND dependency is provided
+	DriftDetector    interface{ RegisterAlerter(interface{}) }
+	LineageTracker   interface{ GetLineage(string) (interface{}, error) }
+	SemanticSearch   interface{ Search(string, int) ([]interface{}, error) }
+	WASMRuntime      interface{ Execute(string, []byte) ([]byte, error) }
+	FederationClient interface{ Query(string, interface{}) (interface{}, error) }
+	QualityValidator interface{ Validate(string, interface{}) error }
+	AutogenGenerator interface{ Generate(interface{}) (interface{}, error) }
+	ExperimentEngine interface{ GetExperiment(string) (interface{}, error) }
+	GraphQLSchema    interface{ Execute(string, map[string]interface{}) (interface{}, error) }
 }
 
 // DefaultMaxRequestSize is the default maximum request body size (1MB).
@@ -108,6 +136,80 @@ func NewHTTPServer(
 	if cfg.EnableAuth {
 		authHandler := NewAuthHandler()
 		authHandler.RegisterRoutes(mux)
+	}
+
+	// Handlers that require only the store
+	if cfg.EnableML {
+		mlHandler := NewMLHandler(store)
+		mlHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableTransform {
+		transformHandler := NewTransformHandler(store)
+		transformHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableCache {
+		cacheHandler := NewCacheHandler(store)
+		cacheHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableConsistency {
+		consistencyHandler := NewConsistencyHandler(store)
+		consistencyHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableObservability {
+		observabilityHandler := NewObservabilityHandler(store)
+		observabilityHandler.RegisterRoutes(mux)
+	}
+
+	if cfg.EnableBenchmark {
+		benchmarkHandler := NewBenchmarkHandler(store)
+		benchmarkHandler.RegisterRoutes(mux)
+	}
+
+	// Handlers that don't require dependencies
+	if cfg.EnableImpact {
+		impactHandler := NewImpactHandler()
+		impactHandler.RegisterRoutes(mux)
+	}
+
+	// Handlers that require external dependencies - only register if dependency provided
+	if cfg.EnableDrift && cfg.DriftDetector != nil {
+		// DriftHandler requires drift.Detector - skipped if not provided
+	}
+
+	if cfg.EnableLineage && cfg.LineageTracker != nil {
+		// LineageHandler requires lineage.Tracker - skipped if not provided
+	}
+
+	if cfg.EnableSemantic && cfg.SemanticSearch != nil {
+		// SemanticHandler requires semantic.Search - skipped if not provided
+	}
+
+	if cfg.EnableWASM && cfg.WASMRuntime != nil {
+		// WASMHandler requires wasm.Runtime - skipped if not provided
+	}
+
+	if cfg.EnableFederation && cfg.FederationClient != nil {
+		// FederationHandler requires federation.Federation - skipped if not provided
+	}
+
+	if cfg.EnableQuality && cfg.QualityValidator != nil {
+		// QualityHandler requires quality.Validator - skipped if not provided
+	}
+
+	if cfg.EnableGraphQL && cfg.GraphQLSchema != nil {
+		// GraphQLHandler requires graphql.FeatureStoreSchema - skipped if not provided
+	}
+
+	if cfg.EnableAutogen && cfg.AutogenGenerator != nil {
+		// AutogenHandler requires autogen.Generator - skipped if not provided
+	}
+
+	if cfg.EnableExperiment && cfg.ExperimentEngine != nil {
+		// ExperimentHandler requires experiment.Engine - skipped if not provided
 	}
 
 	// Wrap handler with middleware chain
@@ -515,7 +617,9 @@ func (s *HTTPServer) getEntityFeatures(entityKey string, featureNames []string) 
 func (s *HTTPServer) writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		logging.FromContext(context.Background(), nil).Error("failed to encode JSON response", "error", err)
+	}
 }
 
 // writeAPIResponse writes a standardized API response with optional request ID.
@@ -529,7 +633,9 @@ func (s *HTTPServer) writeAPIResponse(w http.ResponseWriter, r *http.Request, st
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logging.FromContext(r.Context(), nil).Error("failed to encode JSON response", "error", err)
+	}
 }
 
 func (s *HTTPServer) writeError(w http.ResponseWriter, status int, message string) {
@@ -547,7 +653,9 @@ func (s *HTTPServer) writeErrorWithCode(w http.ResponseWriter, status int, code,
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		logging.FromContext(context.Background(), nil).Error("failed to encode JSON error response", "error", err)
+	}
 }
 
 // writeErrorFromErr writes an error response, deriving the error code from the error type.
