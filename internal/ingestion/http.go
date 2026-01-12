@@ -1,6 +1,7 @@
 package ingestion
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/feather-store/feather/internal/aggregation"
 	"github.com/feather-store/feather/internal/clientip"
 	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/logging"
 	"github.com/feather-store/feather/internal/storage"
 )
 
@@ -288,7 +290,9 @@ func (h *HTTPIngestion) RegisterRoutes(mux *http.ServeMux) {
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		logging.FromContext(context.Background(), nil).Error("failed to encode JSON response", "error", err)
+	}
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
