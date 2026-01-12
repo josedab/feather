@@ -2,6 +2,7 @@ package ingestion
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/feather-store/feather/internal/aggregation"
+	"github.com/feather-store/feather/internal/clientip"
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/storage"
 )
@@ -20,6 +22,7 @@ type HTTPIngestion struct {
 	schema      *storage.Registry
 	metrics     *HTTPIngestionMetrics
 	rateLimiter *rateLimiter
+	ipResolver  *clientip.Resolver
 	config      HTTPIngestionConfig
 }
 
@@ -33,7 +36,17 @@ type HTTPIngestionConfig struct {
 	RateLimitBurst int
 	// ValidateSchema enables strict schema validation (reject invalid features).
 	ValidateSchema bool
+	// TrustedProxies is a list of CIDR ranges for trusted proxy servers.
+	// When a request comes from a trusted proxy, X-Forwarded-For header is used
+	// to determine the real client IP. If empty, proxy headers are not trusted.
+	TrustedProxies []string
+	// MaxRequestSize is the maximum allowed request body size in bytes.
+	// If 0, defaults to DefaultMaxRequestSize (1MB).
+	MaxRequestSize int64
 }
+
+// DefaultMaxRequestSize is the default maximum request body size (1MB).
+const DefaultMaxRequestSize = 1 << 20 // 1MB
 
 // HTTPIngestionMetrics tracks HTTP ingestion performance.
 type HTTPIngestionMetrics struct {
@@ -61,12 +74,20 @@ func NewHTTPIngestionWithConfig(
 	schema *storage.Registry,
 	config HTTPIngestionConfig,
 ) *HTTPIngestion {
+	// Create IP resolver for secure client IP extraction
+	ipResolver, err := clientip.NewResolver(config.TrustedProxies)
+	if err != nil {
+		// Fall back to safe default (trust no proxies)
+		ipResolver, _ = clientip.NewResolver(nil)
+	}
+
 	h := &HTTPIngestion{
-		store:   store,
-		agg:     agg,
-		schema:  schema,
-		metrics: &HTTPIngestionMetrics{},
-		config:  config,
+		store:      store,
+		agg:        agg,
+		schema:     schema,
+		metrics:    &HTTPIngestionMetrics{},
+		ipResolver: ipResolver,
+		config:     config,
 	}
 
 	if config.RateLimitEnabled {
@@ -84,13 +105,24 @@ func NewHTTPIngestionWithConfig(
 	return h
 }
 
+// maxRequestSize returns the configured max request size or the default.
+func (h *HTTPIngestion) maxRequestSize() int64 {
+	if h.config.MaxRequestSize > 0 {
+		return h.config.MaxRequestSize
+	}
+	return DefaultMaxRequestSize
+}
+
 // HandlePush handles POST /ingest for single feature updates.
 func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&h.metrics.RequestsReceived, 1)
 
+	// Limit request body size to prevent DoS
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxRequestSize())
+
 	// Check rate limit
 	if h.rateLimiter != nil {
-		clientIP := getClientIP(r)
+		clientIP := h.ipResolver.GetClientIP(r)
 		if !h.rateLimiter.allow(clientIP) {
 			atomic.AddInt64(&h.metrics.RequestsError, 1)
 			w.Header().Set("Retry-After", "1")
@@ -102,6 +134,12 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 	var update domain.FeatureUpdate
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		atomic.AddInt64(&h.metrics.RequestsError, 1)
+		// Check if the error is due to body size limit
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -132,9 +170,18 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&h.metrics.RequestsReceived, 1)
 
+	// Limit request body size to prevent DoS (use 10x default for bulk)
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxRequestSize()*10)
+
 	var updates []domain.FeatureUpdate
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		atomic.AddInt64(&h.metrics.RequestsError, 1)
+		// Check if the error is due to body size limit
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -264,20 +311,6 @@ func toFloat64(v interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-// getClientIP extracts the client IP from the request.
-func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header first (for proxied requests)
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
-	}
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-	// Fall back to RemoteAddr
-	return r.RemoteAddr
 }
 
 // rateLimiter implements a simple token bucket rate limiter per client.

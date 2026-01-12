@@ -3,6 +3,7 @@ package ingestion
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -258,48 +259,7 @@ func TestHTTPIngestion_RateLimiting(t *testing.T) {
 	}
 }
 
-func TestHTTPIngestion_ClientIPExtraction(t *testing.T) {
-	tests := []struct {
-		name      string
-		headers   map[string]string
-		remoteAddr string
-		wantIP    string
-	}{
-		{
-			name:       "X-Forwarded-For header",
-			headers:    map[string]string{"X-Forwarded-For": "10.0.0.1"},
-			remoteAddr: "192.168.1.1:12345",
-			wantIP:     "10.0.0.1",
-		},
-		{
-			name:       "X-Real-IP header",
-			headers:    map[string]string{"X-Real-IP": "10.0.0.2"},
-			remoteAddr: "192.168.1.1:12345",
-			wantIP:     "10.0.0.2",
-		},
-		{
-			name:       "RemoteAddr fallback",
-			headers:    map[string]string{},
-			remoteAddr: "192.168.1.1:12345",
-			wantIP:     "192.168.1.1:12345",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req.RemoteAddr = tt.remoteAddr
-			for k, v := range tt.headers {
-				req.Header.Set(k, v)
-			}
-
-			got := getClientIP(req)
-			if got != tt.wantIP {
-				t.Errorf("getClientIP() = %q, want %q", got, tt.wantIP)
-			}
-		})
-	}
-}
+// TestHTTPIngestion_ClientIPExtraction is now in internal/clientip/resolver_test.go
 
 func TestHTTPIngestion_Metrics(t *testing.T) {
 	h := newTestHTTPIngestion(t, HTTPIngestionConfig{
@@ -419,5 +379,79 @@ func TestRateLimiter(t *testing.T) {
 	// Different client should have its own bucket
 	if !rl.allow("client2") {
 		t.Error("different client should be allowed")
+	}
+}
+
+func TestHTTPIngestion_RequestSizeLimit(t *testing.T) {
+	// Create handler with small max request size
+	h := newTestHTTPIngestion(t, HTTPIngestionConfig{
+		ValidateSchema: false,
+		MaxRequestSize: 100, // 100 bytes
+	})
+
+	// Create valid JSON body that exceeds the limit
+	// This is a valid JSON structure with a large value to exceed 100 bytes
+	largeFeatures := make(map[string]interface{})
+	for i := 0; i < 20; i++ {
+		largeFeatures[fmt.Sprintf("feature_%d", i)] = 1.234567890
+	}
+	body := map[string]interface{}{
+		"entity_key": "user:123",
+		"features":   largeFeatures,
+	}
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
+
+	// Verify the body is larger than the limit
+	if len(jsonBody) <= 100 {
+		t.Fatalf("test body should be > 100 bytes, got %d", len(jsonBody))
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/ingest", bytes.NewReader(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	h.HandlePush(rr, req)
+
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status = %d, want %d; body: %s", rr.Code, http.StatusRequestEntityTooLarge, rr.Body.String())
+	}
+}
+
+func TestHTTPIngestion_BulkRequestSizeLimit(t *testing.T) {
+	// Create handler with small max request size
+	h := newTestHTTPIngestion(t, HTTPIngestionConfig{
+		ValidateSchema: false,
+		MaxRequestSize: 100, // 100 bytes, bulk gets 10x = 1000 bytes
+	})
+
+	// Create valid JSON array that exceeds the bulk limit (1000 bytes)
+	var updates []map[string]interface{}
+	for i := 0; i < 50; i++ {
+		updates = append(updates, map[string]interface{}{
+			"entity_key": fmt.Sprintf("user:%d", i),
+			"features":   map[string]interface{}{"score": 0.123456789},
+		})
+	}
+	jsonBody, err := json.Marshal(updates)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
+
+	// Verify the body is larger than the bulk limit (1000 bytes)
+	if len(jsonBody) <= 1000 {
+		t.Fatalf("test body should be > 1000 bytes, got %d", len(jsonBody))
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/ingest/bulk", bytes.NewReader(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	h.HandleBulkPush(rr, req)
+
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status = %d, want %d; body: %s", rr.Code, http.StatusRequestEntityTooLarge, rr.Body.String())
 	}
 }
