@@ -241,8 +241,8 @@ func (wm *WindowManager) ComputeAndEvict(now time.Time) []WindowResult {
 	wm.mu.Lock()
 	defer wm.mu.Unlock()
 
-	var results []WindowResult
-	var toDelete []string
+	results := make([]WindowResult, 0)
+	toDelete := make([]string, 0, len(wm.windows))
 
 	for key, w := range wm.windows {
 		// Check if window is complete

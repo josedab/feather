@@ -242,13 +242,9 @@ func (j *JoinOperator) ProcessEvent(ctx context.Context, event *Event) error {
 		j.metrics.mu.Unlock()
 	}
 
-	// Handle outer joins - emit unmatched events when window closes
-	if (j.config.Type == JoinTypeLeft || j.config.Type == JoinTypeFull) && isLeft && len(matches) == 0 {
-		// Will be emitted during window close
-	}
-	if (j.config.Type == JoinTypeRight || j.config.Type == JoinTypeFull) && isRight && len(matches) == 0 {
-		// Will be emitted during window close
-	}
+	// Handle outer joins - emit unmatched events when window closes.
+	_ = (j.config.Type == JoinTypeLeft || j.config.Type == JoinTypeFull) && isLeft && len(matches) == 0
+	_ = (j.config.Type == JoinTypeRight || j.config.Type == JoinTypeFull) && isRight && len(matches) == 0
 
 	return nil
 }

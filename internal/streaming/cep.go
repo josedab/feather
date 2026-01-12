@@ -42,18 +42,30 @@ type PatternCondition struct {
 type Operator string
 
 const (
-	OpEquals         Operator = "eq"
-	OpNotEquals      Operator = "neq"
-	OpGreaterThan    Operator = "gt"
-	OpLessThan       Operator = "lt"
+	// OpEquals checks for equality.
+	OpEquals Operator = "eq"
+	// OpNotEquals checks for inequality.
+	OpNotEquals Operator = "neq"
+	// OpGreaterThan checks for greater-than comparison.
+	OpGreaterThan Operator = "gt"
+	// OpLessThan checks for less-than comparison.
+	OpLessThan Operator = "lt"
+	// OpGreaterOrEqual checks for greater-than-or-equal comparison.
 	OpGreaterOrEqual Operator = "gte"
-	OpLessOrEqual    Operator = "lte"
-	OpContains       Operator = "contains"
-	OpStartsWith     Operator = "starts_with"
-	OpEndsWith       Operator = "ends_with"
-	OpIn             Operator = "in"
-	OpNotIn          Operator = "not_in"
-	OpRegex          Operator = "regex"
+	// OpLessOrEqual checks for less-than-or-equal comparison.
+	OpLessOrEqual Operator = "lte"
+	// OpContains checks if a value contains a substring.
+	OpContains Operator = "contains"
+	// OpStartsWith checks prefix matching.
+	OpStartsWith Operator = "starts_with"
+	// OpEndsWith checks suffix matching.
+	OpEndsWith Operator = "ends_with"
+	// OpIn checks membership in a set.
+	OpIn Operator = "in"
+	// OpNotIn checks non-membership in a set.
+	OpNotIn Operator = "not_in"
+	// OpRegex checks a regex match.
+	OpRegex Operator = "regex"
 )
 
 // Quantifier for pattern steps.
