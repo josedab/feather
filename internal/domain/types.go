@@ -93,6 +93,7 @@ func (d DataType) String() string {
 	}
 }
 
+// ParseDataType parses a data type string to DataType.
 func ParseDataType(s string) DataType {
 	switch s {
 	case "int64":
@@ -114,10 +115,12 @@ func ParseDataType(s string) DataType {
 	}
 }
 
+// MarshalJSON marshals the data type to JSON.
 func (d DataType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.String())
 }
 
+// UnmarshalJSON unmarshals the data type from JSON.
 func (d *DataType) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
