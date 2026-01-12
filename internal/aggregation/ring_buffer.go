@@ -2,6 +2,8 @@ package aggregation
 
 import "math"
 
+//revive:disable:exported
+
 // AggregationBucket stores pre-aggregated values for a time bucket.
 type AggregationBucket struct {
 	StartTime int64   // Unix nanoseconds
@@ -84,6 +86,14 @@ func (r *RingBuffer) Range(fn func(bucket *AggregationBucket) bool) {
 	}
 }
 
+// PopOldest removes the oldest bucket.
+func (r *RingBuffer) PopOldest() {
+	if r.size == 0 {
+		return
+	}
+	r.size--
+}
+
 // Aggregate computes aggregate statistics across all buckets.
 func (r *RingBuffer) Aggregate() AggregationBucket {
 	result := AggregationBucket{
@@ -118,3 +128,5 @@ func (r *RingBuffer) Aggregate() AggregationBucket {
 
 	return result
 }
+
+//revive:enable:exported

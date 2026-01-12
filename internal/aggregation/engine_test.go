@@ -1,6 +1,7 @@
 package aggregation
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -117,22 +118,22 @@ func TestEngine_MinMax(t *testing.T) {
 	engine.Update("user:1", "price", 50.0, now)
 	engine.Update("user:1", "price", 200.0, now)
 
-	min, err := engine.Compute("user:1", "price", domain.AggMin)
+	minValue, err := engine.Compute("user:1", "price", domain.AggMin)
 	if err != nil {
 		t.Fatalf("Compute min failed: %v", err)
 	}
 
-	if min != 50 {
-		t.Errorf("Expected min=50, got %f", min)
+	if minValue != 50 {
+		t.Errorf("Expected min=50, got %f", minValue)
 	}
 
-	max, err := engine.Compute("user:1", "price", domain.AggMax)
+	maxValue, err := engine.Compute("user:1", "price", domain.AggMax)
 	if err != nil {
 		t.Fatalf("Compute max failed: %v", err)
 	}
 
-	if max != 200 {
-		t.Errorf("Expected max=200, got %f", max)
+	if maxValue != 200 {
+		t.Errorf("Expected max=200, got %f", maxValue)
 	}
 }
 
@@ -252,7 +253,7 @@ func TestEngine_EntityNotFound(t *testing.T) {
 	engine.RegisterAggregation("feature", spec)
 
 	_, err := engine.Compute("nonexistent", "feature", domain.AggCount)
-	if err != domain.ErrEntityNotFound {
+	if !errors.Is(err, domain.ErrEntityNotFound) {
 		t.Errorf("Expected ErrEntityNotFound, got %v", err)
 	}
 }
