@@ -5,8 +5,35 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 )
+
+// validIndexNamePattern defines valid index name characters.
+// Allows alphanumeric, underscore, and hyphen only.
+var validIndexNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// validateIndexName checks that an index name is safe for use in file paths.
+// Prevents path traversal attacks by rejecting names with path separators or special sequences.
+func validateIndexName(name string) error {
+	if name == "" {
+		return fmt.Errorf("index name cannot be empty")
+	}
+	if len(name) > 255 {
+		return fmt.Errorf("index name too long (max 255 characters)")
+	}
+	if strings.Contains(name, "..") {
+		return fmt.Errorf("index name cannot contain '..'")
+	}
+	if strings.ContainsAny(name, "/\\") {
+		return fmt.Errorf("index name cannot contain path separators")
+	}
+	if !validIndexNamePattern.MatchString(name) {
+		return fmt.Errorf("index name must contain only alphanumeric characters, underscores, and hyphens")
+	}
+	return nil
+}
 
 // Store manages multiple vector indexes.
 type Store struct {
@@ -40,6 +67,10 @@ func NewStore(config StoreConfig) *Store {
 
 // CreateIndex creates a new vector index.
 func (s *Store) CreateIndex(name string, dim int, distType DistanceType) (*Index, error) {
+	if err := validateIndexName(name); err != nil {
+		return nil, fmt.Errorf("invalid index name: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -72,6 +103,10 @@ func (s *Store) CreateIndex(name string, dim int, distType DistanceType) (*Index
 
 // GetIndex retrieves an index by name.
 func (s *Store) GetIndex(name string) (*Index, error) {
+	if err := validateIndexName(name); err != nil {
+		return nil, fmt.Errorf("invalid index name: %w", err)
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -84,6 +119,10 @@ func (s *Store) GetIndex(name string) (*Index, error) {
 
 // DeleteIndex removes an index.
 func (s *Store) DeleteIndex(name string) error {
+	if err := validateIndexName(name); err != nil {
+		return fmt.Errorf("invalid index name: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -227,6 +266,10 @@ type SearchResultWithMetadata struct {
 
 // Save persists an index to disk.
 func (s *Store) Save(indexName string) error {
+	if err := validateIndexName(indexName); err != nil {
+		return fmt.Errorf("invalid index name: %w", err)
+	}
+
 	if s.dataDir == "" {
 		return nil // In-memory mode
 	}
@@ -291,6 +334,10 @@ func (s *Store) Save(indexName string) error {
 
 // Load loads an index from disk.
 func (s *Store) Load(indexName string) error {
+	if err := validateIndexName(indexName); err != nil {
+		return fmt.Errorf("invalid index name: %w", err)
+	}
+
 	if s.dataDir == "" {
 		return nil
 	}
