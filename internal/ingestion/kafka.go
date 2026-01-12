@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync/atomic"
 	"time"
 
@@ -22,6 +23,7 @@ type KafkaConsumer struct {
 	metrics        *IngestionMetrics
 	circuitBreaker *CircuitBreaker
 	running        int32
+	logger         *slog.Logger
 }
 
 // CircuitBreaker implements a simple circuit breaker pattern.
@@ -163,6 +165,7 @@ func NewKafkaConsumer(
 	config KafkaConfig,
 	store *storage.Store,
 	agg *aggregation.Engine,
+	logger *slog.Logger,
 ) (*KafkaConsumer, error) {
 	autoOffset := config.AutoOffset
 	if autoOffset == "" {
@@ -227,6 +230,7 @@ func NewKafkaConsumer(
 		agg:      agg,
 		decoder:  &JSONDecoder{},
 		metrics:  &IngestionMetrics{},
+		logger:   logger,
 	}
 
 	// Initialize circuit breaker if enabled
@@ -293,7 +297,14 @@ func (k *KafkaConsumer) Start(ctx context.Context) error {
 
 			// Commit offset
 			if _, err := k.consumer.CommitMessage(msg); err != nil {
-				// Log but don't fail - message was processed
+				if k.logger != nil {
+					k.logger.Warn("failed to commit Kafka offset",
+						"error", err,
+						"topic", *msg.TopicPartition.Topic,
+						"partition", msg.TopicPartition.Partition,
+						"offset", msg.TopicPartition.Offset,
+					)
+				}
 			}
 		}
 	}
