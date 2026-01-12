@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/feather-store/feather/internal/logging"
 )
 
 // StreamEvent represents a streaming event for pub/sub.
@@ -50,6 +53,10 @@ type Hub struct {
 	mu            sync.RWMutex
 	stopCh        chan struct{}
 	wg            sync.WaitGroup
+
+	// Metrics for monitoring
+	droppedHubEvents        int64 // Events dropped because hub channel full
+	droppedSubscriberEvents int64 // Events dropped because subscriber channel full
 }
 
 type subscriberInfo struct {
@@ -187,7 +194,14 @@ func (h *Hub) Publish(event StreamEvent) {
 	select {
 	case h.eventCh <- event:
 	default:
-		// Channel full, drop event
+		// Channel full, drop event and track metric
+		dropped := atomic.AddInt64(&h.droppedHubEvents, 1)
+		if dropped%1000 == 1 { // Log every 1000th drop to avoid log spam
+			logging.FromContext(context.Background(), nil).Warn("streaming hub channel full, dropping events",
+				"total_dropped", dropped,
+				"event_type", event.Type,
+			)
+		}
 	}
 }
 
@@ -268,7 +282,15 @@ func (h *Hub) distributeEvent(event StreamEvent) {
 			select {
 			case info.eventCh <- event:
 			default:
-				// Subscriber channel full, skip
+				// Subscriber channel full, track metric
+				dropped := atomic.AddInt64(&h.droppedSubscriberEvents, 1)
+				if dropped%1000 == 1 { // Log every 1000th drop to avoid log spam
+					logging.FromContext(context.Background(), nil).Warn("subscriber channel full, dropping event",
+						"total_dropped", dropped,
+						"subscription_id", id,
+						"event_type", event.Type,
+					)
+				}
 			}
 		}
 	}
@@ -292,15 +314,19 @@ func (h *Hub) Stats() HubStats {
 	defer h.mu.RUnlock()
 
 	return HubStats{
-		ActiveSubscriptions: len(h.subscriptions),
-		QueuedEvents:        len(h.eventCh),
+		ActiveSubscriptions:     len(h.subscriptions),
+		QueuedEvents:            len(h.eventCh),
+		DroppedHubEvents:        atomic.LoadInt64(&h.droppedHubEvents),
+		DroppedSubscriberEvents: atomic.LoadInt64(&h.droppedSubscriberEvents),
 	}
 }
 
 // HubStats contains hub statistics.
 type HubStats struct {
-	ActiveSubscriptions int `json:"active_subscriptions"`
-	QueuedEvents        int `json:"queued_events"`
+	ActiveSubscriptions     int   `json:"active_subscriptions"`
+	QueuedEvents            int   `json:"queued_events"`
+	DroppedHubEvents        int64 `json:"dropped_hub_events"`
+	DroppedSubscriberEvents int64 `json:"dropped_subscriber_events"`
 }
 
 // Stop stops the hub.
