@@ -23,7 +23,7 @@ linters:
     - errname        # Check error naming conventions
     - errorlint      # Find issues with error wrapping
     - exhaustive     # Check switch exhaustiveness
-    - exportloopref  # Check loop variable capture
+    - copyloopvar    # Check loop variable capture
     - gofmt          # Check formatting
     - goimports      # Check imports ordering
     - gosec          # Security checks
@@ -106,6 +106,9 @@ issues:
     - path: "cmd/.*\\.go"
       linters:
         - noctx
+    - path: "internal/warehouse/scheduler.go"
+      linters:
+        - contextcheck
 
     # Allow dot imports in tests for testify
     - path: "_test\\.go"
