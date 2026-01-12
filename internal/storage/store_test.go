@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -47,7 +48,7 @@ func (m *mockSchemaRegistry) ListGroups() []*domain.FeatureGroup {
 
 func newTestStore(t *testing.T) *Store {
 	t.Helper()
-	store, err := NewStore(StoreOptions{
+	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:       1024 * 1024 * 100, // 100MB
 		WarmInMemory:     true,
 		TTLCheckInterval: time.Hour, // Long interval to avoid interference
@@ -62,7 +63,7 @@ func newTestStore(t *testing.T) *Store {
 }
 
 func TestStore_NewStore(t *testing.T) {
-	store, err := NewStore(StoreOptions{
+	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, nil)
@@ -329,7 +330,7 @@ func TestStore_Metrics(t *testing.T) {
 }
 
 func TestStore_Close(t *testing.T) {
-	store, err := NewStore(StoreOptions{
+	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, nil)
@@ -402,7 +403,7 @@ func TestStore_WithSchemaRegistry(t *testing.T) {
 		},
 	}
 
-	store, err := NewStore(StoreOptions{
+	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:       1024 * 1024,
 		WarmInMemory:     true,
 		TTLCheckInterval: time.Hour,
@@ -419,7 +420,7 @@ func TestStore_WithSchemaRegistry(t *testing.T) {
 }
 
 func BenchmarkStore_Put(b *testing.B) {
-	store, err := NewStore(StoreOptions{
+	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, nil)
@@ -441,7 +442,7 @@ func BenchmarkStore_Put(b *testing.B) {
 }
 
 func BenchmarkStore_Get(b *testing.B) {
-	store, err := NewStore(StoreOptions{
+	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, nil)
