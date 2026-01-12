@@ -42,6 +42,9 @@ type HTTPServerConfig struct {
 	VectorStore   *vector.Store
 	TLS           *config.TLSConfig
 	CORS          *CORSConfig
+	// MaxRequestSize is the maximum allowed request body size in bytes.
+	// If 0, defaults to DefaultMaxRequestSize (1MB).
+	MaxRequestSize int64
 	// Optional handlers for extended functionality
 	EnableGroups    bool
 	EnableBackfill  bool
@@ -50,6 +53,9 @@ type HTTPServerConfig struct {
 	EnableAuth      bool
 	EnableCORS      bool
 }
+
+// DefaultMaxRequestSize is the default maximum request body size (1MB).
+const DefaultMaxRequestSize = 1 << 20 // 1MB
 
 // NewHTTPServer creates a new HTTP server.
 func NewHTTPServer(
@@ -109,6 +115,13 @@ func NewHTTPServer(
 	handler = requestIDMiddleware(handler)
 	handler = compressionMiddleware(handler)
 
+	// Add request size limit middleware
+	maxSize := cfg.MaxRequestSize
+	if maxSize == 0 {
+		maxSize = DefaultMaxRequestSize
+	}
+	handler = maxRequestSizeMiddleware(maxSize)(handler)
+
 	// Add CORS middleware if enabled
 	if cfg.EnableCORS {
 		handler = corsMiddleware(cfg.CORS)(handler)
@@ -117,6 +130,9 @@ func NewHTTPServer(
 	// Add security headers middleware
 	tlsEnabled := cfg.TLS != nil && cfg.TLS.Enabled
 	handler = securityHeadersMiddleware(tlsEnabled)(handler)
+
+	// Add panic recovery middleware (outermost to catch all panics)
+	handler = panicRecoveryMiddleware(handler)
 
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -663,6 +679,45 @@ func compressionMiddleware(next http.Handler) http.Handler {
 
 		gzw := &gzipResponseWriter{ResponseWriter: w, Writer: gz}
 		next.ServeHTTP(gzw, r)
+	})
+}
+
+// maxRequestSizeMiddleware limits the size of request bodies to prevent DoS attacks.
+func maxRequestSizeMiddleware(maxSize int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Only limit request body for methods that have bodies
+			if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
+				r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// panicRecoveryMiddleware recovers from panics and returns a 500 error.
+// This prevents a single panic from crashing the entire server.
+func panicRecoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				// Log the panic with request context
+				logger := logging.FromContext(r.Context(), nil)
+				logger.Error("panic recovered in HTTP handler",
+					"panic", rec,
+					"path", r.URL.Path,
+					"method", r.Method,
+				)
+
+				// Return 500 error
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]string{
+					"error": "internal server error",
+				})
+			}
+		}()
+		next.ServeHTTP(w, r)
 	})
 }
 

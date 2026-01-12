@@ -401,3 +401,34 @@ func TestHTTPServer_Compression(t *testing.T) {
 	// This test verifies the middleware doesn't break the response
 	assertStatus(t, rr, http.StatusOK)
 }
+
+func TestPanicRecoveryMiddleware(t *testing.T) {
+	// Create a handler that panics
+	panicHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test panic")
+	})
+
+	// Wrap with panic recovery middleware
+	handler := panicRecoveryMiddleware(panicHandler)
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rr := httptest.NewRecorder()
+
+	// This should not panic
+	handler.ServeHTTP(rr, req)
+
+	// Should return 500
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
+	}
+
+	// Should have JSON content type
+	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Content-Type = %q, want %q", ct, "application/json")
+	}
+
+	// Should contain error message
+	if body := rr.Body.String(); body == "" {
+		t.Error("expected non-empty response body")
+	}
+}
