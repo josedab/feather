@@ -1,23 +1,42 @@
 package auth
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/feather-store/feather/internal/clientip"
 )
 
 // Middleware provides authentication and authorization middleware.
 type Middleware struct {
-	controller *AccessController
+	controller  *AccessController
 	rateLimiter *RateLimiter
+	ipResolver  *clientip.Resolver
 }
 
 // NewMiddleware creates new auth middleware.
-func NewMiddleware(controller *AccessController) *Middleware {
+// The ipResolver parameter controls how client IPs are extracted from requests.
+// If nil, a resolver that trusts no proxies is used (safest default).
+func NewMiddleware(controller *AccessController, ipResolver *clientip.Resolver) *Middleware {
+	if ipResolver == nil {
+		// Safe default: trust no proxies
+		ipResolver, _ = clientip.NewResolver(nil)
+	}
 	return &Middleware{
 		controller:  controller,
 		rateLimiter: NewRateLimiter(),
+		ipResolver:  ipResolver,
+	}
+}
+
+// Stop stops the middleware's background goroutines.
+// This should be called during shutdown to prevent goroutine leaks.
+func (m *Middleware) Stop() {
+	if m.rateLimiter != nil {
+		m.rateLimiter.Stop()
 	}
 }
 
@@ -64,7 +83,7 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 			APIKeyID:  key.ID,
 			Action:    r.Method,
 			Resource:  r.URL.Path,
-			IP:        getClientIP(r),
+			IP:        m.ipResolver.GetClientIP(r),
 			UserAgent: r.UserAgent(),
 			Success:   true,
 		})
@@ -89,7 +108,7 @@ func (m *Middleware) RequirePermission(perm Permission) func(http.Handler) http.
 					APIKeyID: key.ID,
 					Action:   r.Method,
 					Resource: r.URL.Path,
-					IP:       getClientIP(r),
+					IP:       m.ipResolver.GetClientIP(r),
 					Success:  false,
 					Error:    "permission denied: " + string(perm),
 				})
@@ -168,27 +187,14 @@ func (m *Middleware) Optional(next http.Handler) http.Handler {
 func writeAuthError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write([]byte(`{"error":"` + message + `"}`))
-}
-
-func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
-	}
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-	// Fall back to RemoteAddr
-	return r.RemoteAddr
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
 // RateLimiter provides token bucket rate limiting.
 type RateLimiter struct {
 	buckets map[string]*tokenBucket
 	mu      sync.Mutex
+	stopCh  chan struct{}
 }
 
 type tokenBucket struct {
@@ -201,12 +207,19 @@ type tokenBucket struct {
 func NewRateLimiter() *RateLimiter {
 	rl := &RateLimiter{
 		buckets: make(map[string]*tokenBucket),
+		stopCh:  make(chan struct{}),
 	}
 
 	// Start cleanup goroutine
 	go rl.cleanup()
 
 	return rl
+}
+
+// Stop stops the rate limiter's cleanup goroutine.
+// This should be called during shutdown to prevent goroutine leaks.
+func (rl *RateLimiter) Stop() {
+	close(rl.stopCh)
 }
 
 // Allow checks if a request is allowed under rate limiting.
@@ -245,14 +258,21 @@ func (rl *RateLimiter) Allow(key string, rateLimit int) bool {
 
 func (rl *RateLimiter) cleanup() {
 	ticker := time.NewTicker(5 * time.Minute)
-	for range ticker.C {
-		rl.mu.Lock()
-		now := time.Now()
-		for key, bucket := range rl.buckets {
-			if now.Sub(bucket.lastTime) > 10*time.Minute {
-				delete(rl.buckets, key)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-rl.stopCh:
+			return
+		case <-ticker.C:
+			rl.mu.Lock()
+			now := time.Now()
+			for key, bucket := range rl.buckets {
+				if now.Sub(bucket.lastTime) > 10*time.Minute {
+					delete(rl.buckets, key)
+				}
 			}
+			rl.mu.Unlock()
 		}
-		rl.mu.Unlock()
 	}
 }

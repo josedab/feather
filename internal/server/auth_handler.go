@@ -19,7 +19,7 @@ func NewAuthHandler() *AuthHandler {
 	controller := auth.NewAccessController()
 	return &AuthHandler{
 		controller: controller,
-		middleware: auth.NewMiddleware(controller),
+		middleware: auth.NewMiddleware(controller, nil), // nil uses safe default (trust no proxies)
 	}
 }
 
