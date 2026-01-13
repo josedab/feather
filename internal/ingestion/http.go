@@ -128,7 +128,7 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 		if !h.rateLimiter.allow(clientIP) {
 			atomic.AddInt64(&h.metrics.RequestsError, 1)
 			w.Header().Set("Retry-After", "1")
-			writeError(w, http.StatusTooManyRequests, "rate limit exceeded")
+			writeError(r.Context(), w, http.StatusTooManyRequests, "rate limit exceeded")
 			return
 		}
 	}
@@ -139,25 +139,26 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 		// Check if the error is due to body size limit
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			writeError(r.Context(), w, http.StatusRequestEntityTooLarge, "request body too large")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if update.EntityKey == "" {
 		atomic.AddInt64(&h.metrics.RequestsError, 1)
-		writeError(w, http.StatusBadRequest, "entity_key required")
+		writeError(r.Context(), w, http.StatusBadRequest, "entity_key required")
 		return
 	}
 
 	if err := h.ingestUpdate(&update); err != nil {
 		atomic.AddInt64(&h.metrics.RequestsError, 1)
-		if _, ok := err.(*ValidationError); ok {
-			writeError(w, http.StatusBadRequest, err.Error())
+		var validationErr *ValidationError
+		if errors.As(err, &validationErr) {
+			writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
@@ -165,7 +166,7 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&h.metrics.RequestsSuccess, 1)
 	atomic.AddInt64(&h.metrics.FeaturesIngested, int64(len(update.Features)))
 
-	writeJSON(w, http.StatusCreated, map[string]bool{"success": true})
+	writeJSON(r.Context(), w, http.StatusCreated, map[string]bool{"success": true})
 }
 
 // HandleBulkPush handles POST /ingest/bulk for bulk feature updates.
@@ -181,10 +182,10 @@ func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 		// Check if the error is due to body size limit
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			writeError(r.Context(), w, http.StatusRequestEntityTooLarge, "request body too large")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -208,7 +209,7 @@ func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 
 	atomic.AddInt64(&h.metrics.RequestsSuccess, 1)
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": successCount,
 		"errors":  errorCount,
 		"total":   len(updates),
@@ -244,14 +245,16 @@ func (h *HTTPIngestion) ingestUpdate(update *domain.FeatureUpdate) error {
 	}
 
 	if err := h.store.Put(update.EntityKey, features); err != nil {
-		return err
+		return fmt.Errorf("storing features: %w", err)
 	}
 
 	// Update aggregations
 	for name, val := range update.Features {
 		if h.agg.GetSpec(name) != nil {
-			if floatVal, ok := toFloat64(val); ok {
-				h.agg.Update(update.EntityKey, name, floatVal, time.Unix(0, update.Timestamp))
+			if floatVal, ok := domain.ToFloat64(val); ok {
+				if err := h.agg.Update(update.EntityKey, name, floatVal, time.Unix(0, update.Timestamp)); err != nil {
+					return fmt.Errorf("updating aggregation: %w", err)
+				}
 			}
 		}
 	}
@@ -287,36 +290,19 @@ func (h *HTTPIngestion) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /ingest/bulk", h.HandleBulkPush)
 }
 
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		logging.FromContext(context.Background(), nil).Error("failed to encode JSON response", "error", err)
+		logging.FromContext(ctx, nil).Error("failed to encode JSON response", "error", err)
 	}
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
+func writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSON(ctx, w, status, map[string]string{"error": message})
 }
 
 // toFloat64 converts a value to float64 if possible.
-func toFloat64(v interface{}) (float64, bool) {
-	switch val := v.(type) {
-	case float64:
-		return val, true
-	case float32:
-		return float64(val), true
-	case int:
-		return float64(val), true
-	case int64:
-		return float64(val), true
-	case int32:
-		return float64(val), true
-	default:
-		return 0, false
-	}
-}
-
 // rateLimiter implements a simple token bucket rate limiter per client.
 type rateLimiter struct {
 	mu       sync.Mutex

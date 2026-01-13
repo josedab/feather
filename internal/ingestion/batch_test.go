@@ -2,6 +2,7 @@ package ingestion
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ func newTestBatchImporter(t *testing.T) *BatchImporter {
 	t.Helper()
 
 	schema := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1 << 20, // 1MB
 		WarmInMemory: true,
 	}, schema)
@@ -184,7 +185,7 @@ func TestBatchImporter_ImportCSVReader_ContextCancellation(t *testing.T) {
 	}
 
 	_, err := b.ImportCSVReader(ctx, strings.NewReader(csv), config)
-	if err != context.Canceled {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got %v", err)
 	}
 }

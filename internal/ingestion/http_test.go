@@ -2,6 +2,7 @@ package ingestion
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/feather-store/feather/internal/aggregation"
+	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/storage"
 )
 
@@ -17,7 +19,7 @@ func newTestHTTPIngestion(t *testing.T, config HTTPIngestionConfig) *HTTPIngesti
 	t.Helper()
 
 	schema := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1 << 20, // 1MB
 		WarmInMemory: true,
 	}, schema)
@@ -348,7 +350,7 @@ func TestToFloat64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := toFloat64(tt.input)
+			got, ok := domain.ToFloat64(tt.input)
 			if ok != tt.ok {
 				t.Errorf("toFloat64() ok = %v, want %v", ok, tt.ok)
 			}

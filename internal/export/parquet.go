@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	// privateTempDir is a process-private temp directory with restricted permissions
+	// privateTempDir is a process-private temp directory with restricted permissions.
 	privateTempDir     string
 	privateTempDirOnce sync.Once
-	privateTempDirErr  error
+	errPrivateTempDir  error
 )
 
 // getPrivateTempDir returns a private temp directory for this process.
@@ -30,16 +30,16 @@ func getPrivateTempDir() (string, error) {
 
 		// Create with restrictive permissions (owner only)
 		if err := os.MkdirAll(privateTempDir, 0700); err != nil {
-			privateTempDirErr = fmt.Errorf("creating private temp dir: %w", err)
+			errPrivateTempDir = fmt.Errorf("creating private temp dir: %w", err)
 			return
 		}
 
 		// Double-check permissions in case directory already existed
-		if err := os.Chmod(privateTempDir, 0700); err != nil {
-			privateTempDirErr = fmt.Errorf("setting temp dir permissions: %w", err)
+		if err := os.Chmod(privateTempDir, 0700); err != nil { //nolint:gosec
+			errPrivateTempDir = fmt.Errorf("setting temp dir permissions: %w", err)
 		}
 	})
-	return privateTempDir, privateTempDirErr
+	return privateTempDir, errPrivateTempDir
 }
 
 // FeatureRecord is the base struct for Parquet export.
@@ -69,8 +69,13 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	tmpFile.Close()
-	defer os.Remove(tmpPath)
+	closeErr := tmpFile.Close()
+	if closeErr != nil {
+		return fmt.Errorf("closing temp file: %w", closeErr)
+	}
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
 	// Create parquet file writer
 	fw, err := local.NewLocalFileWriter(tmpPath)
@@ -80,7 +85,7 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 
 	pw, err := writer.NewParquetWriter(fw, new(FeatureRecord), 4)
 	if err != nil {
-		fw.Close()
+		_ = fw.Close()
 		return fmt.Errorf("creating parquet writer: %w", err)
 	}
 
@@ -89,11 +94,11 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 	// Write rows
 	for _, row := range rows {
 		// Convert features map to JSON
-		featuresJSON, err := json.Marshal(row.Features)
-		if err != nil {
-			pw.WriteStop()
-			fw.Close()
-			return fmt.Errorf("marshaling features: %w", err)
+		featuresJSON, marshalErr := json.Marshal(row.Features)
+		if marshalErr != nil {
+			_ = pw.WriteStop()
+			_ = fw.Close()
+			return fmt.Errorf("marshaling features: %w", marshalErr)
 		}
 
 		record := FeatureRecord{
@@ -102,25 +107,29 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 			Features:  string(featuresJSON),
 		}
 
-		if err := pw.Write(record); err != nil {
-			pw.WriteStop()
-			fw.Close()
+		if err = pw.Write(record); err != nil {
+			_ = pw.WriteStop()
+			_ = fw.Close()
 			return fmt.Errorf("writing record: %w", err)
 		}
 	}
 
-	if err := pw.WriteStop(); err != nil {
-		fw.Close()
+	if err = pw.WriteStop(); err != nil {
+		_ = fw.Close()
 		return fmt.Errorf("finalizing parquet: %w", err)
 	}
-	fw.Close()
+	if err = fw.Close(); err != nil {
+		return fmt.Errorf("closing parquet file: %w", err)
+	}
 
 	// Copy temp file to writer
 	tmpFile, err = os.Open(tmpPath)
 	if err != nil {
 		return fmt.Errorf("opening temp file: %w", err)
 	}
-	defer tmpFile.Close()
+	defer func() {
+		_ = tmpFile.Close()
+	}()
 
 	if _, err := io.Copy(w, tmpFile); err != nil {
 		return fmt.Errorf("copying to output: %w", err)
@@ -142,8 +151,13 @@ func writeEmptyParquet(w io.Writer) error {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	tmpFile.Close()
-	defer os.Remove(tmpPath)
+	closeErr := tmpFile.Close()
+	if closeErr != nil {
+		return fmt.Errorf("closing temp file: %w", closeErr)
+	}
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
 
 	fw, err := local.NewLocalFileWriter(tmpPath)
 	if err != nil {
@@ -152,22 +166,26 @@ func writeEmptyParquet(w io.Writer) error {
 
 	pw, err := writer.NewParquetWriter(fw, new(FeatureRecord), 4)
 	if err != nil {
-		fw.Close()
+		_ = fw.Close()
 		return fmt.Errorf("creating parquet writer: %w", err)
 	}
 
-	if err := pw.WriteStop(); err != nil {
-		fw.Close()
+	if err = pw.WriteStop(); err != nil {
+		_ = fw.Close()
 		return fmt.Errorf("finalizing parquet: %w", err)
 	}
-	fw.Close()
+	if err = fw.Close(); err != nil {
+		return fmt.Errorf("closing parquet file: %w", err)
+	}
 
 	// Copy to writer
 	tmpFile, err = os.Open(tmpPath)
 	if err != nil {
 		return fmt.Errorf("opening temp file: %w", err)
 	}
-	defer tmpFile.Close()
+	defer func() {
+		_ = tmpFile.Close()
+	}()
 
 	if _, err := io.Copy(w, tmpFile); err != nil {
 		return fmt.Errorf("copying to output: %w", err)

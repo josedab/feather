@@ -143,10 +143,9 @@ func TestExportFormat_Constants(t *testing.T) {
 func TestExportRequest_Fields(t *testing.T) {
 	// Test that ExportRequest struct has expected fields
 	req := ExportRequest{
-		Entities:   []string{"entity:1"},
-		Features:   []string{"feature1"},
-		Format:     FormatCSV,
-		OutputPath: "/tmp/out.csv",
+		Entities: []string{"entity:1"},
+		Features: []string{"feature1"},
+		Format:   FormatCSV,
 	}
 
 	if len(req.Entities) != 1 || req.Entities[0] != "entity:1" {
@@ -158,9 +157,6 @@ func TestExportRequest_Fields(t *testing.T) {
 	if req.Format != FormatCSV {
 		t.Error("Format field not set correctly")
 	}
-	if req.OutputPath != "/tmp/out.csv" {
-		t.Error("OutputPath field not set correctly")
-	}
 }
 
 func TestExportResult_Fields(t *testing.T) {
@@ -169,7 +165,6 @@ func TestExportResult_Fields(t *testing.T) {
 		FeaturesExported: 5,
 		RowsWritten:      10,
 		BytesWritten:     1024,
-		OutputPath:       "/tmp/out.csv",
 	}
 
 	if result.EntitiesExported != 10 {

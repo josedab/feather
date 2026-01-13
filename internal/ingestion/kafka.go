@@ -3,12 +3,14 @@ package ingestion
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+
 	"github.com/feather-store/feather/internal/aggregation"
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/storage"
@@ -39,6 +41,7 @@ type CircuitBreaker struct {
 // CircuitBreakerState represents the circuit breaker state.
 type CircuitBreakerState int32
 
+// CircuitBreakerState constants.
 const (
 	CircuitClosed CircuitBreakerState = iota
 	CircuitOpen
@@ -143,6 +146,7 @@ type FeatureDecoder interface {
 // JSONDecoder decodes JSON-encoded feature updates.
 type JSONDecoder struct{}
 
+// Decode parses a JSON-encoded feature update.
 func (d *JSONDecoder) Decode(data []byte) (*domain.FeatureUpdate, error) {
 	var update domain.FeatureUpdate
 	if err := json.Unmarshal(data, &update); err != nil {
@@ -152,7 +156,7 @@ func (d *JSONDecoder) Decode(data []byte) (*domain.FeatureUpdate, error) {
 }
 
 // IngestionMetrics tracks ingestion performance.
-type IngestionMetrics struct {
+type IngestionMetrics struct { //nolint:revive
 	MessagesReceived int64
 	MessagesSuccess  int64
 	MessagesError    int64
@@ -189,29 +193,43 @@ func NewKafkaConsumer(
 
 	// Configure security protocol
 	if config.SecurityProtocol != "" {
-		configMap.SetKey("security.protocol", config.SecurityProtocol)
+		if err := configMap.SetKey("security.protocol", config.SecurityProtocol); err != nil {
+			return nil, fmt.Errorf("setting security protocol: %w", err)
+		}
 	}
 
 	// Configure SASL authentication
 	if config.SASLMechanism != "" {
-		configMap.SetKey("sasl.mechanism", config.SASLMechanism)
+		if err := configMap.SetKey("sasl.mechanism", config.SASLMechanism); err != nil {
+			return nil, fmt.Errorf("setting sasl mechanism: %w", err)
+		}
 	}
 	if config.SASLUsername != "" {
-		configMap.SetKey("sasl.username", config.SASLUsername)
+		if err := configMap.SetKey("sasl.username", config.SASLUsername); err != nil {
+			return nil, fmt.Errorf("setting sasl username: %w", err)
+		}
 	}
 	if config.SASLPassword != "" {
-		configMap.SetKey("sasl.password", config.SASLPassword)
+		if err := configMap.SetKey("sasl.password", config.SASLPassword); err != nil {
+			return nil, fmt.Errorf("setting sasl password: %w", err)
+		}
 	}
 
 	// Configure SSL/TLS
 	if config.SSLCAFile != "" {
-		configMap.SetKey("ssl.ca.location", config.SSLCAFile)
+		if err := configMap.SetKey("ssl.ca.location", config.SSLCAFile); err != nil {
+			return nil, fmt.Errorf("setting ssl ca location: %w", err)
+		}
 	}
 	if config.SSLCertFile != "" {
-		configMap.SetKey("ssl.certificate.location", config.SSLCertFile)
+		if err := configMap.SetKey("ssl.certificate.location", config.SSLCertFile); err != nil {
+			return nil, fmt.Errorf("setting ssl certificate location: %w", err)
+		}
 	}
 	if config.SSLKeyFile != "" {
-		configMap.SetKey("ssl.key.location", config.SSLKeyFile)
+		if err := configMap.SetKey("ssl.key.location", config.SSLKeyFile); err != nil {
+			return nil, fmt.Errorf("setting ssl key location: %w", err)
+		}
 	}
 
 	c, err := kafka.NewConsumer(configMap)
@@ -220,7 +238,9 @@ func NewKafkaConsumer(
 	}
 
 	if err := c.Subscribe(config.Topic, nil); err != nil {
-		c.Close()
+		if closeErr := c.Close(); closeErr != nil {
+			return nil, fmt.Errorf("closing kafka consumer: %w", closeErr)
+		}
 		return nil, fmt.Errorf("subscribing to topic: %w", err)
 	}
 
@@ -268,7 +288,8 @@ func (k *KafkaConsumer) Start(ctx context.Context) error {
 			msg, err := k.consumer.ReadMessage(100 * time.Millisecond)
 			if err != nil {
 				// Timeout is not an error
-				if kafkaErr, ok := err.(kafka.Error); ok && kafkaErr.Code() == kafka.ErrTimedOut {
+				var kafkaErr kafka.Error
+				if errors.As(err, &kafkaErr) && kafkaErr.Code() == kafka.ErrTimedOut {
 					continue
 				}
 				atomic.AddInt64(&k.metrics.MessagesError, 1)
@@ -312,7 +333,7 @@ func (k *KafkaConsumer) Start(ctx context.Context) error {
 	return nil
 }
 
-// CircuitBreakerState returns the current circuit breaker state, or nil if not enabled.
+// CircuitBreakerStatus returns the current circuit breaker state, or nil if not enabled.
 func (k *KafkaConsumer) CircuitBreakerStatus() *CircuitBreakerState {
 	if k.circuitBreaker == nil {
 		return nil
@@ -359,8 +380,10 @@ func (k *KafkaConsumer) processMessage(msg *kafka.Message) error {
 	// Update aggregations
 	for name, val := range update.Features {
 		if k.agg.GetSpec(name) != nil {
-			if floatVal, ok := toFloat64(val); ok {
-				k.agg.Update(update.EntityKey, name, floatVal, time.Unix(0, update.Timestamp))
+			if floatVal, ok := domain.ToFloat64(val); ok {
+				if err := k.agg.Update(update.EntityKey, name, floatVal, time.Unix(0, update.Timestamp)); err != nil {
+					return fmt.Errorf("updating aggregation: %w", err)
+				}
 			}
 		}
 	}
