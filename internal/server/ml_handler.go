@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -61,7 +62,7 @@ func (h *MLHandler) handleListConnectors(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"connectors": result,
 		"count":      len(result),
 	})
@@ -71,17 +72,17 @@ func (h *MLHandler) handleListConnectors(w http.ResponseWriter, r *http.Request)
 func (h *MLHandler) handleRegisterConnector(w http.ResponseWriter, r *http.Request) {
 	var req ConnectorRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
 	if req.Type == "" {
-		h.writeError(w, http.StatusBadRequest, "type is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "type is required")
 		return
 	}
 
@@ -113,16 +114,16 @@ func (h *MLHandler) handleRegisterConnector(w http.ResponseWriter, r *http.Reque
 		})
 
 	default:
-		h.writeError(w, http.StatusBadRequest, "unsupported connector type: "+req.Type)
+		h.writeError(r.Context(), w, http.StatusBadRequest, "unsupported connector type: "+req.Type)
 		return
 	}
 
 	if err := h.registry.Register(req.Name, connector); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"name":    req.Name,
 		"type":    req.Type,
@@ -133,17 +134,17 @@ func (h *MLHandler) handleRegisterConnector(w http.ResponseWriter, r *http.Reque
 func (h *MLHandler) handleGetConnector(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "connector name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector name required")
 		return
 	}
 
 	connector, err := h.registry.Get(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"name":      connector.Name(),
 		"type":      connector.Type(),
 		"connected": connector.IsConnected(),
@@ -154,27 +155,30 @@ func (h *MLHandler) handleGetConnector(w http.ResponseWriter, r *http.Request) {
 func (h *MLHandler) handleUnregisterConnector(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "connector name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector name required")
 		return
 	}
 
 	// Disconnect first if connected
 	connector, err := h.registry.Get(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	if connector.IsConnected() {
-		connector.Disconnect(r.Context())
+		if err := connector.Disconnect(r.Context()); err != nil {
+			h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	if err := h.registry.Unregister(name); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -183,22 +187,22 @@ func (h *MLHandler) handleUnregisterConnector(w http.ResponseWriter, r *http.Req
 func (h *MLHandler) handleConnect(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "connector name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector name required")
 		return
 	}
 
 	connector, err := h.registry.Get(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	if err := connector.Connect(r.Context()); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":   true,
 		"connected": true,
 	})
@@ -208,22 +212,22 @@ func (h *MLHandler) handleConnect(w http.ResponseWriter, r *http.Request) {
 func (h *MLHandler) handleDisconnect(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "connector name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector name required")
 		return
 	}
 
 	connector, err := h.registry.Get(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	if err := connector.Disconnect(r.Context()); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":   true,
 		"connected": false,
 	})
@@ -243,23 +247,23 @@ type PredictAPIRequest struct {
 func (h *MLHandler) handlePredict(w http.ResponseWriter, r *http.Request) {
 	var req PredictAPIRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Connector == "" {
-		h.writeError(w, http.StatusBadRequest, "connector is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector is required")
 		return
 	}
 
 	if req.ModelName == "" {
-		h.writeError(w, http.StatusBadRequest, "model_name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_name is required")
 		return
 	}
 
 	connector, err := h.registry.Get(req.Connector)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -268,7 +272,7 @@ func (h *MLHandler) handlePredict(w http.ResponseWriter, r *http.Request) {
 	if features == nil && req.EntityID != "" && len(req.FeatureNames) > 0 {
 		features, err = connector.GetFeatures(r.Context(), req.EntityID, req.FeatureNames)
 		if err != nil {
-			h.writeError(w, http.StatusInternalServerError, "failed to get features: "+err.Error())
+			h.writeError(r.Context(), w, http.StatusInternalServerError, "failed to get features: "+err.Error())
 			return
 		}
 	}
@@ -280,11 +284,11 @@ func (h *MLHandler) handlePredict(w http.ResponseWriter, r *http.Request) {
 		Features:     features,
 	})
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"model_name":    resp.ModelName,
 		"model_version": resp.ModelVersion,
 		"predictions":   resp.Predictions,
@@ -306,23 +310,23 @@ type BatchPredictAPIRequest struct {
 func (h *MLHandler) handleBatchPredict(w http.ResponseWriter, r *http.Request) {
 	var req BatchPredictAPIRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Connector == "" {
-		h.writeError(w, http.StatusBadRequest, "connector is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector is required")
 		return
 	}
 
 	if req.ModelName == "" {
-		h.writeError(w, http.StatusBadRequest, "model_name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_name is required")
 		return
 	}
 
 	connector, err := h.registry.Get(req.Connector)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -331,7 +335,7 @@ func (h *MLHandler) handleBatchPredict(w http.ResponseWriter, r *http.Request) {
 	if features == nil && len(req.EntityIDs) > 0 && len(req.FeatureNames) > 0 {
 		features, err = connector.BatchGetFeatures(r.Context(), req.EntityIDs, req.FeatureNames)
 		if err != nil {
-			h.writeError(w, http.StatusInternalServerError, "failed to get features: "+err.Error())
+			h.writeError(r.Context(), w, http.StatusInternalServerError, "failed to get features: "+err.Error())
 			return
 		}
 	}
@@ -343,11 +347,11 @@ func (h *MLHandler) handleBatchPredict(w http.ResponseWriter, r *http.Request) {
 		Features:     features,
 	})
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"model_name":    resp.ModelName,
 		"model_version": resp.ModelVersion,
 		"predictions":   resp.Predictions,
@@ -356,10 +360,10 @@ func (h *MLHandler) handleBatchPredict(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *MLHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *MLHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *MLHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *MLHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

@@ -30,18 +30,18 @@ func (h *GraphQLHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleQuery handles POST /graphql
 func (h *GraphQLHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	if h.schema == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "GraphQL schema not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "GraphQL schema not configured")
 		return
 	}
 
 	var req graphql.Request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Query == "" {
-		h.writeError(w, http.StatusBadRequest, "query is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "query is required")
 		return
 	}
 
@@ -62,7 +62,9 @@ func (h *GraphQLHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 func (h *GraphQLHandler) handlePlayground(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(graphiqlHTML))
+	if _, err := w.Write([]byte(graphiqlHTML)); err != nil {
+		logging.FromContext(r.Context(), nil).Error("failed to write GraphQL playground response", "error", err)
+	}
 }
 
 const graphiqlHTML = `<!DOCTYPE html>
@@ -158,12 +160,12 @@ query {
 </body>
 </html>`
 
-func (h *GraphQLHandler) writeError(w http.ResponseWriter, status int, message string) {
+func (h *GraphQLHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(graphql.Response{
 		Errors: []graphql.Error{{Message: message}},
 	}); err != nil {
-		logging.FromContext(context.Background(), nil).Error("failed to encode GraphQL error response", "error", err)
+		logging.FromContext(ctx, nil).Error("failed to encode GraphQL error response", "error", err)
 	}
 }

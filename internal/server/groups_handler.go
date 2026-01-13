@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -76,7 +77,7 @@ type CreateGroupRequest struct {
 func (h *GroupsHandler) handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 	var req CreateGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -98,11 +99,11 @@ func (h *GroupsHandler) handleCreateGroup(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := h.manager.CreateGroup(group, createdBy); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"group":   group,
 	})
@@ -126,7 +127,7 @@ func (h *GroupsHandler) handleListGroups(w http.ResponseWriter, r *http.Request)
 
 	groupList := h.manager.ListGroups(filter)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"groups": groupList,
 		"count":  len(groupList),
 	})
@@ -136,30 +137,30 @@ func (h *GroupsHandler) handleListGroups(w http.ResponseWriter, r *http.Request)
 func (h *GroupsHandler) handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "group id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id required")
 		return
 	}
 
 	group := h.manager.GetGroup(id)
 	if group == nil {
-		h.writeError(w, http.StatusNotFound, "group not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "group not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, group)
+	h.writeJSON(r.Context(), w, http.StatusOK, group)
 }
 
 // handleUpdateGroup handles PUT /v1/groups/{id}
 func (h *GroupsHandler) handleUpdateGroup(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "group id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id required")
 		return
 	}
 
 	var req CreateGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -181,11 +182,11 @@ func (h *GroupsHandler) handleUpdateGroup(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := h.manager.UpdateGroup(group, updatedBy); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"group":   h.manager.GetGroup(id),
 	})
@@ -195,16 +196,16 @@ func (h *GroupsHandler) handleUpdateGroup(w http.ResponseWriter, r *http.Request
 func (h *GroupsHandler) handleDeleteGroup(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "group id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id required")
 		return
 	}
 
 	if err := h.manager.DeleteGroup(id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 	})
@@ -219,13 +220,13 @@ type GroupSetStatusRequest struct {
 func (h *GroupsHandler) handleSetStatus(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "group id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id required")
 		return
 	}
 
 	var req GroupSetStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -235,11 +236,11 @@ func (h *GroupsHandler) handleSetStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.manager.SetStatus(id, req.Status, updatedBy); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 		"status":  req.Status,
@@ -250,13 +251,13 @@ func (h *GroupsHandler) handleSetStatus(w http.ResponseWriter, r *http.Request) 
 func (h *GroupsHandler) handleAddFeature(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "group id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id required")
 		return
 	}
 
 	var feature groups.GroupFeature
 	if err := json.NewDecoder(r.Body).Decode(&feature); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -266,11 +267,11 @@ func (h *GroupsHandler) handleAddFeature(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.manager.AddFeature(id, feature, updatedBy); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"group":   h.manager.GetGroup(id),
 	})
@@ -281,7 +282,7 @@ func (h *GroupsHandler) handleRemoveFeature(w http.ResponseWriter, r *http.Reque
 	id := r.PathValue("id")
 	featureName := r.PathValue("feature")
 	if id == "" || featureName == "" {
-		h.writeError(w, http.StatusBadRequest, "group id and feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id and feature name required")
 		return
 	}
 
@@ -291,11 +292,11 @@ func (h *GroupsHandler) handleRemoveFeature(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.manager.RemoveFeature(id, featureName, updatedBy); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 		"feature": featureName,
@@ -306,17 +307,17 @@ func (h *GroupsHandler) handleRemoveFeature(w http.ResponseWriter, r *http.Reque
 func (h *GroupsHandler) handleGetFeatures(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "group id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id required")
 		return
 	}
 
 	features := h.manager.GetFeatureNames(id)
 	if features == nil {
-		h.writeError(w, http.StatusNotFound, "group not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "group not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"group_id": id,
 		"features": features,
 		"count":    len(features),
@@ -328,23 +329,23 @@ func (h *GroupsHandler) handleGetVersion(w http.ResponseWriter, r *http.Request)
 	id := r.PathValue("id")
 	versionStr := r.PathValue("version")
 	if id == "" || versionStr == "" {
-		h.writeError(w, http.StatusBadRequest, "group id and version required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "group id and version required")
 		return
 	}
 
 	version, err := strconv.Atoi(versionStr)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid version number")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid version number")
 		return
 	}
 
 	group := h.manager.GetGroupVersion(id, version)
 	if group == nil {
-		h.writeError(w, http.StatusNotFound, "version not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "version not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, group)
+	h.writeJSON(r.Context(), w, http.StatusOK, group)
 }
 
 // CreateViewRequest represents a view creation request.
@@ -360,7 +361,7 @@ type CreateViewRequest struct {
 func (h *GroupsHandler) handleCreateView(w http.ResponseWriter, r *http.Request) {
 	var req CreateViewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -373,11 +374,11 @@ func (h *GroupsHandler) handleCreateView(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.manager.CreateView(view); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"view":    view,
 	})
@@ -388,7 +389,7 @@ func (h *GroupsHandler) handleListViews(w http.ResponseWriter, r *http.Request) 
 	groupID := r.URL.Query().Get("group_id")
 	views := h.manager.ListViews(groupID)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"views": views,
 		"count": len(views),
 	})
@@ -398,33 +399,33 @@ func (h *GroupsHandler) handleListViews(w http.ResponseWriter, r *http.Request) 
 func (h *GroupsHandler) handleGetView(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "view id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "view id required")
 		return
 	}
 
 	view := h.manager.GetView(id)
 	if view == nil {
-		h.writeError(w, http.StatusNotFound, "view not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "view not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, view)
+	h.writeJSON(r.Context(), w, http.StatusOK, view)
 }
 
 // handleDeleteView handles DELETE /v1/groups/views/{id}
 func (h *GroupsHandler) handleDeleteView(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "view id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "view id required")
 		return
 	}
 
 	if err := h.manager.DeleteView(id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 	})
@@ -434,13 +435,13 @@ func (h *GroupsHandler) handleDeleteView(w http.ResponseWriter, r *http.Request)
 func (h *GroupsHandler) handleGetByEntity(w http.ResponseWriter, r *http.Request) {
 	entity := r.PathValue("entity")
 	if entity == "" {
-		h.writeError(w, http.StatusBadRequest, "entity type required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity type required")
 		return
 	}
 
 	groupList := h.manager.GetGroupsByEntity(entity)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"entity_type": entity,
 		"groups":      groupList,
 		"count":       len(groupList),
@@ -451,13 +452,13 @@ func (h *GroupsHandler) handleGetByEntity(w http.ResponseWriter, r *http.Request
 func (h *GroupsHandler) handleGetByTag(w http.ResponseWriter, r *http.Request) {
 	tag := r.PathValue("tag")
 	if tag == "" {
-		h.writeError(w, http.StatusBadRequest, "tag required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tag required")
 		return
 	}
 
 	groupList := h.manager.GetGroupsByTag(tag)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"tag":    tag,
 		"groups": groupList,
 		"count":  len(groupList),
@@ -467,13 +468,13 @@ func (h *GroupsHandler) handleGetByTag(w http.ResponseWriter, r *http.Request) {
 // handleGetStats handles GET /v1/groups/stats
 func (h *GroupsHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.manager.GetStats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
-func (h *GroupsHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *GroupsHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *GroupsHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *GroupsHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

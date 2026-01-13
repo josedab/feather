@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -60,7 +62,7 @@ type AlertJSON struct {
 // handleGetStatus handles GET /v1/drift/status
 func (h *DriftHandler) handleGetStatus(w http.ResponseWriter, r *http.Request) {
 	if h.detector == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "drift detector not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "drift detector not configured")
 		return
 	}
 
@@ -89,13 +91,13 @@ func (h *DriftHandler) handleGetStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // handleGetAlerts handles GET /v1/drift/alerts
 func (h *DriftHandler) handleGetAlerts(w http.ResponseWriter, r *http.Request) {
 	if h.detector == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "drift detector not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "drift detector not configured")
 		return
 	}
 
@@ -120,7 +122,7 @@ func (h *DriftHandler) handleGetAlerts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"alerts": response,
 		"since":  since,
 	})
@@ -129,26 +131,26 @@ func (h *DriftHandler) handleGetAlerts(w http.ResponseWriter, r *http.Request) {
 // handleResetReference handles POST /v1/drift/reset/{feature}
 func (h *DriftHandler) handleResetReference(w http.ResponseWriter, r *http.Request) {
 	if h.detector == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "drift detector not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "drift detector not configured")
 		return
 	}
 
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	if err := h.detector.ResetReference(feature); err != nil {
-		if err == drift.ErrFeatureNotFound {
-			h.writeError(w, http.StatusNotFound, "feature not found")
+		if errors.Is(err, drift.ErrFeatureNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "feature not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Reference distribution reset for feature: " + feature,
 	})
@@ -163,18 +165,18 @@ type RegisterFeatureRequest struct {
 // handleRegisterFeature handles POST /v1/drift/register
 func (h *DriftHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Request) {
 	if h.detector == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "drift detector not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "drift detector not configured")
 		return
 	}
 
 	var req RegisterFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
@@ -185,17 +187,17 @@ func (h *DriftHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Requ
 
 	h.detector.RegisterFeature(req.Name, featureType)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"feature": req.Name,
 		"type":    req.Type,
 	})
 }
 
-func (h *DriftHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *DriftHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *DriftHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *DriftHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

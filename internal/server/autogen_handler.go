@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -77,23 +78,23 @@ type FeatureSuggestionJSON struct {
 // handleGenerateFeatures handles POST /v1/autogen/features
 func (h *AutogenHandler) handleGenerateFeatures(w http.ResponseWriter, r *http.Request) {
 	if h.generator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "auto-generation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "auto-generation not configured")
 		return
 	}
 
 	var req GenerateFeaturesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Schema.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "schema name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "schema name is required")
 		return
 	}
 
 	if len(req.Schema.Fields) == 0 {
-		h.writeError(w, http.StatusBadRequest, "schema fields are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "schema fields are required")
 		return
 	}
 
@@ -137,7 +138,7 @@ func (h *AutogenHandler) handleGenerateFeatures(w http.ResponseWriter, r *http.R
 
 	result, err := h.generator.GenerateFeatures(r.Context(), genReq)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -159,7 +160,7 @@ func (h *AutogenHandler) handleGenerateFeatures(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"generation_id": result.ID,
 		"suggestions":   suggestions,
 		"count":         len(suggestions),
@@ -189,29 +190,29 @@ type TransformationSuggestionJSON struct {
 // handleSuggestTransformations handles POST /v1/autogen/transformations
 func (h *AutogenHandler) handleSuggestTransformations(w http.ResponseWriter, r *http.Request) {
 	if h.generator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "auto-generation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "auto-generation not configured")
 		return
 	}
 
 	var req SuggestTransformationsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureName == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_name is required")
 		return
 	}
 
 	if req.FeatureType == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_type is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_type is required")
 		return
 	}
 
 	suggestions, err := h.generator.SuggestTransformations(r.Context(), req.FeatureName, req.FeatureType, req.Description, req.Examples)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -228,7 +229,7 @@ func (h *AutogenHandler) handleSuggestTransformations(w http.ResponseWriter, r *
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"suggestions": response,
 		"count":       len(response),
 	})
@@ -258,23 +259,23 @@ type AggregationSuggestionJSON struct {
 // handleSuggestAggregations handles POST /v1/autogen/aggregations
 func (h *AutogenHandler) handleSuggestAggregations(w http.ResponseWriter, r *http.Request) {
 	if h.generator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "auto-generation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "auto-generation not configured")
 		return
 	}
 
 	var req SuggestAggregationsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Entity == "" {
-		h.writeError(w, http.StatusBadRequest, "entity is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity is required")
 		return
 	}
 
 	if len(req.Fields) == 0 {
-		h.writeError(w, http.StatusBadRequest, "fields are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "fields are required")
 		return
 	}
 
@@ -290,7 +291,7 @@ func (h *AutogenHandler) handleSuggestAggregations(w http.ResponseWriter, r *htt
 
 	suggestions, err := h.generator.SuggestAggregations(r.Context(), req.Entity, fields, req.TimeField)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -307,7 +308,7 @@ func (h *AutogenHandler) handleSuggestAggregations(w http.ResponseWriter, r *htt
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"suggestions": response,
 		"count":       len(response),
 	})
@@ -326,7 +327,7 @@ type GenerationResultJSON struct {
 // handleGetHistory handles GET /v1/autogen/history
 func (h *AutogenHandler) handleGetHistory(w http.ResponseWriter, r *http.Request) {
 	if h.generator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "auto-generation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "auto-generation not configured")
 		return
 	}
 
@@ -359,7 +360,7 @@ func (h *AutogenHandler) handleGetHistory(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"history": response,
 		"count":   len(response),
 	})
@@ -368,18 +369,18 @@ func (h *AutogenHandler) handleGetHistory(w http.ResponseWriter, r *http.Request
 // handleGetStats handles GET /v1/autogen/stats
 func (h *AutogenHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	if h.generator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "auto-generation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "auto-generation not configured")
 		return
 	}
 
 	stats := h.generator.GetStats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
-func (h *AutogenHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *AutogenHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *AutogenHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *AutogenHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

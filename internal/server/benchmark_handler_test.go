@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,7 +23,7 @@ type testBenchmarkServer struct {
 func newTestBenchmarkServer(t *testing.T) *testBenchmarkServer {
 	t.Helper()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024, // 1MB
 		WarmInMemory: true,
 	}, storage.NewRegistry())
@@ -89,7 +90,7 @@ func (ts *testBenchmarkServer) get(path string) *httptest.ResponseRecorder {
 }
 
 func TestBenchmarkHandler_NewBenchmarkHandler(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, storage.NewRegistry())

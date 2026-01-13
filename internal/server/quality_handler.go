@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -72,7 +73,7 @@ type ValidateBatchRequest struct {
 // handleListRules handles GET /v1/quality/rules
 func (h *QualityHandler) handleListRules(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
@@ -83,7 +84,7 @@ func (h *QualityHandler) handleListRules(w http.ResponseWriter, r *http.Request)
 		response[i] = h.ruleToJSON(rule)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"rules": response,
 		"count": len(response),
 	})
@@ -92,46 +93,46 @@ func (h *QualityHandler) handleListRules(w http.ResponseWriter, r *http.Request)
 // handleGetRule handles GET /v1/quality/rules/{id}
 func (h *QualityHandler) handleGetRule(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	ruleID := r.PathValue("id")
 	if ruleID == "" {
-		h.writeError(w, http.StatusBadRequest, "rule ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "rule ID required")
 		return
 	}
 
 	rule, err := h.validator.GetRule(ruleID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.ruleToJSON(rule))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.ruleToJSON(rule))
 }
 
 // handleAddRule handles POST /v1/quality/rules
 func (h *QualityHandler) handleAddRule(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	var req ValidationRuleJSON
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	rule := h.jsonToRule(&req)
 
 	if err := h.validator.AddRule(rule); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"rule_id": rule.ID,
 	})
@@ -140,22 +141,22 @@ func (h *QualityHandler) handleAddRule(w http.ResponseWriter, r *http.Request) {
 // handleRemoveRule handles DELETE /v1/quality/rules/{id}
 func (h *QualityHandler) handleRemoveRule(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	ruleID := r.PathValue("id")
 	if ruleID == "" {
-		h.writeError(w, http.StatusBadRequest, "rule ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "rule ID required")
 		return
 	}
 
 	if err := h.validator.RemoveRule(ruleID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -163,13 +164,13 @@ func (h *QualityHandler) handleRemoveRule(w http.ResponseWriter, r *http.Request
 // handleGetRulesForFeature handles GET /v1/quality/rules/feature/{featureId}
 func (h *QualityHandler) handleGetRulesForFeature(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	featureID := r.PathValue("featureId")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
@@ -180,7 +181,7 @@ func (h *QualityHandler) handleGetRulesForFeature(w http.ResponseWriter, r *http
 		response[i] = h.ruleToJSON(rule)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"feature_id": featureID,
 		"rules":      response,
 		"count":      len(response),
@@ -190,18 +191,18 @@ func (h *QualityHandler) handleGetRulesForFeature(w http.ResponseWriter, r *http
 // handleValidateValue handles POST /v1/quality/validate
 func (h *QualityHandler) handleValidateValue(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	var req ValidateValueRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_id is required")
 		return
 	}
 
@@ -215,7 +216,7 @@ func (h *QualityHandler) handleValidateValue(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"feature_id": req.FeatureID,
 		"passed":     allPassed,
 		"results":    results,
@@ -225,53 +226,53 @@ func (h *QualityHandler) handleValidateValue(w http.ResponseWriter, r *http.Requ
 // handleValidateBatch handles POST /v1/quality/validate/batch
 func (h *QualityHandler) handleValidateBatch(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	var req ValidateBatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_id is required")
 		return
 	}
 
 	if len(req.Values) == 0 {
-		h.writeError(w, http.StatusBadRequest, "values array is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "values array is required")
 		return
 	}
 
 	report := h.validator.ValidateBatch(r.Context(), req.FeatureID, req.Values, req.Metadata)
 
-	h.writeJSON(w, http.StatusOK, report)
+	h.writeJSON(r.Context(), w, http.StatusOK, report)
 }
 
 // handleGetQualityScore handles GET /v1/quality/score/{featureId}
 func (h *QualityHandler) handleGetQualityScore(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	featureID := r.PathValue("featureId")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	score := h.validator.CalculateQualityScore(featureID)
 
-	h.writeJSON(w, http.StatusOK, score)
+	h.writeJSON(r.Context(), w, http.StatusOK, score)
 }
 
 // handleGetHistory handles GET /v1/quality/history
 func (h *QualityHandler) handleGetHistory(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
@@ -284,7 +285,7 @@ func (h *QualityHandler) handleGetHistory(w http.ResponseWriter, r *http.Request
 
 	history := h.validator.GetQualityHistory(limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"history": history,
 		"count":   len(history),
 	})
@@ -293,13 +294,13 @@ func (h *QualityHandler) handleGetHistory(w http.ResponseWriter, r *http.Request
 // handleGetStats handles GET /v1/quality/stats
 func (h *QualityHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	if h.validator == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "quality validator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality validator not configured")
 		return
 	}
 
 	stats := h.validator.GetStats()
 
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 func (h *QualityHandler) ruleToJSON(rule *quality.ValidationRule) ValidationRuleJSON {
@@ -334,10 +335,10 @@ func (h *QualityHandler) jsonToRule(j *ValidationRuleJSON) *quality.ValidationRu
 	}
 }
 
-func (h *QualityHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *QualityHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *QualityHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *QualityHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

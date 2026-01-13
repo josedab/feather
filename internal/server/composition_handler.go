@@ -67,7 +67,7 @@ type ComposeBatchRequest struct {
 
 func (h *CompositionHandler) handleListDAGs(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *CompositionHandler) handleListDAGs(w http.ResponseWriter, r *http.Reque
 		})
 	}
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"dags":  dagResponses,
 		"count": len(dagResponses),
 	})
@@ -95,18 +95,18 @@ func (h *CompositionHandler) handleListDAGs(w http.ResponseWriter, r *http.Reque
 
 func (h *CompositionHandler) handleCreateDAG(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	var req DAGRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		writeJSONError(w, http.StatusBadRequest, "dag id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "dag id is required")
 		return
 	}
 
@@ -138,24 +138,24 @@ func (h *CompositionHandler) handleCreateDAG(w http.ResponseWriter, r *http.Requ
 		}
 
 		if err := dag.AddNode(node); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "failed to add node "+nodeReq.ID+": "+err.Error())
+			writeJSONError(r.Context(), w, http.StatusBadRequest, "failed to add node "+nodeReq.ID+": "+err.Error())
 			return
 		}
 	}
 
 	// Set outputs
 	if err := dag.SetOutputs(req.Outputs); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "failed to set outputs: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "failed to set outputs: "+err.Error())
 		return
 	}
 
 	// Register DAG
 	if err := h.engine.RegisterDAG(dag); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "failed to register DAG: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "failed to register DAG: "+err.Error())
 		return
 	}
 
-	writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"id":      dag.ID,
 		"name":    dag.Name,
 		"message": "DAG created successfully",
@@ -164,19 +164,19 @@ func (h *CompositionHandler) handleCreateDAG(w http.ResponseWriter, r *http.Requ
 
 func (h *CompositionHandler) handleGetDAG(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	dagID := r.PathValue("id")
 	if dagID == "" {
-		writeJSONError(w, http.StatusBadRequest, "dag id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "dag id is required")
 		return
 	}
 
 	dag, err := h.engine.GetDAG(dagID)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "DAG not found")
+		writeJSONError(r.Context(), w, http.StatusNotFound, "DAG not found")
 		return
 	}
 
@@ -198,7 +198,7 @@ func (h *CompositionHandler) handleGetDAG(w http.ResponseWriter, r *http.Request
 
 	stats := dag.Stats()
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"id":          dag.ID,
 		"name":        dag.Name,
 		"description": dag.Description,
@@ -213,60 +213,60 @@ func (h *CompositionHandler) handleGetDAG(w http.ResponseWriter, r *http.Request
 
 func (h *CompositionHandler) handleDeleteDAG(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	dagID := r.PathValue("id")
 	if dagID == "" {
-		writeJSONError(w, http.StatusBadRequest, "dag id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "dag id is required")
 		return
 	}
 
 	if err := h.engine.UnregisterDAG(dagID); err != nil {
-		writeJSONError(w, http.StatusNotFound, "DAG not found")
+		writeJSONError(r.Context(), w, http.StatusNotFound, "DAG not found")
 		return
 	}
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"message": "DAG deleted successfully",
 	})
 }
 
 func (h *CompositionHandler) handleCompose(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	dagID := r.PathValue("id")
 	if dagID == "" {
-		writeJSONError(w, http.StatusBadRequest, "dag id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "dag id is required")
 		return
 	}
 
 	var req ComposeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityID == "" {
-		writeJSONError(w, http.StatusBadRequest, "entity_id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "entity_id is required")
 		return
 	}
 
 	results, err := h.engine.Compose(r.Context(), dagID, req.EntityID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			writeJSONError(w, http.StatusNotFound, err.Error())
+			writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		} else {
-			writeJSONError(w, http.StatusInternalServerError, "composition failed: "+err.Error())
+			writeJSONError(r.Context(), w, http.StatusInternalServerError, "composition failed: "+err.Error())
 		}
 		return
 	}
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"dag_id":    dagID,
 		"entity_id": req.EntityID,
 		"results":   results,
@@ -275,34 +275,34 @@ func (h *CompositionHandler) handleCompose(w http.ResponseWriter, r *http.Reques
 
 func (h *CompositionHandler) handleComposeBatch(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	dagID := r.PathValue("id")
 	if dagID == "" {
-		writeJSONError(w, http.StatusBadRequest, "dag id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "dag id is required")
 		return
 	}
 
 	var req ComposeBatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.EntityIDs) == 0 {
-		writeJSONError(w, http.StatusBadRequest, "entity_ids is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "entity_ids is required")
 		return
 	}
 
 	results, err := h.engine.ComposeBatch(r.Context(), dagID, req.EntityIDs)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			writeJSONError(w, http.StatusNotFound, err.Error())
+			writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		} else {
 			// Partial failure - return results with error info
-			writeJSONResponse(w, http.StatusPartialContent, map[string]interface{}{
+			writeJSONResponse(r.Context(), w, http.StatusPartialContent, map[string]interface{}{
 				"dag_id":  dagID,
 				"results": results,
 				"error":   err.Error(),
@@ -312,7 +312,7 @@ func (h *CompositionHandler) handleComposeBatch(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"dag_id":       dagID,
 		"entity_count": len(req.EntityIDs),
 		"results":      results,
@@ -321,23 +321,23 @@ func (h *CompositionHandler) handleComposeBatch(w http.ResponseWriter, r *http.R
 
 func (h *CompositionHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	stats := h.engine.Stats()
-	writeJSONResponse(w, http.StatusOK, stats)
+	writeJSONResponse(r.Context(), w, http.StatusOK, stats)
 }
 
 func (h *CompositionHandler) handleClearCache(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		writeJSONError(w, http.StatusServiceUnavailable, "composition engine not configured")
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "composition engine not configured")
 		return
 	}
 
 	h.engine.ClearCache()
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"message": "cache cleared successfully",
 	})
 }

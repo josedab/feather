@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -72,18 +73,18 @@ type ImpactAccessRequest struct {
 func (h *ImpactHandler) handleRecordAccess(w http.ResponseWriter, r *http.Request) {
 	var req ImpactAccessRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
 	h.tracker.RecordAccess(req.Feature, req.LatencyMs, req.IsError, req.IsNull)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"feature": req.Feature,
 	})
@@ -93,7 +94,7 @@ func (h *ImpactHandler) handleRecordAccess(w http.ResponseWriter, r *http.Reques
 func (h *ImpactHandler) handleGetFeatures(w http.ResponseWriter, r *http.Request) {
 	features := h.tracker.GetAllFeatureUsage()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 	})
@@ -103,17 +104,17 @@ func (h *ImpactHandler) handleGetFeatures(w http.ResponseWriter, r *http.Request
 func (h *ImpactHandler) handleGetFeatureUsage(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	usage := h.tracker.GetFeatureUsage(feature)
 	if usage == nil {
-		h.writeError(w, http.StatusNotFound, "feature not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "feature not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, usage)
+	h.writeJSON(r.Context(), w, http.StatusOK, usage)
 }
 
 // SetDependenciesRequest represents a request to set feature dependencies.
@@ -125,19 +126,19 @@ type SetDependenciesRequest struct {
 func (h *ImpactHandler) handleSetDependencies(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	var req SetDependenciesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	h.tracker.SetDependencies(feature, req.Dependencies)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":      true,
 		"feature":      feature,
 		"dependencies": req.Dependencies,
@@ -158,12 +159,12 @@ type RegisterModelRequest struct {
 func (h *ImpactHandler) handleRegisterModel(w http.ResponseWriter, r *http.Request) {
 	var req RegisterModelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ModelID == "" || len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "model_id and features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id and features are required")
 		return
 	}
 
@@ -178,7 +179,7 @@ func (h *ImpactHandler) handleRegisterModel(w http.ResponseWriter, r *http.Reque
 
 	h.tracker.RegisterModel(model)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"model":   model,
 	})
@@ -194,19 +195,19 @@ type RecordInferenceRequest struct {
 func (h *ImpactHandler) handleRecordInference(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("model")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	var req RecordInferenceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	h.tracker.RecordInference(modelID, req.LatencyMs, req.IsError)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":  true,
 		"model_id": modelID,
 	})
@@ -216,7 +217,7 @@ func (h *ImpactHandler) handleRecordInference(w http.ResponseWriter, r *http.Req
 func (h *ImpactHandler) handleGetModels(w http.ResponseWriter, r *http.Request) {
 	models := h.tracker.GetAllModelUsage()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"models": models,
 		"count":  len(models),
 	})
@@ -226,34 +227,34 @@ func (h *ImpactHandler) handleGetModels(w http.ResponseWriter, r *http.Request) 
 func (h *ImpactHandler) handleGetModelUsage(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("model")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	model := h.tracker.GetModelUsage(modelID)
 	if model == nil {
-		h.writeError(w, http.StatusNotFound, "model not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "model not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, model)
+	h.writeJSON(r.Context(), w, http.StatusOK, model)
 }
 
 // handleGetImpactScore handles GET /v1/impact/scores/{feature}
 func (h *ImpactHandler) handleGetImpactScore(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	score := h.tracker.CalculateImpactScore(feature)
 	if score == nil {
-		h.writeError(w, http.StatusNotFound, "feature not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "feature not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, score)
+	h.writeJSON(r.Context(), w, http.StatusOK, score)
 }
 
 // handleGetTopFeatures handles GET /v1/impact/scores
@@ -267,7 +268,7 @@ func (h *ImpactHandler) handleGetTopFeatures(w http.ResponseWriter, r *http.Requ
 
 	scores := h.tracker.GetTopFeaturesByImpact(n)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"scores": scores,
 		"count":  len(scores),
 	})
@@ -284,7 +285,7 @@ func (h *ImpactHandler) handleGetLowImpact(w http.ResponseWriter, r *http.Reques
 
 	features := h.tracker.GetLowImpactFeatures(threshold)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features":  features,
 		"count":     len(features),
 		"threshold": threshold,
@@ -303,7 +304,7 @@ func (h *ImpactHandler) handleGetUnused(w http.ResponseWriter, r *http.Request) 
 	since := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
 	features := h.tracker.GetUnusedFeatures(since)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"since":    since.Format(time.RFC3339),
@@ -314,24 +315,24 @@ func (h *ImpactHandler) handleGetUnused(w http.ResponseWriter, r *http.Request) 
 func (h *ImpactHandler) handleGetLineage(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	lineage := h.tracker.GetFeatureLineage(feature)
 	if lineage == nil {
-		h.writeError(w, http.StatusNotFound, "feature not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "feature not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, lineage)
+	h.writeJSON(r.Context(), w, http.StatusOK, lineage)
 }
 
 // handleGetGraph handles GET /v1/impact/graph
 func (h *ImpactHandler) handleGetGraph(w http.ResponseWriter, r *http.Request) {
 	graph := h.tracker.GetDependencyGraph()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"graph":         graph,
 		"feature_count": len(graph),
 	})
@@ -350,12 +351,12 @@ type DeprecationRequestBody struct {
 func (h *ImpactHandler) handleRequestDeprecation(w http.ResponseWriter, r *http.Request) {
 	var req DeprecationRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Feature == "" || req.Reason == "" || req.RequestedBy == "" {
-		h.writeError(w, http.StatusBadRequest, "feature, reason, and requested_by are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature, reason, and requested_by are required")
 		return
 	}
 
@@ -375,11 +376,11 @@ func (h *ImpactHandler) handleRequestDeprecation(w http.ResponseWriter, r *http.
 	}
 
 	if err := h.tracker.RequestDeprecation(deprecation); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":     true,
 		"deprecation": deprecation,
 	})
@@ -389,7 +390,7 @@ func (h *ImpactHandler) handleRequestDeprecation(w http.ResponseWriter, r *http.
 func (h *ImpactHandler) handleGetDeprecations(w http.ResponseWriter, r *http.Request) {
 	deprecations := h.tracker.GetAllDeprecations()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"deprecations": deprecations,
 		"count":        len(deprecations),
 	})
@@ -399,33 +400,33 @@ func (h *ImpactHandler) handleGetDeprecations(w http.ResponseWriter, r *http.Req
 func (h *ImpactHandler) handleGetDeprecation(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	deprecation := h.tracker.GetDeprecationRequest(feature)
 	if deprecation == nil {
-		h.writeError(w, http.StatusNotFound, "deprecation request not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "deprecation request not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, deprecation)
+	h.writeJSON(r.Context(), w, http.StatusOK, deprecation)
 }
 
 // handleApproveDeprecation handles POST /v1/impact/deprecations/{feature}/approve
 func (h *ImpactHandler) handleApproveDeprecation(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	if err := h.tracker.ApproveDeprecation(feature); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"feature": feature,
 		"status":  "approved",
@@ -435,13 +436,13 @@ func (h *ImpactHandler) handleApproveDeprecation(w http.ResponseWriter, r *http.
 // handleGetReport handles GET /v1/impact/report
 func (h *ImpactHandler) handleGetReport(w http.ResponseWriter, r *http.Request) {
 	report := h.tracker.GenerateReport()
-	h.writeJSON(w, http.StatusOK, report)
+	h.writeJSON(r.Context(), w, http.StatusOK, report)
 }
 
-func (h *ImpactHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *ImpactHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *ImpactHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *ImpactHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

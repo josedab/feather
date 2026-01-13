@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -77,12 +78,12 @@ type CreateAPIKeyRequest struct {
 func (h *AuthHandler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	var req CreateAPIKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" || req.Tenant == "" {
-		h.writeError(w, http.StatusBadRequest, "name and tenant are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name and tenant are required")
 		return
 	}
 
@@ -96,7 +97,7 @@ func (h *AuthHandler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request)
 	if req.ExpiresIn != "" {
 		duration, err := parseDuration(req.ExpiresIn)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid expires_in format")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid expires_in format")
 			return
 		}
 		t := time.Now().Add(duration)
@@ -123,11 +124,11 @@ func (h *AuthHandler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request)
 
 	rawKey, err := h.controller.CreateAPIKey(key, createdBy)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"key":     rawKey, // Only time the raw key is returned
 		"id":      key.ID,
@@ -174,7 +175,7 @@ func (h *AuthHandler) handleListAPIKeys(w http.ResponseWriter, r *http.Request) 
 	tenant := r.URL.Query().Get("tenant")
 	keys := h.controller.ListAPIKeys(tenant)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"keys":  keys,
 		"count": len(keys),
 	})
@@ -184,33 +185,33 @@ func (h *AuthHandler) handleListAPIKeys(w http.ResponseWriter, r *http.Request) 
 func (h *AuthHandler) handleGetAPIKey(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "key id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "key id required")
 		return
 	}
 
 	key := h.controller.GetAPIKey(id)
 	if key == nil {
-		h.writeError(w, http.StatusNotFound, "API key not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "API key not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, key)
+	h.writeJSON(r.Context(), w, http.StatusOK, key)
 }
 
 // handleDeleteAPIKey handles DELETE /v1/auth/keys/{id}
 func (h *AuthHandler) handleDeleteAPIKey(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "key id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "key id required")
 		return
 	}
 
 	if err := h.controller.DeleteAPIKey(id); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 	})
@@ -220,16 +221,16 @@ func (h *AuthHandler) handleDeleteAPIKey(w http.ResponseWriter, r *http.Request)
 func (h *AuthHandler) handleRevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "key id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "key id required")
 		return
 	}
 
 	if err := h.controller.RevokeAPIKey(id); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 		"status":  "revoked",
@@ -245,20 +246,20 @@ type ValidateKeyRequest struct {
 func (h *AuthHandler) handleValidateAPIKey(w http.ResponseWriter, r *http.Request) {
 	var req ValidateKeyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	key, err := h.controller.ValidateAPIKey(req.Key)
 	if err != nil {
-		h.writeJSON(w, http.StatusUnauthorized, map[string]interface{}{
+		h.writeJSON(r.Context(), w, http.StatusUnauthorized, map[string]interface{}{
 			"valid": false,
 			"error": err.Error(),
 		})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"valid":  true,
 		"id":     key.ID,
 		"tenant": key.Tenant,
@@ -279,12 +280,12 @@ type CreateTenantRequest struct {
 func (h *AuthHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	var req CreateTenantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" || req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "id and name are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id and name are required")
 		return
 	}
 
@@ -300,11 +301,11 @@ func (h *AuthHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.controller.CreateTenant(tenant); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"tenant":  tenant,
 	})
@@ -314,7 +315,7 @@ func (h *AuthHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request)
 func (h *AuthHandler) handleListTenants(w http.ResponseWriter, r *http.Request) {
 	tenants := h.controller.ListTenants()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"tenants": tenants,
 		"count":   len(tenants),
 	})
@@ -324,41 +325,41 @@ func (h *AuthHandler) handleListTenants(w http.ResponseWriter, r *http.Request) 
 func (h *AuthHandler) handleGetTenant(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	tenant := h.controller.GetTenant(id)
 	if tenant == nil {
-		h.writeError(w, http.StatusNotFound, "tenant not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "tenant not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, tenant)
+	h.writeJSON(r.Context(), w, http.StatusOK, tenant)
 }
 
 // handleUpdateTenant handles PUT /v1/auth/tenants/{id}
 func (h *AuthHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	var tenant auth.Tenant
 	if err := json.NewDecoder(r.Body).Decode(&tenant); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	tenant.ID = id
 
 	if err := h.controller.UpdateTenant(&tenant); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"tenant":  tenant,
 	})
@@ -368,16 +369,16 @@ func (h *AuthHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Request)
 func (h *AuthHandler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	if err := h.controller.DeleteTenant(id); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 	})
@@ -394,12 +395,12 @@ type CreateRoleRequest struct {
 func (h *AuthHandler) handleCreateRole(w http.ResponseWriter, r *http.Request) {
 	var req CreateRoleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
@@ -415,11 +416,11 @@ func (h *AuthHandler) handleCreateRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.controller.CreateRole(role); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"role":    role,
 	})
@@ -429,7 +430,7 @@ func (h *AuthHandler) handleCreateRole(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) handleListRoles(w http.ResponseWriter, r *http.Request) {
 	roles := h.controller.ListRoles()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"roles": roles,
 		"count": len(roles),
 	})
@@ -439,33 +440,33 @@ func (h *AuthHandler) handleListRoles(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) handleGetRole(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "role name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "role name required")
 		return
 	}
 
 	role := h.controller.GetRole(name)
 	if role == nil {
-		h.writeError(w, http.StatusNotFound, "role not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "role not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, role)
+	h.writeJSON(r.Context(), w, http.StatusOK, role)
 }
 
 // handleDeleteRole handles DELETE /v1/auth/roles/{name}
 func (h *AuthHandler) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "role name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "role name required")
 		return
 	}
 
 	if err := h.controller.DeleteRole(name); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"name":    name,
 	})
@@ -485,16 +486,16 @@ func (h *AuthHandler) handleGetAuditLogs(w http.ResponseWriter, r *http.Request)
 
 	logs := h.controller.GetAuditLogs(tenant, since, limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"logs":  logs,
 		"count": len(logs),
 	})
 }
 
-func (h *AuthHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *AuthHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *AuthHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *AuthHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

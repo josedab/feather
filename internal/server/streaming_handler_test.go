@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -20,7 +21,7 @@ type testStreamingServer struct {
 func newTestStreamingServer(t *testing.T) *testStreamingServer {
 	t.Helper()
 
-	handler := NewStreamingHandler() // Creates internal hub
+	handler := NewStreamingHandler(context.Background()) // Creates internal hub
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
@@ -68,7 +69,7 @@ func (ts *testStreamingServer) delete(path string) *httptest.ResponseRecorder {
 }
 
 func TestStreamingHandler_NewStreamingHandler(t *testing.T) {
-	handler := NewStreamingHandler()
+	handler := NewStreamingHandler(context.Background())
 
 	if handler == nil {
 		t.Error("Expected handler to be created")
@@ -76,7 +77,7 @@ func TestStreamingHandler_NewStreamingHandler(t *testing.T) {
 }
 
 func TestStreamingHandler_GetHub(t *testing.T) {
-	handler := NewStreamingHandler()
+	handler := NewStreamingHandler(context.Background())
 
 	hub := handler.GetHub()
 	if hub == nil {

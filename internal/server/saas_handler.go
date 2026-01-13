@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -75,35 +77,35 @@ func (h *SaaSHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *SaaSHandler) handleListPlans(w http.ResponseWriter, r *http.Request) {
 	plans := h.planRegistry.ListPlans()
-	h.writeJSON(w, http.StatusOK, plans)
+	h.writeJSON(r.Context(), w, http.StatusOK, plans)
 }
 
 func (h *SaaSHandler) handleGetPlan(w http.ResponseWriter, r *http.Request) {
 	planID := r.PathValue("id")
 	plan, err := h.planRegistry.GetPlan(planID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, plan)
+	h.writeJSON(r.Context(), w, http.StatusOK, plan)
 }
 
 func (h *SaaSHandler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	var plan saas.Plan
 	if err := json.NewDecoder(r.Body).Decode(&plan); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.planRegistry.RegisterPlan(&plan); err != nil {
 		status := http.StatusInternalServerError
-		if err == saas.ErrPlanAlreadyExists || err == saas.ErrInvalidPlan {
+		if errors.Is(err, saas.ErrPlanAlreadyExists) || errors.Is(err, saas.ErrInvalidPlan) {
 			status = http.StatusBadRequest
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusCreated, plan)
+	h.writeJSON(r.Context(), w, http.StatusCreated, plan)
 }
 
 func (h *SaaSHandler) handleUpdatePlan(w http.ResponseWriter, r *http.Request) {
@@ -111,20 +113,20 @@ func (h *SaaSHandler) handleUpdatePlan(w http.ResponseWriter, r *http.Request) {
 
 	var plan saas.Plan
 	if err := json.NewDecoder(r.Body).Decode(&plan); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	plan.ID = planID
 
 	if err := h.planRegistry.UpdatePlan(&plan); err != nil {
 		status := http.StatusInternalServerError
-		if err == saas.ErrPlanNotFound {
+		if errors.Is(err, saas.ErrPlanNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, plan)
+	h.writeJSON(r.Context(), w, http.StatusOK, plan)
 }
 
 func (h *SaaSHandler) handleDeactivatePlan(w http.ResponseWriter, r *http.Request) {
@@ -132,10 +134,10 @@ func (h *SaaSHandler) handleDeactivatePlan(w http.ResponseWriter, r *http.Reques
 
 	if err := h.planRegistry.DeactivatePlan(planID); err != nil {
 		status := http.StatusInternalServerError
-		if err == saas.ErrPlanNotFound {
+		if errors.Is(err, saas.ErrPlanNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -146,16 +148,16 @@ func (h *SaaSHandler) handleComparePlans(w http.ResponseWriter, r *http.Request)
 	plan2 := r.URL.Query().Get("plan2")
 
 	if plan1 == "" || plan2 == "" {
-		h.writeError(w, http.StatusBadRequest, "plan1 and plan2 query parameters required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "plan1 and plan2 query parameters required")
 		return
 	}
 
 	comparison, err := h.planRegistry.ComparePlans(plan1, plan2)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, comparison)
+	h.writeJSON(r.Context(), w, http.StatusOK, comparison)
 }
 
 // Subscription handlers
@@ -163,12 +165,12 @@ func (h *SaaSHandler) handleComparePlans(w http.ResponseWriter, r *http.Request)
 func (h *SaaSHandler) handleListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	orgID := r.URL.Query().Get("org_id")
 	if orgID == "" {
-		h.writeError(w, http.StatusBadRequest, "org_id query parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "org_id query parameter required")
 		return
 	}
 
 	subs := h.billingManager.GetSubscriptionByOrg(orgID)
-	h.writeJSON(w, http.StatusOK, subs)
+	h.writeJSON(r.Context(), w, http.StatusOK, subs)
 }
 
 func (h *SaaSHandler) handleGetSubscription(w http.ResponseWriter, r *http.Request) {
@@ -176,10 +178,10 @@ func (h *SaaSHandler) handleGetSubscription(w http.ResponseWriter, r *http.Reque
 
 	sub, err := h.billingManager.GetSubscription(subID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, sub)
+	h.writeJSON(r.Context(), w, http.StatusOK, sub)
 }
 
 func (h *SaaSHandler) handleCreateSubscription(w http.ResponseWriter, r *http.Request) {
@@ -189,16 +191,16 @@ func (h *SaaSHandler) handleCreateSubscription(w http.ResponseWriter, r *http.Re
 		BillingPeriod  saas.BillingPeriod `json:"billing_period"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	sub, err := h.billingManager.CreateSubscription(req.OrganizationID, req.PlanID, req.BillingPeriod)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusCreated, sub)
+	h.writeJSON(r.Context(), w, http.StatusCreated, sub)
 }
 
 func (h *SaaSHandler) handleChangePlan(w http.ResponseWriter, r *http.Request) {
@@ -208,21 +210,21 @@ func (h *SaaSHandler) handleChangePlan(w http.ResponseWriter, r *http.Request) {
 		PlanID string `json:"plan_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.billingManager.ChangePlan(subID, req.PlanID); err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrSubscriptionNotFound {
+		if errors.Is(err, saas.ErrSubscriptionNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
 
 	sub, _ := h.billingManager.GetSubscription(subID)
-	h.writeJSON(w, http.StatusOK, sub)
+	h.writeJSON(r.Context(), w, http.StatusOK, sub)
 }
 
 func (h *SaaSHandler) handleCancelSubscription(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +232,7 @@ func (h *SaaSHandler) handleCancelSubscription(w http.ResponseWriter, r *http.Re
 	immediate := r.URL.Query().Get("immediate") == "true"
 
 	if err := h.billingManager.CancelSubscription(subID, immediate); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -241,12 +243,12 @@ func (h *SaaSHandler) handleCancelSubscription(w http.ResponseWriter, r *http.Re
 func (h *SaaSHandler) handleListInstances(w http.ResponseWriter, r *http.Request) {
 	orgID := r.URL.Query().Get("org_id")
 	if orgID == "" {
-		h.writeError(w, http.StatusBadRequest, "org_id query parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "org_id query parameter required")
 		return
 	}
 
 	instances := h.provisioningManager.ListInstances(orgID)
-	h.writeJSON(w, http.StatusOK, instances)
+	h.writeJSON(r.Context(), w, http.StatusOK, instances)
 }
 
 func (h *SaaSHandler) handleGetInstance(w http.ResponseWriter, r *http.Request) {
@@ -254,29 +256,29 @@ func (h *SaaSHandler) handleGetInstance(w http.ResponseWriter, r *http.Request) 
 
 	instance, err := h.provisioningManager.GetInstance(instanceID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, instance)
+	h.writeJSON(r.Context(), w, http.StatusOK, instance)
 }
 
 func (h *SaaSHandler) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
 	var req saas.ProvisioningRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	instance, err := h.provisioningManager.CreateInstance(&req)
 	if err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrInstanceLimitExceeded {
+		if errors.Is(err, saas.ErrInstanceLimitExceeded) {
 			status = http.StatusForbidden
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusCreated, instance)
+	h.writeJSON(r.Context(), w, http.StatusCreated, instance)
 }
 
 func (h *SaaSHandler) handleUpdateInstance(w http.ResponseWriter, r *http.Request) {
@@ -284,17 +286,17 @@ func (h *SaaSHandler) handleUpdateInstance(w http.ResponseWriter, r *http.Reques
 
 	var config saas.InstanceConfig
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.provisioningManager.UpdateInstance(instanceID, config); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	instance, _ := h.provisioningManager.GetInstance(instanceID)
-	h.writeJSON(w, http.StatusOK, instance)
+	h.writeJSON(r.Context(), w, http.StatusOK, instance)
 }
 
 func (h *SaaSHandler) handleResizeInstance(w http.ResponseWriter, r *http.Request) {
@@ -304,21 +306,21 @@ func (h *SaaSHandler) handleResizeInstance(w http.ResponseWriter, r *http.Reques
 		Size saas.InstanceSize `json:"size"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.provisioningManager.ResizeInstance(instanceID, req.Size); err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrInstanceNotFound {
+		if errors.Is(err, saas.ErrInstanceNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
 
 	instance, _ := h.provisioningManager.GetInstance(instanceID)
-	h.writeJSON(w, http.StatusOK, instance)
+	h.writeJSON(r.Context(), w, http.StatusOK, instance)
 }
 
 func (h *SaaSHandler) handleStartInstance(w http.ResponseWriter, r *http.Request) {
@@ -326,15 +328,15 @@ func (h *SaaSHandler) handleStartInstance(w http.ResponseWriter, r *http.Request
 
 	if err := h.provisioningManager.StartInstance(instanceID); err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrInstanceNotFound {
+		if errors.Is(err, saas.ErrInstanceNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
 
 	instance, _ := h.provisioningManager.GetInstance(instanceID)
-	h.writeJSON(w, http.StatusOK, instance)
+	h.writeJSON(r.Context(), w, http.StatusOK, instance)
 }
 
 func (h *SaaSHandler) handleStopInstance(w http.ResponseWriter, r *http.Request) {
@@ -342,15 +344,15 @@ func (h *SaaSHandler) handleStopInstance(w http.ResponseWriter, r *http.Request)
 
 	if err := h.provisioningManager.StopInstance(instanceID); err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrInstanceNotFound {
+		if errors.Is(err, saas.ErrInstanceNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
 
 	instance, _ := h.provisioningManager.GetInstance(instanceID)
-	h.writeJSON(w, http.StatusOK, instance)
+	h.writeJSON(r.Context(), w, http.StatusOK, instance)
 }
 
 func (h *SaaSHandler) handleRestartInstance(w http.ResponseWriter, r *http.Request) {
@@ -358,22 +360,22 @@ func (h *SaaSHandler) handleRestartInstance(w http.ResponseWriter, r *http.Reque
 
 	if err := h.provisioningManager.RestartInstance(instanceID); err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrInstanceNotFound {
+		if errors.Is(err, saas.ErrInstanceNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
 
 	instance, _ := h.provisioningManager.GetInstance(instanceID)
-	h.writeJSON(w, http.StatusOK, instance)
+	h.writeJSON(r.Context(), w, http.StatusOK, instance)
 }
 
 func (h *SaaSHandler) handleTerminateInstance(w http.ResponseWriter, r *http.Request) {
 	instanceID := r.PathValue("id")
 
 	if err := h.provisioningManager.TerminateInstance(instanceID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -384,10 +386,10 @@ func (h *SaaSHandler) handleGetInstanceMetrics(w http.ResponseWriter, r *http.Re
 
 	metrics, err := h.provisioningManager.GetInstanceMetrics(instanceID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, metrics)
+	h.writeJSON(r.Context(), w, http.StatusOK, metrics)
 }
 
 // Billing handlers
@@ -395,12 +397,12 @@ func (h *SaaSHandler) handleGetInstanceMetrics(w http.ResponseWriter, r *http.Re
 func (h *SaaSHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) {
 	var record saas.UsageRecord
 	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.billingManager.RecordUsage(record); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -412,33 +414,33 @@ func (h *SaaSHandler) handleGetUsageSummary(w http.ResponseWriter, r *http.Reque
 	endStr := r.URL.Query().Get("end")
 
 	if orgID == "" {
-		h.writeError(w, http.StatusBadRequest, "org_id query parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "org_id query parameter required")
 		return
 	}
 
 	start, end, err := parseDateRange(startStr, endStr)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	summary, err := h.billingManager.GetUsageSummary(orgID, start, end)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, summary)
+	h.writeJSON(r.Context(), w, http.StatusOK, summary)
 }
 
 func (h *SaaSHandler) handleListInvoices(w http.ResponseWriter, r *http.Request) {
 	orgID := r.URL.Query().Get("org_id")
 	if orgID == "" {
-		h.writeError(w, http.StatusBadRequest, "org_id query parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "org_id query parameter required")
 		return
 	}
 
 	invoices := h.billingManager.ListInvoices(orgID)
-	h.writeJSON(w, http.StatusOK, invoices)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoices)
 }
 
 func (h *SaaSHandler) handleGetInvoice(w http.ResponseWriter, r *http.Request) {
@@ -446,10 +448,10 @@ func (h *SaaSHandler) handleGetInvoice(w http.ResponseWriter, r *http.Request) {
 
 	invoice, err := h.billingManager.GetInvoice(invoiceID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusOK, invoice)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoice)
 }
 
 func (h *SaaSHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Request) {
@@ -457,44 +459,44 @@ func (h *SaaSHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Reque
 		SubscriptionID string `json:"subscription_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	invoice, err := h.billingManager.GenerateInvoice(req.SubscriptionID)
 	if err != nil {
 		status := http.StatusBadRequest
-		if err == saas.ErrSubscriptionNotFound {
+		if errors.Is(err, saas.ErrSubscriptionNotFound) {
 			status = http.StatusNotFound
 		}
-		h.writeError(w, status, err.Error())
+		h.writeError(r.Context(), w, status, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusCreated, invoice)
+	h.writeJSON(r.Context(), w, http.StatusCreated, invoice)
 }
 
 func (h *SaaSHandler) handleFinalizeInvoice(w http.ResponseWriter, r *http.Request) {
 	invoiceID := r.PathValue("id")
 
 	if err := h.billingManager.FinalizeInvoice(invoiceID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	invoice, _ := h.billingManager.GetInvoice(invoiceID)
-	h.writeJSON(w, http.StatusOK, invoice)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoice)
 }
 
 func (h *SaaSHandler) handleMarkInvoicePaid(w http.ResponseWriter, r *http.Request) {
 	invoiceID := r.PathValue("id")
 
 	if err := h.billingManager.MarkInvoicePaid(invoiceID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	invoice, _ := h.billingManager.GetInvoice(invoiceID)
-	h.writeJSON(w, http.StatusOK, invoice)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoice)
 }
 
 // Payment method handlers
@@ -502,39 +504,39 @@ func (h *SaaSHandler) handleMarkInvoicePaid(w http.ResponseWriter, r *http.Reque
 func (h *SaaSHandler) handleListPaymentMethods(w http.ResponseWriter, r *http.Request) {
 	orgID := r.URL.Query().Get("org_id")
 	if orgID == "" {
-		h.writeError(w, http.StatusBadRequest, "org_id query parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "org_id query parameter required")
 		return
 	}
 
 	methods := h.billingManager.GetPaymentMethods(orgID)
-	h.writeJSON(w, http.StatusOK, methods)
+	h.writeJSON(r.Context(), w, http.StatusOK, methods)
 }
 
 func (h *SaaSHandler) handleAddPaymentMethod(w http.ResponseWriter, r *http.Request) {
 	orgID := r.URL.Query().Get("org_id")
 	if orgID == "" {
-		h.writeError(w, http.StatusBadRequest, "org_id query parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "org_id query parameter required")
 		return
 	}
 
 	var method saas.PaymentMethod
 	if err := json.NewDecoder(r.Body).Decode(&method); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.billingManager.AddPaymentMethod(orgID, &method); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	h.writeJSON(w, http.StatusCreated, method)
+	h.writeJSON(r.Context(), w, http.StatusCreated, method)
 }
 
 // Region and size handlers
 
 func (h *SaaSHandler) handleGetRegions(w http.ResponseWriter, r *http.Request) {
 	regions := h.provisioningManager.GetRegions()
-	h.writeJSON(w, http.StatusOK, regions)
+	h.writeJSON(r.Context(), w, http.StatusOK, regions)
 }
 
 func (h *SaaSHandler) handleGetSizes(w http.ResponseWriter, r *http.Request) {
@@ -550,12 +552,12 @@ func (h *SaaSHandler) handleGetSizes(w http.ResponseWriter, r *http.Request) {
 			"price_per_hour": spec.PricePerHour,
 		})
 	}
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // Helper methods
 
-func (h *SaaSHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func (h *SaaSHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
@@ -563,8 +565,8 @@ func (h *SaaSHandler) writeJSON(w http.ResponseWriter, status int, data interfac
 	}
 }
 
-func (h *SaaSHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]string{"error": message})
+func (h *SaaSHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	h.writeJSON(ctx, w, status, map[string]string{"error": message})
 }
 
 func parseDateRange(startStr, endStr string) (start, end time.Time, err error) {

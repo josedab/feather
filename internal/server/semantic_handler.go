@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -212,7 +213,7 @@ type ExplainRequestBody struct {
 // handleListFeatures handles GET /v1/semantic/features
 func (h *SemanticHandler) handleListFeatures(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
@@ -223,7 +224,7 @@ func (h *SemanticHandler) handleListFeatures(w http.ResponseWriter, r *http.Requ
 		response[i] = h.featureToJSON(f)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": response,
 		"count":    len(response),
 	})
@@ -232,62 +233,62 @@ func (h *SemanticHandler) handleListFeatures(w http.ResponseWriter, r *http.Requ
 // handleGetFeature handles GET /v1/semantic/features/{id}
 func (h *SemanticHandler) handleGetFeature(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	feature, err := h.search.GetFeature(featureID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.featureToJSON(feature))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.featureToJSON(feature))
 }
 
 // handleGetEnrichedFeature handles GET /v1/semantic/features/{id}/enriched
 func (h *SemanticHandler) handleGetEnrichedFeature(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	enriched, err := h.indexer.GetEnrichedFeature(featureID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, enriched)
+	h.writeJSON(r.Context(), w, http.StatusOK, enriched)
 }
 
 // handleIndexFeature handles POST /v1/semantic/features
 func (h *SemanticHandler) handleIndexFeature(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	var req EnhancedFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 
@@ -318,7 +319,7 @@ func (h *SemanticHandler) handleIndexFeature(w http.ResponseWriter, r *http.Requ
 		}
 
 		if err := h.indexer.IndexFeatureWithMetadata(r.Context(), meta); err != nil {
-			h.writeError(w, http.StatusInternalServerError, err.Error())
+			h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {
@@ -335,12 +336,12 @@ func (h *SemanticHandler) handleIndexFeature(w http.ResponseWriter, r *http.Requ
 		}
 
 		if err := h.search.IndexFeature(r.Context(), feature); err != nil {
-			h.writeError(w, http.StatusInternalServerError, err.Error())
+			h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":    true,
 		"feature_id": req.ID,
 	})
@@ -349,13 +350,13 @@ func (h *SemanticHandler) handleIndexFeature(w http.ResponseWriter, r *http.Requ
 // handleIndexBatch handles POST /v1/semantic/features/batch
 func (h *SemanticHandler) handleIndexBatch(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	var features []EnhancedFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&features); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -410,7 +411,7 @@ func (h *SemanticHandler) handleIndexBatch(w http.ResponseWriter, r *http.Reques
 		indexed++
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": len(errors) == 0,
 		"indexed": indexed,
 		"total":   len(features),
@@ -421,22 +422,22 @@ func (h *SemanticHandler) handleIndexBatch(w http.ResponseWriter, r *http.Reques
 // handleDeleteFeature handles DELETE /v1/semantic/features/{id}
 func (h *SemanticHandler) handleDeleteFeature(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	if err := h.search.DeleteFeature(featureID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -444,52 +445,52 @@ func (h *SemanticHandler) handleDeleteFeature(w http.ResponseWriter, r *http.Req
 // handleGetMetadata handles GET /v1/semantic/features/{id}/metadata
 func (h *SemanticHandler) handleGetMetadata(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	meta, err := h.indexer.GetMetadata(featureID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, meta)
+	h.writeJSON(r.Context(), w, http.StatusOK, meta)
 }
 
 // handleUpdateMetadata handles PUT /v1/semantic/features/{id}/metadata
 func (h *SemanticHandler) handleUpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var meta semantic.FeatureMetadata
 	if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	meta.FeatureID = featureID
 
 	if err := h.indexer.IndexFeatureWithMetadata(r.Context(), &meta); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -497,28 +498,28 @@ func (h *SemanticHandler) handleUpdateMetadata(w http.ResponseWriter, r *http.Re
 // handleSetStatistics handles PUT /v1/semantic/features/{id}/statistics
 func (h *SemanticHandler) handleSetStatistics(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var stats semantic.FeatureStatistics
 	if err := json.NewDecoder(r.Body).Decode(&stats); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.indexer.SetStatistics(featureID, &stats); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -526,28 +527,28 @@ func (h *SemanticHandler) handleSetStatistics(w http.ResponseWriter, r *http.Req
 // handleSetLineage handles PUT /v1/semantic/features/{id}/lineage
 func (h *SemanticHandler) handleSetLineage(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var lineage semantic.FeatureLineage
 	if err := json.NewDecoder(r.Body).Decode(&lineage); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.indexer.SetLineage(featureID, &lineage); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -555,28 +556,28 @@ func (h *SemanticHandler) handleSetLineage(w http.ResponseWriter, r *http.Reques
 // handleSetUsage handles PUT /v1/semantic/features/{id}/usage
 func (h *SemanticHandler) handleSetUsage(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var usage semantic.FeatureUsage
 	if err := json.NewDecoder(r.Body).Decode(&usage); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.indexer.SetUsage(featureID, &usage); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -584,18 +585,18 @@ func (h *SemanticHandler) handleSetUsage(w http.ResponseWriter, r *http.Request)
 // handleSearch handles POST /v1/semantic/search
 func (h *SemanticHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	var req SemanticSearchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Query == "" {
-		h.writeError(w, http.StatusBadRequest, "query is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "query is required")
 		return
 	}
 
@@ -616,7 +617,7 @@ func (h *SemanticHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	results, err := h.search.Search(r.Context(), req.Query, opts)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -629,7 +630,7 @@ func (h *SemanticHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": response,
 		"count":   len(response),
 		"query":   req.Query,
@@ -639,13 +640,13 @@ func (h *SemanticHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 // handleSearchGet handles GET /v1/semantic/search?q=...
 func (h *SemanticHandler) handleSearchGet(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		h.writeError(w, http.StatusBadRequest, "q parameter is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "q parameter is required")
 		return
 	}
 
@@ -673,7 +674,7 @@ func (h *SemanticHandler) handleSearchGet(w http.ResponseWriter, r *http.Request
 
 	results, err := h.search.Search(r.Context(), query, opts)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -686,7 +687,7 @@ func (h *SemanticHandler) handleSearchGet(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": response,
 		"count":   len(response),
 		"query":   query,
@@ -696,18 +697,18 @@ func (h *SemanticHandler) handleSearchGet(w http.ResponseWriter, r *http.Request
 // handleRank handles POST /v1/semantic/rank
 func (h *SemanticHandler) handleRank(w http.ResponseWriter, r *http.Request) {
 	if h.ranker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "hybrid ranker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "hybrid ranker not configured")
 		return
 	}
 
 	var req SemanticRankRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Query == "" {
-		h.writeError(w, http.StatusBadRequest, "query is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "query is required")
 		return
 	}
 
@@ -728,11 +729,11 @@ func (h *SemanticHandler) handleRank(w http.ResponseWriter, r *http.Request) {
 
 	results, err := h.ranker.Rank(r.Context(), rankReq)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 		"count":   len(results),
 		"query":   req.Query,
@@ -742,13 +743,13 @@ func (h *SemanticHandler) handleRank(w http.ResponseWriter, r *http.Request) {
 // handleSuggest handles GET /v1/semantic/suggest/{id}
 func (h *SemanticHandler) handleSuggest(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
@@ -763,11 +764,11 @@ func (h *SemanticHandler) handleSuggest(w http.ResponseWriter, r *http.Request) 
 	if h.ranker != nil {
 		results, err := h.ranker.SuggestSimilar(r.Context(), featureID, limit)
 		if err != nil {
-			h.writeError(w, http.StatusNotFound, err.Error())
+			h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 			return
 		}
 
-		h.writeJSON(w, http.StatusOK, map[string]interface{}{
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 			"suggestions": results,
 			"count":       len(results),
 			"source":      featureID,
@@ -778,7 +779,7 @@ func (h *SemanticHandler) handleSuggest(w http.ResponseWriter, r *http.Request) 
 	// Fallback to basic suggest
 	results, err := h.search.Suggest(r.Context(), featureID, limit)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -791,7 +792,7 @@ func (h *SemanticHandler) handleSuggest(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"suggestions": response,
 		"count":       len(response),
 		"source":      featureID,
@@ -801,18 +802,18 @@ func (h *SemanticHandler) handleSuggest(w http.ResponseWriter, r *http.Request) 
 // handleSuggestPost handles POST /v1/semantic/suggest
 func (h *SemanticHandler) handleSuggestPost(w http.ResponseWriter, r *http.Request) {
 	if h.ranker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "hybrid ranker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "hybrid ranker not configured")
 		return
 	}
 
 	var req SuggestRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_id is required")
 		return
 	}
 
@@ -822,11 +823,11 @@ func (h *SemanticHandler) handleSuggestPost(w http.ResponseWriter, r *http.Reque
 
 	results, err := h.ranker.SuggestSimilar(r.Context(), req.FeatureID, req.Limit)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"suggestions": results,
 		"count":       len(results),
 		"source":      req.FeatureID,
@@ -836,18 +837,18 @@ func (h *SemanticHandler) handleSuggestPost(w http.ResponseWriter, r *http.Reque
 // handleRecommend handles POST /v1/semantic/recommend
 func (h *SemanticHandler) handleRecommend(w http.ResponseWriter, r *http.Request) {
 	if h.ranker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "hybrid ranker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "hybrid ranker not configured")
 		return
 	}
 
 	var req RecommendRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.ExistingFeatures) == 0 {
-		h.writeError(w, http.StatusBadRequest, "existing_features is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "existing_features is required")
 		return
 	}
 
@@ -857,11 +858,11 @@ func (h *SemanticHandler) handleRecommend(w http.ResponseWriter, r *http.Request
 
 	results, err := h.ranker.RecommendForModel(r.Context(), req.ExistingFeatures, req.ModelUseCase, req.Limit)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results":  results,
 		"count":    len(results),
 		"use_case": req.ModelUseCase,
@@ -871,22 +872,22 @@ func (h *SemanticHandler) handleRecommend(w http.ResponseWriter, r *http.Request
 // handleExplain handles POST /v1/semantic/explain
 func (h *SemanticHandler) handleExplain(w http.ResponseWriter, r *http.Request) {
 	if h.explainer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "explainer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "explainer not configured")
 		return
 	}
 
 	var req ExplainRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_id is required")
 		return
 	}
 	if req.Query == "" {
-		h.writeError(w, http.StatusBadRequest, "query is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "query is required")
 		return
 	}
 
@@ -896,17 +897,17 @@ func (h *SemanticHandler) handleExplain(w http.ResponseWriter, r *http.Request) 
 
 	explanation, err := h.explainer.Explain(r.Context(), req.FeatureID, req.Query, req.Score)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, explanation)
+	h.writeJSON(r.Context(), w, http.StatusOK, explanation)
 }
 
 // handleExplainBatch handles POST /v1/semantic/explain/batch
 func (h *SemanticHandler) handleExplainBatch(w http.ResponseWriter, r *http.Request) {
 	if h.explainer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "explainer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "explainer not configured")
 		return
 	}
 
@@ -918,21 +919,21 @@ func (h *SemanticHandler) handleExplainBatch(w http.ResponseWriter, r *http.Requ
 		Query string `json:"query"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Results) == 0 {
-		h.writeError(w, http.StatusBadRequest, "results is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "results is required")
 		return
 	}
 	if req.Query == "" {
-		h.writeError(w, http.StatusBadRequest, "query is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "query is required")
 		return
 	}
 
 	// Convert to RankedResult format
-	var rankedResults []semantic.RankedResult
+	rankedResults := make([]semantic.RankedResult, 0, len(req.Results))
 	for _, res := range req.Results {
 		enriched, err := h.indexer.GetEnrichedFeature(res.FeatureID)
 		if err != nil {
@@ -946,11 +947,11 @@ func (h *SemanticHandler) handleExplainBatch(w http.ResponseWriter, r *http.Requ
 
 	explanations, err := h.explainer.ExplainResults(r.Context(), rankedResults, req.Query)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"explanations": explanations,
 		"count":        len(explanations),
 		"query":        req.Query,
@@ -960,7 +961,7 @@ func (h *SemanticHandler) handleExplainBatch(w http.ResponseWriter, r *http.Requ
 // handleDiscoverPopular handles GET /v1/semantic/discover/popular
 func (h *SemanticHandler) handleDiscoverPopular(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
@@ -973,7 +974,7 @@ func (h *SemanticHandler) handleDiscoverPopular(w http.ResponseWriter, r *http.R
 
 	features := h.indexer.GetMostPopular(limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 	})
@@ -982,7 +983,7 @@ func (h *SemanticHandler) handleDiscoverPopular(w http.ResponseWriter, r *http.R
 // handleDiscoverHighQuality handles GET /v1/semantic/discover/quality
 func (h *SemanticHandler) handleDiscoverHighQuality(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
@@ -995,7 +996,7 @@ func (h *SemanticHandler) handleDiscoverHighQuality(w http.ResponseWriter, r *ht
 
 	features := h.indexer.GetHighQuality(minScore)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features":  features,
 		"count":     len(features),
 		"min_score": minScore,
@@ -1005,19 +1006,19 @@ func (h *SemanticHandler) handleDiscoverHighQuality(w http.ResponseWriter, r *ht
 // handleDiscoverByDomain handles GET /v1/semantic/discover/domain/{domain}
 func (h *SemanticHandler) handleDiscoverByDomain(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	domain := r.PathValue("domain")
 	if domain == "" {
-		h.writeError(w, http.StatusBadRequest, "domain required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "domain required")
 		return
 	}
 
 	features := h.indexer.FindByDomain(domain)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"domain":   domain,
@@ -1027,19 +1028,19 @@ func (h *SemanticHandler) handleDiscoverByDomain(w http.ResponseWriter, r *http.
 // handleDiscoverByEntity handles GET /v1/semantic/discover/entity/{entityType}
 func (h *SemanticHandler) handleDiscoverByEntity(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	entityType := r.PathValue("entityType")
 	if entityType == "" {
-		h.writeError(w, http.StatusBadRequest, "entity type required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity type required")
 		return
 	}
 
 	features := h.indexer.FindByEntityType(entityType)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features":    features,
 		"count":       len(features),
 		"entity_type": entityType,
@@ -1049,19 +1050,19 @@ func (h *SemanticHandler) handleDiscoverByEntity(w http.ResponseWriter, r *http.
 // handleDiscoverByUseCase handles GET /v1/semantic/discover/usecase/{usecase}
 func (h *SemanticHandler) handleDiscoverByUseCase(w http.ResponseWriter, r *http.Request) {
 	if h.indexer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "enhanced indexer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "enhanced indexer not configured")
 		return
 	}
 
 	useCase := r.PathValue("usecase")
 	if useCase == "" {
-		h.writeError(w, http.StatusBadRequest, "use case required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "use case required")
 		return
 	}
 
 	features := h.indexer.FindByUseCase(useCase)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"use_case": useCase,
@@ -1071,7 +1072,7 @@ func (h *SemanticHandler) handleDiscoverByUseCase(w http.ResponseWriter, r *http
 // handleGetStats handles GET /v1/semantic/stats
 func (h *SemanticHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	if h.search == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "semantic search not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "semantic search not configured")
 		return
 	}
 
@@ -1082,7 +1083,7 @@ func (h *SemanticHandler) handleGetStats(w http.ResponseWriter, r *http.Request)
 		stats["indexer"] = indexerStats
 	}
 
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 func (h *SemanticHandler) featureToJSON(f *semantic.FeatureDocument) FeatureDocJSON {
@@ -1106,10 +1107,10 @@ func (h *SemanticHandler) featureToJSONPtr(f *semantic.FeatureDocument) *Feature
 	return &j
 }
 
-func (h *SemanticHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *SemanticHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *SemanticHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *SemanticHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

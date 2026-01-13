@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -93,7 +94,7 @@ type CreateSLARequest struct {
 // handleListSLAs handles GET /v1/sla
 func (h *SLAHandler) handleListSLAs(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
@@ -104,7 +105,7 @@ func (h *SLAHandler) handleListSLAs(w http.ResponseWriter, r *http.Request) {
 		result[i] = h.specToJSON(spec)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"slas":  result,
 		"count": len(result),
 	})
@@ -113,65 +114,65 @@ func (h *SLAHandler) handleListSLAs(w http.ResponseWriter, r *http.Request) {
 // handleGetSLA handles GET /v1/sla/{name}
 func (h *SLAHandler) handleGetSLA(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "SLA name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "SLA name required")
 		return
 	}
 
 	spec, err := h.manager.GetSLA(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.specToJSON(spec))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.specToJSON(spec))
 }
 
 // handleCreateSLA handles POST /v1/sla
 func (h *SLAHandler) handleCreateSLA(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
 	var req CreateSLARequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name required")
 		return
 	}
 	if req.Type == "" {
-		h.writeError(w, http.StatusBadRequest, "type required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "type required")
 		return
 	}
 	if req.Target <= 0 {
-		h.writeError(w, http.StatusBadRequest, "target must be positive")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "target must be positive")
 		return
 	}
 	if req.Window == "" {
-		h.writeError(w, http.StatusBadRequest, "window required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "window required")
 		return
 	}
 
 	window, err := time.ParseDuration(req.Window)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid window duration")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid window duration")
 		return
 	}
 
-	spec := &sla.SLASpec{
+	spec := &sla.Spec{
 		Name:           req.Name,
 		Description:    req.Description,
-		Type:           sla.SLAType(req.Type),
+		Type:           sla.Type(req.Type),
 		Target:         req.Target,
 		Priority:       parsePriority(req.Priority),
 		Features:       req.Features,
@@ -183,11 +184,11 @@ func (h *SLAHandler) handleCreateSLA(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.manager.RegisterSLA(spec); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"sla":     h.specToJSON(spec),
 	})
@@ -196,23 +197,23 @@ func (h *SLAHandler) handleCreateSLA(w http.ResponseWriter, r *http.Request) {
 // handleDeleteSLA handles DELETE /v1/sla/{name}
 func (h *SLAHandler) handleDeleteSLA(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "SLA name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "SLA name required")
 		return
 	}
 
 	err := h.manager.UnregisterSLA(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -220,29 +221,29 @@ func (h *SLAHandler) handleDeleteSLA(w http.ResponseWriter, r *http.Request) {
 // handleGetStatus handles GET /v1/sla/{name}/status
 func (h *SLAHandler) handleGetStatus(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "SLA name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "SLA name required")
 		return
 	}
 
 	status, err := h.manager.GetStatus(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.statusToJSON(status))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.statusToJSON(status))
 }
 
 // handleGetAllStatuses handles GET /v1/sla/status
 func (h *SLAHandler) handleGetAllStatuses(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
@@ -253,7 +254,7 @@ func (h *SLAHandler) handleGetAllStatuses(w http.ResponseWriter, r *http.Request
 		result[i] = h.statusToJSON(status)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"statuses": result,
 		"count":    len(result),
 	})
@@ -262,7 +263,7 @@ func (h *SLAHandler) handleGetAllStatuses(w http.ResponseWriter, r *http.Request
 // handleGetBreaches handles GET /v1/sla/breaches
 func (h *SLAHandler) handleGetBreaches(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
@@ -272,7 +273,7 @@ func (h *SLAHandler) handleGetBreaches(w http.ResponseWriter, r *http.Request) {
 	if sinceStr != "" {
 		parsed, err := time.Parse(time.RFC3339, sinceStr)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid since parameter, use RFC3339 format")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid since parameter, use RFC3339 format")
 			return
 		}
 		since = parsed
@@ -285,7 +286,7 @@ func (h *SLAHandler) handleGetBreaches(w http.ResponseWriter, r *http.Request) {
 		result[i] = h.breachToJSON(breach)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"breaches": result,
 		"count":    len(result),
 		"since":    since.Format(time.RFC3339),
@@ -295,31 +296,31 @@ func (h *SLAHandler) handleGetBreaches(w http.ResponseWriter, r *http.Request) {
 // handleGetSummary handles GET /v1/sla/summary
 func (h *SLAHandler) handleGetSummary(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
 	summary := h.manager.GetComplianceSummary()
-	h.writeJSON(w, http.StatusOK, summary)
+	h.writeJSON(r.Context(), w, http.StatusOK, summary)
 }
 
 // handleEvaluateNow handles POST /v1/sla/evaluate
 func (h *SLAHandler) handleEvaluateNow(w http.ResponseWriter, r *http.Request) {
 	if h.manager == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "SLA manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "SLA manager not configured")
 		return
 	}
 
 	h.manager.EvaluateNow(r.Context())
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":   true,
 		"message":   "SLA evaluation triggered",
 		"timestamp": time.Now().Format(time.RFC3339),
 	})
 }
 
-func (h *SLAHandler) specToJSON(spec *sla.SLASpec) SLASpecJSON {
+func (h *SLAHandler) specToJSON(spec *sla.Spec) SLASpecJSON {
 	return SLASpecJSON{
 		Name:           spec.Name,
 		Description:    spec.Description,
@@ -335,7 +336,7 @@ func (h *SLAHandler) specToJSON(spec *sla.SLASpec) SLASpecJSON {
 	}
 }
 
-func (h *SLAHandler) statusToJSON(status *sla.SLAStatus) SLAStatusJSON {
+func (h *SLAHandler) statusToJSON(status *sla.Status) SLAStatusJSON {
 	result := SLAStatusJSON{
 		Name:                 status.Spec.Name,
 		Type:                 string(status.Spec.Type),
@@ -389,14 +390,12 @@ func parsePriority(s string) sla.Priority {
 	}
 }
 
-func (h *SLAHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+func (h *SLAHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *SLAHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]interface{}{
+func (h *SLAHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	h.writeJSON(ctx, w, status, map[string]interface{}{
 		"error": message,
 	})
 }

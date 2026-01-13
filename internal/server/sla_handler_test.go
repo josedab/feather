@@ -110,9 +110,9 @@ func TestSLAHandler_CreateSLA_MissingFields(t *testing.T) {
 
 func TestSLAHandler_GetSLA(t *testing.T) {
 	manager := sla.NewManager(nil, sla.DefaultManagerConfig())
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "test-sla",
-		Type:    sla.SLATypeLatency,
+		Type:    sla.TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -156,9 +156,9 @@ func TestSLAHandler_GetSLA_NotFound(t *testing.T) {
 
 func TestSLAHandler_DeleteSLA(t *testing.T) {
 	manager := sla.NewManager(nil, sla.DefaultManagerConfig())
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "test-sla",
-		Type:    sla.SLATypeLatency,
+		Type:    sla.TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -201,9 +201,9 @@ func TestSLAHandler_DeleteSLA_NotFound(t *testing.T) {
 
 func TestSLAHandler_GetStatus(t *testing.T) {
 	manager := sla.NewManager(nil, sla.DefaultManagerConfig())
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "test-sla",
-		Type:    sla.SLATypeLatency,
+		Type:    sla.TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -234,16 +234,16 @@ func TestSLAHandler_GetStatus(t *testing.T) {
 
 func TestSLAHandler_GetAllStatuses(t *testing.T) {
 	manager := sla.NewManager(nil, sla.DefaultManagerConfig())
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "sla-1",
-		Type:    sla.SLATypeLatency,
+		Type:    sla.TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
 	})
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "sla-2",
-		Type:    sla.SLATypeAvailability,
+		Type:    sla.TypeAvailability,
 		Target:  99.9,
 		Window:  1 * time.Hour,
 		Enabled: true,
@@ -333,9 +333,9 @@ func TestSLAHandler_GetBreaches_InvalidSince(t *testing.T) {
 
 func TestSLAHandler_GetSummary(t *testing.T) {
 	manager := sla.NewManager(nil, sla.DefaultManagerConfig())
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "sla-1",
-		Type:    sla.SLATypeLatency,
+		Type:    sla.TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -472,7 +472,7 @@ func TestSLAHandler_PriorityParsing(t *testing.T) {
 		{"high", sla.PriorityHigh},
 		{"critical", sla.PriorityCritical},
 		{"unknown", sla.PriorityMedium}, // Default
-		{"", sla.PriorityMedium},         // Default
+		{"", sla.PriorityMedium},        // Default
 	}
 
 	for _, tt := range tests {
@@ -487,16 +487,16 @@ func TestSLAHandler_PriorityParsing(t *testing.T) {
 
 func TestSLAHandler_ListSLAs_WithSLAs(t *testing.T) {
 	manager := sla.NewManager(nil, sla.DefaultManagerConfig())
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "sla-1",
-		Type:    sla.SLATypeLatency,
+		Type:    sla.TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
 	})
-	manager.RegisterSLA(&sla.SLASpec{
+	manager.RegisterSLA(&sla.Spec{
 		Name:    "sla-2",
-		Type:    sla.SLATypeAvailability,
+		Type:    sla.TypeAvailability,
 		Target:  99.9,
 		Window:  1 * time.Hour,
 		Enabled: true,

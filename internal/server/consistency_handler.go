@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -53,19 +54,19 @@ type HTTPSourceRequest struct {
 func (h *ConsistencyHandler) handleAddHTTPSource(w http.ResponseWriter, r *http.Request) {
 	var req HTTPSourceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" || req.Endpoint == "" {
-		h.writeError(w, http.StatusBadRequest, "name and endpoint are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name and endpoint are required")
 		return
 	}
 
 	source := consistency.NewHTTPOfflineSource(req.Name, req.Endpoint, req.Headers)
 	h.checker.SetOfflineSource(source)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":  true,
 		"name":     req.Name,
 		"endpoint": req.Endpoint,
@@ -82,22 +83,22 @@ type CheckFeatureRequest struct {
 func (h *ConsistencyHandler) handleCheckFeature(w http.ResponseWriter, r *http.Request) {
 	var req CheckFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityID == "" || req.Feature == "" {
-		h.writeError(w, http.StatusBadRequest, "entity_id and feature are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_id and feature are required")
 		return
 	}
 
 	result, err := h.checker.CheckFeature(r.Context(), req.EntityID, req.Feature)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // CheckBatchRequest represents a request to check multiple features.
@@ -110,24 +111,24 @@ type CheckBatchRequest struct {
 func (h *ConsistencyHandler) handleCheckBatch(w http.ResponseWriter, r *http.Request) {
 	var req CheckBatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.EntityIDs) == 0 || len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "entity_ids and features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_ids and features are required")
 		return
 	}
 
 	results, err := h.checker.CheckBatch(r.Context(), req.EntityIDs, req.Features)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	report := h.checker.GenerateReport(results)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 		"report":  report,
 	})
@@ -153,7 +154,7 @@ func (h *ConsistencyHandler) handleGetResults(w http.ResponseWriter, r *http.Req
 
 	results := h.checker.GetResults(feature, since, limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 		"count":   len(results),
 	})
@@ -179,7 +180,7 @@ func (h *ConsistencyHandler) handleGetInconsistencies(w http.ResponseWriter, r *
 
 	results := h.checker.GetInconsistencies(feature, since, limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"inconsistencies": results,
 		"count":           len(results),
 	})
@@ -198,13 +199,13 @@ func (h *ConsistencyHandler) handleGetReport(w http.ResponseWriter, r *http.Requ
 	results := h.checker.GetResults("", since, 10000)
 	report := h.checker.GenerateReport(results)
 
-	h.writeJSON(w, http.StatusOK, report)
+	h.writeJSON(r.Context(), w, http.StatusOK, report)
 }
 
-func (h *ConsistencyHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *ConsistencyHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *ConsistencyHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *ConsistencyHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

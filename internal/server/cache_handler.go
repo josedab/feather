@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -59,12 +60,12 @@ type RecordAccessRequest struct {
 func (h *CacheHandler) handleRecordAccess(w http.ResponseWriter, r *http.Request) {
 	var req RecordAccessRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityID == "" || len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "entity_id and features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_id and features are required")
 		return
 	}
 
@@ -76,7 +77,7 @@ func (h *CacheHandler) handleRecordAccess(w http.ResponseWriter, r *http.Request
 	// Record co-accesses
 	h.coAccess.RecordAccess(req.EntityID, req.Features)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":  true,
 		"recorded": len(req.Features),
 	})
@@ -93,7 +94,7 @@ func (h *CacheHandler) handleGetPatterns(w http.ResponseWriter, r *http.Request)
 
 	patterns := h.predictive.GetTopPatterns(limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"patterns": patterns,
 		"count":    len(patterns),
 	})
@@ -105,17 +106,17 @@ func (h *CacheHandler) handleGetPattern(w http.ResponseWriter, r *http.Request) 
 	feature := r.PathValue("feature")
 
 	if entityID == "" || feature == "" {
-		h.writeError(w, http.StatusBadRequest, "entity and feature are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity and feature are required")
 		return
 	}
 
 	pattern := h.predictive.GetPattern(entityID, feature)
 	if pattern == nil {
-		h.writeError(w, http.StatusNotFound, "pattern not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "pattern not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, pattern)
+	h.writeJSON(r.Context(), w, http.StatusOK, pattern)
 }
 
 // handleGetPredictions handles GET /v1/cache/predictions
@@ -129,7 +130,7 @@ func (h *CacheHandler) handleGetPredictions(w http.ResponseWriter, r *http.Reque
 
 	predictions := h.predictive.GetPredictedAccesses(window)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"predictions": predictions,
 		"count":       len(predictions),
 		"window":      window.String(),
@@ -140,7 +141,7 @@ func (h *CacheHandler) handleGetPredictions(w http.ResponseWriter, r *http.Reque
 func (h *CacheHandler) handleGetRelated(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
@@ -153,7 +154,7 @@ func (h *CacheHandler) handleGetRelated(w http.ResponseWriter, r *http.Request) 
 
 	related := h.coAccess.GetRelatedFeatures(feature, limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"feature": feature,
 		"related": related,
 		"count":   len(related),
@@ -163,7 +164,7 @@ func (h *CacheHandler) handleGetRelated(w http.ResponseWriter, r *http.Request) 
 // handleGetStats handles GET /v1/cache/stats
 func (h *CacheHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.predictive.GetStats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // CacheConfigRequest represents a request to update cache config.
@@ -179,22 +180,22 @@ type CacheConfigRequest struct {
 func (h *CacheHandler) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	var req CacheConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Note: In production, you'd want to update the actual config
 	// This is a placeholder response
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "configuration updated",
 	})
 }
 
-func (h *CacheHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *CacheHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *CacheHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *CacheHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -203,7 +204,7 @@ type ResidencyValidationRequest struct {
 // handleListAuditLogs handles GET /v1/governance/audit
 func (h *GovernanceHandler) handleListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	if h.audit == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "audit logging not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "audit logging not configured")
 		return
 	}
 
@@ -251,11 +252,11 @@ func (h *GovernanceHandler) handleListAuditLogs(w http.ResponseWriter, r *http.R
 
 	logs, err := h.audit.Query(r.Context(), filter)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"logs":  logs,
 		"count": len(logs),
 	})
@@ -266,30 +267,30 @@ func (h *GovernanceHandler) handleListAuditLogs(w http.ResponseWriter, r *http.R
 // Audit logs should be queried using the list endpoint with appropriate filters.
 func (h *GovernanceHandler) handleGetAuditLog(w http.ResponseWriter, r *http.Request) {
 	if h.audit == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "audit logging not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "audit logging not configured")
 		return
 	}
 
 	logID := r.PathValue("id")
 	if logID == "" {
-		h.writeError(w, http.StatusBadRequest, "log ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "log ID required")
 		return
 	}
 
 	// The audit logger doesn't support direct retrieval by ID.
 	// In production, this would query a database with the log ID.
-	h.writeError(w, http.StatusNotImplemented, "individual audit log retrieval not implemented; use query filters instead")
+	h.writeError(r.Context(), w, http.StatusNotImplemented, "individual audit log retrieval not implemented; use query filters instead")
 }
 
 // handleAuditStats handles GET /v1/governance/audit/stats
 func (h *GovernanceHandler) handleAuditStats(w http.ResponseWriter, r *http.Request) {
 	if h.audit == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "audit logging not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "audit logging not configured")
 		return
 	}
 
 	stats := h.audit.Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // PII handlers
@@ -297,25 +298,25 @@ func (h *GovernanceHandler) handleAuditStats(w http.ResponseWriter, r *http.Requ
 // handleDetectPII handles POST /v1/governance/pii/detect
 func (h *GovernanceHandler) handleDetectPII(w http.ResponseWriter, r *http.Request) {
 	if h.pii == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "PII detection not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "PII detection not configured")
 		return
 	}
 
 	var req PIIDetectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Content == "" {
-		h.writeError(w, http.StatusBadRequest, "content is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "content is required")
 		return
 	}
 
 	// Scan uses featureName + value; use a generic feature name for single-value detection
 	detections, err := h.pii.Scan(r.Context(), "_detect", req.Content)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -334,7 +335,7 @@ func (h *GovernanceHandler) handleDetectPII(w http.ResponseWriter, r *http.Reque
 		detections = filtered
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"detections": detections,
 		"count":      len(detections),
 		"has_pii":    len(detections) > 0,
@@ -344,18 +345,18 @@ func (h *GovernanceHandler) handleDetectPII(w http.ResponseWriter, r *http.Reque
 // handleScanPII handles POST /v1/governance/pii/scan
 func (h *GovernanceHandler) handleScanPII(w http.ResponseWriter, r *http.Request) {
 	if h.pii == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "PII detection not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "PII detection not configured")
 		return
 	}
 
 	var req PIIScanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Contents) == 0 {
-		h.writeError(w, http.StatusBadRequest, "contents is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "contents is required")
 		return
 	}
 
@@ -367,11 +368,11 @@ func (h *GovernanceHandler) handleScanPII(w http.ResponseWriter, r *http.Request
 
 	results, err := h.pii.ScanBatch(r.Context(), features)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 		"count":   len(results),
 	})
@@ -381,7 +382,7 @@ func (h *GovernanceHandler) handleScanPII(w http.ResponseWriter, r *http.Request
 // Note: Returns pattern statistics and detected PII rather than the raw pattern list.
 func (h *GovernanceHandler) handleListPIIPatterns(w http.ResponseWriter, r *http.Request) {
 	if h.pii == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "PII detection not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "PII detection not configured")
 		return
 	}
 
@@ -391,7 +392,7 @@ func (h *GovernanceHandler) handleListPIIPatterns(w http.ResponseWriter, r *http
 	// Get detections to show what PII has been found
 	detections := h.pii.GetDetections()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"pattern_count": stats["patterns"],
 		"detections":    detections,
 		"stats":         stats,
@@ -401,18 +402,18 @@ func (h *GovernanceHandler) handleListPIIPatterns(w http.ResponseWriter, r *http
 // handleAddPIIPattern handles POST /v1/governance/pii/patterns
 func (h *GovernanceHandler) handleAddPIIPattern(w http.ResponseWriter, r *http.Request) {
 	if h.pii == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "PII detection not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "PII detection not configured")
 		return
 	}
 
 	var req PIIPatternRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" || req.Pattern == "" {
-		h.writeError(w, http.StatusBadRequest, "name and pattern are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name and pattern are required")
 		return
 	}
 
@@ -426,11 +427,11 @@ func (h *GovernanceHandler) handleAddPIIPattern(w http.ResponseWriter, r *http.R
 	}
 
 	if err := h.pii.AddPattern(pattern); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"name":    req.Name,
 	})
@@ -441,19 +442,19 @@ func (h *GovernanceHandler) handleAddPIIPattern(w http.ResponseWriter, r *http.R
 // Patterns can be disabled by adding a new pattern with Enabled=false.
 func (h *GovernanceHandler) handleRemovePIIPattern(w http.ResponseWriter, r *http.Request) {
 	if h.pii == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "PII detection not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "PII detection not configured")
 		return
 	}
 
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "pattern name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "pattern name required")
 		return
 	}
 
 	// The PIIDetector doesn't support pattern removal.
 	// In production, this would update the pattern to disabled.
-	h.writeError(w, http.StatusNotImplemented, "pattern removal not implemented; patterns are immutable once added")
+	h.writeError(r.Context(), w, http.StatusNotImplemented, "pattern removal not implemented; patterns are immutable once added")
 }
 
 // Masking handlers
@@ -461,18 +462,18 @@ func (h *GovernanceHandler) handleRemovePIIPattern(w http.ResponseWriter, r *htt
 // handleMaskData handles POST /v1/governance/mask
 func (h *GovernanceHandler) handleMaskData(w http.ResponseWriter, r *http.Request) {
 	if h.masking == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "masking engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "masking engine not configured")
 		return
 	}
 
 	var req MaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Value == "" {
-		h.writeError(w, http.StatusBadRequest, "value is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "value is required")
 		return
 	}
 
@@ -489,7 +490,7 @@ func (h *GovernanceHandler) handleMaskData(w http.ResponseWriter, r *http.Reques
 	// Mask the value
 	masked, _ := h.masking.Mask(r.Context(), req.Field, req.Value, maskCtx)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"original": req.Value,
 		"masked":   masked,
 		"field":    req.Field,
@@ -499,18 +500,18 @@ func (h *GovernanceHandler) handleMaskData(w http.ResponseWriter, r *http.Reques
 // handleMaskBatch handles POST /v1/governance/mask/batch
 func (h *GovernanceHandler) handleMaskBatch(w http.ResponseWriter, r *http.Request) {
 	if h.masking == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "masking engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "masking engine not configured")
 		return
 	}
 
 	var req MaskBatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Items) == 0 {
-		h.writeError(w, http.StatusBadRequest, "items is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "items is required")
 		return
 	}
 
@@ -534,7 +535,7 @@ func (h *GovernanceHandler) handleMaskBatch(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 		"count":   len(results),
 	})
@@ -543,14 +544,14 @@ func (h *GovernanceHandler) handleMaskBatch(w http.ResponseWriter, r *http.Reque
 // handleListMaskingRules handles GET /v1/governance/mask/rules
 func (h *GovernanceHandler) handleListMaskingRules(w http.ResponseWriter, r *http.Request) {
 	if h.masking == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "masking engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "masking engine not configured")
 		return
 	}
 
 	// Return stats which includes rule counts
 	stats := h.masking.Stats()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"stats": stats,
 	})
 }
@@ -558,18 +559,18 @@ func (h *GovernanceHandler) handleListMaskingRules(w http.ResponseWriter, r *htt
 // handleAddMaskingRule handles POST /v1/governance/mask/rules
 func (h *GovernanceHandler) handleAddMaskingRule(w http.ResponseWriter, r *http.Request) {
 	if h.masking == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "masking engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "masking engine not configured")
 		return
 	}
 
 	var req MaskingRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Field == "" || req.Type == "" {
-		h.writeError(w, http.StatusBadRequest, "field and type are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "field and type are required")
 		return
 	}
 
@@ -589,7 +590,7 @@ func (h *GovernanceHandler) handleAddMaskingRule(w http.ResponseWriter, r *http.
 
 	h.masking.AddRule(rule)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":      true,
 		"feature_name": req.Field,
 	})
@@ -599,19 +600,19 @@ func (h *GovernanceHandler) handleAddMaskingRule(w http.ResponseWriter, r *http.
 // Note: The id parameter is treated as the feature name for masking rules.
 func (h *GovernanceHandler) handleRemoveMaskingRule(w http.ResponseWriter, r *http.Request) {
 	if h.masking == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "masking engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "masking engine not configured")
 		return
 	}
 
 	featureName := r.PathValue("id")
 	if featureName == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	h.masking.RemoveRule(featureName)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -621,7 +622,7 @@ func (h *GovernanceHandler) handleRemoveMaskingRule(w http.ResponseWriter, r *ht
 // handleListACLs handles GET /v1/governance/acl
 func (h *GovernanceHandler) handleListACLs(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "ACL controller not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "ACL controller not configured")
 		return
 	}
 
@@ -641,7 +642,7 @@ func (h *GovernanceHandler) handleListACLs(w http.ResponseWriter, r *http.Reques
 		acls = allACLs
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"acls":  acls,
 		"count": len(acls),
 	})
@@ -650,18 +651,18 @@ func (h *GovernanceHandler) handleListACLs(w http.ResponseWriter, r *http.Reques
 // handleCreateACL handles POST /v1/governance/acl
 func (h *GovernanceHandler) handleCreateACL(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "ACL controller not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "ACL controller not configured")
 		return
 	}
 
 	var req ACLRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" || req.Resource == "" || req.Principal == "" {
-		h.writeError(w, http.StatusBadRequest, "id, resource, and principal are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id, resource, and principal are required")
 		return
 	}
 
@@ -691,11 +692,11 @@ func (h *GovernanceHandler) handleCreateACL(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.acl.AddACL(acl); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"acl_id":  req.ID,
 	})
@@ -704,41 +705,41 @@ func (h *GovernanceHandler) handleCreateACL(w http.ResponseWriter, r *http.Reque
 // handleGetACL handles GET /v1/governance/acl/{id}
 func (h *GovernanceHandler) handleGetACL(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "ACL controller not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "ACL controller not configured")
 		return
 	}
 
 	aclID := r.PathValue("id")
 	if aclID == "" {
-		h.writeError(w, http.StatusBadRequest, "ACL ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "ACL ID required")
 		return
 	}
 
 	acl, err := h.acl.GetACL(aclID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, acl)
+	h.writeJSON(r.Context(), w, http.StatusOK, acl)
 }
 
 // handleUpdateACL handles PUT /v1/governance/acl/{id}
 func (h *GovernanceHandler) handleUpdateACL(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "ACL controller not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "ACL controller not configured")
 		return
 	}
 
 	aclID := r.PathValue("id")
 	if aclID == "" {
-		h.writeError(w, http.StatusBadRequest, "ACL ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "ACL ID required")
 		return
 	}
 
 	var req ACLRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -770,11 +771,11 @@ func (h *GovernanceHandler) handleUpdateACL(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.acl.UpdateACL(acl); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -782,22 +783,22 @@ func (h *GovernanceHandler) handleUpdateACL(w http.ResponseWriter, r *http.Reque
 // handleDeleteACL handles DELETE /v1/governance/acl/{id}
 func (h *GovernanceHandler) handleDeleteACL(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "ACL controller not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "ACL controller not configured")
 		return
 	}
 
 	aclID := r.PathValue("id")
 	if aclID == "" {
-		h.writeError(w, http.StatusBadRequest, "ACL ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "ACL ID required")
 		return
 	}
 
 	if err := h.acl.DeleteACL(aclID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -805,18 +806,18 @@ func (h *GovernanceHandler) handleDeleteACL(w http.ResponseWriter, r *http.Reque
 // handleCheckAccess handles POST /v1/governance/acl/check
 func (h *GovernanceHandler) handleCheckAccess(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "ACL controller not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "ACL controller not configured")
 		return
 	}
 
 	var req AccessCheckRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Resource == "" || req.Permission == "" || req.Principal == nil {
-		h.writeError(w, http.StatusBadRequest, "resource, permission, and principal are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "resource, permission, and principal are required")
 		return
 	}
 
@@ -843,7 +844,7 @@ func (h *GovernanceHandler) handleCheckAccess(w http.ResponseWriter, r *http.Req
 
 	result := h.acl.Evaluate(r.Context(), evalReq)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"allowed": result.Allowed,
 		"reason":  result.Reason,
 		"effect":  result.Effect,
@@ -855,13 +856,13 @@ func (h *GovernanceHandler) handleCheckAccess(w http.ResponseWriter, r *http.Req
 // handleListResidencyPolicies handles GET /v1/governance/residency/policies
 func (h *GovernanceHandler) handleListResidencyPolicies(w http.ResponseWriter, r *http.Request) {
 	if h.residency == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "residency enforcer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "residency enforcer not configured")
 		return
 	}
 
 	policies := h.residency.ListPolicies()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"policies": policies,
 		"count":    len(policies),
 	})
@@ -870,18 +871,18 @@ func (h *GovernanceHandler) handleListResidencyPolicies(w http.ResponseWriter, r
 // handleAddResidencyPolicy handles POST /v1/governance/residency/policies
 func (h *GovernanceHandler) handleAddResidencyPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.residency == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "residency enforcer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "residency enforcer not configured")
 		return
 	}
 
 	var req ResidencyPolicyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" || len(req.Regions) == 0 {
-		h.writeError(w, http.StatusBadRequest, "id and regions are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id and regions are required")
 		return
 	}
 
@@ -917,11 +918,11 @@ func (h *GovernanceHandler) handleAddResidencyPolicy(w http.ResponseWriter, r *h
 	}
 
 	if err := h.residency.AddPolicy(policy); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":   true,
 		"policy_id": req.ID,
 	})
@@ -930,44 +931,44 @@ func (h *GovernanceHandler) handleAddResidencyPolicy(w http.ResponseWriter, r *h
 // handleGetResidencyPolicy handles GET /v1/governance/residency/policies/{id}
 func (h *GovernanceHandler) handleGetResidencyPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.residency == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "residency enforcer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "residency enforcer not configured")
 		return
 	}
 
 	policyID := r.PathValue("id")
 	if policyID == "" {
-		h.writeError(w, http.StatusBadRequest, "policy ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "policy ID required")
 		return
 	}
 
 	policy, err := h.residency.GetPolicy(policyID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, policy)
+	h.writeJSON(r.Context(), w, http.StatusOK, policy)
 }
 
 // handleDeleteResidencyPolicy handles DELETE /v1/governance/residency/policies/{id}
 func (h *GovernanceHandler) handleDeleteResidencyPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.residency == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "residency enforcer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "residency enforcer not configured")
 		return
 	}
 
 	policyID := r.PathValue("id")
 	if policyID == "" {
-		h.writeError(w, http.StatusBadRequest, "policy ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "policy ID required")
 		return
 	}
 
 	if err := h.residency.DeletePolicy(policyID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -975,18 +976,18 @@ func (h *GovernanceHandler) handleDeleteResidencyPolicy(w http.ResponseWriter, r
 // handleValidateResidency handles POST /v1/governance/residency/validate
 func (h *GovernanceHandler) handleValidateResidency(w http.ResponseWriter, r *http.Request) {
 	if h.residency == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "residency enforcer not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "residency enforcer not configured")
 		return
 	}
 
 	var req ResidencyValidationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.SourceRegion == "" || req.TargetRegion == "" || req.Operation == "" {
-		h.writeError(w, http.StatusBadRequest, "source_region, target_region, and operation are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "source_region, target_region, and operation are required")
 		return
 	}
 
@@ -1008,7 +1009,7 @@ func (h *GovernanceHandler) handleValidateResidency(w http.ResponseWriter, r *ht
 		violation = check.Violation
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"valid":         check != nil && check.Allowed,
 		"violation":     violation,
 		"operation":     req.Operation,
@@ -1037,7 +1038,7 @@ func (h *GovernanceHandler) handleGetStats(w http.ResponseWriter, r *http.Reques
 		stats["residency"] = h.residency.Stats()
 	}
 
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // Helper methods
@@ -1089,10 +1090,10 @@ func (h *GovernanceHandler) convertACLConditions(req *ACLConditions) []governanc
 	return conditions
 }
 
-func (h *GovernanceHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *GovernanceHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *GovernanceHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *GovernanceHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }
