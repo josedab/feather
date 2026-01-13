@@ -39,7 +39,7 @@ func init() {
 }
 
 type versionInfo struct {
-	CLI    cliVersion    `json:"cli" yaml:"cli"`
+	CLI    cliVersion     `json:"cli" yaml:"cli"`
 	Server *serverVersion `json:"server,omitempty" yaml:"server,omitempty"`
 }
 
@@ -93,13 +93,24 @@ func getServerVersion() *serverVersion {
 	if err != nil {
 		return &serverVersion{Status: "unreachable"}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		// Try the health endpoint to at least confirm server is running
-		healthReq, _ := http.NewRequestWithContext(ctx, "GET", cfg.ServerURL+"/live", nil)
+		healthReq, err := http.NewRequestWithContext(ctx, "GET", cfg.ServerURL+"/live", nil)
+		if err != nil {
+			return &serverVersion{Status: "unreachable"}
+		}
 		healthResp, err := client.Do(healthReq)
-		if err != nil || healthResp.StatusCode != http.StatusOK {
+		if err != nil {
+			return &serverVersion{Status: "unreachable"}
+		}
+		defer func() {
+			_ = healthResp.Body.Close()
+		}()
+		if healthResp.StatusCode != http.StatusOK {
 			return &serverVersion{Status: "unreachable"}
 		}
 		return &serverVersion{Version: "unknown", Status: "healthy"}

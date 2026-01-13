@@ -79,7 +79,7 @@ func init() {
 	schemaCmd.AddCommand(schemaCreateCmd)
 
 	schemaCreateCmd.Flags().StringVarP(&schemaFile, "file", "f", "", "path to schema definition file (use - for stdin)")
-	schemaCreateCmd.MarkFlagRequired("file")
+	cobra.CheckErr(schemaCreateCmd.MarkFlagRequired("file"))
 }
 
 func runSchemaList(cmd *cobra.Command, args []string) error {
@@ -155,30 +155,29 @@ func runSchemaGet(cmd *cobra.Command, args []string) error {
 
 func runSchemaCreate(cmd *cobra.Command, args []string) error {
 	var data []byte
-	var err error
+	var readErr error
 
 	if schemaFile == "-" {
 		// Read from stdin
-		data, err = os.ReadFile("/dev/stdin")
+		data, readErr = os.ReadFile("/dev/stdin")
 	} else {
-		data, err = os.ReadFile(schemaFile)
+		data, readErr = os.ReadFile(schemaFile)
 	}
-	if err != nil {
-		return fmt.Errorf("reading schema file: %w", err)
+	if readErr != nil {
+		return fmt.Errorf("reading schema file: %w", readErr)
 	}
 
 	// Parse the schema definition
 	var def feather.FeatureDefinition
-	if err := json.Unmarshal(data, &def); err != nil {
-		return fmt.Errorf("parsing schema file: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &def); unmarshalErr != nil {
+		return fmt.Errorf("parsing schema file: %w", unmarshalErr)
 	}
 
 	client := feather.NewClient(cfg.ServerURL, cfg.APIKey, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
 	defer cancel()
 
-	err = client.Catalog.Register(ctx, &def)
-	if err != nil {
+	if err := client.Catalog.Register(ctx, &def); err != nil {
 		formatter.PrintError(err)
 		return err
 	}

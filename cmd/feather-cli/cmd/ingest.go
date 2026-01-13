@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	ingestFormat  string
-	entityColumn  string
-	batchSize     int
+	ingestFormat string
+	entityColumn string
+	batchSize    int
 )
 
 // ingestCmd represents the ingest command
@@ -99,7 +99,9 @@ func runIngestFile(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("opening file: %w", err)
 		}
-		defer f.Close()
+		defer func() {
+			_ = f.Close()
+		}()
 		reader = f
 	}
 

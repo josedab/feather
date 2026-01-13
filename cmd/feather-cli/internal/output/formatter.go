@@ -15,9 +15,12 @@ import (
 type Format string
 
 const (
+	// FormatTable emits output in a tabular layout.
 	FormatTable Format = "table"
-	FormatJSON  Format = "json"
-	FormatYAML  Format = "yaml"
+	// FormatJSON emits output in JSON format.
+	FormatJSON Format = "json"
+	// FormatYAML emits output in YAML format.
+	FormatYAML Format = "yaml"
 )
 
 // Formatter handles output formatting.
@@ -62,17 +65,17 @@ func (f *Formatter) PrintJSON(data interface{}) error {
 
 // PrintMessage prints a simple message.
 func (f *Formatter) PrintMessage(format string, args ...interface{}) {
-	fmt.Fprintf(f.writer, format+"\n", args...)
+	_, _ = fmt.Fprintf(f.writer, format+"\n", args...)
 }
 
 // PrintError prints an error message.
 func (f *Formatter) PrintError(err error) {
-	fmt.Fprintf(f.writer, "Error: %v\n", err)
+	_, _ = fmt.Fprintf(f.writer, "Error: %v\n", err)
 }
 
 // PrintSuccess prints a success message.
 func (f *Formatter) PrintSuccess(msg string) {
-	fmt.Fprintf(f.writer, "Success: %s\n", msg)
+	_, _ = fmt.Fprintf(f.writer, "Success: %s\n", msg)
 }
 
 func (f *Formatter) printJSON(data interface{}) error {
@@ -83,7 +86,9 @@ func (f *Formatter) printJSON(data interface{}) error {
 
 func (f *Formatter) printYAML(data interface{}) error {
 	encoder := yaml.NewEncoder(f.writer)
-	defer encoder.Close()
+	defer func() {
+		_ = encoder.Close()
+	}()
 	return encoder.Encode(data)
 }
 
@@ -117,18 +122,18 @@ func (f *Formatter) printTableRows(headers []string, rows []TableRow) error {
 
 	// Print headers
 	if len(headers) > 0 {
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(headers, "\t"))
 		// Print separator
 		sep := make([]string, len(headers))
 		for i := range sep {
 			sep[i] = strings.Repeat("-", len(headers[i]))
 		}
-		fmt.Fprintln(w, strings.Join(sep, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(sep, "\t"))
 	}
 
 	// Print rows
 	for _, row := range rows {
-		fmt.Fprintln(w, strings.Join(row, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(row, "\t"))
 	}
 
 	return w.Flush()
@@ -169,10 +174,10 @@ func (f *Formatter) PrintFeatureResult(result *FeatureResult) error {
 
 // SchemaResult represents a schema for display.
 type SchemaResult struct {
-	Name       string             `json:"name" yaml:"name"`
-	EntityType string             `json:"entity_type" yaml:"entity_type"`
-	Features   []SchemaFeature    `json:"features" yaml:"features"`
-	Metadata   map[string]string  `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Name       string            `json:"name" yaml:"name"`
+	EntityType string            `json:"entity_type" yaml:"entity_type"`
+	Features   []SchemaFeature   `json:"features" yaml:"features"`
+	Metadata   map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
 // SchemaFeature represents a feature in a schema.
