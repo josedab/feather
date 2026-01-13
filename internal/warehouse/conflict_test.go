@@ -376,15 +376,15 @@ func TestConflictResolver_DetectConflict(t *testing.T) {
 	tolerance := time.Second
 
 	tests := []struct {
-		name             string
-		sourceVal        interface{}
-		targetVal        interface{}
-		sourceTime       time.Time
-		targetTime       time.Time
-		sourceVersion    int64
-		targetVersion    int64
-		expectConflict   bool
-		expectedType     ConflictType
+		name           string
+		sourceVal      interface{}
+		targetVal      interface{}
+		sourceTime     time.Time
+		targetTime     time.Time
+		sourceVersion  int64
+		targetVersion  int64
+		expectConflict bool
+		expectedType   ConflictType
 	}{
 		{
 			name:           "no conflict - same value",

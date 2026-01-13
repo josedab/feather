@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/storage"
 )
 
 func TestDefaultBigQueryConfig(t *testing.T) {
@@ -472,7 +473,7 @@ func setupBigQueryTestConnector(t *testing.T) (*BigQueryConnector, *storage.Stor
 	}
 
 	// Create store with in-memory warm tier
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, schemaReg)
@@ -693,7 +694,7 @@ func (m *mockBigQueryClient) GetTableMetadata(ctx context.Context, dataset, tabl
 }
 
 func (m *mockBigQueryClient) ListTables(ctx context.Context, dataset string) ([]string, error) {
-	var names []string
+	names := make([]string, 0, len(m.tables))
 	for name := range m.tables {
 		names = append(names, name)
 	}
@@ -706,7 +707,7 @@ type mockIterator struct {
 
 func (m *mockIterator) Next(dst interface{}) error {
 	if m.called {
-		return ErrTableNotFound // Signals end of iteration
+		return ErrIteratorDone
 	}
 	m.called = true
 	return nil

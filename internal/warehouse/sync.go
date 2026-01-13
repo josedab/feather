@@ -102,11 +102,16 @@ type SyncJob struct {
 type SyncStatus string
 
 const (
-	SyncStatusPending   SyncStatus = "pending"
-	SyncStatusRunning   SyncStatus = "running"
+	// SyncStatusPending indicates a sync is queued but not running.
+	SyncStatusPending SyncStatus = "pending"
+	// SyncStatusRunning indicates a sync is in progress.
+	SyncStatusRunning SyncStatus = "running"
+	// SyncStatusCompleted indicates a sync finished successfully.
 	SyncStatusCompleted SyncStatus = "completed"
-	SyncStatusFailed    SyncStatus = "failed"
-	SyncStatusCancelled SyncStatus = "cancelled"
+	// SyncStatusFailed indicates a sync finished with errors.
+	SyncStatusFailed SyncStatus = "failed"
+	// SyncStatusCanceled indicates a sync was canceled.
+	SyncStatusCanceled SyncStatus = "canceled"
 )
 
 // SyncExecution represents a single sync execution.

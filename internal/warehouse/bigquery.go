@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -401,7 +402,7 @@ func (c *BigQueryConnector) exportBatchStreaming(ctx context.Context, client Big
 		return 0, 0, nil
 	}
 
-	var rows []map[string]interface{}
+	rows := make([]map[string]interface{}, 0, len(entities))
 	var bytesExported int64
 
 	for _, entity := range entities {
@@ -491,7 +492,7 @@ func (c *BigQueryConnector) Import(ctx context.Context, req *ImportRequest) (*Im
 	// Execute query
 	iter, err := client.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
 
 	// Process rows
@@ -505,7 +506,10 @@ func (c *BigQueryConnector) Import(ctx context.Context, req *ImportRequest) (*Im
 
 		var row map[string]interface{}
 		if err := iter.Next(&row); err != nil {
-			break // No more rows
+			if errors.Is(err, ErrIteratorDone) {
+				break
+			}
+			return nil, fmt.Errorf("iterating rows: %w", err)
 		}
 
 		// Extract entity key
@@ -626,10 +630,10 @@ func (c *BigQueryConnector) ListTables(ctx context.Context, dataset string) ([]T
 
 	tableNames, err := client.ListTables(ctx, dataset)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
 
-	var tables []TableInfo
+	tables := make([]TableInfo, 0, len(tableNames))
 	for _, name := range tableNames {
 		metadata, err := client.GetTableMetadata(ctx, dataset, name)
 		if err != nil {
@@ -639,7 +643,7 @@ func (c *BigQueryConnector) ListTables(ctx context.Context, dataset string) ([]T
 		tables = append(tables, TableInfo{
 			Name:         name,
 			Schema:       dataset,
-			RowCount:     int64(metadata.NumRows),
+			RowCount:     clampUint64ToInt64(metadata.NumRows),
 			SizeBytes:    metadata.NumBytes,
 			CreatedAt:    metadata.CreationTime,
 			LastModified: metadata.LastModified,
@@ -678,7 +682,7 @@ func (c *BigQueryConnector) GetTableSchema(ctx context.Context, table string) (*
 
 	metadata, err := client.GetTableMetadata(ctx, dataset, tableName)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrTableNotFound, err)
+		return nil, fmt.Errorf("%w: %w", ErrTableNotFound, err)
 	}
 
 	schema := &TableSchema{
@@ -797,7 +801,7 @@ func (c *BigQueryConnector) ExecuteQuery(ctx context.Context, query string) (*Qu
 	iter, err := client.Query(ctx, query)
 	if err != nil {
 		atomic.AddInt64(&c.metrics.QueryErrors, 1)
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
 
 	result := &QueryResult{}
@@ -805,7 +809,10 @@ func (c *BigQueryConnector) ExecuteQuery(ctx context.Context, query string) (*Qu
 	for {
 		var row map[string]interface{}
 		if err := iter.Next(&row); err != nil {
-			break
+			if errors.Is(err, ErrIteratorDone) {
+				break
+			}
+			return nil, fmt.Errorf("iterating rows: %w", err)
 		}
 
 		// Build columns on first row
@@ -827,6 +834,13 @@ func (c *BigQueryConnector) ExecuteQuery(ctx context.Context, query string) (*Qu
 	result.Duration = time.Since(start)
 
 	return result, nil
+}
+
+func clampUint64ToInt64(value uint64) int64 {
+	if value > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(value)
 }
 
 // Metrics returns connector performance metrics.

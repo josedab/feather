@@ -1,6 +1,7 @@
 package warehouse
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -265,7 +266,7 @@ func TestCronScheduler_StartStop(t *testing.T) {
 		t.Error("scheduler should not be running initially")
 	}
 
-	err := scheduler.Start()
+	err := scheduler.Start(context.Background())
 	if err != nil {
 		t.Fatalf("Start error = %v", err)
 	}
@@ -275,7 +276,7 @@ func TestCronScheduler_StartStop(t *testing.T) {
 	}
 
 	// Starting again should error
-	err = scheduler.Start()
+	err = scheduler.Start(context.Background())
 	if err == nil {
 		t.Error("expected error starting already running scheduler")
 	}

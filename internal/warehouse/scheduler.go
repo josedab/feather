@@ -41,11 +41,11 @@ type ScheduleEntry struct {
 // CronExpression represents a parsed cron expression.
 type CronExpression struct {
 	raw      string
-	minute   []int // 0-59
-	hour     []int // 0-23
-	day      []int // 1-31
-	month    []int // 1-12
-	weekday  []int // 0-6 (Sunday = 0)
+	minute   []int         // 0-59
+	hour     []int         // 0-23
+	day      []int         // 1-31
+	month    []int         // 1-12
+	weekday  []int         // 0-6 (Sunday = 0)
 	interval time.Duration // For @every expressions
 }
 
@@ -180,19 +180,19 @@ func (s *CronScheduler) ListEntries() []*ScheduleEntry {
 }
 
 // Start starts the scheduler.
-func (s *CronScheduler) Start() error {
+func (s *CronScheduler) Start(ctx context.Context) error {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
 		return fmt.Errorf("scheduler already running")
 	}
 
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.ctx, s.cancel = context.WithCancel(ctx)
 	s.running = true
 	s.mu.Unlock()
 
 	s.wg.Add(1)
-	go s.run()
+	go s.run(s.ctx)
 
 	s.logger.Info("cron scheduler started")
 	return nil
@@ -222,7 +222,7 @@ func (s *CronScheduler) IsRunning() bool {
 	return s.running
 }
 
-func (s *CronScheduler) run() {
+func (s *CronScheduler) run(ctx context.Context) {
 	defer s.wg.Done()
 
 	ticker := time.NewTicker(time.Second)
@@ -230,15 +230,15 @@ func (s *CronScheduler) run() {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		case now := <-ticker.C:
-			s.checkAndRun(now.In(s.location))
+			s.checkAndRun(ctx, now.In(s.location))
 		}
 	}
 }
 
-func (s *CronScheduler) checkAndRun(now time.Time) {
+func (s *CronScheduler) checkAndRun(ctx context.Context, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -253,13 +253,13 @@ func (s *CronScheduler) checkAndRun(now time.Time) {
 			entry.NextRun = entry.Schedule.Next(now)
 
 			// Run in background
-			go s.executeJob(jobID, entry.ConnectorName)
+			go s.executeJob(ctx, jobID, entry.ConnectorName)
 		}
 	}
 }
 
-func (s *CronScheduler) executeJob(jobID, connectorName string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+func (s *CronScheduler) executeJob(ctx context.Context, jobID, connectorName string) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 
 	execution, err := s.engine.ExecuteJob(ctx, jobID, connectorName)
@@ -303,7 +303,7 @@ func (s *CronScheduler) executeJob(jobID, connectorName string) {
 }
 
 // TriggerNow immediately executes a scheduled job.
-func (s *CronScheduler) TriggerNow(jobID string) error {
+func (s *CronScheduler) TriggerNow(ctx context.Context, jobID string) error {
 	s.mu.RLock()
 	entry, exists := s.entries[jobID]
 	if !exists {
@@ -313,7 +313,7 @@ func (s *CronScheduler) TriggerNow(jobID string) error {
 	connectorName := entry.ConnectorName
 	s.mu.RUnlock()
 
-	go s.executeJob(jobID, connectorName)
+	go s.executeJob(ctx, jobID, connectorName)
 	return nil
 }
 
@@ -433,9 +433,9 @@ func parseSpecialExpression(expr string) (*CronExpression, error) {
 	}
 }
 
-func parseField(field string, min, max int) ([]int, error) {
+func parseField(field string, minValue, maxValue int) ([]int, error) {
 	if field == "*" {
-		return allValues(min, max), nil
+		return allValues(minValue, maxValue), nil
 	}
 
 	var values []int
@@ -446,7 +446,7 @@ func parseField(field string, min, max int) ([]int, error) {
 		part = strings.TrimSpace(part)
 
 		// Handle step values (*/5 or 1-10/2)
-		var step int = 1
+		step := 1
 		if idx := strings.Index(part, "/"); idx != -1 {
 			stepStr := part[idx+1:]
 			var err error
@@ -469,14 +469,14 @@ func parseField(field string, min, max int) ([]int, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid end: %s", endStr)
 			}
-			if start < min || end > max || start > end {
+			if start < minValue || end > maxValue || start > end {
 				return nil, fmt.Errorf("range out of bounds: %d-%d", start, end)
 			}
 			for i := start; i <= end; i += step {
 				values = append(values, i)
 			}
 		} else if part == "*" {
-			for i := min; i <= max; i += step {
+			for i := minValue; i <= maxValue; i += step {
 				values = append(values, i)
 			}
 		} else {
@@ -484,7 +484,7 @@ func parseField(field string, min, max int) ([]int, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid value: %s", part)
 			}
-			if val < min || val > max {
+			if val < minValue || val > maxValue {
 				return nil, fmt.Errorf("value out of bounds: %d", val)
 			}
 			values = append(values, val)
@@ -507,10 +507,10 @@ func parseField(field string, min, max int) ([]int, error) {
 	return unique, nil
 }
 
-func allValues(min, max int) []int {
-	values := make([]int, max-min+1)
+func allValues(minValue, maxValue int) []int {
+	values := make([]int, maxValue-minValue+1)
 	for i := range values {
-		values[i] = min + i
+		values[i] = minValue + i
 	}
 	return values
 }
