@@ -7,21 +7,9 @@ import (
 
 func TestNode_Creation(t *testing.T) {
 	node := &Node{
-		ID:           "node-1",
-		Name:         "test-node",
-		Address:      "192.168.1.1",
-		GossipPort:   7946,
-		DataPort:     7947,
-		Status:       NodeStatusAlive,
-		Role:         NodeRoleFollower,
-		Zone:         "us-east-1a",
-		Region:       "us-east-1",
-		Weight:       100,
-		VirtualNodes: 150,
-		Metadata:     map[string]string{"key": "value"},
-		JoinedAt:     time.Now(),
-		LastHeartbeat: time.Now(),
-		Generation:   1,
+		ID:     "node-1",
+		Status: NodeStatusAlive,
+		Zone:   "us-east-1a",
 	}
 
 	if node.ID != "node-1" {

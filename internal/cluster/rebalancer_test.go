@@ -29,7 +29,7 @@ func TestRebalanceState_Values(t *testing.T) {
 		RebalanceStateCancelled,
 	}
 
-	expected := []string{"pending", "running", "completed", "failed", "cancelled"}
+	expected := []string{"pending", "running", "completed", "failed", string(RebalanceStateCancelled)}
 
 	for i, state := range states {
 		if string(state) != expected[i] {
@@ -61,8 +61,6 @@ func TestRebalanceTask_Fields(t *testing.T) {
 		ID:        "task-1",
 		Partition: 10,
 		FromNode:  "node-1",
-		ToNode:    "node-2",
-		State:     RebalanceStatePending,
 	}
 
 	if task.ID != "task-1" {
@@ -229,7 +227,7 @@ func TestRebalancer_CancelRebalance_NoPlan(t *testing.T) {
 
 	err := rebalancer.CancelRebalance()
 	if err == nil {
-		t.Error("expected error when cancelling with no plan")
+		t.Error("expected error when canceling with no plan")
 	}
 }
 
@@ -336,10 +334,6 @@ func TestRebalancerStats_Fields(t *testing.T) {
 		TotalRebalances:      5,
 		SuccessfulRebalances: 4,
 		FailedRebalances:     1,
-		PartitionDistribution: map[string]int{
-			"node-1": 50,
-			"node-2": 50,
-		},
 	}
 
 	if stats.TotalRebalances != 5 {
@@ -355,7 +349,6 @@ func TestRebalancerStats_Fields(t *testing.T) {
 
 func TestRebalanceTask_Progress(t *testing.T) {
 	task := &RebalanceTask{
-		ID:         "task-1",
 		BytesMoved: 500,
 		KeysMoved:  100,
 		Progress:   0.5,

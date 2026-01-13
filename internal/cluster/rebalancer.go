@@ -13,22 +13,32 @@ import (
 type RebalanceState string
 
 const (
-	RebalanceStatePending    RebalanceState = "pending"
-	RebalanceStateRunning    RebalanceState = "running"
-	RebalanceStateCompleted  RebalanceState = "completed"
-	RebalanceStateFailed     RebalanceState = "failed"
-	RebalanceStateCancelled  RebalanceState = "cancelled"
+	// RebalanceStatePending indicates a pending rebalance.
+	RebalanceStatePending RebalanceState = "pending"
+	// RebalanceStateRunning indicates a rebalance in progress.
+	RebalanceStateRunning RebalanceState = "running"
+	// RebalanceStateCompleted indicates a successful rebalance.
+	RebalanceStateCompleted RebalanceState = "completed"
+	// RebalanceStateFailed indicates a failed rebalance.
+	RebalanceStateFailed RebalanceState = "failed"
+	// RebalanceStateCancelled indicates a canceled rebalance.
+	RebalanceStateCancelled RebalanceState = "cancelled" //nolint:misspell
 )
 
 // RebalanceReason represents why a rebalance was triggered.
 type RebalanceReason string
 
 const (
-	RebalanceReasonNodeJoin   RebalanceReason = "node_join"
-	RebalanceReasonNodeLeave  RebalanceReason = "node_leave"
-	RebalanceReasonManual     RebalanceReason = "manual"
-	RebalanceReasonScheduled  RebalanceReason = "scheduled"
-	RebalanceReasonImbalance  RebalanceReason = "imbalance"
+	// RebalanceReasonNodeJoin indicates a rebalance from a node join.
+	RebalanceReasonNodeJoin RebalanceReason = "node_join"
+	// RebalanceReasonNodeLeave indicates a rebalance from a node leave.
+	RebalanceReasonNodeLeave RebalanceReason = "node_leave"
+	// RebalanceReasonManual indicates an operator-triggered rebalance.
+	RebalanceReasonManual RebalanceReason = "manual"
+	// RebalanceReasonScheduled indicates a scheduled rebalance.
+	RebalanceReasonScheduled RebalanceReason = "scheduled"
+	// RebalanceReasonImbalance indicates a rebalance due to imbalance.
+	RebalanceReasonImbalance RebalanceReason = "imbalance"
 )
 
 // RebalanceTask represents a single partition transfer task.
@@ -48,15 +58,15 @@ type RebalanceTask struct {
 
 // RebalancePlan represents a complete rebalance plan.
 type RebalancePlan struct {
-	ID         string           `json:"id"`
-	Reason     RebalanceReason  `json:"reason"`
-	State      RebalanceState   `json:"state"`
-	Tasks      []*RebalanceTask `json:"tasks"`
-	CreatedAt  time.Time        `json:"created_at"`
-	StartedAt  time.Time        `json:"started_at,omitempty"`
-	CompletedAt time.Time       `json:"completed_at,omitempty"`
-	TotalBytes int64            `json:"total_bytes"`
-	TotalKeys  int64            `json:"total_keys"`
+	ID          string           `json:"id"`
+	Reason      RebalanceReason  `json:"reason"`
+	State       RebalanceState   `json:"state"`
+	Tasks       []*RebalanceTask `json:"tasks"`
+	CreatedAt   time.Time        `json:"created_at"`
+	StartedAt   time.Time        `json:"started_at,omitempty"`
+	CompletedAt time.Time        `json:"completed_at,omitempty"`
+	TotalBytes  int64            `json:"total_bytes"`
+	TotalKeys   int64            `json:"total_keys"`
 }
 
 // Progress returns the overall progress of the rebalance plan.
@@ -107,10 +117,10 @@ type Rebalancer struct {
 	partitionMap *PartitionMap
 	transferFunc DataTransferFunc
 
-	currentPlan  *RebalancePlan
-	planHistory  []*RebalancePlan
+	currentPlan   *RebalancePlan
+	planHistory   []*RebalancePlan
 	lastRebalance time.Time
-	mu           sync.RWMutex
+	mu            sync.RWMutex
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -168,6 +178,8 @@ func (r *Rebalancer) OnMembershipChange(event MembershipEvent) {
 		r.onNodeJoin(event.Node)
 	case EventNodeLeave, EventNodeDead:
 		r.onNodeLeave(event.Node)
+	case EventNodeUpdate, EventNodeSuspect, EventNodeAlive:
+		return
 	}
 }
 
@@ -500,11 +512,11 @@ func (r *Rebalancer) executeTask(task *RebalanceTask) {
 
 // RebalancerStats returns statistics about the rebalancer.
 type RebalancerStats struct {
-	CurrentPlan        *RebalancePlan    `json:"current_plan,omitempty"`
-	TotalRebalances    int               `json:"total_rebalances"`
-	SuccessfulRebalances int             `json:"successful_rebalances"`
-	FailedRebalances   int               `json:"failed_rebalances"`
-	LastRebalance      time.Time         `json:"last_rebalance,omitempty"`
+	CurrentPlan           *RebalancePlan `json:"current_plan,omitempty"`
+	TotalRebalances       int            `json:"total_rebalances"`
+	SuccessfulRebalances  int            `json:"successful_rebalances"`
+	FailedRebalances      int            `json:"failed_rebalances"`
+	LastRebalance         time.Time      `json:"last_rebalance,omitempty"`
 	PartitionDistribution map[string]int `json:"partition_distribution"`
 }
 
@@ -514,9 +526,9 @@ func (r *Rebalancer) Stats() RebalancerStats {
 	defer r.mu.RUnlock()
 
 	stats := RebalancerStats{
-		CurrentPlan:       r.currentPlan,
-		TotalRebalances:   len(r.planHistory),
-		LastRebalance:     r.lastRebalance,
+		CurrentPlan:           r.currentPlan,
+		TotalRebalances:       len(r.planHistory),
+		LastRebalance:         r.lastRebalance,
 		PartitionDistribution: r.partitionMap.GetPartitionDistribution(),
 	}
 
