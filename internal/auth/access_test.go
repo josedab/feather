@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -48,7 +49,7 @@ func TestAccessController_CreateTenant(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ac.CreateTenant(tt.tenant)
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("CreateTenant() error = %v, want %v", err, tt.wantErr)
 			}
 		})
@@ -65,7 +66,7 @@ func TestAccessController_CreateTenant_Duplicate(t *testing.T) {
 	}
 
 	err = ac.CreateTenant(tenant)
-	if err != ErrTenantExists {
+	if !errors.Is(err, ErrTenantExists) {
 		t.Errorf("CreateTenant() duplicate error = %v, want %v", err, ErrTenantExists)
 	}
 }
@@ -117,7 +118,7 @@ func TestAccessController_UpdateTenant(t *testing.T) {
 
 	// Update non-existent
 	err := ac.UpdateTenant(&Tenant{ID: "nonexistent"})
-	if err != ErrTenantNotFound {
+	if !errors.Is(err, ErrTenantNotFound) {
 		t.Errorf("UpdateTenant() error = %v, want %v", err, ErrTenantNotFound)
 	}
 
@@ -148,7 +149,7 @@ func TestAccessController_DeleteTenant(t *testing.T) {
 
 	// Delete non-existent
 	err := ac.DeleteTenant("nonexistent")
-	if err != ErrTenantNotFound {
+	if !errors.Is(err, ErrTenantNotFound) {
 		t.Errorf("DeleteTenant() error = %v, want %v", err, ErrTenantNotFound)
 	}
 
@@ -175,7 +176,7 @@ func TestAccessController_DeleteTenant(t *testing.T) {
 
 	// Verify API key deleted
 	_, err = ac.ValidateAPIKey(rawKey)
-	if err != ErrInvalidAPIKey {
+	if !errors.Is(err, ErrInvalidAPIKey) {
 		t.Errorf("API key should be invalid after tenant deletion, got: %v", err)
 	}
 }
@@ -216,7 +217,7 @@ func TestAccessController_CreateAPIKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rawKey, err := ac.CreateAPIKey(tt.key, "admin")
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("CreateAPIKey() error = %v, want %v", err, tt.wantErr)
 			}
 			if tt.wantErr == nil {
@@ -251,14 +252,13 @@ func TestAccessController_ValidateAPIKey(t *testing.T) {
 	}
 	if key == nil {
 		t.Error("ValidateAPIKey() should return key info")
-	}
-	if key.LastUsedAt == nil {
+	} else if key.LastUsedAt == nil {
 		t.Error("LastUsedAt should be set after validation")
 	}
 
 	// Invalid key
 	_, err = ac.ValidateAPIKey("invalid_key")
-	if err != ErrInvalidAPIKey {
+	if !errors.Is(err, ErrInvalidAPIKey) {
 		t.Errorf("ValidateAPIKey() invalid key error = %v, want %v", err, ErrInvalidAPIKey)
 	}
 }
@@ -275,7 +275,7 @@ func TestAccessController_ValidateAPIKey_Disabled(t *testing.T) {
 
 	// Try to validate
 	_, err := ac.ValidateAPIKey(rawKey)
-	if err != ErrAPIKeyDisabled {
+	if !errors.Is(err, ErrAPIKeyDisabled) {
 		t.Errorf("ValidateAPIKey() disabled key error = %v, want %v", err, ErrAPIKeyDisabled)
 	}
 }
@@ -294,7 +294,7 @@ func TestAccessController_ValidateAPIKey_Expired(t *testing.T) {
 	rawKey, _ := ac.CreateAPIKey(apiKey, "admin")
 
 	_, err := ac.ValidateAPIKey(rawKey)
-	if err != ErrAPIKeyExpired {
+	if !errors.Is(err, ErrAPIKeyExpired) {
 		t.Errorf("ValidateAPIKey() expired key error = %v, want %v", err, ErrAPIKeyExpired)
 	}
 }
@@ -314,7 +314,7 @@ func TestAccessController_GetAPIKey(t *testing.T) {
 
 	got := ac.GetAPIKey(keyInfo.ID)
 	if got == nil {
-		t.Error("GetAPIKey() should return key")
+		t.Fatal("GetAPIKey() should return key")
 	}
 	if got.Name != "key1" {
 		t.Errorf("GetAPIKey() Name = %v, want %v", got.Name, "key1")
@@ -350,7 +350,7 @@ func TestAccessController_RevokeAPIKey(t *testing.T) {
 
 	// Revoke non-existent
 	err := ac.RevokeAPIKey("nonexistent")
-	if err != ErrAPIKeyNotFound {
+	if !errors.Is(err, ErrAPIKeyNotFound) {
 		t.Errorf("RevokeAPIKey() error = %v, want %v", err, ErrAPIKeyNotFound)
 	}
 
@@ -366,7 +366,7 @@ func TestAccessController_RevokeAPIKey(t *testing.T) {
 	// Key still exists but is disabled
 	got := ac.GetAPIKey(keyInfo.ID)
 	if got == nil {
-		t.Error("Key should still exist after revocation")
+		t.Fatal("Key should still exist after revocation")
 	}
 	if got.Enabled {
 		t.Error("Key should be disabled after revocation")
@@ -379,7 +379,7 @@ func TestAccessController_DeleteAPIKey(t *testing.T) {
 
 	// Delete non-existent
 	err := ac.DeleteAPIKey("nonexistent")
-	if err != ErrAPIKeyNotFound {
+	if !errors.Is(err, ErrAPIKeyNotFound) {
 		t.Errorf("DeleteAPIKey() error = %v, want %v", err, ErrAPIKeyNotFound)
 	}
 
@@ -567,7 +567,7 @@ func TestAccessController_CreateRole(t *testing.T) {
 
 	got := ac.GetRole("custom")
 	if got == nil {
-		t.Error("Role should be created")
+		t.Fatal("Role should be created")
 	}
 	if got.IsBuiltin {
 		t.Error("Custom role should not be builtin")
@@ -575,13 +575,13 @@ func TestAccessController_CreateRole(t *testing.T) {
 
 	// Missing name
 	err = ac.CreateRole(&Role{})
-	if err != ErrNameRequired {
+	if !errors.Is(err, ErrNameRequired) {
 		t.Errorf("CreateRole() missing name error = %v, want %v", err, ErrNameRequired)
 	}
 
 	// Cannot modify builtin
 	err = ac.CreateRole(&Role{Name: "reader"})
-	if err != ErrCannotModifyBuiltin {
+	if !errors.Is(err, ErrCannotModifyBuiltin) {
 		t.Errorf("CreateRole() builtin error = %v, want %v", err, ErrCannotModifyBuiltin)
 	}
 }
@@ -592,7 +592,7 @@ func TestAccessController_GetRole(t *testing.T) {
 	// Get builtin role
 	reader := ac.GetRole("reader")
 	if reader == nil {
-		t.Error("GetRole() should return builtin reader role")
+		t.Fatal("GetRole() should return builtin reader role")
 	}
 	if !reader.IsBuiltin {
 		t.Error("Reader role should be builtin")
@@ -627,13 +627,13 @@ func TestAccessController_DeleteRole(t *testing.T) {
 
 	// Delete non-existent
 	err := ac.DeleteRole("nonexistent")
-	if err != ErrRoleNotFound {
+	if !errors.Is(err, ErrRoleNotFound) {
 		t.Errorf("DeleteRole() error = %v, want %v", err, ErrRoleNotFound)
 	}
 
 	// Cannot delete builtin
 	err = ac.DeleteRole("reader")
-	if err != ErrCannotModifyBuiltin {
+	if !errors.Is(err, ErrCannotModifyBuiltin) {
 		t.Errorf("DeleteRole() builtin error = %v, want %v", err, ErrCannotModifyBuiltin)
 	}
 
