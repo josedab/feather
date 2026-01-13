@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func (m *MockDynamoDBClient) BatchGetItem(ctx context.Context, input *BatchGetIt
 	responses := make(map[string][]map[string]interface{})
 
 	for tableName, keys := range input.RequestItems {
-		var items []map[string]interface{}
+		items := make([]map[string]interface{}, 0, len(keys.Keys))
 		for _, key := range keys.Keys {
 			pk, _ := key["pk"].(string)
 			if item, ok := m.items[pk]; ok {
@@ -100,7 +101,7 @@ func (m *MockDynamoDBClient) Scan(ctx context.Context, input *ScanInput) (*ScanO
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var items []map[string]interface{}
+	items := make([]map[string]interface{}, 0, len(m.items))
 	for _, item := range m.items {
 		items = append(items, item)
 		if input.Limit > 0 && len(items) >= input.Limit {
@@ -116,6 +117,7 @@ func TestDynamoDBBackendBasic(t *testing.T) {
 	config := DefaultDynamoDBConfig()
 	config.EnableCompression = false
 
+	var err error
 	backend, err := NewDynamoDBBackend(config, client)
 	if err != nil {
 		t.Fatalf("create backend: %v", err)
@@ -130,14 +132,16 @@ func TestDynamoDBBackendBasic(t *testing.T) {
 		"last_seen":   {Value: "2024-01-15", Timestamp: time.Now().UnixNano()},
 	}
 
-	if err := backend.Put(ctx, "user:123", features); err != nil {
+	if err = backend.Put(ctx, "user:123", features); err != nil {
 		t.Fatalf("put: %v", err)
 	}
 
 	// Test Get
-	retrieved, err := backend.Get(ctx, "user:123", []string{"click_count"})
-	if err != nil {
-		t.Fatalf("get: %v", err)
+	var getErr error
+	var retrieved map[string]*domain.FeatureValue
+	retrieved, getErr = backend.Get(ctx, "user:123", []string{"click_count"})
+	if getErr != nil {
+		t.Fatalf("get: %v", getErr)
 	}
 
 	if _, ok := retrieved["click_count"]; !ok {
@@ -145,12 +149,12 @@ func TestDynamoDBBackendBasic(t *testing.T) {
 	}
 
 	// Test Delete
-	if err := backend.Delete(ctx, "user:123"); err != nil {
+	if err = backend.Delete(ctx, "user:123"); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
 
 	_, err = backend.Get(ctx, "user:123", nil)
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Error("expected ErrNotFound after delete")
 	}
 }
@@ -160,6 +164,7 @@ func TestDynamoDBBackendBatch(t *testing.T) {
 	config := DefaultDynamoDBConfig()
 	config.EnableCompression = false
 
+	var err error
 	backend, err := NewDynamoDBBackend(config, client)
 	if err != nil {
 		t.Fatalf("create backend: %v", err)
@@ -175,14 +180,16 @@ func TestDynamoDBBackendBatch(t *testing.T) {
 		"user:3": {"score": {Value: 300, Timestamp: time.Now().UnixNano()}},
 	}
 
-	if err := backend.BatchPut(ctx, updates); err != nil {
+	if err = backend.BatchPut(ctx, updates); err != nil {
 		t.Fatalf("batch put: %v", err)
 	}
 
 	// Batch get
-	result, err := backend.BatchGet(ctx, []string{"user:1", "user:2", "user:3"}, nil)
-	if err != nil {
-		t.Fatalf("batch get: %v", err)
+	var batchErr error
+	var result map[string]map[string]*domain.FeatureValue
+	result, batchErr = backend.BatchGet(ctx, []string{"user:1", "user:2", "user:3"}, nil)
+	if batchErr != nil {
+		t.Fatalf("batch get: %v", batchErr)
 	}
 
 	if len(result) != 3 {
@@ -195,6 +202,7 @@ func TestDynamoDBBackendStats(t *testing.T) {
 	config := DefaultDynamoDBConfig()
 	config.EnableCompression = false
 
+	var err error
 	backend, err := NewDynamoDBBackend(config, client)
 	if err != nil {
 		t.Fatalf("create backend: %v", err)
@@ -225,6 +233,7 @@ func TestDynamoDBBackendHealth(t *testing.T) {
 	client := NewMockDynamoDBClient()
 	config := DefaultDynamoDBConfig()
 
+	var err error
 	backend, err := NewDynamoDBBackend(config, client)
 	if err != nil {
 		t.Fatalf("create backend: %v", err)
@@ -238,7 +247,7 @@ func TestDynamoDBBackendHealth(t *testing.T) {
 
 	backend.Close()
 
-	if err := backend.Health(ctx); err != ErrBackendClosed {
+	if err := backend.Health(ctx); !errors.Is(err, ErrBackendClosed) {
 		t.Error("expected ErrBackendClosed after close")
 	}
 }
@@ -283,7 +292,7 @@ func TestRetryExhausted(t *testing.T) {
 		return ErrConnectionFailed
 	})
 
-	if err != ErrConnectionFailed {
+	if !errors.Is(err, ErrConnectionFailed) {
 		t.Errorf("expected ErrConnectionFailed, got: %v", err)
 	}
 }
@@ -334,7 +343,7 @@ func (m *MockGCSClient) List(ctx context.Context, bucket, prefix string, maxResu
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var objects []string
+	objects := make([]string, 0, len(m.objects))
 	fullPrefix := bucket + "/" + prefix
 
 	for key := range m.objects {
@@ -363,6 +372,7 @@ func TestGCSBackendBasic(t *testing.T) {
 	config := DefaultGCSConfig()
 	config.EnableCompression = false
 
+	var err error
 	backend, err := NewGCSBackend(config, client)
 	if err != nil {
 		t.Fatalf("create backend: %v", err)
@@ -370,20 +380,22 @@ func TestGCSBackendBasic(t *testing.T) {
 	defer backend.Close()
 
 	ctx := context.Background()
+	var getErr error
+	var retrieved map[string]*domain.FeatureValue
 
 	// Test Put
 	features := map[string]*domain.FeatureValue{
 		"click_count": {Value: 42, Timestamp: time.Now().UnixNano()},
 	}
 
-	if err := backend.Put(ctx, "user:123", features); err != nil {
+	if err = backend.Put(ctx, "user:123", features); err != nil {
 		t.Fatalf("put: %v", err)
 	}
 
 	// Test Get
-	retrieved, err := backend.Get(ctx, "user:123", nil)
-	if err != nil {
-		t.Fatalf("get: %v", err)
+	retrieved, getErr = backend.Get(ctx, "user:123", nil)
+	if getErr != nil {
+		t.Fatalf("get: %v", getErr)
 	}
 
 	if _, ok := retrieved["click_count"]; !ok {
@@ -391,7 +403,7 @@ func TestGCSBackendBasic(t *testing.T) {
 	}
 
 	// Test Delete
-	if err := backend.Delete(ctx, "user:123"); err != nil {
+	if err = backend.Delete(ctx, "user:123"); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
 }
@@ -401,6 +413,7 @@ func TestGCSBackendBatch(t *testing.T) {
 	config := DefaultGCSConfig()
 	config.EnableCompression = false
 
+	var err error
 	backend, err := NewGCSBackend(config, client)
 	if err != nil {
 		t.Fatalf("create backend: %v", err)
@@ -408,6 +421,8 @@ func TestGCSBackendBatch(t *testing.T) {
 	defer backend.Close()
 
 	ctx := context.Background()
+	var batchErr error
+	var result map[string]map[string]*domain.FeatureValue
 
 	// Batch put
 	updates := map[string]map[string]*domain.FeatureValue{
@@ -415,14 +430,14 @@ func TestGCSBackendBatch(t *testing.T) {
 		"user:2": {"score": {Value: 200, Timestamp: time.Now().UnixNano()}},
 	}
 
-	if err := backend.BatchPut(ctx, updates); err != nil {
+	if err = backend.BatchPut(ctx, updates); err != nil {
 		t.Fatalf("batch put: %v", err)
 	}
 
 	// Batch get
-	result, err := backend.BatchGet(ctx, []string{"user:1", "user:2"}, nil)
-	if err != nil {
-		t.Fatalf("batch get: %v", err)
+	result, batchErr = backend.BatchGet(ctx, []string{"user:1", "user:2"}, nil)
+	if batchErr != nil {
+		t.Fatalf("batch get: %v", batchErr)
 	}
 
 	if len(result) != 2 {
