@@ -48,8 +48,31 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
+
+// FeatureStore defines the interface for feature storage operations.
+//
+// This interface provides the core read/write operations that consumers
+// (HTTP handlers, gRPC server, etc.) need. It enables mocking in tests
+// and swapping storage backends without modifying consumers.
+type FeatureStore interface {
+	// Get retrieves features for an entity, checking hot then warm tier.
+	Get(entityKey string, features []string) (map[string]*domain.FeatureValue, error)
+	// GetAsOf retrieves features as of a specific timestamp from the warm tier.
+	GetAsOf(entityKey string, features []string, asOf time.Time) (map[string]*domain.FeatureValue, error)
+	// Put stores features for an entity in both tiers.
+	Put(entityKey string, features map[string]*domain.FeatureValue) error
+	// Delete removes an entity from the hot tier.
+	Delete(entityKey string) error
+	// Metrics returns current store performance metrics.
+	Metrics() StoreMetrics
+	// Close shuts down the store, flushing pending writes.
+	Close() error
+}
+
+// Ensure Store implements FeatureStore at compile time.
+var _ FeatureStore = (*Store)(nil)
 
 // Store provides unified access to Feather's tiered storage architecture.
 //
@@ -266,8 +289,31 @@ func (s *Store) Hot() *HotTier {
 }
 
 // Warm returns the warm tier for direct access.
+//
+// Deprecated: Prefer using Stats() or Metrics() instead of accessing tiers directly.
 func (s *Store) Warm() *WarmTier {
 	return s.warm
+}
+
+// StoreStats provides aggregated statistics across all storage tiers.
+type StoreStats struct {
+	HotEntityCount int
+	HotSize        int64
+	HotMetrics     HotTierMetrics
+	StoreMetrics   StoreMetrics
+}
+
+// Stats returns aggregated statistics across all storage tiers.
+//
+// This method provides a unified view of store health without exposing
+// internal tier details.
+func (s *Store) Stats() StoreStats {
+	return StoreStats{
+		HotEntityCount: s.hot.EntityCount(),
+		HotSize:        s.hot.Size(),
+		HotMetrics:     s.hot.Metrics(),
+		StoreMetrics:   s.Metrics(),
+	}
 }
 
 // Metrics returns current metrics.
@@ -333,14 +379,31 @@ func (s *Store) warmWriteLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			s.drainWarmWrites()
 			return
 		case req := <-s.warmWrites:
-			if err := s.warm.Put(req.entityKey, req.features); err != nil {
-				atomic.AddInt64(&s.warmWriteErrors, 1)
-				if s.logger != nil {
-					s.logger.Error("warm tier write failed", "entity_key", req.entityKey, "error", err)
-				}
-			}
+			s.processWarmWrite(req)
+		}
+	}
+}
+
+// drainWarmWrites flushes any buffered warm writes before shutdown.
+func (s *Store) drainWarmWrites() {
+	for {
+		select {
+		case req := <-s.warmWrites:
+			s.processWarmWrite(req)
+		default:
+			return
+		}
+	}
+}
+
+func (s *Store) processWarmWrite(req warmWriteRequest) {
+	if err := s.warm.Put(req.entityKey, req.features); err != nil {
+		atomic.AddInt64(&s.warmWriteErrors, 1)
+		if s.logger != nil {
+			s.logger.Error("warm tier write failed", "entity_key", req.entityKey, "error", err)
 		}
 	}
 }
