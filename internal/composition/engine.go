@@ -275,7 +275,7 @@ func toFloat64(v interface{}) (float64, bool) {
 	}
 }
 
-func getExecutorForType(t transform.TransformType) transform.Executor {
+func getExecutorForType(t transform.Type) transform.Executor {
 	// Return appropriate executor based on type
 	// This would be populated from the pipeline in a real implementation
 	return nil
@@ -405,7 +405,7 @@ func (e *Engine) ComposeBatch(ctx context.Context, dagID string, entityIDs []str
 	close(errCh)
 
 	// Collect errors
-	var errs []error
+	errs := make([]error, 0, len(entityIDs))
 	for err := range errCh {
 		errs = append(errs, err)
 	}

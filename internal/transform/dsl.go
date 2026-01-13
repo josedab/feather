@@ -55,20 +55,20 @@ func (d *DSL) parse(name string, expr string) (*Transform, error) {
 
 		switch funcName {
 		case "sum", "avg", "min", "max", "count":
-			t.Type = TransformTypeAggregation
+			t.Type = TypeAggregation
 			t.Inputs = args
 			t.Config = map[string]interface{}{"type": funcName}
 		case "lower", "upper", "trim", "concat":
-			t.Type = TransformTypeString
+			t.Type = TypeString
 			t.Inputs = args
 			t.Config = map[string]interface{}{"operation": funcName}
 		case "year", "month", "day", "hour", "weekday":
-			t.Type = TransformTypeTimestamp
+			t.Type = TypeTimestamp
 			t.Inputs = args
 			t.Config = map[string]interface{}{"operation": funcName}
 		case "window":
 			if len(args) >= 3 {
-				t.Type = TransformTypeWindow
+				t.Type = TypeWindow
 				t.Inputs = []string{args[0]}
 				t.Config = map[string]interface{}{
 					"type":   args[1],
@@ -77,7 +77,7 @@ func (d *DSL) parse(name string, expr string) (*Transform, error) {
 			}
 		case "lookup":
 			if len(args) >= 3 {
-				t.Type = TransformTypeLookup
+				t.Type = TypeLookup
 				t.Inputs = []string{args[0]}
 				t.Config = map[string]interface{}{
 					"lookup_entity":  args[1],
@@ -89,12 +89,12 @@ func (d *DSL) parse(name string, expr string) (*Transform, error) {
 		}
 	} else if strings.Contains(body, "?") {
 		// Conditional
-		t.Type = TransformTypeConditional
+		t.Type = TypeConditional
 		t.Expression = body
 		t.Inputs = extractVariables(body)
 	} else {
 		// Arithmetic
-		t.Type = TransformTypeArithmetic
+		t.Type = TypeArithmetic
 		t.Expression = body
 		t.Inputs = extractVariables(body)
 	}
@@ -135,13 +135,13 @@ var MathFunctions = map[string]func(float64) float64{
 	"tan":   math.Tan,
 }
 
-// TransformJSON serializes a transform to JSON.
-func TransformJSON(t *Transform) ([]byte, error) {
+// JSON serializes a transform to JSON.
+func JSON(t *Transform) ([]byte, error) {
 	return json.Marshal(t)
 }
 
-// TransformFromJSON deserializes a transform from JSON.
-func TransformFromJSON(data []byte) (*Transform, error) {
+// FromJSON deserializes a transform from JSON.
+func FromJSON(data []byte) (*Transform, error) {
 	var t Transform
 	if err := json.Unmarshal(data, &t); err != nil {
 		return nil, err

@@ -5,15 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/storage"
 )
 
 func createTestStore(t *testing.T) *storage.Store {
 	t.Helper()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   100 * 1024 * 1024,
 		WarmInMemory: true,
 	}, nil)
@@ -26,9 +27,9 @@ func TestNewPipeline(t *testing.T) {
 	pipeline := NewPipeline(store)
 
 	assert.NotNil(t, pipeline)
-	assert.NotNil(t, pipeline.executors[TransformTypeArithmetic])
-	assert.NotNil(t, pipeline.executors[TransformTypeAggregation])
-	assert.NotNil(t, pipeline.executors[TransformTypeConditional])
+	assert.NotNil(t, pipeline.executors[TypeArithmetic])
+	assert.NotNil(t, pipeline.executors[TypeAggregation])
+	assert.NotNil(t, pipeline.executors[TypeConditional])
 }
 
 func TestPipeline_ArithmeticTransform(t *testing.T) {
@@ -46,7 +47,7 @@ func TestPipeline_ArithmeticTransform(t *testing.T) {
 	// Register transform
 	transform := &Transform{
 		Name:       "total_price",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "price * quantity * (1 - discount)",
 		Inputs:     []string{"price", "quantity", "discount"},
 		Output:     "total_price",
@@ -79,7 +80,7 @@ func TestPipeline_AggregationTransform(t *testing.T) {
 	// Sum transform
 	sumTransform := &Transform{
 		Name:   "total_score",
-		Type:   TransformTypeAggregation,
+		Type:   TypeAggregation,
 		Inputs: []string{"score_1", "score_2", "score_3"},
 		Output: "total_score",
 		Config: map[string]interface{}{"type": "sum"},
@@ -96,7 +97,7 @@ func TestPipeline_AggregationTransform(t *testing.T) {
 	// Avg transform
 	avgTransform := &Transform{
 		Name:   "avg_score",
-		Type:   TransformTypeAggregation,
+		Type:   TypeAggregation,
 		Inputs: []string{"score_1", "score_2", "score_3"},
 		Output: "avg_score",
 		Config: map[string]interface{}{"type": "avg"},
@@ -128,7 +129,7 @@ func TestPipeline_ConditionalTransform(t *testing.T) {
 	// Register conditional transform
 	transform := &Transform{
 		Name:       "age_group",
-		Type:       TransformTypeConditional,
+		Type:       TypeConditional,
 		Expression: "age >= 18 ? 'adult' : 'minor'",
 		Inputs:     []string{"age"},
 		Output:     "age_group",
@@ -176,7 +177,7 @@ func TestPipeline_StringTransform(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			transform := &Transform{
 				Name:   tt.name,
-				Type:   TransformTypeString,
+				Type:   TypeString,
 				Inputs: []string{"name"},
 				Output: tt.name,
 				Config: map[string]interface{}{"operation": tt.operation},
@@ -205,7 +206,7 @@ func TestPipeline_TimestampTransform(t *testing.T) {
 
 	transform := &Transform{
 		Name:   "created_month",
-		Type:   TransformTypeTimestamp,
+		Type:   TypeTimestamp,
 		Inputs: []string{"created_at"},
 		Output: "created_month",
 		Config: map[string]interface{}{"operation": "month"},
@@ -232,7 +233,7 @@ func TestPipeline_ExecuteAndStore(t *testing.T) {
 
 	transform := &Transform{
 		Name:       "sum_ab",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "a + b",
 		Inputs:     []string{"a", "b"},
 		Output:     "sum_ab",
@@ -266,7 +267,7 @@ func TestPipeline_DependencyChain(t *testing.T) {
 	// First derived feature: price after discount
 	t1 := &Transform{
 		Name:       "discounted_price",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "base_price * (1 - discount)",
 		Inputs:     []string{"base_price", "discount"},
 		Output:     "discounted_price",
@@ -276,7 +277,7 @@ func TestPipeline_DependencyChain(t *testing.T) {
 	// Second derived feature: final price with tax (depends on discounted_price)
 	t2 := &Transform{
 		Name:       "final_price",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "discounted_price * (1 + tax_rate)",
 		Inputs:     []string{"discounted_price", "tax_rate"},
 		Output:     "final_price",
@@ -300,7 +301,7 @@ func TestPipeline_CycleDetection(t *testing.T) {
 	// Create transforms that would form a cycle
 	t1 := &Transform{
 		Name:       "a_to_b",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "a + 1",
 		Inputs:     []string{"a"},
 		Output:     "b",
@@ -309,7 +310,7 @@ func TestPipeline_CycleDetection(t *testing.T) {
 
 	t2 := &Transform{
 		Name:       "b_to_c",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "b + 1",
 		Inputs:     []string{"b"},
 		Output:     "c",
@@ -319,7 +320,7 @@ func TestPipeline_CycleDetection(t *testing.T) {
 	// This would create a cycle: c -> a -> b -> c
 	t3 := &Transform{
 		Name:       "c_to_a",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "c + 1",
 		Inputs:     []string{"c"},
 		Output:     "a",
@@ -336,7 +337,7 @@ func TestPipeline_ListTransforms(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		transform := &Transform{
 			Name:       "transform_" + string(rune('a'+i)),
-			Type:       TransformTypeArithmetic,
+			Type:       TypeArithmetic,
 			Expression: "x + 1",
 			Inputs:     []string{"x"},
 			Output:     "y_" + string(rune('a'+i)),
@@ -354,7 +355,7 @@ func TestPipeline_UnregisterTransform(t *testing.T) {
 
 	transform := &Transform{
 		Name:       "test",
-		Type:       TransformTypeArithmetic,
+		Type:       TypeArithmetic,
 		Expression: "x + 1",
 		Inputs:     []string{"x"},
 		Output:     "y",
