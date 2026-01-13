@@ -51,7 +51,7 @@ func TestIntegration_EndToEnd(t *testing.T) {
 	}
 
 	// Create store
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100, // 100MB
 		WarmInMemory: true,
 	}, schema)
@@ -62,11 +62,13 @@ func TestIntegration_EndToEnd(t *testing.T) {
 
 	// Create HTTP server
 	httpServer := server.NewHTTPServer(
-		store, agg, schema, nil,
+		context.Background(), store, agg, schema, nil,
 		server.HTTPServerConfig{
-			Port:         0, // Use any available port
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
+			Core: server.HTTPServerCoreConfig{
+				Port:         0, // Use any available port
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 10 * time.Second,
+			},
 		},
 	)
 
@@ -231,7 +233,7 @@ func TestIntegration_Export(t *testing.T) {
 	// Create components
 	schema := storage.NewRegistry()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 10,
 		WarmInMemory: true,
 	}, schema)
@@ -317,7 +319,7 @@ func TestIntegration_BatchImport(t *testing.T) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 10,
 		WarmInMemory: true,
 	}, schema)
