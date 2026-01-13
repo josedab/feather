@@ -1,6 +1,7 @@
 package saas
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -85,7 +86,7 @@ func TestBillingManager_GetSubscription_NotFound(t *testing.T) {
 	manager := setupBillingManager()
 
 	_, err := manager.GetSubscription("nonexistent")
-	if err != ErrSubscriptionNotFound {
+	if !errors.Is(err, ErrSubscriptionNotFound) {
 		t.Errorf("Expected ErrSubscriptionNotFound, got %v", err)
 	}
 }
@@ -147,7 +148,7 @@ func TestBillingManager_CancelSubscription_NotFound(t *testing.T) {
 	manager := setupBillingManager()
 
 	err := manager.CancelSubscription("nonexistent", true)
-	if err != ErrSubscriptionNotFound {
+	if !errors.Is(err, ErrSubscriptionNotFound) {
 		t.Errorf("Expected ErrSubscriptionNotFound, got %v", err)
 	}
 }
@@ -275,7 +276,7 @@ func TestBillingManager_GenerateInvoice_NotFound(t *testing.T) {
 	manager := setupBillingManager()
 
 	_, err := manager.GenerateInvoice("nonexistent")
-	if err != ErrSubscriptionNotFound {
+	if !errors.Is(err, ErrSubscriptionNotFound) {
 		t.Errorf("Expected ErrSubscriptionNotFound, got %v", err)
 	}
 }
@@ -299,7 +300,7 @@ func TestBillingManager_GetInvoice_NotFound(t *testing.T) {
 	manager := setupBillingManager()
 
 	_, err := manager.GetInvoice("nonexistent")
-	if err != ErrInvoiceNotFound {
+	if !errors.Is(err, ErrInvoiceNotFound) {
 		t.Errorf("Expected ErrInvoiceNotFound, got %v", err)
 	}
 }
@@ -435,12 +436,13 @@ func TestUsageMetrics(t *testing.T) {
 
 func TestInvoiceLineItem(t *testing.T) {
 	item := InvoiceLineItem{
-		Description: "Test Item",
-		Quantity:    10,
-		UnitPrice:   5.0,
-		Amount:      50.0,
-		Type:        "subscription",
+		Quantity:  10,
+		UnitPrice: 5.0,
+		Amount:    50.0,
 	}
+
+	_ = item.Description
+	_ = item.Type
 
 	if item.Amount != item.Quantity*item.UnitPrice {
 		t.Error("Expected amount to equal quantity * unit price")

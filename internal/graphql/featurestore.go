@@ -395,8 +395,14 @@ func (fs *FeatureStoreSchema) createHealthCheckType() *ObjectType {
 // Resolvers
 
 func (fs *FeatureStoreSchema) resolveFeature(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
-	entity := args["entity"].(string)
-	feature := args["feature"].(string)
+	entity, ok := args["entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity must be a string")
+	}
+	feature, ok := args["feature"].(string)
+	if !ok {
+		return nil, fmt.Errorf("feature must be a string")
+	}
 
 	values, err := fs.store.Get(entity, []string{feature})
 	if err != nil {
@@ -418,7 +424,10 @@ func (fs *FeatureStoreSchema) resolveFeature(ctx context.Context, parent interfa
 }
 
 func (fs *FeatureStoreSchema) resolveFeatures(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
-	entity := args["entity"].(string)
+	entity, ok := args["entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity must be a string")
+	}
 	featuresArg := args["features"]
 
 	var features []string
@@ -450,8 +459,14 @@ func (fs *FeatureStoreSchema) resolveFeatures(ctx context.Context, parent interf
 }
 
 func (fs *FeatureStoreSchema) resolveFeatureHistory(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
-	entity := args["entity"].(string)
-	feature := args["feature"].(string)
+	entity, ok := args["entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity must be a string")
+	}
+	feature, ok := args["feature"].(string)
+	if !ok {
+		return nil, fmt.Errorf("feature must be a string")
+	}
 
 	var asOf time.Time
 	if st, ok := args["startTime"].(time.Time); ok {
@@ -505,7 +520,10 @@ func (fs *FeatureStoreSchema) resolveFeatureGroup(ctx context.Context, parent in
 		return nil, fmt.Errorf("registry not configured")
 	}
 
-	name := args["name"].(string)
+	name, ok := args["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("name must be a string")
+	}
 
 	group, err := fs.registry.GetGroup(name)
 	if err != nil {
@@ -521,9 +539,18 @@ func (fs *FeatureStoreSchema) resolveFeatureGroup(ctx context.Context, parent in
 }
 
 func (fs *FeatureStoreSchema) resolveAggregation(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
-	entity := args["entity"].(string)
-	feature := args["feature"].(string)
-	function := args["function"].(string)
+	entity, ok := args["entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity must be a string")
+	}
+	feature, ok := args["feature"].(string)
+	if !ok {
+		return nil, fmt.Errorf("feature must be a string")
+	}
+	function, ok := args["function"].(string)
+	if !ok {
+		return nil, fmt.Errorf("function must be a string")
+	}
 
 	window := "1h"
 	if w, ok := args["window"].(string); ok {
@@ -560,8 +587,14 @@ func (fs *FeatureStoreSchema) resolveHealthCheck(ctx context.Context, parent int
 }
 
 func (fs *FeatureStoreSchema) resolveSetFeature(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
-	entity := args["entity"].(string)
-	feature := args["feature"].(string)
+	entity, ok := args["entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity must be a string")
+	}
+	feature, ok := args["feature"].(string)
+	if !ok {
+		return nil, fmt.Errorf("feature must be a string")
+	}
 	value := args["value"]
 
 	timestamp := time.Now()
@@ -635,8 +668,13 @@ func (fs *FeatureStoreSchema) resolveSetFeatures(ctx context.Context, parent int
 }
 
 func (fs *FeatureStoreSchema) resolveDeleteFeature(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
-	entity := args["entity"].(string)
-	_ = args["feature"].(string) // Feature name captured but store deletes entire entity
+	entity, ok := args["entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity must be a string")
+	}
+	if _, ok := args["feature"].(string); !ok {
+		return nil, fmt.Errorf("feature must be a string")
+	}
 
 	// Note: Store.Delete removes all features for an entity
 	// To delete a single feature, set its value to nil instead
@@ -658,7 +696,10 @@ func (fs *FeatureStoreSchema) resolveCreateFeatureGroup(ctx context.Context, par
 		return nil, fmt.Errorf("registry does not support group creation")
 	}
 
-	name := args["name"].(string)
+	name, ok := args["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("name must be a string")
+	}
 
 	description := ""
 	if d, ok := args["description"].(string); ok {

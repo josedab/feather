@@ -75,8 +75,8 @@ func (a *Adapter) SyncManifest(manifest *Manifest) (*SyncResult, error) {
 
 // convertModelToFeatures converts a dbt model to feature definitions.
 func (a *Adapter) convertModelToFeatures(model Node, manifest *Manifest) ([]FeatureDefinition, []SyncError) {
-	var features []FeatureDefinition
-	var errors []SyncError
+	features := make([]FeatureDefinition, 0, len(model.Columns))
+	errors := make([]SyncError, 0, len(model.Columns))
 
 	// Skip disabled models
 	if !model.Config.Enabled {
@@ -167,8 +167,8 @@ func (a *Adapter) convertColumnToFeature(model Node, column Column, colName, ent
 
 // convertSourceToFeatures converts a dbt source to feature definitions.
 func (a *Adapter) convertSourceToFeatures(source Source, manifest *Manifest) ([]FeatureDefinition, []SyncError) {
-	var features []FeatureDefinition
-	var errors []SyncError
+	features := make([]FeatureDefinition, 0, len(source.Columns))
+	errors := make([]SyncError, 0, len(source.Columns))
 
 	entityType := a.determineEntityType(source.Tags)
 

@@ -58,6 +58,7 @@ type ValidationIssue struct {
 // ValidationIssueType categorizes validation issues.
 type ValidationIssueType string
 
+// ValidationIssueType constants for serving validation.
 const (
 	IssueTypeOutOfRange        ValidationIssueType = "out_of_range"
 	IssueTypeMeanShift         ValidationIssueType = "mean_shift"
@@ -72,6 +73,7 @@ const (
 // IssueSeverity indicates the severity of a validation issue.
 type IssueSeverity string
 
+// IssueSeverity constants for validation severity.
 const (
 	SeverityInfo    IssueSeverity = "info"
 	SeverityWarning IssueSeverity = "warning"
@@ -240,7 +242,7 @@ func (v *ServingValidator) Validate(ctx context.Context, modelID string, feature
 // ValidateAsync performs validation asynchronously without blocking.
 func (v *ServingValidator) ValidateAsync(ctx context.Context, modelID string, features map[string]interface{}) {
 	if !v.config.AsyncValidation {
-		v.Validate(ctx, modelID, features)
+		_, _ = v.Validate(ctx, modelID, features)
 		return
 	}
 

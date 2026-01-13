@@ -43,6 +43,7 @@ var (
 // AuditAction represents the type of audited operation.
 type AuditAction string
 
+// AuditAction constants.
 const (
 	ActionRead        AuditAction = "read"
 	ActionWrite       AuditAction = "write"
@@ -60,6 +61,7 @@ const (
 // AuditOutcome represents the result of an audited operation.
 type AuditOutcome string
 
+// AuditOutcome constants.
 const (
 	OutcomeSuccess     AuditOutcome = "success"
 	OutcomeFailure     AuditOutcome = "failure"
@@ -71,6 +73,7 @@ const (
 // AuditSeverity indicates the importance level of an audit event.
 type AuditSeverity string
 
+// AuditSeverity constants.
 const (
 	SeverityInfo     AuditSeverity = "info"
 	SeverityWarning  AuditSeverity = "warning"

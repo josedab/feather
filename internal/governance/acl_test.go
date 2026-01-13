@@ -825,13 +825,9 @@ func TestColumnACLController_Stats(t *testing.T) {
 }
 
 func TestColumnACL_Fields(t *testing.T) {
-	now := time.Now()
 	acl := &ColumnACL{
-		ID:             "acl-1",
-		FeatureName:    "sensitive_feature",
-		FeaturePattern: "sensitive_*",
-		Effect:         ACLEffectAllow,
-		Permissions:    []ACLPermission{ACLPermissionRead, ACLPermissionWrite},
+		ID:          "acl-1",
+		Permissions: []ACLPermission{ACLPermissionRead, ACLPermissionWrite},
 		Principals: []ACLPrincipal{
 			{Type: "user", ID: "user-1"},
 			{Type: "role", ID: "admin"},
@@ -839,12 +835,6 @@ func TestColumnACL_Fields(t *testing.T) {
 		Conditions: []ACLCondition{
 			{Type: "time", Operator: "in", Value: "business_hours"},
 		},
-		Priority:    100,
-		Enabled:     true,
-		Description: "Allow read/write for admins during business hours",
-		CreatedAt:   now,
-		UpdatedAt:   now,
-		CreatedBy:   "admin",
 	}
 
 	assert.Equal(t, "acl-1", acl.ID)
@@ -886,9 +876,6 @@ func TestACLDecision_Fields(t *testing.T) {
 		MatchedACL: &ColumnACL{
 			ID: "acl-1",
 		},
-		Reason:         "Matched ACL rule",
-		EvaluatedAt:    time.Now(),
-		EvaluationTime: 100 * time.Microsecond,
 	}
 
 	assert.True(t, decision.Allowed)

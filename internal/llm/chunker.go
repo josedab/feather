@@ -419,7 +419,7 @@ func splitSentences(text string) []string {
 		return []string{text}
 	}
 
-	var sentences []string
+	sentences := make([]string, 0, len(indices)+1)
 	start := 0
 	for _, idx := range indices {
 		end := idx[1]

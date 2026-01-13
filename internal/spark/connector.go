@@ -52,30 +52,42 @@ var (
 type DataFormat string
 
 const (
+	// FormatParquet represents Parquet export format.
 	FormatParquet DataFormat = "parquet"
-	FormatJSON    DataFormat = "json"
-	FormatCSV     DataFormat = "csv"
-	FormatArrow   DataFormat = "arrow"
+	// FormatJSON represents JSON export format.
+	FormatJSON DataFormat = "json"
+	// FormatCSV represents CSV export format.
+	FormatCSV DataFormat = "csv"
+	// FormatArrow represents Arrow export format.
+	FormatArrow DataFormat = "arrow"
 )
 
 // ConnectorState represents the connector state.
 type ConnectorState string
 
 const (
+	// StateUninitialized indicates the connector has not been initialized.
 	StateUninitialized ConnectorState = "uninitialized"
-	StateReady         ConnectorState = "ready"
-	StateBusy          ConnectorState = "busy"
-	StateFailed        ConnectorState = "failed"
+	// StateReady indicates the connector is ready to serve requests.
+	StateReady ConnectorState = "ready"
+	// StateBusy indicates the connector is busy processing a request.
+	StateBusy ConnectorState = "busy"
+	// StateFailed indicates the connector is in a failed state.
+	StateFailed ConnectorState = "failed"
 )
 
 // WriteMode determines how to handle existing data.
 type WriteMode string
 
 const (
+	// WriteModeOverwrite replaces existing data.
 	WriteModeOverwrite WriteMode = "overwrite"
-	WriteModeAppend    WriteMode = "append"
-	WriteModeMerge     WriteMode = "merge"
-	WriteModeIgnore    WriteMode = "ignore"
+	// WriteModeAppend appends to existing data.
+	WriteModeAppend WriteMode = "append"
+	// WriteModeMerge merges with existing data.
+	WriteModeMerge WriteMode = "merge"
+	// WriteModeIgnore ignores writes when data exists.
+	WriteModeIgnore WriteMode = "ignore"
 )
 
 // Config contains configuration for the Spark connector.
@@ -341,7 +353,7 @@ func NewConnector(config Config, store *storage.Store, schema storage.SchemaRegi
 	}
 
 	// Ensure temp path exists
-	if err := os.MkdirAll(config.TempPath, 0755); err != nil {
+	if err := os.MkdirAll(config.TempPath, 0750); err != nil {
 		return nil, fmt.Errorf("creating temp path: %w", err)
 	}
 
@@ -411,7 +423,7 @@ func (c *Connector) Export(ctx context.Context, req *ExportRequest) (*ExportResu
 	}
 
 	// Create output directory
-	if err := os.MkdirAll(req.OutputPath, 0755); err != nil {
+	if err := os.MkdirAll(req.OutputPath, 0750); err != nil {
 		return nil, fmt.Errorf("creating output path: %w", err)
 	}
 
@@ -538,7 +550,11 @@ func (c *Connector) exportParquet(ctx context.Context, req *ExportRequest, resul
 	if err != nil {
 		return fmt.Errorf("creating output file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			c.logger.Warn("failed to close export file", "error", closeErr)
+		}
+	}()
 
 	entities, err := c.getExportEntities(ctx, req)
 	if err != nil {
@@ -555,12 +571,12 @@ func (c *Connector) exportParquet(ctx context.Context, req *ExportRequest, resul
 		default:
 		}
 
-		featureValues, err := c.store.Get(entity, req.Features)
-		if err != nil {
-			if errors.Is(err, domain.ErrEntityNotFound) {
+		featureValues, fetchErr := c.store.Get(entity, req.Features)
+		if fetchErr != nil {
+			if errors.Is(fetchErr, domain.ErrEntityNotFound) {
 				continue
 			}
-			result.Errors = append(result.Errors, fmt.Sprintf("entity %s: %v", entity, err))
+			result.Errors = append(result.Errors, fmt.Sprintf("entity %s: %v", entity, fetchErr))
 			continue
 		}
 
@@ -602,8 +618,8 @@ func (c *Connector) exportParquet(ctx context.Context, req *ExportRequest, resul
 		}
 		record["timestamp"] = time.Unix(0, maxTimestamp).Format(time.RFC3339Nano)
 
-		if err := encoder.Encode(record); err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("encoding entity %s: %v", entity, err))
+		if encodeErr := encoder.Encode(record); encodeErr != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("encoding entity %s: %v", entity, encodeErr))
 			continue
 		}
 
@@ -615,18 +631,19 @@ func (c *Connector) exportParquet(ctx context.Context, req *ExportRequest, resul
 	result.FilesWritten = 1
 
 	// Get file size
-	if stat, err := file.Stat(); err == nil {
+	if stat, statErr := file.Stat(); statErr == nil {
 		result.BytesWritten = stat.Size()
 	}
 
 	// Write schema file
 	schemaFile := filepath.Join(req.OutputPath, "_schema.json")
-	if schemaData, err := json.MarshalIndent(result.Schema, "", "  "); err == nil {
-		if err := os.WriteFile(schemaFile, schemaData, 0644); err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("writing schema: %v", err))
-		} else {
-			result.FilesWritten++
-		}
+	schemaData, err := json.MarshalIndent(result.Schema, "", "  ")
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("encoding schema: %v", err))
+	} else if err := os.WriteFile(schemaFile, schemaData, 0600); err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("writing schema: %v", err))
+	} else {
+		result.FilesWritten++
 	}
 
 	return nil
@@ -638,7 +655,11 @@ func (c *Connector) exportJSON(ctx context.Context, req *ExportRequest, result *
 	if err != nil {
 		return fmt.Errorf("creating output file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			c.logger.Warn("failed to close export file", "error", closeErr)
+		}
+	}()
 
 	entities, err := c.getExportEntities(ctx, req)
 	if err != nil {
@@ -649,7 +670,7 @@ func (c *Connector) exportJSON(ctx context.Context, req *ExportRequest, result *
 	encoder.SetIndent("", "  ")
 	entitiesExported := make(map[string]bool)
 
-	records := make([]map[string]interface{}, 0)
+	records := make([]map[string]interface{}, 0, len(entities))
 
 	for _, entity := range entities {
 		select {
@@ -698,7 +719,7 @@ func (c *Connector) exportJSON(ctx context.Context, req *ExportRequest, result *
 	result.EntitiesExported = int64(len(entitiesExported))
 	result.FilesWritten = 1
 
-	if stat, err := file.Stat(); err == nil {
+	if stat, statErr := file.Stat(); statErr == nil {
 		result.BytesWritten = stat.Size()
 	}
 
@@ -711,7 +732,11 @@ func (c *Connector) exportCSV(ctx context.Context, req *ExportRequest, result *E
 	if err != nil {
 		return fmt.Errorf("creating output file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			c.logger.Warn("failed to close export file", "error", closeErr)
+		}
+	}()
 
 	entities, err := c.getExportEntities(ctx, req)
 	if err != nil {
@@ -779,7 +804,7 @@ func (c *Connector) exportCSV(ctx context.Context, req *ExportRequest, result *E
 	result.EntitiesExported = int64(len(entitiesExported))
 	result.FilesWritten = 1
 
-	if stat, err := file.Stat(); err == nil {
+	if stat, statErr := file.Stat(); statErr == nil {
 		result.BytesWritten = stat.Size()
 	}
 
@@ -882,11 +907,15 @@ func (c *Connector) validateImportRequest(req *ImportRequest) error {
 func (c *Connector) importJSON(ctx context.Context, req *ImportRequest, result *ImportResult) error {
 	file, err := os.Open(req.InputPath)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrPathNotFound, err)
+		return fmt.Errorf("%w: %w", ErrPathNotFound, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			c.logger.Warn("failed to close import file", "error", closeErr)
+		}
+	}()
 
-	if stat, err := file.Stat(); err == nil {
+	if stat, statErr := file.Stat(); statErr == nil {
 		result.BytesRead = stat.Size()
 	}
 
@@ -924,7 +953,9 @@ func (c *Connector) importJSON(ctx context.Context, req *ImportRequest, result *
 		}
 	} else {
 		// Try JSON lines format
-		file.Seek(0, 0)
+		if _, err := file.Seek(0, 0); err != nil {
+			return fmt.Errorf("resetting file: %w", err)
+		}
 		decoder = json.NewDecoder(file)
 
 		for {
@@ -1073,11 +1104,15 @@ func (c *Connector) writeBatch(ctx context.Context, batch []featureRecord, mode 
 func (c *Connector) importCSV(ctx context.Context, req *ImportRequest, result *ImportResult) error {
 	file, err := os.Open(req.InputPath)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrPathNotFound, err)
+		return fmt.Errorf("%w: %w", ErrPathNotFound, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			c.logger.Warn("failed to close import file", "error", closeErr)
+		}
+	}()
 
-	if stat, err := file.Stat(); err == nil {
+	if stat, statErr := file.Stat(); statErr == nil {
 		result.BytesRead = stat.Size()
 	}
 
@@ -1300,6 +1335,21 @@ func validateValue(val interface{}, dt domain.DataType) error {
 	case domain.DataTypeString:
 		if _, ok := val.(string); !ok {
 			return fmt.Errorf("expected string, got %T", val)
+		}
+	case domain.DataTypeBytes:
+		if _, ok := val.([]byte); !ok {
+			return fmt.Errorf("expected bytes, got %T", val)
+		}
+	case domain.DataTypeVector:
+		if _, ok := val.([]float32); !ok {
+			return fmt.Errorf("expected vector, got %T", val)
+		}
+	case domain.DataTypeTimestamp:
+		switch val.(type) {
+		case time.Time, int64, float64, string:
+			return nil
+		default:
+			return fmt.Errorf("expected timestamp, got %T", val)
 		}
 	}
 	return nil

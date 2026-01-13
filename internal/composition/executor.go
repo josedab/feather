@@ -206,7 +206,7 @@ func (e *Executor) executeLevel(
 	close(errCh)
 
 	// Collect any errors
-	var errs []error
+	errs := make([]error, 0, len(nodeIDs))
 	for err := range errCh {
 		errs = append(errs, err)
 	}
@@ -415,7 +415,7 @@ func (c *resultCache) cleanLoop() {
 	}
 }
 
-// Stats returns executor statistics.
+// ExecutorStats reports executor statistics.
 type ExecutorStats struct {
 	CacheSize     int  `json:"cache_size"`
 	ComputeFuncs  int  `json:"compute_funcs"`

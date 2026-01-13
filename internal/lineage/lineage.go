@@ -77,6 +77,7 @@ type DataSource struct {
 // SourceType indicates the type of data source.
 type SourceType string
 
+// SourceType constants for data sources.
 const (
 	SourceTypeKafka     SourceType = "kafka"
 	SourceTypeDatabase  SourceType = "database"
@@ -110,6 +111,7 @@ type Transformation struct {
 // TransformType indicates the type of transformation.
 type TransformType string
 
+// TransformType constants for transformations.
 const (
 	TransformTypeAggregation TransformType = "aggregation"
 	TransformTypeFilter      TransformType = "filter"
@@ -134,6 +136,7 @@ type Consumer struct {
 // ConsumerType indicates the type of consumer.
 type ConsumerType string
 
+// ConsumerType constants for consumers.
 const (
 	ConsumerTypeModel     ConsumerType = "model"
 	ConsumerTypeService   ConsumerType = "service"
@@ -151,6 +154,7 @@ type ConsumerRef struct {
 // PIILevel indicates the level of personally identifiable information.
 type PIILevel int
 
+// PIILevel constants for PII classification.
 const (
 	PIINone     PIILevel = iota
 	PIILow               // Indirect identifiers (zip code, age range)
@@ -179,6 +183,7 @@ func (p PIILevel) String() string {
 // DataClassification indicates the data classification level.
 type DataClassification string
 
+// DataClassification constants for data classification.
 const (
 	ClassPublic       DataClassification = "public"
 	ClassInternal     DataClassification = "internal"
@@ -516,6 +521,7 @@ func (t *Tracker) calculateRiskLevel(feature *FeatureLineage, analysis *ImpactAn
 		score += 30
 	case ClassInternal:
 		score += 10
+	case ClassPublic:
 	}
 
 	switch {

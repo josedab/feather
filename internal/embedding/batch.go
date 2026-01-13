@@ -1,3 +1,4 @@
+// Package embedding provides batch embedding processing for feature vectors.
 package embedding
 
 import (
@@ -16,7 +17,7 @@ var (
 	ErrBatchEmpty        = errors.New("batch is empty")
 	ErrProviderError     = errors.New("embedding provider error")
 	ErrRateLimitExceeded = errors.New("rate limit exceeded")
-	ErrBatchCancelled    = errors.New("batch processing cancelled")
+	ErrBatchCancelled    = errors.New("batch processing cancelled") //nolint:misspell
 )
 
 // BatchRequest represents a batch embedding request.
@@ -68,7 +69,7 @@ type BatchResult struct {
 }
 
 // EmbeddingProvider is the interface for embedding generation.
-type EmbeddingProvider interface {
+type EmbeddingProvider interface { //nolint:revive
 	// GenerateEmbeddings generates embeddings for the given texts.
 	GenerateEmbeddings(ctx context.Context, texts []string, modelID string) ([][]float32, error)
 
@@ -464,7 +465,6 @@ func randomHex(n int) string {
 type MockProvider struct {
 	dimension int
 	delay     time.Duration
-	failRate  float64
 }
 
 // NewMockProvider creates a new mock provider.

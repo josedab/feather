@@ -3,8 +3,9 @@ package vector
 
 import (
 	"container/heap"
+	"crypto/rand"
+	"encoding/binary"
 	"math"
-	"math/rand"
 	"sync"
 )
 
@@ -25,11 +26,11 @@ var (
 		},
 	}
 
-	// Pool for string slices used in results
-	stringSlicePool = sync.Pool{
+	// Pool for random buffers used in level selection
+	levelRandBufPool = sync.Pool{
 		New: func() interface{} {
-			s := make([]string, 0, 64)
-			return &s
+			buf := make([]byte, 8)
+			return &buf
 		},
 	}
 )
@@ -70,8 +71,11 @@ type DistanceFunc func(a, b []float32) float32
 type DistanceType string
 
 const (
-	DistanceCosine     DistanceType = "cosine"
-	DistanceEuclidean  DistanceType = "euclidean"
+	// DistanceCosine uses cosine distance.
+	DistanceCosine DistanceType = "cosine"
+	// DistanceEuclidean uses Euclidean distance.
+	DistanceEuclidean DistanceType = "euclidean"
+	// DistanceDotProduct uses dot product distance.
 	DistanceDotProduct DistanceType = "dot_product"
 )
 
@@ -167,7 +171,7 @@ func (h *HNSW) Insert(id string, vector []float32) error {
 	}
 
 	// Insert at each level from node's level down to 0
-	for l := min(level, h.maxLevel); l >= 0; l-- {
+	for l := minValue(level, h.maxLevel); l >= 0; l-- {
 		neighbors := h.searchLayer(vector, ep, h.efConstruct, l)
 
 		// Select M best neighbors
@@ -217,7 +221,7 @@ func (h *HNSW) Search(query []float32, k int, ef int) ([]SearchResult, error) {
 	}
 
 	if ef == 0 {
-		ef = max(k, 10)
+		ef = maxValue(k, 10)
 	}
 
 	// Find entry point by traversing from top
@@ -230,7 +234,7 @@ func (h *HNSW) Search(query []float32, k int, ef int) ([]SearchResult, error) {
 	candidates := h.searchLayer(query, ep, ef, 0)
 
 	// Return top k
-	results := make([]SearchResult, 0, min(k, len(candidates)))
+	results := make([]SearchResult, 0, minValue(k, len(candidates)))
 	for i := 0; i < k && i < len(candidates); i++ {
 		n := h.nodes[candidates[i]]
 		results = append(results, SearchResult{
@@ -343,7 +347,10 @@ func (h *HNSW) searchLayerClosest(query []float32, ep string, level int) string 
 // searchLayer performs a greedy search at a given level, returning ef closest nodes.
 func (h *HNSW) searchLayer(query []float32, ep string, ef int, level int) []string {
 	// Get visited map from pool
-	visited := visitedMapPool.Get().(map[string]bool)
+	visited, visitedOK := visitedMapPool.Get().(map[string]bool)
+	if !visitedOK {
+		visited = make(map[string]bool, 128)
+	}
 	// Clear the map for reuse
 	for k := range visited {
 		delete(visited, k)
@@ -362,7 +369,10 @@ func (h *HNSW) searchLayer(query []float32, ep string, ef int, level int) []stri
 	heap.Push(results, &distItem{id: ep, dist: -epDist}) // negative for max-heap behavior
 
 	for candidates.Len() > 0 {
-		closest := heap.Pop(candidates).(*distItem)
+		closest, itemOK := heap.Pop(candidates).(*distItem)
+		if !itemOK {
+			break
+		}
 
 		// Get furthest in results
 		if results.Len() > 0 {
@@ -402,7 +412,11 @@ func (h *HNSW) searchLayer(query []float32, ep string, ef int, level int) []stri
 	}
 
 	// Get result slices from pool
-	resultListPtr := distItemSlicePool.Get().(*[]distItem)
+	resultListPtr, listOK := distItemSlicePool.Get().(*[]distItem)
+	if !listOK {
+		list := make([]distItem, 0, 64)
+		resultListPtr = &list
+	}
 	resultList := (*resultListPtr)[:0]
 	defer func() {
 		*resultListPtr = resultList[:0]
@@ -411,7 +425,10 @@ func (h *HNSW) searchLayer(query []float32, ep string, ef int, level int) []stri
 
 	// Extract results (sorted by distance)
 	for results.Len() > 0 {
-		item := heap.Pop(results).(*distItem)
+		item, itemOK := heap.Pop(results).(*distItem)
+		if !itemOK {
+			break
+		}
 		resultList = append(resultList, distItem{id: item.id, dist: -item.dist})
 	}
 
@@ -440,36 +457,54 @@ func (h *HNSW) selectNeighbors(query []float32, candidates []string, m int) []st
 		id   string
 		dist float32
 	}
-	scored_candidates := make([]scored, len(candidates))
+	scoredCandidates := make([]scored, len(candidates))
 	for i, id := range candidates {
 		n := h.nodes[id]
-		scored_candidates[i] = scored{id: id, dist: h.distFunc(query, n.vector)}
+		scoredCandidates[i] = scored{id: id, dist: h.distFunc(query, n.vector)}
 	}
 
 	// Simple selection sort for small m
 	for i := 0; i < m; i++ {
 		minIdx := i
-		for j := i + 1; j < len(scored_candidates); j++ {
-			if scored_candidates[j].dist < scored_candidates[minIdx].dist {
+		for j := i + 1; j < len(scoredCandidates); j++ {
+			if scoredCandidates[j].dist < scoredCandidates[minIdx].dist {
 				minIdx = j
 			}
 		}
-		scored_candidates[i], scored_candidates[minIdx] = scored_candidates[minIdx], scored_candidates[i]
+		scoredCandidates[i], scoredCandidates[minIdx] = scoredCandidates[minIdx], scoredCandidates[i]
 	}
 
 	result := make([]string, m)
 	for i := 0; i < m; i++ {
-		result[i] = scored_candidates[i].id
+		result[i] = scoredCandidates[i].id
 	}
 	return result
 }
 
 func (h *HNSW) randomLevel() int {
 	level := 0
-	for rand.Float64() < 0.5 && level < 16 {
+	for h.randFloat64() < 0.5 && level < 16 {
 		level++
 	}
 	return level
+}
+
+func (h *HNSW) randFloat64() float64 {
+	bufPtr, ok := levelRandBufPool.Get().(*[]byte)
+	if !ok {
+		buf := make([]byte, 8)
+		if _, err := rand.Read(buf); err != nil {
+			return 0.5
+		}
+		return float64(binary.LittleEndian.Uint64(buf)) / float64(^uint64(0))
+	}
+	buf := *bufPtr
+	if _, err := rand.Read(buf); err != nil {
+		levelRandBufPool.Put(bufPtr)
+		return 0.5
+	}
+	levelRandBufPool.Put(bufPtr)
+	return float64(binary.LittleEndian.Uint64(buf)) / float64(^uint64(0))
 }
 
 // SearchResult represents a search result.
@@ -527,7 +562,11 @@ func (h distHeap) Less(i, j int) bool { return h[i].dist < h[j].dist }
 func (h distHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
 func (h *distHeap) Push(x interface{}) {
-	*h = append(*h, x.(*distItem))
+	item, ok := x.(*distItem)
+	if !ok {
+		return
+	}
+	*h = append(*h, item)
 }
 
 func (h *distHeap) Pop() interface{} {
@@ -538,14 +577,14 @@ func (h *distHeap) Pop() interface{} {
 	return x
 }
 
-func min(a, b int) int {
+func minValue(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func max(a, b int) int {
+func maxValue(a, b int) int {
 	if a > b {
 		return a
 	}

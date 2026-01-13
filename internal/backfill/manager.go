@@ -50,12 +50,18 @@ type FieldMapping struct {
 type JobStatus string
 
 const (
-	StatusPending   JobStatus = "pending"
-	StatusRunning   JobStatus = "running"
-	StatusPaused    JobStatus = "paused"
+	// StatusPending indicates a queued job.
+	StatusPending JobStatus = "pending"
+	// StatusRunning indicates a currently running job.
+	StatusRunning JobStatus = "running"
+	// StatusPaused indicates a paused job.
+	StatusPaused JobStatus = "paused"
+	// StatusCompleted indicates a completed job.
 	StatusCompleted JobStatus = "completed"
-	StatusFailed    JobStatus = "failed"
-	StatusCancelled JobStatus = "cancelled"
+	// StatusFailed indicates a failed job.
+	StatusFailed JobStatus = "failed"
+	// StatusCancelled indicates a canceled job.
+	StatusCancelled JobStatus = "cancelled" //nolint:misspell
 )
 
 // JobProgress tracks job progress.
@@ -379,8 +385,8 @@ func (m *Manager) runJob(ctx context.Context, job *Job) {
 			if errors.Is(err, ErrEndOfData) {
 				// Process remaining batch
 				if len(batch) > 0 {
-					if err := m.processBatch(ctx, job, batch); err != nil {
-						m.failJob(job, err)
+					if processErr := m.processBatch(ctx, job, batch); processErr != nil {
+						m.failJob(job, processErr)
 						return
 					}
 				}
@@ -403,11 +409,19 @@ func (m *Manager) runJob(ctx context.Context, job *Job) {
 				continue
 			}
 
+			entityID, ok := record[job.Source.Mapping.EntityIDField].(string)
+			if !ok {
+				continue
+			}
+			timestamp, ok := record[job.Source.Mapping.TimestampField].(time.Time)
+			if !ok {
+				continue
+			}
 			batch = append(batch, FeatureRecord{
-				EntityID:  record[job.Source.Mapping.EntityIDField].(string),
+				EntityID:  entityID,
 				Feature:   feature,
 				Value:     value,
-				Timestamp: record[job.Source.Mapping.TimestampField].(time.Time),
+				Timestamp: timestamp,
 			})
 		}
 
@@ -529,11 +543,11 @@ func (m *Manager) GetCheckpoint(jobID string) *Checkpoint {
 }
 
 // GetStats returns backfill statistics.
-func (m *Manager) GetStats() BackfillStats {
+func (m *Manager) GetStats() Stats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	stats := BackfillStats{
+	stats := Stats{
 		TotalJobs: len(m.jobs),
 		ByStatus:  make(map[JobStatus]int),
 	}
@@ -548,8 +562,8 @@ func (m *Manager) GetStats() BackfillStats {
 	return stats
 }
 
-// BackfillStats contains backfill statistics.
-type BackfillStats struct {
+// Stats contains backfill statistics.
+type Stats struct {
 	TotalJobs             int               `json:"total_jobs"`
 	ByStatus              map[JobStatus]int `json:"by_status"`
 	TotalRecordsProcessed int64             `json:"total_records_processed"`

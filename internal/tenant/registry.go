@@ -21,13 +21,19 @@ var (
 	ErrStorageQuotaExceeded = errors.New("storage quota exceeded")
 )
 
+//revive:disable:exported
+
 // TenantTier represents the service tier for a tenant.
 type TenantTier string
 
 const (
-	TierFree       TenantTier = "free"
-	TierStandard   TenantTier = "standard"
-	TierPremium    TenantTier = "premium"
+	// TierFree is the free service tier.
+	TierFree TenantTier = "free"
+	// TierStandard is the standard service tier.
+	TierStandard TenantTier = "standard"
+	// TierPremium is the premium service tier.
+	TierPremium TenantTier = "premium"
+	// TierEnterprise is the enterprise service tier.
 	TierEnterprise TenantTier = "enterprise"
 )
 
@@ -35,9 +41,13 @@ const (
 type PriorityClass int
 
 const (
-	PriorityLow      PriorityClass = 0
-	PriorityNormal   PriorityClass = 50
-	PriorityHigh     PriorityClass = 75
+	// PriorityLow is the lowest priority class.
+	PriorityLow PriorityClass = 0
+	// PriorityNormal is the default priority class.
+	PriorityNormal PriorityClass = 50
+	// PriorityHigh is a high priority class.
+	PriorityHigh PriorityClass = 75
+	// PriorityCritical is the highest priority class.
 	PriorityCritical PriorityClass = 100
 )
 
@@ -113,9 +123,12 @@ type TenantSettings struct {
 type IsolationMode string
 
 const (
-	IsolationShared      IsolationMode = "shared"      // Shared storage with tenant key prefix
-	IsolationPartitioned IsolationMode = "partitioned" // Partitioned hot tier
-	IsolationDedicated   IsolationMode = "dedicated"   // Dedicated storage instance
+	// IsolationShared uses shared storage with tenant key prefixing.
+	IsolationShared IsolationMode = "shared"
+	// IsolationPartitioned uses a partitioned hot tier.
+	IsolationPartitioned IsolationMode = "partitioned"
+	// IsolationDedicated uses a dedicated storage instance.
+	IsolationDedicated IsolationMode = "dedicated"
 )
 
 // TenantUsage tracks current resource usage for a tenant.
@@ -654,3 +667,5 @@ func TenantFromContext(ctx context.Context) string {
 	tenantID, _ := ctx.Value(tenantContextKey{}).(string)
 	return tenantID
 }
+
+//revive:enable:exported

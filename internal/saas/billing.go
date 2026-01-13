@@ -1,3 +1,4 @@
+// Package saas provides subscription, billing, and provisioning support.
 package saas
 
 import (
@@ -16,6 +17,7 @@ var (
 // UsageMetric represents a usage metric type.
 type UsageMetric string
 
+// UsageMetric constants for usage tracking.
 const (
 	MetricRequests     UsageMetric = "requests"
 	MetricStorage      UsageMetric = "storage_gb"
@@ -77,6 +79,7 @@ type Invoice struct {
 // InvoiceStatus defines invoice states.
 type InvoiceStatus string
 
+// InvoiceStatus constants for invoices.
 const (
 	InvoiceDraft         InvoiceStatus = "draft"
 	InvoiceOpen          InvoiceStatus = "open"

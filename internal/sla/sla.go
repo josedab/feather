@@ -9,27 +9,31 @@ import (
 	"time"
 )
 
-// SLAType represents the type of SLA being defined.
-type SLAType string
+// Type represents the type of SLA being defined.
+type Type string
 
 const (
-	// SLATypeLatency enforces maximum latency for feature retrieval.
-	SLATypeLatency SLAType = "latency"
-	// SLATypeFreshness enforces maximum age of feature data.
-	SLATypeFreshness SLAType = "freshness"
-	// SLATypeAvailability enforces minimum availability percentage.
-	SLATypeAvailability SLAType = "availability"
-	// SLATypeThroughput enforces minimum throughput.
-	SLATypeThroughput SLAType = "throughput"
+	// TypeLatency enforces maximum latency for feature retrieval.
+	TypeLatency Type = "latency"
+	// TypeFreshness enforces maximum age of feature data.
+	TypeFreshness Type = "freshness"
+	// TypeAvailability enforces minimum availability percentage.
+	TypeAvailability Type = "availability"
+	// TypeThroughput enforces minimum throughput.
+	TypeThroughput Type = "throughput"
 )
 
 // Priority represents the priority level of an SLA.
 type Priority int
 
 const (
+	// PriorityLow indicates a low priority SLA.
 	PriorityLow Priority = iota
+	// PriorityMedium indicates a medium priority SLA.
 	PriorityMedium
+	// PriorityHigh indicates a high priority SLA.
 	PriorityHigh
+	// PriorityCritical indicates a critical priority SLA.
 	PriorityCritical
 )
 
@@ -49,14 +53,14 @@ func (p Priority) String() string {
 	}
 }
 
-// SLASpec defines a Service Level Agreement specification.
-type SLASpec struct {
+// Spec defines a Service Level Agreement specification.
+type Spec struct {
 	// Name is the unique identifier for this SLA.
 	Name string `json:"name"`
 	// Description describes the SLA purpose.
 	Description string `json:"description,omitempty"`
 	// Type is the type of SLA (latency, freshness, availability).
-	Type SLAType `json:"type"`
+	Type Type `json:"type"`
 	// Target is the target value (e.g., 100ms for latency, 99.9 for availability).
 	Target float64 `json:"target"`
 	// Priority indicates the importance of this SLA.
@@ -76,7 +80,7 @@ type SLASpec struct {
 }
 
 // Validate validates the SLA specification.
-func (s *SLASpec) Validate() error {
+func (s *Spec) Validate() error {
 	if s.Name == "" {
 		return errors.New("SLA name is required")
 	}
@@ -90,21 +94,21 @@ func (s *SLASpec) Validate() error {
 		return errors.New("SLA window must be positive")
 	}
 	switch s.Type {
-	case SLATypeLatency, SLATypeFreshness, SLATypeAvailability, SLATypeThroughput:
+	case TypeLatency, TypeFreshness, TypeAvailability, TypeThroughput:
 		// Valid types
 	default:
 		return fmt.Errorf("unknown SLA type: %s", s.Type)
 	}
-	if s.Type == SLATypeAvailability && (s.Target < 0 || s.Target > 100) {
+	if s.Type == TypeAvailability && (s.Target < 0 || s.Target > 100) {
 		return errors.New("availability SLA target must be between 0 and 100")
 	}
 	return nil
 }
 
-// SLAStatus represents the current status of an SLA.
-type SLAStatus struct {
+// Status represents the current status of an SLA.
+type Status struct {
 	// Spec is the SLA specification.
-	Spec *SLASpec `json:"spec"`
+	Spec *Spec `json:"spec"`
 	// CurrentValue is the current measured value.
 	CurrentValue float64 `json:"currentValue"`
 	// IsBreached indicates if the SLA is currently breached.
@@ -126,7 +130,7 @@ type Breach struct {
 	// SLAName is the name of the breached SLA.
 	SLAName string `json:"slaName"`
 	// Type is the SLA type.
-	Type SLAType `json:"type"`
+	Type Type `json:"type"`
 	// Feature is the specific feature that breached (if applicable).
 	Feature string `json:"feature,omitempty"`
 	// TargetValue is the SLA target.
@@ -158,7 +162,7 @@ type MetricsProvider interface {
 // AlertHandler handles SLA breach alerts.
 type AlertHandler interface {
 	// OnWarning is called when an SLA is approaching breach threshold.
-	OnWarning(ctx context.Context, status *SLAStatus) error
+	OnWarning(ctx context.Context, status *Status) error
 	// OnBreach is called when an SLA is breached.
 	OnBreach(ctx context.Context, breach *Breach) error
 	// OnRecovery is called when an SLA recovers from breach.
@@ -168,8 +172,8 @@ type AlertHandler interface {
 // Manager manages SLA specifications and enforcement.
 type Manager struct {
 	mu             sync.RWMutex
-	specs          map[string]*SLASpec
-	statuses       map[string]*SLAStatus
+	specs          map[string]*Spec
+	statuses       map[string]*Status
 	breaches       []*Breach
 	maxBreaches    int
 	metrics        MetricsProvider
@@ -205,8 +209,8 @@ func NewManager(metrics MetricsProvider, config ManagerConfig) *Manager {
 	}
 
 	return &Manager{
-		specs:         make(map[string]*SLASpec),
-		statuses:      make(map[string]*SLAStatus),
+		specs:         make(map[string]*Spec),
+		statuses:      make(map[string]*Status),
 		breaches:      make([]*Breach, 0),
 		maxBreaches:   config.MaxBreachHistory,
 		metrics:       metrics,
@@ -217,7 +221,7 @@ func NewManager(metrics MetricsProvider, config ManagerConfig) *Manager {
 }
 
 // RegisterSLA registers a new SLA specification.
-func (m *Manager) RegisterSLA(spec *SLASpec) error {
+func (m *Manager) RegisterSLA(spec *Spec) error {
 	if err := spec.Validate(); err != nil {
 		return fmt.Errorf("invalid SLA specification: %w", err)
 	}
@@ -226,7 +230,7 @@ func (m *Manager) RegisterSLA(spec *SLASpec) error {
 	defer m.mu.Unlock()
 
 	m.specs[spec.Name] = spec
-	m.statuses[spec.Name] = &SLAStatus{
+	m.statuses[spec.Name] = &Status{
 		Spec:                 spec,
 		CompliancePercentage: 100.0,
 		LastUpdated:          time.Now(),
@@ -250,7 +254,7 @@ func (m *Manager) UnregisterSLA(name string) error {
 }
 
 // GetSLA returns an SLA specification by name.
-func (m *Manager) GetSLA(name string) (*SLASpec, error) {
+func (m *Manager) GetSLA(name string) (*Spec, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -262,11 +266,11 @@ func (m *Manager) GetSLA(name string) (*SLASpec, error) {
 }
 
 // ListSLAs returns all registered SLA specifications.
-func (m *Manager) ListSLAs() []*SLASpec {
+func (m *Manager) ListSLAs() []*Spec {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make([]*SLASpec, 0, len(m.specs))
+	result := make([]*Spec, 0, len(m.specs))
 	for _, spec := range m.specs {
 		result = append(result, spec)
 	}
@@ -274,7 +278,7 @@ func (m *Manager) ListSLAs() []*SLASpec {
 }
 
 // GetStatus returns the current status of an SLA.
-func (m *Manager) GetStatus(name string) (*SLAStatus, error) {
+func (m *Manager) GetStatus(name string) (*Status, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -286,11 +290,11 @@ func (m *Manager) GetStatus(name string) (*SLAStatus, error) {
 }
 
 // GetAllStatuses returns all SLA statuses.
-func (m *Manager) GetAllStatuses() []*SLAStatus {
+func (m *Manager) GetAllStatuses() []*Status {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	result := make([]*SLAStatus, 0, len(m.statuses))
+	result := make([]*Status, 0, len(m.statuses))
 	for _, status := range m.statuses {
 		result = append(result, status)
 	}
@@ -346,7 +350,7 @@ func (m *Manager) evaluationLoop(ctx context.Context) {
 
 func (m *Manager) evaluate(ctx context.Context) {
 	m.mu.Lock()
-	specs := make([]*SLASpec, 0, len(m.specs))
+	specs := make([]*Spec, 0, len(m.specs))
 	for _, spec := range m.specs {
 		if spec.Enabled {
 			specs = append(specs, spec)
@@ -360,7 +364,7 @@ func (m *Manager) evaluate(ctx context.Context) {
 	}
 }
 
-func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
+func (m *Manager) evaluateSLA(ctx context.Context, spec *Spec) {
 	if m.metrics == nil {
 		return
 	}
@@ -370,7 +374,7 @@ func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
 
 	// Get appropriate metric based on SLA type
 	switch spec.Type {
-	case SLATypeLatency:
+	case TypeLatency:
 		var latency time.Duration
 		if len(spec.Features) > 0 {
 			latency, err = m.metrics.GetLatencyP99(ctx, spec.Features[0], spec.Window)
@@ -381,7 +385,7 @@ func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
 			currentValue = float64(latency.Milliseconds())
 		}
 
-	case SLATypeFreshness:
+	case TypeFreshness:
 		var age time.Duration
 		if len(spec.Features) > 0 {
 			age, err = m.metrics.GetFreshness(ctx, spec.Features[0])
@@ -392,14 +396,14 @@ func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
 			currentValue = age.Seconds()
 		}
 
-	case SLATypeAvailability:
+	case TypeAvailability:
 		feature := ""
 		if len(spec.Features) > 0 {
 			feature = spec.Features[0]
 		}
 		currentValue, err = m.metrics.GetAvailability(ctx, feature, spec.Window)
 
-	case SLATypeThroughput:
+	case TypeThroughput:
 		feature := ""
 		if len(spec.Features) > 0 {
 			feature = spec.Features[0]
@@ -414,13 +418,13 @@ func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
 	// Determine if breached
 	var isBreached, isWarning bool
 	switch spec.Type {
-	case SLATypeLatency, SLATypeFreshness:
+	case TypeLatency, TypeFreshness:
 		// Higher is worse for latency/freshness
 		isBreached = currentValue > spec.Target
 		if spec.AlertThreshold > 0 {
 			isWarning = currentValue > spec.Target*spec.AlertThreshold
 		}
-	case SLATypeAvailability, SLATypeThroughput:
+	case TypeAvailability, TypeThroughput:
 		// Lower is worse for availability/throughput
 		isBreached = currentValue < spec.Target
 		if spec.AlertThreshold > 0 {
@@ -432,7 +436,7 @@ func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
 	m.mu.Lock()
 	status := m.statuses[spec.Name]
 	if status == nil {
-		status = &SLAStatus{Spec: spec}
+		status = &Status{Spec: spec}
 		m.statuses[spec.Name] = status
 	}
 
@@ -458,9 +462,9 @@ func (m *Manager) evaluateSLA(ctx context.Context, spec *SLASpec) {
 
 		// Calculate severity
 		switch spec.Type {
-		case SLATypeLatency, SLATypeFreshness:
+		case TypeLatency, TypeFreshness:
 			breach.Severity = (currentValue - spec.Target) / spec.Target
-		case SLATypeAvailability, SLATypeThroughput:
+		case TypeAvailability, TypeThroughput:
 			breach.Severity = (spec.Target - currentValue) / spec.Target
 		}
 

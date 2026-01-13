@@ -40,7 +40,7 @@ type ModelUsage struct {
 }
 
 // ImpactScore measures the impact of a feature.
-type ImpactScore struct {
+type ImpactScore struct { //nolint:revive
 	Feature          string    `json:"feature"`
 	OverallScore     float64   `json:"overall_score"`     // 0-100 overall impact
 	UsageScore       float64   `json:"usage_score"`       // Based on access frequency
@@ -65,7 +65,7 @@ type DeprecationRequest struct {
 }
 
 // ImpactTracker tracks feature usage and impact.
-type ImpactTracker struct {
+type ImpactTracker struct { //nolint:revive
 	featureUsage   map[string]*FeatureUsage
 	modelUsage     map[string]*ModelUsage
 	impactScores   map[string]*ImpactScore
@@ -310,7 +310,7 @@ func (t *ImpactTracker) CalculateImpactScore(feature string) *ImpactScore {
 	// Usage score: logarithmic scale of access count
 	usageScore := 0.0
 	if usage.AccessCount > 0 {
-		usageScore = min(100.0, 20.0*log10(float64(usage.AccessCount)))
+		usageScore = minFloat64(100.0, 20.0*log10(float64(usage.AccessCount)))
 	}
 
 	// Model coverage: percentage of models using this feature
@@ -321,7 +321,7 @@ func (t *ImpactTracker) CalculateImpactScore(feature string) *ImpactScore {
 	if usage.AccessCount > 0 {
 		errorRate := float64(usage.ErrorCount) / float64(usage.AccessCount)
 		nullRate := float64(usage.NullCount) / float64(usage.AccessCount)
-		reliabilityScore = max(0, 100.0-errorRate*100-nullRate*50)
+		reliabilityScore = maxFloat64(0, 100.0-errorRate*100-nullRate*50)
 	}
 
 	// Latency score: lower is better, target < 10ms
@@ -336,12 +336,12 @@ func (t *ImpactTracker) CalculateImpactScore(feature string) *ImpactScore {
 		} else if usage.AvgLatencyMs <= 100 {
 			latencyScore = 50.0
 		} else {
-			latencyScore = max(0, 100.0-usage.AvgLatencyMs)
+			latencyScore = maxFloat64(0, 100.0-usage.AvgLatencyMs)
 		}
 	}
 
 	// Dependency score: based on how many features depend on this
-	dependencyScore := min(100.0, float64(len(usage.Dependents))*20)
+	dependencyScore := minFloat64(100.0, float64(len(usage.Dependents))*20)
 
 	// Check if feature is in critical path (used by prod models)
 	criticalPath := false
@@ -357,7 +357,7 @@ func (t *ImpactTracker) CalculateImpactScore(feature string) *ImpactScore {
 	// Overall score: weighted average
 	overallScore := usageScore*0.25 + modelCoverage*0.25 + reliabilityScore*0.2 + latencyScore*0.15 + dependencyScore*0.15
 	if criticalPath {
-		overallScore = min(100, overallScore*1.2)
+		overallScore = minFloat64(100, overallScore*1.2)
 	}
 
 	score := &ImpactScore{
@@ -422,7 +422,7 @@ func (t *ImpactTracker) calculateImpactScoreUnlocked(feature string) *ImpactScor
 
 	usageScore := 0.0
 	if usage.AccessCount > 0 {
-		usageScore = min(100.0, 20.0*log10(float64(usage.AccessCount)))
+		usageScore = minFloat64(100.0, 20.0*log10(float64(usage.AccessCount)))
 	}
 
 	modelCoverage := float64(len(usage.Models)) / float64(totalModels) * 100
@@ -431,7 +431,7 @@ func (t *ImpactTracker) calculateImpactScoreUnlocked(feature string) *ImpactScor
 	if usage.AccessCount > 0 {
 		errorRate := float64(usage.ErrorCount) / float64(usage.AccessCount)
 		nullRate := float64(usage.NullCount) / float64(usage.AccessCount)
-		reliabilityScore = max(0, 100.0-errorRate*100-nullRate*50)
+		reliabilityScore = maxFloat64(0, 100.0-errorRate*100-nullRate*50)
 	}
 
 	latencyScore := 100.0
@@ -445,11 +445,11 @@ func (t *ImpactTracker) calculateImpactScoreUnlocked(feature string) *ImpactScor
 		} else if usage.AvgLatencyMs <= 100 {
 			latencyScore = 50.0
 		} else {
-			latencyScore = max(0, 100.0-usage.AvgLatencyMs)
+			latencyScore = maxFloat64(0, 100.0-usage.AvgLatencyMs)
 		}
 	}
 
-	dependencyScore := min(100.0, float64(len(usage.Dependents))*20)
+	dependencyScore := minFloat64(100.0, float64(len(usage.Dependents))*20)
 
 	criticalPath := false
 	for _, modelID := range usage.Models {
@@ -463,7 +463,7 @@ func (t *ImpactTracker) calculateImpactScoreUnlocked(feature string) *ImpactScor
 
 	overallScore := usageScore*0.25 + modelCoverage*0.25 + reliabilityScore*0.2 + latencyScore*0.15 + dependencyScore*0.15
 	if criticalPath {
-		overallScore = min(100, overallScore*1.2)
+		overallScore = minFloat64(100, overallScore*1.2)
 	}
 
 	score := &ImpactScore{
@@ -625,7 +625,7 @@ func (t *ImpactTracker) getUpstream(feature string, visited map[string]bool) []s
 		return nil
 	}
 
-	var upstream []string
+	upstream := make([]string, 0, len(usage.Dependencies))
 	for _, dep := range usage.Dependencies {
 		upstream = append(upstream, dep)
 		upstream = append(upstream, t.getUpstream(dep, visited)...)
@@ -644,7 +644,7 @@ func (t *ImpactTracker) getDownstream(feature string, visited map[string]bool) [
 		return nil
 	}
 
-	var downstream []string
+	downstream := make([]string, 0, len(usage.Dependents))
 	for _, dep := range usage.Dependents {
 		downstream = append(downstream, dep)
 		downstream = append(downstream, t.getDownstream(dep, visited)...)
@@ -661,7 +661,7 @@ type FeatureLineage struct {
 }
 
 // ImpactReport provides a summary report.
-type ImpactReport struct {
+type ImpactReport struct { //nolint:revive
 	GeneratedAt         time.Time             `json:"generated_at"`
 	TotalFeatures       int                   `json:"total_features"`
 	TotalModels         int                   `json:"total_models"`
@@ -799,14 +799,14 @@ func ln(x float64) float64 {
 	return result
 }
 
-func min(a, b float64) float64 {
+func minFloat64(a, b float64) float64 {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func max(a, b float64) float64 {
+func maxFloat64(a, b float64) float64 {
 	if a > b {
 		return a
 	}

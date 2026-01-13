@@ -1,9 +1,12 @@
 package vector
 
 import (
+	"errors"
 	"math"
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestHNSW_InsertAndSearch(t *testing.T) {
@@ -63,18 +66,19 @@ func TestHNSW_DimensionMismatch(t *testing.T) {
 
 	// Insert with wrong dimension
 	err := hnsw.Insert("v1", []float32{1.0, 0.0})
-	if err != ErrDimensionMismatch {
+	if !errors.Is(err, ErrDimensionMismatch) {
 		t.Errorf("Insert with wrong dim: got %v, want ErrDimensionMismatch", err)
 	}
 
 	// Insert with correct dimension
-	if err := hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}); err != nil {
+	err = hnsw.Insert("v1", []float32{1.0, 0.0, 0.0})
+	if err != nil {
 		t.Fatalf("Insert error: %v", err)
 	}
 
 	// Search with wrong dimension
 	_, err = hnsw.Search([]float32{1.0, 0.0}, 1, 0)
-	if err != ErrDimensionMismatch {
+	if !errors.Is(err, ErrDimensionMismatch) {
 		t.Errorf("Search with wrong dim: got %v, want ErrDimensionMismatch", err)
 	}
 }
@@ -82,9 +86,9 @@ func TestHNSW_DimensionMismatch(t *testing.T) {
 func TestHNSW_Delete(t *testing.T) {
 	hnsw := NewHNSW(HNSWConfig{Dim: 3})
 
-	hnsw.Insert("v1", []float32{1.0, 0.0, 0.0})
-	hnsw.Insert("v2", []float32{0.0, 1.0, 0.0})
-	hnsw.Insert("v3", []float32{0.0, 0.0, 1.0})
+	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}))
+	require.NoError(t, hnsw.Insert("v2", []float32{0.0, 1.0, 0.0}))
+	require.NoError(t, hnsw.Insert("v3", []float32{0.0, 0.0, 1.0}))
 
 	if hnsw.Size() != 3 {
 		t.Fatalf("Size() = %d, want 3", hnsw.Size())
@@ -185,7 +189,7 @@ func TestHNSW_EmptyIndex(t *testing.T) {
 		t.Fatalf("Search on empty index error: %v", err)
 	}
 
-	if results != nil && len(results) != 0 {
+	if len(results) != 0 {
 		t.Errorf("Search on empty index should return empty, got %d results", len(results))
 	}
 }

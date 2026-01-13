@@ -1,3 +1,4 @@
+// Package graphql provides a minimal GraphQL schema and execution engine.
 package graphql
 
 import (
@@ -28,6 +29,7 @@ type Type interface {
 // TypeKind represents the kind of a GraphQL type.
 type TypeKind string
 
+// TypeKind values for GraphQL type classification.
 const (
 	TypeKindScalar      TypeKind = "SCALAR"
 	TypeKindObject      TypeKind = "OBJECT"
@@ -47,8 +49,13 @@ type ScalarType struct {
 	parseValue  func(interface{}) (interface{}, error)
 }
 
-func (t *ScalarType) Name() string        { return t.name }
-func (t *ScalarType) Kind() TypeKind      { return TypeKindScalar }
+// Name returns the scalar type name.
+func (t *ScalarType) Name() string { return t.name }
+
+// Kind returns the GraphQL type kind.
+func (t *ScalarType) Kind() TypeKind { return TypeKindScalar }
+
+// Description returns the scalar type description.
 func (t *ScalarType) Description() string { return t.description }
 
 // ObjectType represents a GraphQL object type.
@@ -56,11 +63,15 @@ type ObjectType struct {
 	name        string
 	description string
 	fields      map[string]*Field
-	interfaces  []*InterfaceType
 }
 
-func (t *ObjectType) Name() string        { return t.name }
-func (t *ObjectType) Kind() TypeKind      { return TypeKindObject }
+// Name returns the object type name.
+func (t *ObjectType) Name() string { return t.name }
+
+// Kind returns the GraphQL type kind.
+func (t *ObjectType) Kind() TypeKind { return TypeKindObject }
+
+// Description returns the object type description.
 func (t *ObjectType) Description() string { return t.description }
 
 // Field represents a GraphQL field.
@@ -86,11 +97,15 @@ type Argument struct {
 type InterfaceType struct {
 	name        string
 	description string
-	fields      map[string]*Field
 }
 
-func (t *InterfaceType) Name() string        { return t.name }
-func (t *InterfaceType) Kind() TypeKind      { return TypeKindInterface }
+// Name returns the interface type name.
+func (t *InterfaceType) Name() string { return t.name }
+
+// Kind returns the GraphQL type kind.
+func (t *InterfaceType) Kind() TypeKind { return TypeKindInterface }
+
+// Description returns the interface type description.
 func (t *InterfaceType) Description() string { return t.description }
 
 // EnumType represents a GraphQL enum type.
@@ -100,8 +115,13 @@ type EnumType struct {
 	values      []*EnumValue
 }
 
-func (t *EnumType) Name() string        { return t.name }
-func (t *EnumType) Kind() TypeKind      { return TypeKindEnum }
+// Name returns the enum type name.
+func (t *EnumType) Name() string { return t.name }
+
+// Kind returns the GraphQL type kind.
+func (t *EnumType) Kind() TypeKind { return TypeKindEnum }
+
+// Description returns the enum type description.
 func (t *EnumType) Description() string { return t.description }
 
 // EnumValue represents a GraphQL enum value.
@@ -120,8 +140,13 @@ type InputObjectType struct {
 	fields      map[string]*InputField
 }
 
-func (t *InputObjectType) Name() string        { return t.name }
-func (t *InputObjectType) Kind() TypeKind      { return TypeKindInputObject }
+// Name returns the input object type name.
+func (t *InputObjectType) Name() string { return t.name }
+
+// Kind returns the GraphQL type kind.
+func (t *InputObjectType) Kind() TypeKind { return TypeKindInputObject }
+
+// Description returns the input object type description.
 func (t *InputObjectType) Description() string { return t.description }
 
 // InputField represents a GraphQL input field.
@@ -137,8 +162,13 @@ type ListType struct {
 	OfType Type
 }
 
-func (t *ListType) Name() string        { return fmt.Sprintf("[%s]", t.OfType.Name()) }
-func (t *ListType) Kind() TypeKind      { return TypeKindList }
+// Name returns the list type name.
+func (t *ListType) Name() string { return fmt.Sprintf("[%s]", t.OfType.Name()) }
+
+// Kind returns the GraphQL type kind.
+func (t *ListType) Kind() TypeKind { return TypeKindList }
+
+// Description returns the list type description.
 func (t *ListType) Description() string { return "" }
 
 // NonNullType represents a GraphQL non-null type.
@@ -146,8 +176,13 @@ type NonNullType struct {
 	OfType Type
 }
 
-func (t *NonNullType) Name() string        { return fmt.Sprintf("%s!", t.OfType.Name()) }
-func (t *NonNullType) Kind() TypeKind      { return TypeKindNonNull }
+// Name returns the non-null type name.
+func (t *NonNullType) Name() string { return fmt.Sprintf("%s!", t.OfType.Name()) }
+
+// Kind returns the GraphQL type kind.
+func (t *NonNullType) Kind() TypeKind { return TypeKindNonNull }
+
+// Description returns the non-null type description.
 func (t *NonNullType) Description() string { return "" }
 
 // Directive represents a GraphQL directive.
@@ -514,7 +549,7 @@ func (s *Schema) executeSelections(ctx context.Context, objectType *ObjectType, 
 			args := resolveArguments(selection.Arguments, variables)
 
 			// Execute resolver
-			value, err := field.Resolver(ctx, parent, args)
+			resolvedValue, err := field.Resolver(ctx, parent, args)
 			if err != nil {
 				errors = append(errors, Error{Message: err.Error(), Path: []interface{}{alias}})
 				result[alias] = nil
@@ -523,11 +558,11 @@ func (s *Schema) executeSelections(ctx context.Context, objectType *ObjectType, 
 
 			// Handle nested selections
 			if len(selection.Selections) > 0 {
-				value, errs := s.resolveValue(ctx, field.Type, value, selection.Selections, variables)
+				value, errs := s.resolveValue(ctx, field.Type, resolvedValue, selection.Selections, variables)
 				result[alias] = value
 				errors = append(errors, errs...)
 			} else {
-				result[alias] = value
+				result[alias] = resolvedValue
 			}
 		}
 	}

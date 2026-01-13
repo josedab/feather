@@ -94,13 +94,13 @@ type Pipeline struct {
 	store    *storage.Store
 
 	// Metrics
-	processCount    int64
-	chunkCount      int64
-	embeddingCount  int64
-	cacheHits       int64
-	cacheMisses     int64
-	processingTime  int64 // microseconds
-	mu              sync.RWMutex
+	processCount   int64
+	chunkCount     int64
+	embeddingCount int64
+	cacheHits      int64
+	cacheMisses    int64
+	processingTime int64 // microseconds
+	mu             sync.RWMutex
 }
 
 // NewPipeline creates a new LLM feature pipeline.
@@ -177,7 +177,7 @@ func (p *Pipeline) Process(ctx context.Context, entityKey, featureName, text str
 
 	embeddings, err := p.embedBatched(ctx, chunkTexts)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrEmbeddingFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrEmbeddingFailed, err)
 	}
 	atomic.AddInt64(&p.embeddingCount, int64(len(embeddings)))
 
@@ -464,11 +464,11 @@ type PipelineStats struct {
 
 // Embedding cache implementation
 type embeddingCache struct {
-	mu       sync.RWMutex
-	entries  map[string]*cacheEntry
-	maxSize  int
-	ttl      time.Duration
-	evictCh  chan struct{}
+	mu      sync.RWMutex
+	entries map[string]*cacheEntry
+	maxSize int
+	ttl     time.Duration
+	evictCh chan struct{}
 }
 
 type cacheEntry struct {

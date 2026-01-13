@@ -2,10 +2,11 @@ package benchmark
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math"
-	"math/rand"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -21,6 +22,8 @@ type Suite struct {
 	config    Config
 	results   map[string]*Result
 	resultsMu sync.RWMutex
+	rng       *deterministicRNG
+	rngMu     sync.Mutex
 }
 
 // Config configures the benchmark suite.
@@ -73,12 +76,52 @@ type Result struct {
 	ThroughputMBps float64       `json:"throughput_mbps"`
 }
 
+type deterministicRNG struct {
+	seed uint64
+}
+
+func newDeterministicRNG() *deterministicRNG {
+	var seed uint64
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err == nil {
+		seed = binary.LittleEndian.Uint64(buf[:])
+	} else {
+		seed = uint64(time.Now().UnixNano()) //nolint:gosec // Non-crypto fallback seed.
+	}
+	if seed == 0 {
+		seed = 1
+	}
+	return &deterministicRNG{seed: seed}
+}
+
+func (r *deterministicRNG) nextUint64() uint64 {
+	const (
+		multiplier = 6364136223846793005
+		increment  = 1442695040888963407
+	)
+	r.seed = r.seed*multiplier + increment
+	return r.seed
+}
+
+func (r *deterministicRNG) Intn(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	return int(r.nextUint64() % uint64(n)) //nolint:gosec // Bound by n.
+}
+
+func (r *deterministicRNG) Float64() float64 {
+	const denom = 1 << 53
+	return float64(r.nextUint64()>>11) / denom
+}
+
 // NewSuite creates a new benchmark suite.
 func NewSuite(store *storage.Store, config Config) *Suite {
 	return &Suite{
 		store:   store,
 		config:  config,
 		results: make(map[string]*Result),
+		rng:     newDeterministicRNG(),
 	}
 }
 
@@ -200,9 +243,9 @@ func (s *Suite) warmup(ctx context.Context) {
 		default:
 		}
 
-		entityKey := fmt.Sprintf("entity:%d", rand.Intn(s.config.NumEntities))
-		features := []string{fmt.Sprintf("feature_%d", rand.Intn(s.config.NumFeatures))}
-		s.store.Get(entityKey, features)
+		entityKey := fmt.Sprintf("entity:%d", s.intn(s.config.NumEntities))
+		features := []string{fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))}
+		_, _ = s.store.Get(entityKey, features)
 	}
 }
 
@@ -229,8 +272,8 @@ func (s *Suite) benchmarkWrite(ctx context.Context) (*Result, error) {
 				default:
 				}
 
-				entityKey := fmt.Sprintf("entity:%d", rand.Intn(s.config.NumEntities))
-				featureName := fmt.Sprintf("feature_%d", rand.Intn(s.config.NumFeatures))
+				entityKey := fmt.Sprintf("entity:%d", s.intn(s.config.NumEntities))
+				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
 				value := s.generateValue()
 
 				opStart := time.Now()
@@ -286,8 +329,8 @@ func (s *Suite) benchmarkRead(ctx context.Context) (*Result, error) {
 				default:
 				}
 
-				entityKey := fmt.Sprintf("entity:%d", rand.Intn(s.config.NumEntities))
-				featureName := fmt.Sprintf("feature_%d", rand.Intn(s.config.NumFeatures))
+				entityKey := fmt.Sprintf("entity:%d", s.intn(s.config.NumEntities))
+				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
 
 				opStart := time.Now()
 				values, err := s.store.Get(entityKey, []string{featureName})
@@ -339,7 +382,7 @@ func (s *Suite) benchmarkBatchRead(ctx context.Context) (*Result, error) {
 				default:
 				}
 
-				entityKey := fmt.Sprintf("entity:%d", rand.Intn(s.config.NumEntities))
+				entityKey := fmt.Sprintf("entity:%d", s.intn(s.config.NumEntities))
 				features := make([]string, batchSize)
 				for j := 0; j < batchSize; j++ {
 					features[j] = fmt.Sprintf("feature_%d", j)
@@ -393,13 +436,13 @@ func (s *Suite) benchmarkMixedWorkload(ctx context.Context) (*Result, error) {
 				default:
 				}
 
-				entityKey := fmt.Sprintf("entity:%d", rand.Intn(s.config.NumEntities))
-				featureName := fmt.Sprintf("feature_%d", rand.Intn(s.config.NumFeatures))
+				entityKey := fmt.Sprintf("entity:%d", s.intn(s.config.NumEntities))
+				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
 
 				var latency time.Duration
 				var err error
 
-				if rand.Float64() < 0.8 {
+				if s.float64() < 0.8 {
 					// Read operation
 					opStart := time.Now()
 					_, err = s.store.Get(entityKey, []string{featureName})
@@ -462,8 +505,8 @@ func (s *Suite) benchmarkConcurrentWrite(ctx context.Context) (*Result, error) {
 				default:
 				}
 
-				entityKey := fmt.Sprintf("hot_entity:%d", rand.Intn(hotEntities))
-				featureName := fmt.Sprintf("feature_%d", rand.Intn(s.config.NumFeatures))
+				entityKey := fmt.Sprintf("hot_entity:%d", s.intn(hotEntities))
+				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
 
 				opStart := time.Now()
 				err := s.store.Put(entityKey, map[string]*domain.FeatureValue{
@@ -513,7 +556,7 @@ func (s *Suite) benchmarkPointInTimeRead(ctx context.Context) (*Result, error) {
 					Version:   int64(j + 1),
 				}
 			}
-			s.store.Put(entityKey, features)
+			_ = s.store.Put(entityKey, features)
 			time.Sleep(time.Millisecond) // Ensure different timestamps
 		}
 	}
@@ -535,9 +578,9 @@ func (s *Suite) benchmarkPointInTimeRead(ctx context.Context) (*Result, error) {
 				default:
 				}
 
-				entityKey := fmt.Sprintf("pit_entity:%d", rand.Intn(100))
-				featureName := fmt.Sprintf("feature_%d", rand.Intn(s.config.NumFeatures))
-				asOf := time.Now().Add(-time.Duration(rand.Intn(10)) * time.Hour)
+				entityKey := fmt.Sprintf("pit_entity:%d", s.intn(100))
+				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
+				asOf := time.Now().Add(-time.Duration(s.intn(10)) * time.Hour)
 
 				opStart := time.Now()
 				values, err := s.store.GetAsOf(entityKey, []string{featureName}, asOf)
@@ -569,9 +612,21 @@ func (s *Suite) generateValue() interface{} {
 	// Generate a value of approximately the configured size
 	data := make([]byte, s.config.DataSize)
 	for i := range data {
-		data[i] = byte('a' + rand.Intn(26))
+		data[i] = byte('a' + s.intn(26))
 	}
 	return string(data)
+}
+
+func (s *Suite) intn(n int) int {
+	s.rngMu.Lock()
+	defer s.rngMu.Unlock()
+	return s.rng.Intn(n)
+}
+
+func (s *Suite) float64() float64 {
+	s.rngMu.Lock()
+	defer s.rngMu.Unlock()
+	return s.rng.Float64()
 }
 
 func (s *Suite) calculateResult(name string, latencies []time.Duration, duration time.Duration, totalBytes, errors int64) *Result {

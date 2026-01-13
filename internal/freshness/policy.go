@@ -17,10 +17,14 @@ var (
 type PolicyType string
 
 const (
-	PolicyTypeFixed     PolicyType = "fixed"     // Fixed TTL
-	PolicyTypeAdaptive  PolicyType = "adaptive"  // ML-driven adaptive TTL
-	PolicyTypeTime      PolicyType = "time"      // Time-of-day based
-	PolicyTypeThreshold PolicyType = "threshold" // Metric threshold based
+	// PolicyTypeFixed uses a static TTL.
+	PolicyTypeFixed PolicyType = "fixed"
+	// PolicyTypeAdaptive uses ML-driven adaptive TTL.
+	PolicyTypeAdaptive PolicyType = "adaptive"
+	// PolicyTypeTime uses time-of-day based TTL.
+	PolicyTypeTime PolicyType = "time"
+	// PolicyTypeThreshold uses metric threshold based TTL.
+	PolicyTypeThreshold PolicyType = "threshold"
 )
 
 // Policy defines a freshness policy for features.
@@ -304,7 +308,7 @@ func (e *PolicyEvaluator) Evaluate(featureName string) *EvaluationResult {
 func (e *PolicyEvaluator) evaluateTimePolicy(policy *Policy) (time.Duration, string) {
 	hour := time.Now().Hour()
 
-	isPeak := false
+	var isPeak bool
 	if policy.Config.PeakHoursStart <= policy.Config.PeakHoursEnd {
 		// Normal case: peak hours don't wrap around midnight
 		isPeak = hour >= policy.Config.PeakHoursStart && hour < policy.Config.PeakHoursEnd

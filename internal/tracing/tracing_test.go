@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+type tracingTestKey struct{}
+
 func TestNew_Disabled(t *testing.T) {
 	ctx := context.Background()
 	tracer, err := New(ctx, Config{
@@ -249,7 +251,7 @@ func (m *mockServerStream) SendMsg(interface{}) error    { return nil }
 func (m *mockServerStream) RecvMsg(interface{}) error    { return nil }
 
 func TestTracedServerStream_Context(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "test", "value")
+	ctx := context.WithValue(context.Background(), tracingTestKey{}, "value")
 	stream := &tracedServerStream{
 		ServerStream: &mockServerStream{ctx: context.Background()},
 		ctx:          ctx,

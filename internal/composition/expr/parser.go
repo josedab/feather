@@ -12,31 +12,57 @@ import (
 type TokenType int
 
 const (
+	// TokenEOF marks the end of input.
 	TokenEOF TokenType = iota
+	// TokenNumber represents a numeric literal.
 	TokenNumber
+	// TokenString represents a string literal.
 	TokenString
+	// TokenIdent represents an identifier.
 	TokenIdent
+	// TokenPlus represents the "+" operator.
 	TokenPlus
+	// TokenMinus represents the "-" operator.
 	TokenMinus
+	// TokenStar represents the "*" operator.
 	TokenStar
+	// TokenSlash represents the "/" operator.
 	TokenSlash
+	// TokenPercent represents the "%" operator.
 	TokenPercent
+	// TokenLParen represents the "(" token.
 	TokenLParen
+	// TokenRParen represents the ")" token.
 	TokenRParen
+	// TokenComma represents the "," token.
 	TokenComma
+	// TokenDot represents the "." token.
 	TokenDot
+	// TokenLT represents the "<" operator.
 	TokenLT
+	// TokenLE represents the "<=" operator.
 	TokenLE
+	// TokenGT represents the ">" operator.
 	TokenGT
+	// TokenGE represents the ">=" operator.
 	TokenGE
+	// TokenEQ represents the "==" operator.
 	TokenEQ
+	// TokenNE represents the "!=" operator.
 	TokenNE
+	// TokenAnd represents the "&&" operator.
 	TokenAnd
+	// TokenOr represents the "||" operator.
 	TokenOr
+	// TokenNot represents the "!" operator.
 	TokenNot
+	// TokenQuestion represents the "?" token.
 	TokenQuestion
+	// TokenColon represents the ":" token.
 	TokenColon
+	// TokenLBracket represents the "[" token.
 	TokenLBracket
+	// TokenRBracket represents the "]" token.
 	TokenRBracket
 )
 
@@ -449,11 +475,17 @@ func (p *Parser) parsePostfix() (Node, error) {
 func (p *Parser) parsePrimary() (Node, error) {
 	switch p.current.Type {
 	case TokenNumber:
-		num := p.current.Literal.(float64)
+		num, ok := p.current.Literal.(float64)
+		if !ok {
+			return nil, fmt.Errorf("expected number at position %d", p.current.Pos)
+		}
 		p.nextToken()
 		return &NumberNode{Value: num}, nil
 	case TokenString:
-		str := p.current.Literal.(string)
+		str, ok := p.current.Literal.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string at position %d", p.current.Pos)
+		}
 		p.nextToken()
 		return &StringNode{Value: str}, nil
 	case TokenIdent:

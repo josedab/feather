@@ -265,7 +265,7 @@ func (m *BudgetManager) GetAlerts(tenantID string, since time.Time) []Alert {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0, len(m.alerts))
 	for _, a := range m.alerts {
 		if tenantID != "" && a.TenantID != tenantID {
 			continue

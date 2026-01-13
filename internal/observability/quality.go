@@ -140,8 +140,8 @@ func (m *QualityMonitor) checkRule(rule *QualityRule, entityID string, value int
 		}
 
 	case "range":
-		min, hasMin := rule.Config["min"].(float64)
-		max, hasMax := rule.Config["max"].(float64)
+		minValue, hasMin := rule.Config["min"].(float64)
+		maxValue, hasMax := rule.Config["max"].(float64)
 
 		var numVal float64
 		switch v := value.(type) {
@@ -155,7 +155,7 @@ func (m *QualityMonitor) checkRule(rule *QualityRule, entityID string, value int
 			return nil
 		}
 
-		if hasMin && numVal < min {
+		if hasMin && numVal < minValue {
 			return &QualityViolation{
 				Rule:      rule.Name,
 				Feature:   rule.Feature,
@@ -166,7 +166,7 @@ func (m *QualityMonitor) checkRule(rule *QualityRule, entityID string, value int
 				Timestamp: time.Now(),
 			}
 		}
-		if hasMax && numVal > max {
+		if hasMax && numVal > maxValue {
 			return &QualityViolation{
 				Rule:      rule.Name,
 				Feature:   rule.Feature,

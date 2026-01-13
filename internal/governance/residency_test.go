@@ -594,22 +594,11 @@ func TestResidencyController_Stats(t *testing.T) {
 
 func TestResidencyPolicy_Fields(t *testing.T) {
 	policy := &ResidencyPolicy{
-		ID:                    "policy-1",
-		Name:                  "GDPR Policy",
-		Description:           "EU data residency",
-		FeaturePattern:        "eu_*",
-		FeatureNames:          []string{"eu_data1", "eu_data2"},
-		Classification:        ClassificationConfidential,
-		Requirement:           RequirementSameZone,
-		AllowedRegions:        []Region{RegionEUWest, RegionEUCentral},
-		AllowedZones:          []RegionZone{ZoneEU},
-		DenyRegions:           []Region{RegionUSEast},
-		AllowCrossRegionRead:  false,
-		AllowCrossRegionWrite: false,
-		AllowExport:           false,
-		TenantIDs:             []string{"tenant-1"},
-		Enabled:               true,
-		Priority:              100,
+		ID:             "policy-1",
+		Name:           "GDPR Policy",
+		Classification: ClassificationConfidential,
+		AllowedRegions: []Region{RegionEUWest, RegionEUCentral},
+		AllowedZones:   []RegionZone{ZoneEU},
 	}
 
 	assert.Equal(t, "policy-1", policy.ID)
@@ -624,11 +613,9 @@ func TestResidencyCheck_Fields(t *testing.T) {
 		Allowed:      false,
 		FeatureName:  "sensitive",
 		SourceRegion: RegionUSEast,
-		TargetRegion: RegionEUWest,
 		MatchedPolicy: &ResidencyPolicy{
 			ID: "policy-1",
 		},
-		Violation: "Region not allowed",
 	}
 
 	assert.False(t, check.Allowed)

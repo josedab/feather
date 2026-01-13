@@ -23,6 +23,7 @@ var (
 // ModelStatus represents the lifecycle status of a model.
 type ModelStatus string
 
+// ModelStatus constants for model lifecycle.
 const (
 	ModelStatusDraft      ModelStatus = "draft"
 	ModelStatusStaging    ModelStatus = "staging"

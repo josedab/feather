@@ -61,7 +61,7 @@ func TestRegisterSLA(t *testing.T) {
 	manager := NewSLAManager(fm, cfg, nil)
 
 	t.Run("valid SLA", func(t *testing.T) {
-		spec := &SLASpec{
+		spec := &Spec{
 			ID:             "test-sla-1",
 			Name:           "Test SLA",
 			FeaturePattern: "user_*",
@@ -87,7 +87,7 @@ func TestRegisterSLA(t *testing.T) {
 	})
 
 	t.Run("duplicate SLA", func(t *testing.T) {
-		spec := &SLASpec{
+		spec := &Spec{
 			ID:             "test-sla-1",
 			Name:           "Duplicate",
 			FeaturePattern: "user_*",
@@ -101,7 +101,7 @@ func TestRegisterSLA(t *testing.T) {
 	})
 
 	t.Run("explicit features", func(t *testing.T) {
-		spec := &SLASpec{
+		spec := &Spec{
 			ID:   "test-sla-explicit",
 			Name: "Explicit Features SLA",
 			Features: []string{
@@ -120,25 +120,25 @@ func TestRegisterSLA(t *testing.T) {
 	t.Run("missing required fields", func(t *testing.T) {
 		tests := []struct {
 			name string
-			spec *SLASpec
+			spec *Spec
 		}{
 			{
 				name: "missing id",
-				spec: &SLASpec{
+				spec: &Spec{
 					FeaturePattern: "user_*",
 					Thresholds:     SLAThresholds{BreachAge: time.Minute},
 				},
 			},
 			{
 				name: "missing features",
-				spec: &SLASpec{
+				spec: &Spec{
 					ID:         "test",
 					Thresholds: SLAThresholds{BreachAge: time.Minute},
 				},
 			},
 			{
 				name: "missing breach threshold",
-				spec: &SLASpec{
+				spec: &Spec{
 					ID:             "test",
 					FeaturePattern: "user_*",
 				},
@@ -160,7 +160,7 @@ func TestUpdateSLA(t *testing.T) {
 	manager := NewSLAManager(fm, cfg, nil)
 
 	// Register initial
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:             "update-test",
 		Name:           "Original Name",
 		FeaturePattern: "user_*",
@@ -180,7 +180,7 @@ func TestUpdateSLA(t *testing.T) {
 	})
 
 	t.Run("update non-existing", func(t *testing.T) {
-		nonExisting := &SLASpec{
+		nonExisting := &Spec{
 			ID:             "non-existing",
 			FeaturePattern: "user_*",
 			Thresholds: SLAThresholds{
@@ -197,7 +197,7 @@ func TestDeleteSLA(t *testing.T) {
 	cfg := DefaultSLAManagerConfig()
 	manager := NewSLAManager(fm, cfg, nil)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:             "delete-test",
 		Name:           "To Delete",
 		FeaturePattern: "user_*",
@@ -228,7 +228,7 @@ func TestListSLAs(t *testing.T) {
 
 	// Register multiple SLAs
 	for i := 0; i < 3; i++ {
-		spec := &SLASpec{
+		spec := &Spec{
 			ID:             "list-test-" + string(rune('0'+i)),
 			Name:           "Test SLA",
 			FeaturePattern: "user_*",
@@ -252,7 +252,7 @@ func TestEvaluateFeature(t *testing.T) {
 	cfg := DefaultSLAManagerConfig()
 	manager := NewSLAManager(fm, cfg, nil)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:       "eval-test",
 		Name:     "Evaluation Test",
 		Features: []string{"test_feature"},
@@ -277,7 +277,7 @@ func TestSeverityDetermination(t *testing.T) {
 	cfg := DefaultSLAManagerConfig()
 	manager := NewSLAManager(fm, cfg, nil)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:       "severity-test",
 		Name:     "Severity Test",
 		Features: []string{"fresh_feature", "stale_feature"},
@@ -310,7 +310,7 @@ func TestWebhookAlert(t *testing.T) {
 	cfg := DefaultSLAManagerConfig()
 	manager := NewSLAManager(fm, cfg, nil)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:       "webhook-test",
 		Name:     "Webhook Test",
 		Features: []string{"webhook_feature"},
@@ -400,7 +400,7 @@ func TestRemediation(t *testing.T) {
 		return nil
 	})
 
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:       "remediation-test",
 		Name:     "Remediation Test",
 		Features: []string{"remediation_feature"},
@@ -522,7 +522,7 @@ func TestMetrics(t *testing.T) {
 	manager := NewSLAManager(fm, cfg, nil)
 
 	// Register SLA
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:             "metrics-test",
 		Name:           "Metrics Test",
 		FeaturePattern: "user_*",
@@ -566,7 +566,7 @@ func TestSLAStateTracking(t *testing.T) {
 	cfg := DefaultSLAManagerConfig()
 	manager := NewSLAManager(fm, cfg, nil)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		ID:       "state-test",
 		Name:     "State Test",
 		Features: []string{"track_feature"},

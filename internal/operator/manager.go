@@ -1,7 +1,9 @@
+// Package operator provides a lightweight control plane for managing Feather deployments.
 package operator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -50,11 +52,11 @@ type Manager struct {
 	config     ManagerConfig
 	controller *Controller
 
-	mu          sync.RWMutex
-	isLeader    bool
-	leaderID    string
-	started     bool
-	startTime   time.Time
+	mu        sync.RWMutex
+	isLeader  bool
+	leaderID  string
+	started   bool
+	startTime time.Time
 
 	metricsServer *http.Server
 	probeServer   *http.Server
@@ -76,7 +78,7 @@ func NewManager(config ManagerConfig) (*Manager, error) {
 	}, nil
 }
 
-// Controller returns the controller.
+// Controller returns the manager controller.
 func (m *Manager) Controller() *Controller {
 	return m.controller
 }
@@ -142,13 +144,17 @@ func (m *Manager) Stop() error {
 	if m.metricsServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		m.metricsServer.Shutdown(ctx)
+		if err := m.metricsServer.Shutdown(ctx); err != nil {
+			return fmt.Errorf("shutting down metrics server: %w", err)
+		}
 	}
 
 	if m.probeServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		m.probeServer.Shutdown(ctx)
+		if err := m.probeServer.Shutdown(ctx); err != nil {
+			return fmt.Errorf("shutting down probe server: %w", err)
+		}
 	}
 
 	return nil
@@ -159,11 +165,16 @@ func (m *Manager) startMetricsServer() {
 	mux.HandleFunc("/metrics", m.handleMetrics)
 
 	m.metricsServer = &http.Server{
-		Addr:    m.config.MetricsAddr,
-		Handler: mux,
+		Addr:              m.config.MetricsAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	m.metricsServer.ListenAndServe()
+	if err := m.metricsServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		m.mu.Lock()
+		m.metricsServer = nil
+		m.mu.Unlock()
+	}
 }
 
 func (m *Manager) startProbeServer() {
@@ -172,39 +183,80 @@ func (m *Manager) startProbeServer() {
 	mux.HandleFunc("/readyz", m.handleReadyz)
 
 	m.probeServer = &http.Server{
-		Addr:    m.config.ProbeAddr,
-		Handler: mux,
+		Addr:              m.config.ProbeAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	m.probeServer.ListenAndServe()
+	if err := m.probeServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		m.mu.Lock()
+		m.probeServer = nil
+		m.mu.Unlock()
+	}
 }
 
 func (m *Manager) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	stats := m.controller.Stats()
 
-	fmt.Fprintf(w, "# HELP feather_operator_reconcile_total Total reconciliations\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_reconcile_total counter\n")
-	fmt.Fprintf(w, "feather_operator_reconcile_total %d\n", stats.ReconcileCount)
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_reconcile_total Total reconciliations\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_reconcile_total counter\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_reconcile_total %d\n", stats.ReconcileCount); err != nil {
+		return
+	}
 
-	fmt.Fprintf(w, "# HELP feather_operator_reconcile_errors_total Total reconciliation errors\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_reconcile_errors_total counter\n")
-	fmt.Fprintf(w, "feather_operator_reconcile_errors_total %d\n", stats.ReconcileErrors)
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_reconcile_errors_total Total reconciliation errors\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_reconcile_errors_total counter\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_reconcile_errors_total %d\n", stats.ReconcileErrors); err != nil {
+		return
+	}
 
-	fmt.Fprintf(w, "# HELP feather_operator_feature_stores Number of FeatureStore resources\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_feature_stores gauge\n")
-	fmt.Fprintf(w, "feather_operator_feature_stores %d\n", stats.FeatureStores)
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_feature_stores Number of FeatureStore resources\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_feature_stores gauge\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_feature_stores %d\n", stats.FeatureStores); err != nil {
+		return
+	}
 
-	fmt.Fprintf(w, "# HELP feather_operator_feature_groups Number of FeatureGroup resources\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_feature_groups gauge\n")
-	fmt.Fprintf(w, "feather_operator_feature_groups %d\n", stats.FeatureGroups)
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_feature_groups Number of FeatureGroup resources\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_feature_groups gauge\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_feature_groups %d\n", stats.FeatureGroups); err != nil {
+		return
+	}
 
-	fmt.Fprintf(w, "# HELP feather_operator_feature_views Number of FeatureView resources\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_feature_views gauge\n")
-	fmt.Fprintf(w, "feather_operator_feature_views %d\n", stats.FeatureViews)
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_feature_views Number of FeatureView resources\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_feature_views gauge\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_feature_views %d\n", stats.FeatureViews); err != nil {
+		return
+	}
 
-	fmt.Fprintf(w, "# HELP feather_operator_reconcile_duration_seconds Average reconcile duration\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_reconcile_duration_seconds gauge\n")
-	fmt.Fprintf(w, "feather_operator_reconcile_duration_seconds %f\n", stats.AvgReconcileTime.Seconds())
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_reconcile_duration_seconds Average reconcile duration\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_reconcile_duration_seconds gauge\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_reconcile_duration_seconds %f\n", stats.AvgReconcileTime.Seconds()); err != nil {
+		return
+	}
 
 	m.mu.RLock()
 	isLeader := m.isLeader
@@ -214,14 +266,20 @@ func (m *Manager) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	if isLeader {
 		leaderVal = 1
 	}
-	fmt.Fprintf(w, "# HELP feather_operator_is_leader Whether this instance is leader\n")
-	fmt.Fprintf(w, "# TYPE feather_operator_is_leader gauge\n")
-	fmt.Fprintf(w, "feather_operator_is_leader %d\n", leaderVal)
+	if _, err := fmt.Fprintf(w, "# HELP feather_operator_is_leader Whether this instance is leader\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "# TYPE feather_operator_is_leader gauge\n"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "feather_operator_is_leader %d\n", leaderVal); err != nil {
+		return
+	}
 }
 
 func (m *Manager) handleHealthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
+	_, _ = w.Write([]byte("ok"))
 }
 
 func (m *Manager) handleReadyz(w http.ResponseWriter, r *http.Request) {
@@ -232,18 +290,18 @@ func (m *Manager) handleReadyz(w http.ResponseWriter, r *http.Request) {
 
 	if !started {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("not started"))
+		_, _ = w.Write([]byte("not started"))
 		return
 	}
 
 	if m.config.LeaderElect && !isLeader {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("not leader"))
+		_, _ = w.Write([]byte("not leader"))
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
+	_, _ = w.Write([]byte("ok"))
 }
 
 func (m *Manager) runLeaderElection(ctx context.Context) {

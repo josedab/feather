@@ -19,6 +19,7 @@ var (
 // FeastValueType represents Feast value types.
 type FeastValueType string
 
+// FeastValueType constants.
 const (
 	FeastTypeBool          FeastValueType = "BOOL"
 	FeastTypeInt32         FeastValueType = "INT32"

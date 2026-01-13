@@ -15,31 +15,40 @@ import (
 
 // Errors returned by the SLA system.
 var (
-	ErrSLANotFound        = errors.New("SLA not found")
-	ErrSLAAlreadyExists   = errors.New("SLA already exists")
-	ErrInvalidSLASpec     = errors.New("invalid SLA specification")
-	ErrFeatureNotTracked  = errors.New("feature not tracked")
-	ErrWebhookFailed      = errors.New("webhook delivery failed")
+	ErrSLANotFound       = errors.New("SLA not found")
+	ErrSLAAlreadyExists  = errors.New("SLA already exists")
+	ErrInvalidSLASpec    = errors.New("invalid SLA specification")
+	ErrFeatureNotTracked = errors.New("feature not tracked")
+	ErrWebhookFailed     = errors.New("webhook delivery failed")
 )
 
 // SLASeverity represents the severity level of an SLA state.
 type SLASeverity string
 
 const (
-	SeverityOK       SLASeverity = "ok"
-	SeverityWarning  SLASeverity = "warning"
+	// SeverityOK indicates a healthy SLA status.
+	SeverityOK SLASeverity = "ok"
+	// SeverityWarning indicates a warning SLA status.
+	SeverityWarning SLASeverity = "warning"
+	// SeverityCritical indicates a critical SLA status.
 	SeverityCritical SLASeverity = "critical"
-	SeverityBreach   SLASeverity = "breach"
+	// SeverityBreach indicates a breached SLA status.
+	SeverityBreach SLASeverity = "breach"
 )
 
 // AlertChannel represents where alerts are sent.
 type AlertChannel string
 
 const (
-	AlertChannelWebhook   AlertChannel = "webhook"
-	AlertChannelSlack     AlertChannel = "slack"
+	// AlertChannelWebhook delivers alerts via webhook.
+	AlertChannelWebhook AlertChannel = "webhook"
+	// AlertChannelSlack delivers alerts via Slack.
+	AlertChannelSlack AlertChannel = "slack"
+	// AlertChannelPagerDuty delivers alerts via PagerDuty.
 	AlertChannelPagerDuty AlertChannel = "pagerduty"
-	AlertChannelEmail     AlertChannel = "email"
+	// AlertChannelEmail delivers alerts via email.
+	AlertChannelEmail AlertChannel = "email"
+	// AlertChannelPrometheus exports alerts to Prometheus.
 	AlertChannelPrometheus AlertChannel = "prometheus"
 )
 
@@ -47,15 +56,20 @@ const (
 type RemediationAction string
 
 const (
-	RemediationNone      RemediationAction = "none"
-	RemediationBackfill  RemediationAction = "backfill"
+	// RemediationNone disables remediation.
+	RemediationNone RemediationAction = "none"
+	// RemediationBackfill triggers backfill remediation.
+	RemediationBackfill RemediationAction = "backfill"
+	// RemediationRecompute triggers recomputation remediation.
 	RemediationRecompute RemediationAction = "recompute"
-	RemediationFallback  RemediationAction = "fallback"
-	RemediationNotify    RemediationAction = "notify"
+	// RemediationFallback triggers fallback remediation.
+	RemediationFallback RemediationAction = "fallback"
+	// RemediationNotify triggers notification remediation.
+	RemediationNotify RemediationAction = "notify"
 )
 
-// SLASpec defines a freshness SLA specification.
-type SLASpec struct {
+// Spec defines a freshness SLA specification.
+type Spec struct {
 	// ID is the unique SLA identifier.
 	ID string `json:"id"`
 
@@ -290,7 +304,7 @@ type SLAManager struct {
 	mu sync.RWMutex
 
 	// SLA registry
-	slas map[string]*SLASpec
+	slas map[string]*Spec
 
 	// Feature to SLA mapping
 	featureSLAs map[string][]string
@@ -366,16 +380,16 @@ func DefaultSLAManagerConfig() SLAManagerConfig {
 
 // SLAManagerMetrics tracks SLA manager performance.
 type SLAManagerMetrics struct {
-	SLAsRegistered      int64   `json:"slas_registered"`
-	FeaturesTracked     int64   `json:"features_tracked"`
-	ChecksPerformed     int64   `json:"checks_performed"`
-	AlertsFired         int64   `json:"alerts_fired"`
-	AlertsResolved      int64   `json:"alerts_resolved"`
-	RemediationsTriggered int64 `json:"remediations_triggered"`
-	RemediationsSucceeded int64 `json:"remediations_succeeded"`
-	RemediationsFailed  int64   `json:"remediations_failed"`
-	CurrentBreaches     int64   `json:"current_breaches"`
-	OverallCompliance   float64 `json:"overall_compliance"`
+	SLAsRegistered        int64   `json:"slas_registered"`
+	FeaturesTracked       int64   `json:"features_tracked"`
+	ChecksPerformed       int64   `json:"checks_performed"`
+	AlertsFired           int64   `json:"alerts_fired"`
+	AlertsResolved        int64   `json:"alerts_resolved"`
+	RemediationsTriggered int64   `json:"remediations_triggered"`
+	RemediationsSucceeded int64   `json:"remediations_succeeded"`
+	RemediationsFailed    int64   `json:"remediations_failed"`
+	CurrentBreaches       int64   `json:"current_breaches"`
+	OverallCompliance     float64 `json:"overall_compliance"`
 }
 
 // NewSLAManager creates a new SLA manager.
@@ -385,7 +399,7 @@ func NewSLAManager(freshnessManager *Manager, config SLAManagerConfig, logger *s
 	}
 
 	return &SLAManager{
-		slas:             make(map[string]*SLASpec),
+		slas:             make(map[string]*Spec),
 		featureSLAs:      make(map[string][]string),
 		states:           make(map[string]map[string]*SLAState),
 		alerts:           make([]*SLAAlert, 0),
@@ -462,7 +476,7 @@ func (m *SLAManager) monitorLoop(ctx context.Context) {
 
 func (m *SLAManager) checkAllSLAs(ctx context.Context) {
 	m.mu.RLock()
-	slas := make([]*SLASpec, 0, len(m.slas))
+	slas := make([]*Spec, 0, len(m.slas))
 	for _, sla := range m.slas {
 		if sla.Enabled {
 			slas = append(slas, sla)
@@ -478,7 +492,7 @@ func (m *SLAManager) checkAllSLAs(ctx context.Context) {
 	m.updateComplianceMetrics()
 }
 
-func (m *SLAManager) checkSLA(ctx context.Context, sla *SLASpec) {
+func (m *SLAManager) checkSLA(ctx context.Context, sla *Spec) {
 	features := m.getFeaturesForSLA(sla)
 
 	for _, feature := range features {
@@ -499,7 +513,7 @@ func (m *SLAManager) checkSLA(ctx context.Context, sla *SLASpec) {
 	}
 }
 
-func (m *SLAManager) getFeaturesForSLA(sla *SLASpec) []string {
+func (m *SLAManager) getFeaturesForSLA(sla *Spec) []string {
 	if len(sla.Features) > 0 {
 		return sla.Features
 	}
@@ -521,7 +535,7 @@ func (m *SLAManager) getFeaturesForSLA(sla *SLASpec) []string {
 	return features
 }
 
-func (m *SLAManager) evaluateFeature(sla *SLASpec, feature string) *SLAState {
+func (m *SLAManager) evaluateFeature(sla *Spec, feature string) *SLAState {
 	state := &SLAState{
 		SLAID:       sla.ID,
 		Feature:     feature,
@@ -563,14 +577,14 @@ func (m *SLAManager) evaluateFeature(sla *SLASpec, feature string) *SLAState {
 
 	// Check stale serve percentage
 	if sla.Thresholds.MaxStalePercent > 0 && state.StaleServePercent > sla.Thresholds.MaxStalePercent {
-		if state.Severity < SeverityWarning {
+		if state.Severity == SeverityOK {
 			state.Severity = SeverityWarning
 		}
 	}
 
 	// Check freshness score
 	if sla.Thresholds.MinFreshnessScore > 0 && state.FreshnessScore < sla.Thresholds.MinFreshnessScore {
-		if state.Severity < SeverityWarning {
+		if state.Severity == SeverityOK {
 			state.Severity = SeverityWarning
 		}
 	}
@@ -578,7 +592,7 @@ func (m *SLAManager) evaluateFeature(sla *SLASpec, feature string) *SLAState {
 	return state
 }
 
-func (m *SLAManager) handleSeverityChange(ctx context.Context, sla *SLASpec, feature string, oldState, newState *SLAState) {
+func (m *SLAManager) handleSeverityChange(ctx context.Context, sla *Spec, feature string, oldState, newState *SLAState) {
 	// Check if we should fire an alert
 	if newState.Severity != SeverityOK {
 		// Check cooldown
@@ -605,7 +619,7 @@ func (m *SLAManager) handleSeverityChange(ctx context.Context, sla *SLASpec, fea
 	}
 }
 
-func (m *SLAManager) createAlert(sla *SLASpec, feature string, state *SLAState) *SLAAlert {
+func (m *SLAManager) createAlert(sla *Spec, feature string, state *SLAState) *SLAAlert {
 	alert := &SLAAlert{
 		ID:       fmt.Sprintf("%s-%s-%d", sla.ID, feature, time.Now().UnixNano()),
 		SLAID:    sla.ID,
@@ -627,7 +641,7 @@ func (m *SLAManager) createAlert(sla *SLASpec, feature string, state *SLAState) 
 	return alert
 }
 
-func (m *SLAManager) fireAlert(ctx context.Context, sla *SLASpec, alert *SLAAlert) {
+func (m *SLAManager) fireAlert(ctx context.Context, sla *Spec, alert *SLAAlert) {
 	m.mu.Lock()
 	m.alerts = append(m.alerts, alert)
 	m.activeAlerts[alert.ID] = alert
@@ -704,7 +718,9 @@ func (m *SLAManager) sendWebhookAlert(ctx context.Context, channel AlertChannelC
 		m.logger.Error("webhook delivery failed", "error", err, "url", channel.URL)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode >= 400 {
 		m.logger.Error("webhook returned error", "status", resp.StatusCode, "url", channel.URL)
@@ -719,6 +735,8 @@ func (m *SLAManager) sendSlackAlert(ctx context.Context, channel AlertChannelCon
 	// Format as Slack message
 	color := "#36a64f" // green
 	switch alert.Severity {
+	case SeverityOK:
+		color = "#36a64f"
 	case SeverityWarning:
 		color = "#ffcc00"
 	case SeverityCritical:
@@ -743,11 +761,17 @@ func (m *SLAManager) sendSlackAlert(ctx context.Context, channel AlertChannelCon
 	}
 
 	if alert.Metrics != nil {
-		payload["attachments"].([]map[string]interface{})[0]["fields"] = append(
-			payload["attachments"].([]map[string]interface{})[0]["fields"].([]map[string]interface{}),
-			map[string]interface{}{"title": "Stale Duration", "value": alert.Metrics.StaleDuration.String(), "short": true},
-			map[string]interface{}{"title": "Freshness Score", "value": fmt.Sprintf("%.1f%%", alert.Metrics.FreshnessScore), "short": true},
-		)
+		attachments, ok := payload["attachments"].([]map[string]interface{})
+		if ok && len(attachments) > 0 {
+			fields, ok := attachments[0]["fields"].([]map[string]interface{})
+			if ok {
+				attachments[0]["fields"] = append(
+					fields,
+					map[string]interface{}{"title": "Stale Duration", "value": alert.Metrics.StaleDuration.String(), "short": true},
+					map[string]interface{}{"title": "Freshness Score", "value": fmt.Sprintf("%.1f%%", alert.Metrics.FreshnessScore), "short": true},
+				)
+			}
+		}
 	}
 
 	data, _ := json.Marshal(payload)
@@ -757,7 +781,14 @@ func (m *SLAManager) sendSlackAlert(ctx context.Context, channel AlertChannelCon
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	m.httpClient.Do(req)
+	resp, err := m.httpClient.Do(req)
+	if err != nil {
+		m.logger.Error("slack delivery failed", "error", err, "url", channel.URL)
+		return
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 }
 
 func (m *SLAManager) sendPagerDutyAlert(ctx context.Context, channel AlertChannelConfig, alert *SLAAlert) {
@@ -767,6 +798,8 @@ func (m *SLAManager) sendPagerDutyAlert(ctx context.Context, channel AlertChanne
 
 	severity := "info"
 	switch alert.Severity {
+	case SeverityOK:
+		severity = "info"
 	case SeverityWarning:
 		severity = "warning"
 	case SeverityCritical:
@@ -796,7 +829,14 @@ func (m *SLAManager) sendPagerDutyAlert(ctx context.Context, channel AlertChanne
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	m.httpClient.Do(req)
+	resp, err := m.httpClient.Do(req)
+	if err != nil {
+		m.logger.Error("pagerduty delivery failed", "error", err, "url", channel.URL)
+		return
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 }
 
 func (m *SLAManager) resolveAlerts(slaID, feature string) {
@@ -822,7 +862,7 @@ func (m *SLAManager) resolveAlerts(slaID, feature string) {
 	}
 }
 
-func (m *SLAManager) triggerRemediation(ctx context.Context, sla *SLASpec, feature string, state *SLAState) {
+func (m *SLAManager) triggerRemediation(ctx context.Context, sla *Spec, feature string, state *SLAState) {
 	action, ok := sla.RemediationConfig.Actions[state.Severity]
 	if !ok || action == RemediationNone {
 		return
@@ -892,7 +932,7 @@ func (m *SLAManager) updateComplianceMetrics() {
 }
 
 // RegisterSLA registers a new SLA.
-func (m *SLAManager) RegisterSLA(spec *SLASpec) error {
+func (m *SLAManager) RegisterSLA(spec *Spec) error {
 	if err := m.validateSLASpec(spec); err != nil {
 		return err
 	}
@@ -926,7 +966,7 @@ func (m *SLAManager) RegisterSLA(spec *SLASpec) error {
 	return nil
 }
 
-func (m *SLAManager) validateSLASpec(spec *SLASpec) error {
+func (m *SLAManager) validateSLASpec(spec *Spec) error {
 	if spec.ID == "" {
 		return fmt.Errorf("%w: id is required", ErrInvalidSLASpec)
 	}
@@ -943,7 +983,7 @@ func (m *SLAManager) validateSLASpec(spec *SLASpec) error {
 }
 
 // UpdateSLA updates an existing SLA.
-func (m *SLAManager) UpdateSLA(spec *SLASpec) error {
+func (m *SLAManager) UpdateSLA(spec *Spec) error {
 	if err := m.validateSLASpec(spec); err != nil {
 		return err
 	}
@@ -979,7 +1019,7 @@ func (m *SLAManager) DeleteSLA(id string) error {
 }
 
 // GetSLA returns an SLA by ID.
-func (m *SLAManager) GetSLA(id string) (*SLASpec, error) {
+func (m *SLAManager) GetSLA(id string) (*Spec, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -991,11 +1031,11 @@ func (m *SLAManager) GetSLA(id string) (*SLASpec, error) {
 }
 
 // ListSLAs returns all SLAs.
-func (m *SLAManager) ListSLAs() []*SLASpec {
+func (m *SLAManager) ListSLAs() []*Spec {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	slas := make([]*SLASpec, 0, len(m.slas))
+	slas := make([]*Spec, 0, len(m.slas))
 	for _, sla := range m.slas {
 		slas = append(slas, sla)
 	}

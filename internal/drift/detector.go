@@ -61,14 +61,16 @@ type FeatureMonitor struct {
 // FeatureType indicates the data type of the feature.
 type FeatureType int
 
+// FeatureType constants.
 const (
 	TypeNumeric FeatureType = iota
 	TypeCategorical
 )
 
 // DriftType indicates the type of drift detected.
-type DriftType int
+type DriftType int //nolint:revive
 
+// DriftType constants.
 const (
 	DriftNone     DriftType = iota
 	DriftKS                 // Kolmogorov-Smirnov
@@ -391,7 +393,7 @@ func (d *Detector) GetAlerts(since time.Time) []Alert {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	var result []Alert
+	result := make([]Alert, 0, len(d.alerts))
 	for _, a := range d.alerts {
 		if a.Timestamp.After(since) {
 			result = append(result, a)
@@ -405,7 +407,7 @@ func (d *Detector) GetMonitorStatus() []MonitorStatus {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	var result []MonitorStatus
+	result := make([]MonitorStatus, 0, len(d.monitors))
 	for _, m := range d.monitors {
 		status := MonitorStatus{
 			Feature:     m.Name,

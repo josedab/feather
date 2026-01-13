@@ -20,6 +20,7 @@ var (
 // InstanceStatus represents the state of an instance.
 type InstanceStatus string
 
+// InstanceStatus constants for provisioning.
 const (
 	InstancePending      InstanceStatus = "pending"
 	InstanceProvisioning InstanceStatus = "provisioning"
@@ -34,6 +35,7 @@ const (
 // InstanceSize defines the compute configuration.
 type InstanceSize string
 
+// InstanceSize constants for provisioning sizes.
 const (
 	SizeXSmall  InstanceSize = "xs"      // 0.5 vCPU, 1GB RAM
 	SizeSmall   InstanceSize = "small"   // 1 vCPU, 2GB RAM
@@ -43,7 +45,7 @@ const (
 	Size2XLarge InstanceSize = "2xlarge" // 16 vCPU, 32GB RAM
 )
 
-// InstanceSizeSpec defines the resources for a size.
+// InstanceSizeSpecs defines the resources for each size.
 var InstanceSizeSpecs = map[InstanceSize]struct {
 	VCPUs        int
 	MemoryGB     int
@@ -213,11 +215,12 @@ func (pm *ProvisioningManager) CreateInstance(req *ProvisioningRequest) (*Instan
 	}
 
 	pm.instances[instanceID] = instance
+	instanceCopy := *instance
 
 	// Simulate async provisioning
 	go pm.provisionInstance(instance)
 
-	return instance, nil
+	return &instanceCopy, nil
 }
 
 func (pm *ProvisioningManager) provisionInstance(instance *Instance) {
@@ -272,7 +275,8 @@ func (pm *ProvisioningManager) GetInstance(id string) (*Instance, error) {
 	if !exists {
 		return nil, ErrInstanceNotFound
 	}
-	return instance, nil
+	instanceCopy := *instance
+	return &instanceCopy, nil
 }
 
 // ListInstances returns instances for an organization.
@@ -283,7 +287,8 @@ func (pm *ProvisioningManager) ListInstances(orgID string) []*Instance {
 	result := make([]*Instance, 0)
 	for _, inst := range pm.instances {
 		if inst.OrganizationID == orgID {
-			result = append(result, inst)
+			copyInstance := *inst
+			result = append(result, &copyInstance)
 		}
 	}
 	return result
@@ -465,7 +470,7 @@ func (pm *ProvisioningManager) GetInstanceMetrics(id string) (*InstanceMetrics, 
 
 	// Return simulated metrics
 	spec := InstanceSizeSpecs[instance.Size]
-	return &InstanceMetrics{
+	metrics := &InstanceMetrics{
 		InstanceID:     id,
 		CPUUtilization: 25.5,
 		MemoryUsedGB:   float64(spec.MemoryGB) * 0.6,
@@ -476,7 +481,9 @@ func (pm *ProvisioningManager) GetInstanceMetrics(id string) (*InstanceMetrics, 
 		StorageUsedGB:  float64(instance.Config.HotStorageGB) * 0.3,
 		StorageTotalGB: float64(instance.Config.HotStorageGB),
 		Timestamp:      time.Now(),
-	}, nil
+	}
+	metricsCopy := *metrics
+	return &metricsCopy, nil
 }
 
 // InstanceMetrics represents instance resource metrics.

@@ -1,6 +1,7 @@
 package saas
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -63,7 +64,7 @@ func TestProvisioningManager_CreateInstance_InvalidRegion(t *testing.T) {
 	}
 
 	_, err := pm.CreateInstance(req)
-	if err != ErrInvalidRegion {
+	if !errors.Is(err, ErrInvalidRegion) {
 		t.Errorf("Expected ErrInvalidRegion, got %v", err)
 	}
 }
@@ -79,7 +80,7 @@ func TestProvisioningManager_CreateInstance_InvalidSize(t *testing.T) {
 	}
 
 	_, err := pm.CreateInstance(req)
-	if err != ErrInvalidInstanceSize {
+	if !errors.Is(err, ErrInvalidInstanceSize) {
 		t.Errorf("Expected ErrInvalidInstanceSize, got %v", err)
 	}
 }
@@ -136,7 +137,7 @@ func TestProvisioningManager_GetInstance_NotFound(t *testing.T) {
 	pm := setupProvisioningManager()
 
 	_, err := pm.GetInstance("nonexistent")
-	if err != ErrInstanceNotFound {
+	if !errors.Is(err, ErrInstanceNotFound) {
 		t.Errorf("Expected ErrInstanceNotFound, got %v", err)
 	}
 }
@@ -213,7 +214,7 @@ func TestProvisioningManager_UpdateInstance_NotFound(t *testing.T) {
 	pm := setupProvisioningManager()
 
 	err := pm.UpdateInstance("nonexistent", InstanceConfig{})
-	if err != ErrInstanceNotFound {
+	if !errors.Is(err, ErrInstanceNotFound) {
 		t.Errorf("Expected ErrInstanceNotFound, got %v", err)
 	}
 }
@@ -254,7 +255,7 @@ func TestProvisioningManager_ResizeInstance_InvalidSize(t *testing.T) {
 	instance, _ := pm.CreateInstance(req)
 
 	err := pm.ResizeInstance(instance.ID, InstanceSize("invalid"))
-	if err != ErrInvalidInstanceSize {
+	if !errors.Is(err, ErrInvalidInstanceSize) {
 		t.Errorf("Expected ErrInvalidInstanceSize, got %v", err)
 	}
 }
@@ -347,7 +348,7 @@ func TestProvisioningManager_TerminateInstance_NotFound(t *testing.T) {
 	pm := setupProvisioningManager()
 
 	err := pm.TerminateInstance("nonexistent")
-	if err != ErrInstanceNotFound {
+	if !errors.Is(err, ErrInstanceNotFound) {
 		t.Errorf("Expected ErrInstanceNotFound, got %v", err)
 	}
 }
@@ -466,7 +467,7 @@ func TestProvisioningManager_GetInstanceMetrics_NotFound(t *testing.T) {
 	pm := setupProvisioningManager()
 
 	_, err := pm.GetInstanceMetrics("nonexistent")
-	if err != ErrInstanceNotFound {
+	if !errors.Is(err, ErrInstanceNotFound) {
 		t.Errorf("Expected ErrInstanceNotFound, got %v", err)
 	}
 }

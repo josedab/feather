@@ -1,6 +1,7 @@
 package ml
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -245,12 +246,12 @@ func TestModelDriftMonitor_OnAlert(t *testing.T) {
 	monitor := NewModelDriftMonitor()
 	monitor.alertCooldown = 0
 
-	called := false
-	var receivedAlert *ModelDriftAlert
+	var called atomic.Bool
+	alertCh := make(chan *ModelDriftAlert, 1)
 
 	monitor.OnAlert(func(alert *ModelDriftAlert) {
-		called = true
-		receivedAlert = alert
+		called.Store(true)
+		alertCh <- alert
 	})
 
 	monitor.RecordAlert(&ModelDriftAlert{
@@ -258,13 +259,11 @@ func TestModelDriftMonitor_OnAlert(t *testing.T) {
 		Feature: "feature-1",
 	})
 
-	// Wait for async callback
-	time.Sleep(10 * time.Millisecond)
-
-	if !called {
+	received := <-alertCh
+	if !called.Load() {
 		t.Error("expected callback to be called")
 	}
-	if receivedAlert == nil || receivedAlert.ModelID != "model-1" {
+	if received == nil || received.ModelID != "model-1" {
 		t.Error("expected correct alert in callback")
 	}
 }

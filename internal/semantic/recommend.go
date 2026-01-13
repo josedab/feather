@@ -47,7 +47,7 @@ type RecommendationConfig struct {
 	ContextWeight       float64 `json:"context_weight"`
 
 	// Collaborative filtering settings
-	MinSimilarUsers      int     `json:"min_similar_users"`
+	MinSimilarUsers         int     `json:"min_similar_users"`
 	UserSimilarityThreshold float64 `json:"user_similarity_threshold"`
 
 	// Content-based settings
@@ -58,20 +58,20 @@ type RecommendationConfig struct {
 	MinPopularityScore  float64 `json:"min_popularity_score"`
 
 	// Context settings
-	UseContextBoost bool    `json:"use_context_boost"`
+	UseContextBoost    bool    `json:"use_context_boost"`
 	ContextBoostFactor float64 `json:"context_boost_factor"`
 
 	// Diversity settings
-	DiversityFactor       float64 `json:"diversity_factor"`
-	MaxSameCategoryRatio  float64 `json:"max_same_category_ratio"`
+	DiversityFactor      float64 `json:"diversity_factor"`
+	MaxSameCategoryRatio float64 `json:"max_same_category_ratio"`
 
 	// Cold start handling
 	ColdStartStrategy string `json:"cold_start_strategy"` // "popularity", "content", "random"
 
 	// General settings
-	DefaultLimit  int           `json:"default_limit"`
-	CacheEnabled  bool          `json:"cache_enabled"`
-	CacheTTL      time.Duration `json:"cache_ttl"`
+	DefaultLimit int           `json:"default_limit"`
+	CacheEnabled bool          `json:"cache_enabled"`
+	CacheTTL     time.Duration `json:"cache_ttl"`
 }
 
 // DefaultRecommendationConfig returns sensible defaults.
@@ -99,35 +99,35 @@ func DefaultRecommendationConfig() RecommendationConfig {
 
 // UserInteractionHistory tracks user interactions with features.
 type UserInteractionHistory struct {
-	UserID            string                       `json:"user_id"`
-	ViewedFeatures    map[string]*FeatureInteraction `json:"viewed_features"`
-	FavoriteFeatures  []string                     `json:"favorite_features"`
-	UsedFeatures      map[string]time.Time         `json:"used_features"`
-	SearchQueries     []string                     `json:"search_queries,omitempty"`
-	PreferredCategories map[string]float64         `json:"preferred_categories"`
-	PreferredDomains    map[string]float64         `json:"preferred_domains"`
-	LastActivity      time.Time                    `json:"last_activity"`
-	InteractionCount  int                          `json:"interaction_count"`
+	UserID              string                         `json:"user_id"`
+	ViewedFeatures      map[string]*FeatureInteraction `json:"viewed_features"`
+	FavoriteFeatures    []string                       `json:"favorite_features"`
+	UsedFeatures        map[string]time.Time           `json:"used_features"`
+	SearchQueries       []string                       `json:"search_queries,omitempty"`
+	PreferredCategories map[string]float64             `json:"preferred_categories"`
+	PreferredDomains    map[string]float64             `json:"preferred_domains"`
+	LastActivity        time.Time                      `json:"last_activity"`
+	InteractionCount    int                            `json:"interaction_count"`
 }
 
 // FeatureInteraction represents an interaction with a feature.
 type FeatureInteraction struct {
-	FeatureID   string    `json:"feature_id"`
-	ViewCount   int       `json:"view_count"`
-	LastViewed  time.Time `json:"last_viewed"`
-	IsFavorite  bool      `json:"is_favorite"`
-	IsUsed      bool      `json:"is_used"`
-	Rating      float64   `json:"rating,omitempty"` // Implicit rating based on interaction
+	FeatureID  string    `json:"feature_id"`
+	ViewCount  int       `json:"view_count"`
+	LastViewed time.Time `json:"last_viewed"`
+	IsFavorite bool      `json:"is_favorite"`
+	IsUsed     bool      `json:"is_used"`
+	Rating     float64   `json:"rating,omitempty"` // Implicit rating based on interaction
 }
 
 // ModelFeatureUsage tracks which features are used by which models.
 type ModelFeatureUsage struct {
-	ModelID         string    `json:"model_id"`
-	ModelName       string    `json:"model_name"`
-	UseCase         string    `json:"use_case"`
-	Features        []string  `json:"features"`
-	Performance     float64   `json:"performance,omitempty"`
-	LastUpdated     time.Time `json:"last_updated"`
+	ModelID     string    `json:"model_id"`
+	ModelName   string    `json:"model_name"`
+	UseCase     string    `json:"use_case"`
+	Features    []string  `json:"features"`
+	Performance float64   `json:"performance,omitempty"`
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 // CollaborativeFilter implements collaborative filtering.
@@ -145,11 +145,10 @@ type ContentBasedFilter struct {
 type PopularityModel struct {
 	mu sync.RWMutex
 
-	viewCounts    map[string]int64
-	usageCounts   map[string]int64
-	trendScores   map[string]float64
-	recentViews   map[string][]time.Time
-	lastComputed  time.Time
+	viewCounts  map[string]int64
+	usageCounts map[string]int64
+	trendScores map[string]float64
+	recentViews map[string][]time.Time
 }
 
 // ContextModel provides context-aware recommendations.
@@ -176,8 +175,8 @@ func NewRecommendationEngine(
 	}
 
 	engine := &RecommendationEngine{
-		discovery:        discovery,
-		indexer:          discovery.indexer,
+		discovery:           discovery,
+		indexer:             discovery.indexer,
 		collaborativeFilter: newCollaborativeFilter(),
 		contentBasedFilter:  newContentBasedFilter(),
 		popularityModel:     newPopularityModel(),
@@ -208,10 +207,10 @@ func newContentBasedFilter() *ContentBasedFilter {
 
 func newPopularityModel() *PopularityModel {
 	return &PopularityModel{
-		viewCounts:   make(map[string]int64),
-		usageCounts:  make(map[string]int64),
-		trendScores:  make(map[string]float64),
-		recentViews:  make(map[string][]time.Time),
+		viewCounts:  make(map[string]int64),
+		usageCounts: make(map[string]int64),
+		trendScores: make(map[string]float64),
+		recentViews: make(map[string][]time.Time),
 	}
 }
 
@@ -256,10 +255,10 @@ type RecommendationRequest struct {
 	UserID string `json:"user_id,omitempty"`
 
 	// Recommendation context
-	UseCase        string   `json:"use_case,omitempty"`
-	Domain         string   `json:"domain,omitempty"`
-	EntityType     string   `json:"entity_type,omitempty"`
-	Category       string   `json:"category,omitempty"`
+	UseCase         string   `json:"use_case,omitempty"`
+	Domain          string   `json:"domain,omitempty"`
+	EntityType      string   `json:"entity_type,omitempty"`
+	Category        string   `json:"category,omitempty"`
 	CurrentFeatures []string `json:"current_features,omitempty"` // Features already used
 
 	// Filters
@@ -273,18 +272,18 @@ type RecommendationRequest struct {
 	DiversityFactor float64 `json:"diversity_factor,omitempty"`
 
 	// Output
-	Limit           int  `json:"limit,omitempty"`
-	IncludeScores   bool `json:"include_scores,omitempty"`
-	IncludeReasons  bool `json:"include_reasons,omitempty"`
+	Limit          int  `json:"limit,omitempty"`
+	IncludeScores  bool `json:"include_scores,omitempty"`
+	IncludeReasons bool `json:"include_reasons,omitempty"`
 }
 
 // Recommendation represents a single recommendation.
 type Recommendation struct {
-	Feature       *EnrichedFeature `json:"feature"`
-	Score         float64          `json:"score"`
+	Feature        *EnrichedFeature      `json:"feature"`
+	Score          float64               `json:"score"`
 	ScoreBreakdown *RecommendationScores `json:"score_breakdown,omitempty"`
-	Reasons       []string         `json:"reasons,omitempty"`
-	Confidence    float64          `json:"confidence"`
+	Reasons        []string              `json:"reasons,omitempty"`
+	Confidence     float64               `json:"confidence"`
 }
 
 // RecommendationScores breaks down the recommendation score.
@@ -353,9 +352,8 @@ func (e *RecommendationEngine) Recommend(ctx context.Context, req Recommendation
 }
 
 func (e *RecommendationEngine) getCandidates(ctx context.Context, req RecommendationRequest, excludeSet map[string]bool) []*EnrichedFeature {
-	var candidates []*EnrichedFeature
-
 	allMetadata := e.indexer.ListMetadata()
+	candidates := make([]*EnrichedFeature, 0, len(allMetadata))
 
 	for _, meta := range allMetadata {
 		if excludeSet[meta.FeatureID] {
@@ -871,7 +869,7 @@ func (e *RecommendationEngine) applyDiversity(recommendations []Recommendation, 
 	categoryCount := make(map[string]int)
 	maxPerCategory := int(float64(req.Limit) * e.config.MaxSameCategoryRatio)
 
-	var diverse []Recommendation
+	diverse := make([]Recommendation, 0, len(recommendations))
 
 	for _, rec := range recommendations {
 		category := rec.Feature.Metadata.Category
@@ -906,9 +904,9 @@ func (e *RecommendationEngine) RecordInteraction(userID, featureID string, inter
 	history, ok := e.userInteractions[userID]
 	if !ok {
 		history = &UserInteractionHistory{
-			UserID:           userID,
-			ViewedFeatures:   make(map[string]*FeatureInteraction),
-			UsedFeatures:     make(map[string]time.Time),
+			UserID:              userID,
+			ViewedFeatures:      make(map[string]*FeatureInteraction),
+			UsedFeatures:        make(map[string]time.Time),
 			PreferredCategories: make(map[string]float64),
 			PreferredDomains:    make(map[string]float64),
 		}
@@ -1109,14 +1107,14 @@ func (e *RecommendationEngine) GetStats() map[string]interface{} {
 	defer e.popularityModel.mu.RUnlock()
 
 	return map[string]interface{}{
-		"user_count":               len(e.userInteractions),
-		"model_count":              len(e.modelFeatures),
-		"tracked_features":         len(e.popularityModel.viewCounts),
-		"user_similarities_count":  len(e.collaborativeFilter.userSimilarities),
-		"use_case_count":           len(e.contextModel.useCaseFeatures),
-		"domain_count":             len(e.contextModel.domainFeatures),
-		"category_count":           len(e.contextModel.categoryFeatures),
-		"config":                   e.config,
+		"user_count":              len(e.userInteractions),
+		"model_count":             len(e.modelFeatures),
+		"tracked_features":        len(e.popularityModel.viewCounts),
+		"user_similarities_count": len(e.collaborativeFilter.userSimilarities),
+		"use_case_count":          len(e.contextModel.useCaseFeatures),
+		"domain_count":            len(e.contextModel.domainFeatures),
+		"category_count":          len(e.contextModel.categoryFeatures),
+		"config":                  e.config,
 	}
 }
 

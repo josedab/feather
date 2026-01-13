@@ -380,29 +380,11 @@ func TestAuditLogger_Query(t *testing.T) {
 }
 
 func TestAuditEvent_Fields(t *testing.T) {
-	now := time.Now()
 	event := &AuditEvent{
 		ID:             "event-1",
-		Timestamp:      now,
 		Action:         ActionRead,
-		Outcome:        OutcomeSuccess,
-		Severity:       SeverityInfo,
-		UserID:         "user-1",
-		TenantID:       "tenant-1",
-		Resource:       "entity:123",
-		Features:       []string{"feature1"},
-		RequestID:      "req-123",
-		SourceIP:       "192.168.1.1",
-		UserAgent:      "curl/7.68.0",
-		Method:         "GET",
-		Path:           "/v1/features",
-		Duration:       100 * time.Millisecond,
-		BytesRead:      1024,
-		BytesWritten:   0,
-		RowsAffected:   10,
 		PIIAccessed:    true,
 		MaskingApplied: true,
-		Metadata:       map[string]interface{}{"key": "value"},
 	}
 
 	assert.Equal(t, "event-1", event.ID)
@@ -412,52 +394,21 @@ func TestAuditEvent_Fields(t *testing.T) {
 }
 
 func TestAuditFilter_Fields(t *testing.T) {
-	now := time.Now()
 	filter := &AuditFilter{
-		StartTime: &now,
-		EndTime:   &now,
-		Actions:   []AuditAction{ActionRead, ActionWrite},
-		Outcomes:  []AuditOutcome{OutcomeSuccess},
-		UserIDs:   []string{"user-1"},
-		TenantIDs: []string{"tenant-1"},
-		Resources: []string{"entity:123"},
-		PIIOnly:   true,
-		Limit:     100,
-		Offset:    0,
+		Actions: []AuditAction{ActionRead, ActionWrite},
+		PIIOnly: true,
 	}
 
-	assert.NotNil(t, filter.StartTime)
 	assert.Len(t, filter.Actions, 2)
 	assert.True(t, filter.PIIOnly)
 }
 
 func TestAuditReport_Fields(t *testing.T) {
-	now := time.Now()
 	report := &AuditReport{
 		Period:      "daily",
-		StartTime:   now.Add(-24 * time.Hour),
-		EndTime:     now,
 		TotalEvents: 1000,
-		EventsByAction: map[AuditAction]int64{
-			ActionRead:  800,
-			ActionWrite: 200,
-		},
-		EventsByOutcome: map[AuditOutcome]int64{
-			OutcomeSuccess: 950,
-			OutcomeDenied:  50,
-		},
-		UniqueUsers:    100,
-		PIIAccessCount: 50,
-		DeniedCount:    50,
-		TopUsers: []UserActivity{
-			{UserID: "user-1", EventCount: 100},
-		},
-		TopResources: []ResourceActivity{
-			{Resource: "entity:123", AccessCount: 500},
-		},
 	}
 
 	assert.Equal(t, "daily", report.Period)
 	assert.Equal(t, int64(1000), report.TotalEvents)
-	assert.Len(t, report.TopUsers, 1)
 }

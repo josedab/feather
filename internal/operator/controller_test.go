@@ -168,9 +168,9 @@ func TestController_FeatureView(t *testing.T) {
 func TestController_Callbacks(t *testing.T) {
 	ctrl := NewController(2)
 
-	storeCalled := false
+	callbackCh := make(chan struct{}, 1)
 	ctrl.OnFeatureStoreChange(func(store *FeatureStore) error {
-		storeCalled = true
+		callbackCh <- struct{}{}
 		return nil
 	})
 
@@ -189,9 +189,9 @@ func TestController_Callbacks(t *testing.T) {
 	}
 
 	ctrl.CreateFeatureStore(store)
-	time.Sleep(100 * time.Millisecond)
-
-	if !storeCalled {
+	select {
+	case <-callbackCh:
+	case <-time.After(200 * time.Millisecond):
 		t.Error("expected store callback to be called")
 	}
 }

@@ -162,7 +162,7 @@ func (idx *Index) Upsert(id string, vector []float32, metadata map[string]interf
 }
 
 // UpsertBatch adds or updates multiple vectors.
-func (idx *Index) UpsertBatch(vectors []VectorRecord) error {
+func (idx *Index) UpsertBatch(vectors []Record) error {
 	for _, v := range vectors {
 		if err := idx.Upsert(v.ID, v.Vector, v.Metadata); err != nil {
 			return fmt.Errorf("upserting %s: %w", v.ID, err)
@@ -219,7 +219,7 @@ func (idx *Index) Delete(id string) error {
 }
 
 // Get retrieves a vector by ID.
-func (idx *Index) Get(id string) (*VectorRecord, error) {
+func (idx *Index) Get(id string) (*Record, error) {
 	vector, exists := idx.hnsw.Get(id)
 	if !exists {
 		return nil, ErrVectorNotFound
@@ -229,7 +229,7 @@ func (idx *Index) Get(id string) (*VectorRecord, error) {
 	metadata := idx.metadata[id]
 	idx.mu.RUnlock()
 
-	return &VectorRecord{
+	return &Record{
 		ID:       id,
 		Vector:   vector,
 		Metadata: metadata,
@@ -241,8 +241,8 @@ func (idx *Index) Size() int {
 	return idx.hnsw.Size()
 }
 
-// VectorRecord represents a vector with metadata.
-type VectorRecord struct {
+// Record represents a vector with metadata.
+type Record struct {
 	ID       string                 `json:"id"`
 	Vector   []float32              `json:"vector"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
@@ -284,7 +284,7 @@ func (s *Store) Save(indexName string) error {
 
 	// Create directory
 	indexDir := filepath.Join(s.dataDir, "vectors", indexName)
-	if err := os.MkdirAll(indexDir, 0755); err != nil {
+	if err := os.MkdirAll(indexDir, 0750); err != nil {
 		return err
 	}
 
@@ -294,7 +294,7 @@ func (s *Store) Save(indexName string) error {
 
 	// Save index config
 	configPath := filepath.Join(indexDir, "config.json")
-	configData, err := json.Marshal(struct {
+	configData, marshalErr := json.Marshal(struct {
 		Name         string       `json:"name"`
 		Dimension    int          `json:"dimension"`
 		DistanceType DistanceType `json:"distance_type"`
@@ -303,18 +303,18 @@ func (s *Store) Save(indexName string) error {
 		Dimension:    idx.Dimension,
 		DistanceType: idx.DistanceType,
 	})
-	if err != nil {
-		return err
+	if marshalErr != nil {
+		return marshalErr
 	}
-	if err := os.WriteFile(configPath, configData, 0644); err != nil {
-		return err
+	if writeErr := os.WriteFile(configPath, configData, 0600); writeErr != nil {
+		return writeErr
 	}
 
 	// Save vectors and metadata
-	var records []VectorRecord
+	records := make([]Record, 0, len(idx.metadata))
 	for id, meta := range idx.metadata {
 		vec, _ := idx.hnsw.Get(id)
-		records = append(records, VectorRecord{
+		records = append(records, Record{
 			ID:       id,
 			Vector:   vec,
 			Metadata: meta,
@@ -329,7 +329,7 @@ func (s *Store) Save(indexName string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dataPath, dataBytes, 0644)
+	return os.WriteFile(dataPath, dataBytes, 0600)
 }
 
 // Load loads an index from disk.
@@ -346,9 +346,9 @@ func (s *Store) Load(indexName string) error {
 
 	// Load config
 	configPath := filepath.Join(indexDir, "config.json")
-	configData, err := os.ReadFile(configPath)
-	if err != nil {
-		return err
+	configData, readErr := os.ReadFile(configPath)
+	if readErr != nil {
+		return readErr
 	}
 
 	var config struct {
@@ -356,8 +356,8 @@ func (s *Store) Load(indexName string) error {
 		Dimension    int          `json:"dimension"`
 		DistanceType DistanceType `json:"distance_type"`
 	}
-	if err := json.Unmarshal(configData, &config); err != nil {
-		return err
+	if unmarshalErr := json.Unmarshal(configData, &config); unmarshalErr != nil {
+		return unmarshalErr
 	}
 
 	// Create index
@@ -376,7 +376,7 @@ func (s *Store) Load(indexName string) error {
 		return err
 	}
 
-	var records []VectorRecord
+	records := make([]Record, 0)
 	if err := json.Unmarshal(dataBytes, &records); err != nil {
 		return err
 	}

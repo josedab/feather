@@ -39,33 +39,35 @@ import (
 
 // Errors returned by the sync engine.
 var (
-	ErrEngineNotRunning   = errors.New("engine not running")
-	ErrJobNotFound        = errors.New("job not found")
-	ErrJobAlreadyExists   = errors.New("job already exists")
-	ErrInvalidJobSpec     = errors.New("invalid job specification")
-	ErrSyncFailed         = errors.New("sync failed")
-	ErrVersionConflict    = errors.New("version conflict")
-	ErrSourceNotFound     = errors.New("source not found")
-	ErrDependencyNotMet   = errors.New("dependency not met")
-	ErrScheduleInvalid    = errors.New("invalid schedule")
+	ErrEngineNotRunning = errors.New("engine not running")
+	ErrJobNotFound      = errors.New("job not found")
+	ErrJobAlreadyExists = errors.New("job already exists")
+	ErrInvalidJobSpec   = errors.New("invalid job specification")
+	ErrSyncFailed       = errors.New("sync failed")
+	ErrVersionConflict  = errors.New("version conflict")
+	ErrSourceNotFound   = errors.New("source not found")
+	ErrDependencyNotMet = errors.New("dependency not met")
+	ErrScheduleInvalid  = errors.New("invalid schedule")
 )
 
 // JobStatus represents the status of a sync job.
 type JobStatus string
 
+// JobStatus constants for sync jobs.
 const (
-	JobStatusPending    JobStatus = "pending"
-	JobStatusScheduled  JobStatus = "scheduled"
-	JobStatusRunning    JobStatus = "running"
-	JobStatusCompleted  JobStatus = "completed"
-	JobStatusFailed     JobStatus = "failed"
-	JobStatusCancelled  JobStatus = "cancelled"
-	JobStatusRetrying   JobStatus = "retrying"
+	JobStatusPending   JobStatus = "pending"
+	JobStatusScheduled JobStatus = "scheduled"
+	JobStatusRunning   JobStatus = "running"
+	JobStatusCompleted JobStatus = "completed"
+	JobStatusFailed    JobStatus = "failed"
+	JobStatusCanceled  JobStatus = "canceled"
+	JobStatusRetrying  JobStatus = "retrying"
 )
 
 // SourceType identifies the source data format.
 type SourceType string
 
+// SourceType constants for offline sync.
 const (
 	SourceTypeParquet SourceType = "parquet"
 	SourceTypeJSON    SourceType = "json"
@@ -78,10 +80,11 @@ const (
 // SyncStrategy determines how updates are applied.
 type SyncStrategy string
 
+// SyncStrategy constants for sync behavior.
 const (
-	SyncStrategyReplace    SyncStrategy = "replace"     // Replace all features
-	SyncStrategyMerge      SyncStrategy = "merge"       // Merge with existing
-	SyncStrategyAppend     SyncStrategy = "append"      // Append only (no updates)
+	SyncStrategyReplace     SyncStrategy = "replace"     // Replace all features
+	SyncStrategyMerge       SyncStrategy = "merge"       // Merge with existing
+	SyncStrategyAppend      SyncStrategy = "append"      // Append only (no updates)
 	SyncStrategyIncremental SyncStrategy = "incremental" // Only sync changes
 )
 
@@ -265,14 +268,14 @@ type JobProgress struct {
 
 // JobExecution represents a single job execution.
 type JobExecution struct {
-	ID            string        `json:"id"`
-	StartedAt     time.Time     `json:"started_at"`
-	CompletedAt   time.Time     `json:"completed_at"`
-	Duration      time.Duration `json:"duration"`
-	Status        JobStatus     `json:"status"`
-	RecordsSync   int64         `json:"records_synced"`
-	Error         string        `json:"error,omitempty"`
-	Version       int64         `json:"version"`
+	ID          string        `json:"id"`
+	StartedAt   time.Time     `json:"started_at"`
+	CompletedAt time.Time     `json:"completed_at"`
+	Duration    time.Duration `json:"duration"`
+	Status      JobStatus     `json:"status"`
+	RecordsSync int64         `json:"records_synced"`
+	Error       string        `json:"error,omitempty"`
+	Version     int64         `json:"version"`
 }
 
 // EngineMetrics tracks engine performance.
@@ -325,7 +328,7 @@ func NewEngine(config Config, store *storage.Store, schema storage.SchemaRegistr
 	}
 
 	// Ensure work directory exists
-	if err := os.MkdirAll(config.WorkDir, 0755); err != nil {
+	if err := os.MkdirAll(config.WorkDir, 0750); err != nil {
 		return nil, fmt.Errorf("creating work directory: %w", err)
 	}
 
@@ -374,7 +377,7 @@ func (e *Engine) Stop() error {
 	// Cancel all running jobs
 	for id, cancel := range e.running {
 		cancel()
-		e.logger.Info("cancelled running job", "job_id", id)
+		e.logger.Info("canceled running job", "job_id", id)
 	}
 	e.mu.Unlock()
 
@@ -719,7 +722,9 @@ func (e *Engine) syncFromJSON(ctx context.Context, job *Job) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("opening source: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	decoder := json.NewDecoder(file)
 	var records []map[string]interface{}
@@ -727,7 +732,9 @@ func (e *Engine) syncFromJSON(ctx context.Context, job *Job) (int64, error) {
 	// Try to decode as array first
 	if err := decoder.Decode(&records); err != nil {
 		// Try as newline-delimited JSON
-		file.Seek(0, 0)
+		if _, err := file.Seek(0, 0); err != nil {
+			return 0, fmt.Errorf("rewinding source: %w", err)
+		}
 		decoder = json.NewDecoder(file)
 		records = make([]map[string]interface{}, 0)
 
@@ -850,7 +857,7 @@ func (e *Engine) processBatch(ctx context.Context, job *Job, records []map[strin
 		}
 
 		// Extract timestamp
-		var timestamp int64 = time.Now().UnixNano()
+		timestamp := time.Now().UnixNano()
 		if job.Spec.TimestampColumn != "" {
 			if ts, ok := record[job.Spec.TimestampColumn]; ok {
 				switch t := ts.(type) {
@@ -941,10 +948,10 @@ func (e *Engine) CancelJob(id string) error {
 		delete(e.running, id)
 	}
 
-	job.Status = JobStatusCancelled
+	job.Status = JobStatusCanceled
 	job.UpdatedAt = time.Now()
 
-	e.logger.Info("cancelled sync job", "job_id", id)
+	e.logger.Info("canceled sync job", "job_id", id)
 	return nil
 }
 
@@ -954,12 +961,12 @@ func (e *Engine) Metrics() EngineMetrics {
 	defer e.mu.RUnlock()
 
 	return EngineMetrics{
-		JobsCreated:   atomic.LoadInt64(&e.metrics.JobsCreated),
-		JobsCompleted: atomic.LoadInt64(&e.metrics.JobsCompleted),
-		JobsFailed:    atomic.LoadInt64(&e.metrics.JobsFailed),
-		RecordsSynced: atomic.LoadInt64(&e.metrics.RecordsSynced),
+		JobsCreated:    atomic.LoadInt64(&e.metrics.JobsCreated),
+		JobsCompleted:  atomic.LoadInt64(&e.metrics.JobsCompleted),
+		JobsFailed:     atomic.LoadInt64(&e.metrics.JobsFailed),
+		RecordsSynced:  atomic.LoadInt64(&e.metrics.RecordsSynced),
 		BytesProcessed: atomic.LoadInt64(&e.metrics.BytesProcessed),
-		ActiveJobs:    len(e.running),
+		ActiveJobs:     len(e.running),
 	}
 }
 
@@ -1025,7 +1032,7 @@ func (e *Engine) WriteManifest(path string, manifest *ManifestFile) error {
 	}
 
 	manifestPath := filepath.Join(path, "_manifest.json")
-	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, data, 0600); err != nil {
 		return fmt.Errorf("writing manifest: %w", err)
 	}
 

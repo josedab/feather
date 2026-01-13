@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -15,7 +14,6 @@ type Dashboard struct {
 	config    Config
 	alerts    *AlertManager
 	analytics *AnalyticsCollector
-	mu        sync.RWMutex
 }
 
 // Config configures the dashboard.
@@ -109,19 +107,19 @@ func (d *Dashboard) RegisterRoutes(mux *http.ServeMux) {
 
 // OverviewResponse provides dashboard overview data.
 type OverviewResponse struct {
-	TotalFeatures   int                    `json:"total_features"`
-	TotalGroups     int                    `json:"total_groups"`
-	HealthStatus    string                 `json:"health_status"`
-	ActiveAlerts    int                    `json:"active_alerts"`
-	DriftDetected   int                    `json:"drift_detected"`
-	StaleFeatures   int                    `json:"stale_features"`
-	RequestsPerSec  float64                `json:"requests_per_sec"`
-	AvgLatencyMs    float64                `json:"avg_latency_ms"`
-	CacheHitRate    float64                `json:"cache_hit_rate"`
-	StorageUsedGB   float64                `json:"storage_used_gb"`
-	LastUpdated     time.Time              `json:"last_updated"`
-	RecentActivity  []ActivityItem         `json:"recent_activity"`
-	SystemMetrics   map[string]interface{} `json:"system_metrics"`
+	TotalFeatures  int                    `json:"total_features"`
+	TotalGroups    int                    `json:"total_groups"`
+	HealthStatus   string                 `json:"health_status"`
+	ActiveAlerts   int                    `json:"active_alerts"`
+	DriftDetected  int                    `json:"drift_detected"`
+	StaleFeatures  int                    `json:"stale_features"`
+	RequestsPerSec float64                `json:"requests_per_sec"`
+	AvgLatencyMs   float64                `json:"avg_latency_ms"`
+	CacheHitRate   float64                `json:"cache_hit_rate"`
+	StorageUsedGB  float64                `json:"storage_used_gb"`
+	LastUpdated    time.Time              `json:"last_updated"`
+	RecentActivity []ActivityItem         `json:"recent_activity"`
+	SystemMetrics  map[string]interface{} `json:"system_metrics"`
 }
 
 // ActivityItem represents a recent activity.
@@ -318,19 +316,19 @@ func (d *Dashboard) getFeatureList(search, group, driftStatus string) []FeatureL
 
 // FeatureDetail provides detailed feature information.
 type FeatureDetail struct {
-	Name           string                 `json:"name"`
-	Group          string                 `json:"group"`
-	DataType       string                 `json:"data_type"`
-	Description    string                 `json:"description"`
-	Tags           []string               `json:"tags"`
-	Schema         map[string]interface{} `json:"schema"`
-	Statistics     *FeatureStatistics     `json:"statistics"`
-	DriftInfo      *DriftInfo             `json:"drift_info"`
-	FreshnessInfo  *FreshnessInfo         `json:"freshness_info"`
-	UsageInfo      *UsageInfo             `json:"usage_info"`
-	Lineage        interface{}            `json:"lineage,omitempty"`
-	RecentValues   []RecentValue          `json:"recent_values"`
-	RelatedFeatures []string              `json:"related_features"`
+	Name            string                 `json:"name"`
+	Group           string                 `json:"group"`
+	DataType        string                 `json:"data_type"`
+	Description     string                 `json:"description"`
+	Tags            []string               `json:"tags"`
+	Schema          map[string]interface{} `json:"schema"`
+	Statistics      *FeatureStatistics     `json:"statistics"`
+	DriftInfo       *DriftInfo             `json:"drift_info"`
+	FreshnessInfo   *FreshnessInfo         `json:"freshness_info"`
+	UsageInfo       *UsageInfo             `json:"usage_info"`
+	Lineage         interface{}            `json:"lineage,omitempty"`
+	RecentValues    []RecentValue          `json:"recent_values"`
+	RelatedFeatures []string               `json:"related_features"`
 }
 
 // FeatureStatistics contains feature statistics.
@@ -349,13 +347,13 @@ type FeatureStatistics struct {
 
 // DriftInfo contains drift detection information.
 type DriftInfo struct {
-	Status          string    `json:"status"`
-	Score           float64   `json:"score"`
-	Threshold       float64   `json:"threshold"`
-	DetectedAt      time.Time `json:"detected_at,omitempty"`
-	ReferenceWindow string    `json:"reference_window"`
-	CurrentWindow   string    `json:"current_window"`
-	Method          string    `json:"method"`
+	Status          string       `json:"status"`
+	Score           float64      `json:"score"`
+	Threshold       float64      `json:"threshold"`
+	DetectedAt      time.Time    `json:"detected_at,omitempty"`
+	ReferenceWindow string       `json:"reference_window"`
+	CurrentWindow   string       `json:"current_window"`
+	Method          string       `json:"method"`
 	History         []DriftPoint `json:"history"`
 }
 
@@ -378,11 +376,11 @@ type FreshnessInfo struct {
 
 // UsageInfo contains feature usage information.
 type UsageInfo struct {
-	TotalRequests   int64              `json:"total_requests"`
-	RequestsPerHour float64            `json:"requests_per_hour"`
-	UniqueEntities  int64              `json:"unique_entities"`
-	TopConsumers    []ConsumerInfo     `json:"top_consumers"`
-	UsageByDay      []DailyUsage       `json:"usage_by_day"`
+	TotalRequests   int64          `json:"total_requests"`
+	RequestsPerHour float64        `json:"requests_per_hour"`
+	UniqueEntities  int64          `json:"unique_entities"`
+	TopConsumers    []ConsumerInfo `json:"top_consumers"`
+	UsageByDay      []DailyUsage   `json:"usage_by_day"`
 }
 
 // ConsumerInfo identifies a feature consumer.
@@ -547,7 +545,9 @@ func (d *Dashboard) handleFeatureLineage(w http.ResponseWriter, r *http.Request)
 
 	if d.config.Lineage != nil {
 		if l, err := d.config.Lineage.GetLineage(name); err == nil {
-			lineage = l.(map[string]interface{})
+			if lineageMap, ok := l.(map[string]interface{}); ok {
+				lineage = lineageMap
+			}
 		}
 	}
 
@@ -556,10 +556,10 @@ func (d *Dashboard) handleFeatureLineage(w http.ResponseWriter, r *http.Request)
 
 func (d *Dashboard) handleDriftOverview(w http.ResponseWriter, r *http.Request) {
 	overview := map[string]interface{}{
-		"total_monitored":  0,
-		"drifted_count":    0,
-		"warning_count":    0,
-		"healthy_count":    0,
+		"total_monitored": 0,
+		"drifted_count":   0,
+		"warning_count":   0,
+		"healthy_count":   0,
 		"features_by_status": map[string][]string{
 			"drifted": {},
 			"warning": {},
@@ -709,7 +709,9 @@ func (d *Dashboard) handleAnalytics(w http.ResponseWriter, r *http.Request) {
 
 func (d *Dashboard) handleDashboardIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(dashboardHTML))
+	if _, err := w.Write([]byte(dashboardHTML)); err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
+	}
 }
 
 func (d *Dashboard) handleDashboardStatic(w http.ResponseWriter, r *http.Request) {
@@ -721,12 +723,16 @@ func (d *Dashboard) handleDashboardStatic(w http.ResponseWriter, r *http.Request
 
 	// Serve static files or return index for SPA routing
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(dashboardHTML))
+	if _, err := w.Write([]byte(dashboardHTML)); err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 // Dashboard HTML template

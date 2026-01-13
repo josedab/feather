@@ -76,21 +76,22 @@ func DefaultNLQueryConfig() NLQueryConfig {
 // QueryIntent represents the detected intent of a query.
 type QueryIntent string
 
+// Query intent constants for natural language classification.
 const (
-	IntentSearch       QueryIntent = "search"        // Find features matching criteria
-	IntentSimilar      QueryIntent = "similar"       // Find similar features
-	IntentRecommend    QueryIntent = "recommend"     // Get recommendations
-	IntentExplain      QueryIntent = "explain"       // Explain a feature
-	IntentCompare      QueryIntent = "compare"       // Compare features
-	IntentList         QueryIntent = "list"          // List features
-	IntentCount        QueryIntent = "count"         // Count features
-	IntentFilter       QueryIntent = "filter"        // Filter by criteria
-	IntentRelated      QueryIntent = "related"       // Find related features
-	IntentTrending     QueryIntent = "trending"      // Find trending/popular features
-	IntentRecent       QueryIntent = "recent"        // Find recently updated
-	IntentQuality      QueryIntent = "quality"       // Find high quality features
-	IntentOwned        QueryIntent = "owned"         // Find features by owner
-	IntentUnknown      QueryIntent = "unknown"       // Unable to determine
+	IntentSearch    QueryIntent = "search"    // Find features matching criteria
+	IntentSimilar   QueryIntent = "similar"   // Find similar features
+	IntentRecommend QueryIntent = "recommend" // Get recommendations
+	IntentExplain   QueryIntent = "explain"   // Explain a feature
+	IntentCompare   QueryIntent = "compare"   // Compare features
+	IntentList      QueryIntent = "list"      // List features
+	IntentCount     QueryIntent = "count"     // Count features
+	IntentFilter    QueryIntent = "filter"    // Filter by criteria
+	IntentRelated   QueryIntent = "related"   // Find related features
+	IntentTrending  QueryIntent = "trending"  // Find trending/popular features
+	IntentRecent    QueryIntent = "recent"    // Find recently updated
+	IntentQuality   QueryIntent = "quality"   // Find high quality features
+	IntentOwned     QueryIntent = "owned"     // Find features by owner
+	IntentUnknown   QueryIntent = "unknown"   // Unable to determine
 )
 
 // ParsedQuery represents a parsed natural language query.
@@ -137,8 +138,8 @@ type ExtractedEntities struct {
 	UseCases    []string `json:"use_cases,omitempty"`
 
 	// Quality/freshness
-	MinQuality   *float32 `json:"min_quality,omitempty"`
-	Freshness    []string `json:"freshness,omitempty"`
+	MinQuality *float32 `json:"min_quality,omitempty"`
+	Freshness  []string `json:"freshness,omitempty"`
 
 	// Time references
 	TimeReference *TimeReference `json:"time_reference,omitempty"`
@@ -489,6 +490,7 @@ func (e *NLQueryEngine) parseRules(query string) (*ParsedQuery, error) {
 	return parsed, nil
 }
 
+// Classify determines the most likely intent for a query string.
 func (c *IntentClassifier) Classify(query string) (QueryIntent, float64) {
 	query = strings.ToLower(query)
 
@@ -533,6 +535,7 @@ func (c *IntentClassifier) Classify(query string) (QueryIntent, float64) {
 	return bestIntent, bestScore
 }
 
+// Extract parses entities from a query string.
 func (e *EntityExtractor) Extract(query string) *ExtractedEntities {
 	entities := &ExtractedEntities{
 		Keywords: make([]string, 0),
@@ -850,12 +853,11 @@ func (e *NLQueryEngine) generateInterpretation(intent QueryIntent, entities *Ext
 }
 
 func (e *NLQueryEngine) generateAlternatives(query string, mainIntent QueryIntent, entities *ExtractedEntities) []AlternativeInterpretation {
-	var alternatives []AlternativeInterpretation
-
 	// Generate alternative intents
 	allIntents := []QueryIntent{
 		IntentSearch, IntentSimilar, IntentRecommend, IntentList, IntentTrending,
 	}
+	alternatives := make([]AlternativeInterpretation, 0, len(allIntents)-1)
 
 	for _, intent := range allIntents {
 		if intent == mainIntent {
@@ -1084,11 +1086,11 @@ type NLQueryResult struct {
 	ResultType string `json:"result_type"`
 
 	// Results (one of these will be populated)
-	DiscoveryResult  *DiscoveryResult      `json:"discovery_result,omitempty"`
-	SimilarFeatures  []DiscoveredFeature   `json:"similar_features,omitempty"`
-	Explanation      *FeatureExplanation   `json:"explanation,omitempty"`
-	TrendingFeatures []*FeatureNode        `json:"trending_features,omitempty"`
-	Count            int                   `json:"count,omitempty"`
+	DiscoveryResult  *DiscoveryResult    `json:"discovery_result,omitempty"`
+	SimilarFeatures  []DiscoveredFeature `json:"similar_features,omitempty"`
+	Explanation      *FeatureExplanation `json:"explanation,omitempty"`
+	TrendingFeatures []*FeatureNode      `json:"trending_features,omitempty"`
+	Count            int                 `json:"count,omitempty"`
 
 	// Metadata
 	ResponseTime int64     `json:"response_time_ms"`

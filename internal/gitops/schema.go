@@ -212,7 +212,7 @@ func (l *SchemaLoader) LoadAllDefinitions(pattern string) ([]*FeatureDefinition,
 		return nil, fmt.Errorf("glob pattern: %w", err)
 	}
 
-	var definitions []*FeatureDefinition
+	definitions := make([]*FeatureDefinition, 0, len(matches))
 	for _, match := range matches {
 		relPath, err := filepath.Rel(l.basePath, match)
 		if err != nil {
@@ -284,7 +284,7 @@ func (l *SchemaLoader) SaveDefinition(def *FeatureDefinition, filePath string) e
 
 	// Ensure directory exists
 	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
 	}
 
@@ -305,7 +305,7 @@ func (l *SchemaLoader) SaveDefinition(def *FeatureDefinition, filePath string) e
 		return fmt.Errorf("marshaling: %w", err)
 	}
 
-	if err := os.WriteFile(fullPath, data, 0644); err != nil {
+	if err := os.WriteFile(fullPath, data, 0600); err != nil {
 		return fmt.Errorf("writing file: %w", err)
 	}
 

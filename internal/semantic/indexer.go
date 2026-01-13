@@ -421,26 +421,26 @@ func (i *EnhancedIndexer) GetMostPopular(limit int) []*FeatureMetadata {
 		score float64
 	}
 
-	var scored_list []scored
+	scoredList := make([]scored, 0, len(i.metadata))
 	for id, meta := range i.metadata {
 		usage := i.usage[id]
 		var score float64
 		if usage != nil {
 			score = usage.PopularityScore
 		}
-		scored_list = append(scored_list, scored{meta: meta, score: score})
+		scoredList = append(scoredList, scored{meta: meta, score: score})
 	}
 
-	sort.Slice(scored_list, func(a, b int) bool {
-		return scored_list[a].score > scored_list[b].score
+	sort.Slice(scoredList, func(a, b int) bool {
+		return scoredList[a].score > scoredList[b].score
 	})
 
-	if len(scored_list) > limit {
-		scored_list = scored_list[:limit]
+	if len(scoredList) > limit {
+		scoredList = scoredList[:limit]
 	}
 
-	result := make([]*FeatureMetadata, len(scored_list))
-	for idx, s := range scored_list {
+	result := make([]*FeatureMetadata, len(scoredList))
+	for idx, s := range scoredList {
 		result[idx] = s.meta
 	}
 	return result

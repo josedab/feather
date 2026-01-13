@@ -1,3 +1,4 @@
+// Package ml provides connectors to external ML model serving systems.
 package ml
 
 import (
@@ -125,10 +126,12 @@ func NewBaseConnector(config ConnectorConfig) *BaseConnector {
 	}
 }
 
+// Name returns the connector name.
 func (c *BaseConnector) Name() string {
 	return c.config.Name
 }
 
+// IsConnected reports whether the connector is currently connected.
 func (c *BaseConnector) IsConnected() bool {
 	c.connectedMu.RLock()
 	defer c.connectedMu.RUnlock()
@@ -141,6 +144,7 @@ func (c *BaseConnector) setConnected(connected bool) {
 	c.connected = connected
 }
 
+// GetFeatures retrieves feature values for an entity from the feature store.
 func (c *BaseConnector) GetFeatures(ctx context.Context, entityID string, featureNames []string) (map[string]interface{}, error) {
 	if c.config.Store == nil {
 		return nil, fmt.Errorf("store not configured")
@@ -159,6 +163,7 @@ func (c *BaseConnector) GetFeatures(ctx context.Context, entityID string, featur
 	return result, nil
 }
 
+// BatchGetFeatures retrieves feature values for multiple entities.
 func (c *BaseConnector) BatchGetFeatures(ctx context.Context, entityIDs []string, featureNames []string) ([]map[string]interface{}, error) {
 	results := make([]map[string]interface{}, len(entityIDs))
 
@@ -202,7 +207,7 @@ func (c *BaseConnector) doRequest(ctx context.Context, method, url string, body 
 		}
 
 		if resp.StatusCode >= 500 {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			lastErr = fmt.Errorf("server error: %d", resp.StatusCode)
 			continue
 		}
@@ -234,10 +239,12 @@ func NewTensorFlowConnector(config TensorFlowConfig) *TensorFlowConnector {
 	}
 }
 
+// Type returns the connector type identifier.
 func (c *TensorFlowConnector) Type() string {
 	return "tensorflow"
 }
 
+// Connect establishes a connection to the TensorFlow Serving endpoint.
 func (c *TensorFlowConnector) Connect(ctx context.Context) error {
 	// Test connection by checking model status
 	url := fmt.Sprintf("%s%s", c.config.Endpoint, "/v1/models")
@@ -245,7 +252,9 @@ func (c *TensorFlowConnector) Connect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("connecting to TensorFlow Serving: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -255,11 +264,13 @@ func (c *TensorFlowConnector) Connect(ctx context.Context) error {
 	return nil
 }
 
+// Disconnect marks the connector as disconnected.
 func (c *TensorFlowConnector) Disconnect(ctx context.Context) error {
 	c.setConnected(false)
 	return nil
 }
 
+// Predict performs a prediction request against TensorFlow Serving.
 func (c *TensorFlowConnector) Predict(ctx context.Context, req *PredictRequest) (*PredictResponse, error) {
 	if !c.IsConnected() {
 		return nil, fmt.Errorf("not connected")
@@ -267,22 +278,19 @@ func (c *TensorFlowConnector) Predict(ctx context.Context, req *PredictRequest) 
 
 	// Get features if not provided
 	features := req.Features
-	if features == nil && req.EntityID != "" && c.config.Store != nil {
-		// Get all features for the entity
-		featureNames := make([]string, 0)
+	if features == nil {
+		features = make(map[string]interface{})
+	}
+	if len(features) > 0 && req.EntityID != "" && c.config.Store != nil {
+		featureNames := make([]string, 0, len(features))
 		for name := range features {
 			featureNames = append(featureNames, name)
 		}
-		if len(featureNames) == 0 {
-			// If no feature names specified, we can't auto-fetch
-			features = make(map[string]interface{})
-		} else {
-			var err error
-			features, err = c.GetFeatures(ctx, req.EntityID, featureNames)
-			if err != nil {
-				return nil, fmt.Errorf("fetching features: %w", err)
-			}
+		fetched, err := c.GetFeatures(ctx, req.EntityID, featureNames)
+		if err != nil {
+			return nil, fmt.Errorf("fetching features: %w", err)
 		}
+		features = fetched
 	}
 
 	// Build TensorFlow Serving request
@@ -305,7 +313,9 @@ func (c *TensorFlowConnector) Predict(ctx context.Context, req *PredictRequest) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -326,6 +336,7 @@ func (c *TensorFlowConnector) Predict(ctx context.Context, req *PredictRequest) 
 	}, nil
 }
 
+// BatchPredict performs batch predictions against TensorFlow Serving.
 func (c *TensorFlowConnector) BatchPredict(ctx context.Context, req *BatchPredictRequest) (*BatchPredictResponse, error) {
 	if !c.IsConnected() {
 		return nil, fmt.Errorf("not connected")
@@ -364,7 +375,9 @@ func (c *TensorFlowConnector) BatchPredict(ctx context.Context, req *BatchPredic
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -410,10 +423,12 @@ func NewMLflowConnector(config MLflowConfig) *MLflowConnector {
 	}
 }
 
+// Type returns the connector type identifier.
 func (c *MLflowConnector) Type() string {
 	return "mlflow"
 }
 
+// Connect establishes a connection to the MLflow tracking server.
 func (c *MLflowConnector) Connect(ctx context.Context) error {
 	// Test connection to MLflow tracking server
 	url := fmt.Sprintf("%s/api/2.0/mlflow/experiments/list", c.trackingURI)
@@ -421,7 +436,9 @@ func (c *MLflowConnector) Connect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("connecting to MLflow: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -431,11 +448,13 @@ func (c *MLflowConnector) Connect(ctx context.Context) error {
 	return nil
 }
 
+// Disconnect marks the connector as disconnected.
 func (c *MLflowConnector) Disconnect(ctx context.Context) error {
 	c.setConnected(false)
 	return nil
 }
 
+// Predict performs a prediction request against MLflow serving.
 func (c *MLflowConnector) Predict(ctx context.Context, req *PredictRequest) (*PredictResponse, error) {
 	if !c.IsConnected() {
 		return nil, fmt.Errorf("not connected")
@@ -465,7 +484,9 @@ func (c *MLflowConnector) Predict(ctx context.Context, req *PredictRequest) (*Pr
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -486,6 +507,7 @@ func (c *MLflowConnector) Predict(ctx context.Context, req *PredictRequest) (*Pr
 	}, nil
 }
 
+// BatchPredict performs batch predictions against MLflow serving.
 func (c *MLflowConnector) BatchPredict(ctx context.Context, req *BatchPredictRequest) (*BatchPredictResponse, error) {
 	if !c.IsConnected() {
 		return nil, fmt.Errorf("not connected")
@@ -516,7 +538,9 @@ func (c *MLflowConnector) BatchPredict(ctx context.Context, req *BatchPredictReq
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -560,10 +584,12 @@ func NewSageMakerConnector(config SageMakerConfig) *SageMakerConnector {
 	}
 }
 
+// Type returns the connector type identifier.
 func (c *SageMakerConnector) Type() string {
 	return "sagemaker"
 }
 
+// Connect validates the SageMaker endpoint configuration.
 func (c *SageMakerConnector) Connect(ctx context.Context) error {
 	// SageMaker connection is stateless, just validate config
 	if c.region == "" {
@@ -576,11 +602,13 @@ func (c *SageMakerConnector) Connect(ctx context.Context) error {
 	return nil
 }
 
+// Disconnect marks the connector as disconnected.
 func (c *SageMakerConnector) Disconnect(ctx context.Context) error {
 	c.setConnected(false)
 	return nil
 }
 
+// Predict performs a prediction request against SageMaker.
 func (c *SageMakerConnector) Predict(ctx context.Context, req *PredictRequest) (*PredictResponse, error) {
 	if !c.IsConnected() {
 		return nil, fmt.Errorf("not connected")
@@ -604,7 +632,9 @@ func (c *SageMakerConnector) Predict(ctx context.Context, req *PredictRequest) (
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -625,6 +655,7 @@ func (c *SageMakerConnector) Predict(ctx context.Context, req *PredictRequest) (
 	}, nil
 }
 
+// BatchPredict performs batch predictions against SageMaker.
 func (c *SageMakerConnector) BatchPredict(ctx context.Context, req *BatchPredictRequest) (*BatchPredictResponse, error) {
 	if !c.IsConnected() {
 		return nil, fmt.Errorf("not connected")
@@ -642,7 +673,9 @@ func (c *SageMakerConnector) BatchPredict(ctx context.Context, req *BatchPredict
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {

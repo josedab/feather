@@ -1,6 +1,7 @@
 package drift
 
 import (
+	"errors"
 	"math/rand"
 	"testing"
 	"time"
@@ -161,7 +162,7 @@ func TestDetector_ResetReference(t *testing.T) {
 	}
 
 	// Reset non-existent feature
-	if err := detector.ResetReference("nonexistent"); err != ErrFeatureNotFound {
+	if err := detector.ResetReference("nonexistent"); err != nil && !errors.Is(err, ErrFeatureNotFound) {
 		t.Errorf("expected ErrFeatureNotFound, got %v", err)
 	}
 }

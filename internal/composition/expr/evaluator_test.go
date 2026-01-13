@@ -478,16 +478,16 @@ func TestEvaluate_StringConcatenation(t *testing.T) {
 
 func TestEvaluate_ComplexExpressions(t *testing.T) {
 	vars := map[string]interface{}{
-		"purchases":    150.0,
-		"logins":       30.0,
-		"account_age":  365.0,
-		"mean":         100.0,
-		"stddev":       25.0,
-		"is_premium":   1.0,
-		"feature_a":    10.0,
-		"feature_b":    20.0,
-		"weight_a":     0.3,
-		"weight_b":     0.7,
+		"purchases":   150.0,
+		"logins":      30.0,
+		"account_age": 365.0,
+		"mean":        100.0,
+		"stddev":      25.0,
+		"is_premium":  1.0,
+		"feature_a":   10.0,
+		"feature_b":   20.0,
+		"weight_a":    0.3,
+		"weight_b":    0.7,
 	}
 
 	tests := []struct {
@@ -661,9 +661,9 @@ func BenchmarkEvaluate_Simple(b *testing.B) {
 
 func BenchmarkEvaluate_Complex(b *testing.B) {
 	vars := map[string]interface{}{
-		"purchases": 150.0,
-		"mean":      100.0,
-		"stddev":    25.0,
+		"purchases":  150.0,
+		"mean":       100.0,
+		"stddev":     25.0,
 		"is_premium": 1.0,
 	}
 	for i := 0; i < b.N; i++ {

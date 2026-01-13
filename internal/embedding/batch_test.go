@@ -326,15 +326,10 @@ func TestBatchProcessor_Stats(t *testing.T) {
 }
 
 func TestBatchRequest_Fields(t *testing.T) {
-	now := time.Now()
 	req := &BatchRequest{
-		ID:           "req-1",
-		Contents:     []string{"text 1", "text 2"},
-		ModelID:      "model-1",
-		ModelVersion: "v1.0",
-		Priority:     10,
-		Metadata:     map[string]interface{}{"key": "value"},
-		SubmittedAt:  now,
+		ID:       "req-1",
+		Contents: []string{"text 1", "text 2"},
+		Priority: 10,
 	}
 
 	assert.Equal(t, "req-1", req.ID)
@@ -343,15 +338,11 @@ func TestBatchRequest_Fields(t *testing.T) {
 }
 
 func TestBatchResult_Fields(t *testing.T) {
-	now := time.Now()
 	result := &BatchResult{
-		RequestID:   "req-1",
-		Embeddings:  []*Embedding{{ID: "emb-1"}},
-		Errors:      []error{nil},
-		ProcessedAt: now,
-		Duration:    100 * time.Millisecond,
-		CacheHits:   5,
-		APICalls:    2,
+		RequestID:  "req-1",
+		Embeddings: []*Embedding{{ID: "emb-1"}},
+		CacheHits:  5,
+		APICalls:   2,
 	}
 
 	assert.Equal(t, "req-1", result.RequestID)

@@ -187,14 +187,14 @@ func (f *Federation) ShareFeature(feature *FederatedFeature) error {
 }
 
 // GetFeature returns a feature from the catalog.
-func (f *Federation) GetFeature(featureID string) (*FederatedFeature, error) {
+func (f *Federation) GetFeature(ctx context.Context, featureID string) (*FederatedFeature, error) {
 	f.mu.RLock()
 	entry, exists := f.catalog[featureID]
 	f.mu.RUnlock()
 
 	if !exists {
 		// Try to fetch from remote nodes
-		return f.fetchRemoteFeature(featureID)
+		return f.fetchRemoteFeature(ctx, featureID)
 	}
 
 	// Update access stats
@@ -303,6 +303,8 @@ func (f *Federation) hasAccess(feature *FederatedFeature) bool {
 		return true
 	case VisibilityPrivate:
 		return feature.OwnerNode == f.localNode.ID
+	case VisibilityTeam, VisibilityOrg:
+		return true
 	}
 
 	// Check access control
@@ -402,7 +404,7 @@ func (f *Federation) replicateToNode(ctx context.Context, feature *FederatedFeat
 	return nil
 }
 
-func (f *Federation) fetchRemoteFeature(featureID string) (*FederatedFeature, error) {
+func (f *Federation) fetchRemoteFeature(ctx context.Context, featureID string) (*FederatedFeature, error) {
 	f.mu.RLock()
 	nodes := make([]*Node, 0, len(f.nodes))
 	for _, node := range f.nodes {
@@ -413,7 +415,7 @@ func (f *Federation) fetchRemoteFeature(featureID string) (*FederatedFeature, er
 	f.mu.RUnlock()
 
 	for _, node := range nodes {
-		feature, err := f.fetchFromNode(context.Background(), node, featureID)
+		feature, err := f.fetchFromNode(ctx, node, featureID)
 		if err == nil {
 			// Cache locally
 			f.mu.Lock()
@@ -444,7 +446,9 @@ func (f *Federation) fetchFromNode(ctx context.Context, node *Node, featureID st
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("node returned status %d", resp.StatusCode)
@@ -512,7 +516,9 @@ func (f *Federation) pingNode(node *Node) bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	return resp.StatusCode == http.StatusOK
 }
@@ -561,7 +567,9 @@ func (f *Federation) syncWithNode(ctx context.Context, node *Node) {
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return

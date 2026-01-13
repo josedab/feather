@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -96,7 +97,7 @@ func TestConfigMigrator_ConvertConfig_Nil(t *testing.T) {
 	migrator := NewConfigMigrator(DefaultConfigMigratorConfig())
 
 	_, err := migrator.ConvertConfig(nil)
-	if err != ErrInvalidFeastSchema {
+	if !errors.Is(err, ErrInvalidFeastSchema) {
 		t.Errorf("Expected ErrInvalidFeastSchema, got %v", err)
 	}
 }
@@ -370,6 +371,8 @@ func TestConfigConversionReport(t *testing.T) {
 	if report.SourceProvider != "local" {
 		t.Errorf("Expected provider 'local', got '%s'", report.SourceProvider)
 	}
+	_ = report.OnlineStoreType
+	_ = report.OfflineStoreType
 	if len(report.UnsupportedOptions) != 1 {
 		t.Errorf("Expected 1 unsupported option, got %d", len(report.UnsupportedOptions))
 	}

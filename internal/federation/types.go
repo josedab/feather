@@ -5,6 +5,7 @@ import "time"
 // NodeRole represents the role of a node in the federation.
 type NodeRole string
 
+// NodeRole constants.
 const (
 	NodeRoleLeader   NodeRole = "leader"
 	NodeRoleFollower NodeRole = "follower"
@@ -14,6 +15,7 @@ const (
 // NodeState represents the state of a federated node.
 type NodeState string
 
+// NodeState constants.
 const (
 	NodeStateHealthy     NodeState = "healthy"
 	NodeStateUnhealthy   NodeState = "unhealthy"
@@ -67,6 +69,7 @@ type FederatedFeature struct {
 // Visibility defines who can see and access a feature.
 type Visibility string
 
+// Visibility constants.
 const (
 	VisibilityPrivate    Visibility = "private"
 	VisibilityTeam       Visibility = "team"
@@ -111,6 +114,7 @@ type ReplicationPolicy struct {
 // ReplicationMode defines how replication works.
 type ReplicationMode string
 
+// ReplicationMode constants.
 const (
 	ReplicationModeSync     ReplicationMode = "sync"
 	ReplicationModeAsync    ReplicationMode = "async"
@@ -154,6 +158,7 @@ type Event struct {
 // EventType defines types of federation events.
 type EventType string
 
+// EventType constants.
 const (
 	EventNodeJoined      EventType = "node_joined"
 	EventNodeLeft        EventType = "node_left"

@@ -1,6 +1,7 @@
 package composition
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -83,7 +84,7 @@ func TestDAG_RemoveNode_NotFound(t *testing.T) {
 	dag := NewDAG("test", "Test")
 
 	err := dag.RemoveNode("nonexistent")
-	if err != ErrNodeNotFound {
+	if !errors.Is(err, ErrNodeNotFound) {
 		t.Errorf("Expected ErrNodeNotFound, got %v", err)
 	}
 }

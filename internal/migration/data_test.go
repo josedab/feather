@@ -350,8 +350,8 @@ func TestDataMigrator_MigrateFromSource_Cancellation(t *testing.T) {
 		t.Error("Expected context cancellation error")
 	}
 
-	if stats.Status != "cancelled" {
-		t.Errorf("Expected status 'cancelled', got '%s'", stats.Status)
+	if stats.Status != StatusCanceled {
+		t.Errorf("Expected status '%s', got '%s'", StatusCanceled, stats.Status)
 	}
 }
 
@@ -390,11 +390,7 @@ func TestMigrationStats_Duration(t *testing.T) {
 
 func TestMigrationPlan(t *testing.T) {
 	plan := &MigrationPlan{
-		ID:           "plan-1",
-		Name:         "User Features Migration",
-		SourceType:   "parquet",
-		FieldMapping: NewFieldMapping(),
-		TargetGroups: []string{"user_features"},
+		ID: "plan-1",
 	}
 
 	if plan.ID != "plan-1" {
@@ -404,10 +400,7 @@ func TestMigrationPlan(t *testing.T) {
 
 func TestMigrationJob(t *testing.T) {
 	job := &MigrationJob{
-		ID:        "job-1",
-		PlanID:    "plan-1",
-		StartedAt: time.Now(),
-		Status:    "running",
+		Status: "running",
 	}
 
 	if job.Status != "running" {

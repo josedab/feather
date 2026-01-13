@@ -15,6 +15,7 @@ import (
 // SyncState represents the synchronization state.
 type SyncState string
 
+// SyncState constants.
 const (
 	SyncStatePending    SyncState = "pending"
 	SyncStateInProgress SyncState = "in_progress"
@@ -26,6 +27,7 @@ const (
 // SyncMode determines how changes are applied.
 type SyncMode string
 
+// SyncMode constants.
 const (
 	SyncModeApply  SyncMode = "apply"   // Create or update resources
 	SyncModeDelete SyncMode = "delete"  // Remove resources not in Git
@@ -241,7 +243,7 @@ func (m *SyncManager) Sync(ctx context.Context, config *SyncConfig) (*SyncResult
 
 // filterDefinitions filters definitions by namespace and labels.
 func (m *SyncManager) filterDefinitions(defs []*FeatureDefinition, config *SyncConfig) []*FeatureDefinition {
-	var filtered []*FeatureDefinition
+	filtered := make([]*FeatureDefinition, 0, len(defs))
 
 	for _, def := range defs {
 		// Filter by namespace
@@ -336,10 +338,10 @@ func (m *SyncManager) resourceKey(def *FeatureDefinition) string {
 // calculateHash calculates a hash of a definition for change detection.
 func (m *SyncManager) calculateHash(def *FeatureDefinition) string {
 	// Create a copy without status for hashing
-	copy := *def
-	copy.Status = nil
+	defCopy := *def
+	defCopy.Status = nil
 
-	data, _ := json.Marshal(copy)
+	data, _ := json.Marshal(defCopy)
 	hash := sha256.Sum256(data)
 	return hex.EncodeToString(hash[:])
 }
@@ -376,7 +378,7 @@ func (m *SyncManager) GetLastResult() *SyncResult {
 // saveState saves the sync state to a file.
 func (m *SyncManager) saveState(result *SyncResult) error {
 	dir := filepath.Dir(m.stateFile)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
@@ -385,7 +387,7 @@ func (m *SyncManager) saveState(result *SyncResult) error {
 		return err
 	}
 
-	return os.WriteFile(m.stateFile, data, 0644)
+	return os.WriteFile(m.stateFile, data, 0600)
 }
 
 // LoadState loads the sync state from a file.

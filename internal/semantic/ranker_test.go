@@ -384,8 +384,16 @@ func TestRankRequest_Fields(t *testing.T) {
 
 	assert.Equal(t, "test query", req.Query)
 	assert.Equal(t, 2, len(req.Categories))
+	assert.Equal(t, []string{"tag1"}, req.Tags)
+	assert.Equal(t, []string{"user"}, req.EntityTypes)
+	assert.Equal(t, []string{"finance"}, req.Domains)
+	assert.Equal(t, []string{"fraud_detection"}, req.UseCases)
 	assert.True(t, req.OnlyFresh)
 	assert.Equal(t, 20, req.Limit)
+	assert.Equal(t, "team-a", req.Owner)
+	assert.Equal(t, "data", req.Team)
+	assert.Equal(t, float32(0.5), req.MinQuality)
+	assert.Equal(t, []string{"excluded"}, req.ExcludeFeatures)
 }
 
 func TestRankedResult_Fields(t *testing.T) {
@@ -402,6 +410,12 @@ func TestRankedResult_Fields(t *testing.T) {
 	}
 
 	assert.Equal(t, 0.85, result.TotalScore)
+	assert.Equal(t, 0.9, result.SemanticScore)
+	assert.Equal(t, 0.8, result.MetadataScore)
+	assert.Equal(t, 0.7, result.PopularityScore)
+	assert.Equal(t, 0.95, result.QualityScore)
+	assert.Equal(t, 1.0, result.FreshnessScore)
+	assert.Equal(t, 0.5, result.LineageScore)
 	assert.Equal(t, 2, len(result.BoostFactors))
 	assert.Equal(t, 1, len(result.Penalties))
 }

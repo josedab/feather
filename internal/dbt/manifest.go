@@ -15,7 +15,9 @@ func ParseManifest(path string) (*Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening manifest file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	return ParseManifestFromReader(f)
 }
@@ -183,7 +185,7 @@ func (m *Manifest) GetDownstreamNodes(uniqueID string) []Node {
 	return downstream
 }
 
-// GetLineage returns the full lineage graph for a node.
+// Lineage contains upstream and downstream dependencies for a node.
 type Lineage struct {
 	Node       Node   `json:"node"`
 	Upstream   []Node `json:"upstream"`

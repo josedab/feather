@@ -1,3 +1,4 @@
+// Package llm provides embedding providers and helper utilities.
 package llm
 
 import (
@@ -6,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,6 +35,7 @@ type Provider interface {
 // ProviderType identifies the embedding provider.
 type ProviderType string
 
+// ProviderType values identify embedding providers.
 const (
 	ProviderTypeOpenAI      ProviderType = "openai"
 	ProviderTypeOllama      ProviderType = "ollama"
@@ -44,12 +47,12 @@ const (
 
 // OpenAIProvider generates embeddings using OpenAI's API.
 type OpenAIProvider struct {
-	apiKey     string
-	model      string
-	baseURL    string
-	dimension  int
-	client     *http.Client
-	maxRetries int
+	apiKey      string
+	model       string
+	baseURL     string
+	dimension   int
+	client      *http.Client
+	maxRetries  int
 	rateLimiter *rateLimiter
 }
 
@@ -98,22 +101,25 @@ func NewOpenAIProvider(config OpenAIConfig) *OpenAIProvider {
 }
 
 var modelDimensions = map[string]int{
-	"text-embedding-3-small":   1536,
-	"text-embedding-3-large":   3072,
-	"text-embedding-ada-002":   1536,
-	"nomic-embed-text":         768,
-	"mxbai-embed-large":        1024,
-	"all-minilm":               384,
+	"text-embedding-3-small": 1536,
+	"text-embedding-3-large": 3072,
+	"text-embedding-ada-002": 1536,
+	"nomic-embed-text":       768,
+	"mxbai-embed-large":      1024,
+	"all-minilm":             384,
 }
 
+// Dimension returns the embedding dimension.
 func (p *OpenAIProvider) Dimension() int {
 	return p.dimension
 }
 
+// ModelID returns the provider model identifier.
 func (p *OpenAIProvider) ModelID() string {
 	return "openai:" + p.model
 }
 
+// Embed generates an embedding for a single text.
 func (p *OpenAIProvider) Embed(ctx context.Context, text string) ([]float32, error) {
 	embeddings, err := p.EmbedBatch(ctx, []string{text})
 	if err != nil {
@@ -125,6 +131,7 @@ func (p *OpenAIProvider) Embed(ctx context.Context, text string) ([]float32, err
 	return embeddings[0], nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (p *OpenAIProvider) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return nil, nil
@@ -149,7 +156,8 @@ func (p *OpenAIProvider) EmbedBatch(ctx context.Context, texts []string) ([][]fl
 		}
 
 		// Exponential backoff
-		backoff := time.Duration(1<<uint(attempt)) * 100 * time.Millisecond
+		//nolint:gosec // attempt is bounded by maxRetries.
+		backoff := time.Duration(1<<uint64(attempt)) * 100 * time.Millisecond
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -185,7 +193,9 @@ func (p *OpenAIProvider) embedBatchOnce(ctx context.Context, texts []string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -258,14 +268,17 @@ func NewOllamaProvider(config OllamaConfig) *OllamaProvider {
 	}
 }
 
+// Dimension returns the embedding dimension.
 func (p *OllamaProvider) Dimension() int {
 	return p.dimension
 }
 
+// ModelID returns the provider model identifier.
 func (p *OllamaProvider) ModelID() string {
 	return "ollama:" + p.model
 }
 
+// Embed generates an embedding for a single text.
 func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, error) {
 	reqBody := map[string]interface{}{
 		"model":  p.model,
@@ -289,7 +302,9 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -310,6 +325,7 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 	return result.Embedding, nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (p *OllamaProvider) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	embeddings := make([][]float32, len(texts))
 	for i, text := range texts {
@@ -356,14 +372,17 @@ func NewHuggingFaceProvider(config HuggingFaceConfig) *HuggingFaceProvider {
 	}
 }
 
+// Dimension returns the embedding dimension.
 func (p *HuggingFaceProvider) Dimension() int {
 	return p.dimension
 }
 
+// ModelID returns the provider model identifier.
 func (p *HuggingFaceProvider) ModelID() string {
 	return "huggingface:" + p.model
 }
 
+// Embed generates an embedding for a single text.
 func (p *HuggingFaceProvider) Embed(ctx context.Context, text string) ([]float32, error) {
 	embeddings, err := p.EmbedBatch(ctx, []string{text})
 	if err != nil {
@@ -372,6 +391,7 @@ func (p *HuggingFaceProvider) Embed(ctx context.Context, text string) ([]float32
 	return embeddings[0], nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (p *HuggingFaceProvider) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	reqBody := map[string]interface{}{
 		"inputs": texts,
@@ -395,7 +415,9 @@ func (p *HuggingFaceProvider) EmbedBatch(ctx context.Context, texts []string) ([
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -433,14 +455,17 @@ func NewLocalProvider(dimension int) *LocalProvider {
 	}
 }
 
+// Dimension returns the embedding dimension.
 func (p *LocalProvider) Dimension() int {
 	return p.dimension
 }
 
+// ModelID returns the provider model identifier.
 func (p *LocalProvider) ModelID() string {
 	return "local:tfidf"
 }
 
+// Embed generates an embedding for a single text.
 func (p *LocalProvider) Embed(ctx context.Context, text string) ([]float32, error) {
 	words := tokenize(text)
 	embedding := make([]float32, p.dimension)
@@ -452,7 +477,8 @@ func (p *LocalProvider) Embed(ctx context.Context, text string) ([]float32, erro
 
 	for word, freq := range wordFreq {
 		hash := simpleHash(word)
-		idx := hash % uint32(p.dimension)
+		//nolint:gosec // dimension is configured and hash is used for indexing only.
+		idx := int(hash % uint32(p.dimension))
 
 		tf := float32(freq) / float32(len(words))
 		p.mu.RLock()
@@ -469,6 +495,7 @@ func (p *LocalProvider) Embed(ctx context.Context, text string) ([]float32, erro
 	return embedding, nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (p *LocalProvider) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	// Update IDF
 	docFreq := make(map[string]int)
@@ -523,8 +550,9 @@ func isAPIError(err error) (*APIError, bool) {
 	if err == nil {
 		return nil, false
 	}
-	if e, ok := err.(*APIError); ok {
-		return e, true
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr, true
 	}
 	return nil, false
 }

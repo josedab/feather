@@ -420,13 +420,9 @@ func TestVersionManager_Stats(t *testing.T) {
 
 func TestModelInfo_Fields(t *testing.T) {
 	model := &ModelInfo{
-		ID:          "text-embedding-ada-002",
-		Name:        "OpenAI Ada",
-		Provider:    "openai",
-		Dimension:   1536,
-		MaxTokens:   8191,
-		Description: "Test model",
-		Metadata:    map[string]interface{}{"key": "value"},
+		ID:        "text-embedding-ada-002",
+		Dimension: 1536,
+		MaxTokens: 8191,
 	}
 
 	assert.Equal(t, "text-embedding-ada-002", model.ID)
@@ -435,18 +431,10 @@ func TestModelInfo_Fields(t *testing.T) {
 }
 
 func TestModelVersion_Fields(t *testing.T) {
-	now := time.Now()
-	deprecated := now.Add(-time.Hour)
-
 	version := &ModelVersion{
-		Version:      "v1.0",
-		ModelID:      "model-1",
-		Dimension:    1536,
-		Compatible:   []string{"v1.1", "v1.2"},
-		ReleasedAt:   now,
-		DeprecatedAt: &deprecated,
-		IsDefault:    true,
-		Metadata:     map[string]interface{}{"key": "value"},
+		Version:    "v1.0",
+		Compatible: []string{"v1.1", "v1.2"},
+		IsDefault:  true,
 	}
 
 	assert.Equal(t, "v1.0", version.Version)

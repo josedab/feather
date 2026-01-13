@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -9,6 +10,7 @@ import (
 // AlertSeverity represents alert severity levels.
 type AlertSeverity string
 
+// AlertSeverity constants for alert severity.
 const (
 	SeverityInfo     AlertSeverity = "info"
 	SeverityWarning  AlertSeverity = "warning"
@@ -19,6 +21,7 @@ const (
 // AlertType represents types of alerts.
 type AlertType string
 
+// AlertType constants for alert categories.
 const (
 	AlertTypeFreshness    AlertType = "freshness"
 	AlertTypeQuality      AlertType = "quality"
@@ -68,6 +71,7 @@ type AlertHandler interface {
 // AlertHandlerFunc is a function that implements AlertHandler.
 type AlertHandlerFunc func(ctx context.Context, alert *Alert) error
 
+// HandleAlert calls the wrapped handler function.
 func (f AlertHandlerFunc) HandleAlert(ctx context.Context, alert *Alert) error {
 	return f(ctx, alert)
 }
@@ -131,7 +135,7 @@ func (m *AlertManager) Trigger(ctx context.Context, alertType AlertType, severit
 	m.mu.Unlock()
 
 	alert := &Alert{
-		ID:          string(rune(id)),
+		ID:          fmt.Sprintf("%d", id),
 		Type:        alertType,
 		Severity:    severity,
 		Feature:     feature,
@@ -154,7 +158,9 @@ func (m *AlertManager) Trigger(ctx context.Context, alertType AlertType, severit
 
 	// Notify handlers
 	for _, handler := range handlers {
-		go handler.HandleAlert(ctx, alert)
+		go func(h AlertHandler) {
+			_ = h.HandleAlert(ctx, alert)
+		}(handler)
 	}
 
 	return alert
@@ -205,6 +211,7 @@ func (m *AlertManager) CheckRules(ctx context.Context, metrics *MetricsCollector
 				value = time.Since(fm.LastWrite).Seconds()
 				shouldAlert = m.evaluateCondition(rule.Condition, value, rule.Threshold)
 			}
+		case AlertTypeQuality, AlertTypeDrift, AlertTypeAnomaly:
 		}
 
 		if shouldAlert {
@@ -293,7 +300,7 @@ func (m *AlertManager) Resolve(alertID string) bool {
 }
 
 // ObservabilityStack combines all observability components.
-type ObservabilityStack struct {
+type ObservabilityStack struct { //nolint:revive
 	Metrics   *MetricsCollector
 	Freshness *FreshnessChecker
 	Usage     *UsageTracker

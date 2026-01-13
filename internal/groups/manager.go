@@ -40,6 +40,7 @@ type GroupFeature struct {
 // GroupStatus represents the status of a feature group.
 type GroupStatus string
 
+// GroupStatus constants.
 const (
 	GroupStatusDraft      GroupStatus = "draft"
 	GroupStatusActive     GroupStatus = "active"

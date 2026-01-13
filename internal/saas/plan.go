@@ -18,6 +18,7 @@ var (
 // PlanTier defines the service tier level.
 type PlanTier string
 
+// PlanTier constants for plan tiers.
 const (
 	TierFree       PlanTier = "free"
 	TierStarter    PlanTier = "starter"
@@ -28,6 +29,7 @@ const (
 // BillingPeriod defines the billing cycle.
 type BillingPeriod string
 
+// BillingPeriod constants for billing cycles.
 const (
 	BillingMonthly BillingPeriod = "monthly"
 	BillingYearly  BillingPeriod = "yearly"
@@ -110,6 +112,7 @@ type Subscription struct {
 // SubscriptionStatus defines subscription states.
 type SubscriptionStatus string
 
+// SubscriptionStatus constants for subscriptions.
 const (
 	SubscriptionActive   SubscriptionStatus = "active"
 	SubscriptionTrialing SubscriptionStatus = "trialing"

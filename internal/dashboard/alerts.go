@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,24 +20,27 @@ type AlertManager struct {
 
 // Alert represents a dashboard alert.
 type Alert struct {
-	ID           string                 `json:"id"`
-	Title        string                 `json:"title"`
-	Message      string                 `json:"message"`
-	Severity     AlertSeverity          `json:"severity"`
-	Source       string                 `json:"source"`
-	FeatureName  string                 `json:"feature_name,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	AcknowledgedAt *time.Time           `json:"acknowledged_at,omitempty"`
-	ResolvedAt   *time.Time             `json:"resolved_at,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	ID             string                 `json:"id"`
+	Title          string                 `json:"title"`
+	Message        string                 `json:"message"`
+	Severity       AlertSeverity          `json:"severity"`
+	Source         string                 `json:"source"`
+	FeatureName    string                 `json:"feature_name,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	AcknowledgedAt *time.Time             `json:"acknowledged_at,omitempty"`
+	ResolvedAt     *time.Time             `json:"resolved_at,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // AlertSeverity indicates alert severity.
 type AlertSeverity string
 
 const (
-	SeverityInfo     AlertSeverity = "info"
-	SeverityWarning  AlertSeverity = "warning"
+	// SeverityInfo indicates informational severity.
+	SeverityInfo AlertSeverity = "info"
+	// SeverityWarning indicates warning severity.
+	SeverityWarning AlertSeverity = "warning"
+	// SeverityCritical indicates critical severity.
 	SeverityCritical AlertSeverity = "critical"
 )
 
@@ -167,9 +171,9 @@ func (m *AlertManager) Cleanup(maxAge time.Duration) {
 
 func (m *AlertManager) sendWebhook(alert *Alert) {
 	payload := map[string]interface{}{
-		"type":     "alert",
-		"alert":    alert,
-		"sent_at":  time.Now(),
+		"type":    "alert",
+		"alert":   alert,
+		"sent_at": time.Now(),
 	}
 
 	body, err := json.Marshal(payload)
@@ -177,11 +181,19 @@ func (m *AlertManager) sendWebhook(alert *Alert) {
 		return
 	}
 
-	resp, err := m.client.Post(m.webhookURL, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, m.webhookURL, bytes.NewReader(body))
 	if err != nil {
 		return
 	}
-	resp.Body.Close()
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := m.client.Do(req)
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 }
 
 // AlertForDrift creates an alert for drift detection.
