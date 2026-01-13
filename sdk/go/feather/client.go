@@ -4,10 +4,11 @@ package feather
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -129,9 +130,13 @@ func (c *Client) request(ctx context.Context, method, path string, body interfac
 		}
 
 		respBody, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		closeErr := resp.Body.Close()
 		if err != nil {
 			lastErr = err
+			continue
+		}
+		if closeErr != nil {
+			lastErr = closeErr
 			continue
 		}
 
@@ -144,7 +149,9 @@ func (c *Client) request(ctx context.Context, method, path string, body interfac
 			var errResp struct {
 				Error string `json:"error"`
 			}
-			json.Unmarshal(respBody, &errResp)
+			if err := json.Unmarshal(respBody, &errResp); err != nil {
+				return fmt.Errorf("unmarshal error response: %w", err)
+			}
 			return &APIError{StatusCode: resp.StatusCode, Message: errResp.Error}
 		}
 
@@ -177,11 +184,19 @@ func (c *Client) calculateBackoff(attempt int) time.Duration {
 	// This gives a range of [1-jitter, 1+jitter]
 	if c.config.RetryJitter > 0 {
 		jitterRange := float64(backoff) * c.config.RetryJitter
-		jitterOffset := (rand.Float64()*2 - 1) * jitterRange
+		jitterOffset := (jitterFloat64()*2 - 1) * jitterRange
 		backoff = time.Duration(float64(backoff) + jitterOffset)
 	}
 
 	return backoff
+}
+
+func jitterFloat64() float64 {
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return 0.5
+	}
+	return float64(binary.LittleEndian.Uint64(buf[:])) / float64(^uint64(0))
 }
 
 // APIError represents an API error response.
