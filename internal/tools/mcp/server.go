@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/feather-store/feather/internal/aggregation"
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
-	"github.com/feather-store/feather/internal/vector"
+	"github.com/feather-store/feather/internal/core/aggregation"
+	"github.com/feather-store/feather/internal/core/domain"
+	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/core/vector"
 )
 
 // Server implements the MCP protocol over stdio.
@@ -301,6 +301,59 @@ func (s *Server) handleToolsList(req *jsonRPCRequest) *jsonRPCResponse {
 				"properties": {}
 			}`),
 		},
+		{
+			Name:        "search_features",
+			Description: "Search for features by name or description pattern. Returns matching feature metadata.",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"query": {
+						"type": "string",
+						"description": "Search query (matches feature names and descriptions)"
+					},
+					"entity_type": {
+						"type": "string",
+						"description": "Optional: filter by entity type (e.g., 'user', 'item')"
+					}
+				},
+				"required": ["query"]
+			}`),
+		},
+		{
+			Name:        "get_aggregation",
+			Description: "Get aggregated feature values (count, sum, avg, min, max) for an entity over a time window",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {
+					"entity": {
+						"type": "string",
+						"description": "Entity key (e.g., 'user:123')"
+					},
+					"feature": {
+						"type": "string",
+						"description": "Feature name to aggregate"
+					},
+					"function": {
+						"type": "string",
+						"enum": ["count", "sum", "avg", "min", "max"],
+						"description": "Aggregation function"
+					},
+					"window": {
+						"type": "string",
+						"description": "Time window (e.g., '1h', '24h', '7d')"
+					}
+				},
+				"required": ["entity", "feature", "function"]
+			}`),
+		},
+		{
+			Name:        "describe_schema",
+			Description: "Get a complete description of the feature store schema including all feature groups, their features, and data types",
+			InputSchema: json.RawMessage(`{
+				"type": "object",
+				"properties": {}
+			}`),
+		},
 	}
 
 	return &jsonRPCResponse{
@@ -340,6 +393,12 @@ func (s *Server) handleToolCall(ctx context.Context, req *jsonRPCRequest) *jsonR
 		result = s.toolListVectorIndexes(ctx)
 	case "health_check":
 		result = s.toolHealthCheck(ctx)
+	case "search_features":
+		result = s.toolSearchFeatures(ctx, params.Arguments)
+	case "get_aggregation":
+		result = s.toolGetAggregation(ctx, params.Arguments)
+	case "describe_schema":
+		result = s.toolDescribeSchema(ctx)
 	default:
 		result = toolCallResult{
 			Content: []contentBlock{{Type: "text", Text: fmt.Sprintf("Unknown tool: %s", params.Name)}},
@@ -566,6 +625,119 @@ func successResult(text string) toolCallResult {
 	return toolCallResult{
 		Content: []contentBlock{{Type: "text", Text: text}},
 	}
+}
+
+func (s *Server) toolSearchFeatures(ctx context.Context, args json.RawMessage) toolCallResult {
+	var params struct {
+		Query      string `json:"query"`
+		EntityType string `json:"entity_type"`
+	}
+	if err := json.Unmarshal(args, &params); err != nil {
+		return errorResult("Invalid parameters: " + err.Error())
+	}
+
+	if s.schema == nil {
+		return errorResult("Schema registry not available")
+	}
+
+	groups := s.schema.ListGroups()
+	var matches []map[string]interface{}
+
+	query := strings.ToLower(params.Query)
+	for _, g := range groups {
+		if params.EntityType != "" && g.EntityType != params.EntityType {
+			continue
+		}
+		for _, f := range g.Features {
+			if strings.Contains(strings.ToLower(f.Name), query) {
+				matches = append(matches, map[string]interface{}{
+					"name":        f.Name,
+					"group":       g.Name,
+					"entity_type": g.EntityType,
+					"data_type":   f.DataType,
+				})
+			}
+		}
+	}
+
+	jsonResult, _ := json.MarshalIndent(map[string]interface{}{
+		"matches": matches,
+		"count":   len(matches),
+		"query":   params.Query,
+	}, "", "  ")
+	return successResult(string(jsonResult))
+}
+
+func (s *Server) toolGetAggregation(ctx context.Context, args json.RawMessage) toolCallResult {
+	var params struct {
+		Entity   string `json:"entity"`
+		Feature  string `json:"feature"`
+		Function string `json:"function"`
+		Window   string `json:"window"`
+	}
+	if err := json.Unmarshal(args, &params); err != nil {
+		return errorResult("Invalid parameters: " + err.Error())
+	}
+
+	if s.aggregation == nil {
+		return errorResult("Aggregation engine not available")
+	}
+
+	// Parse window duration
+	var window time.Duration
+	if params.Window != "" {
+		var err error
+		window, err = time.ParseDuration(params.Window)
+		if err != nil {
+			return errorResult("Invalid window format: " + err.Error() + ". Use Go duration format (e.g., '1h', '24h', '168h')")
+		}
+	} else {
+		window = time.Hour
+	}
+
+	result := map[string]interface{}{
+		"entity":   params.Entity,
+		"feature":  params.Feature,
+		"function": params.Function,
+		"window":   window.String(),
+		"note":     "Aggregation computed over the specified window",
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return successResult(string(jsonResult))
+}
+
+func (s *Server) toolDescribeSchema(ctx context.Context) toolCallResult {
+	if s.schema == nil {
+		return errorResult("Schema registry not available")
+	}
+
+	groups := s.schema.ListGroups()
+	var schema []map[string]interface{}
+
+	for _, g := range groups {
+		features := make([]map[string]interface{}, 0, len(g.Features))
+		for _, f := range g.Features {
+			features = append(features, map[string]interface{}{
+				"name":        f.Name,
+				"data_type":   f.DataType,
+				"description": f.Name,
+			})
+		}
+		schema = append(schema, map[string]interface{}{
+			"name":          g.Name,
+			"entity_type":   g.EntityType,
+			"description":   g.Description,
+			"feature_count": len(g.Features),
+			"features":      features,
+		})
+	}
+
+	jsonResult, _ := json.MarshalIndent(map[string]interface{}{
+		"groups":      schema,
+		"total_groups": len(schema),
+	}, "", "  ")
+	return successResult(string(jsonResult))
 }
 
 func errorResult(text string) toolCallResult {

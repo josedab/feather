@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/domain"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // Suite represents a benchmark suite for the feature store.

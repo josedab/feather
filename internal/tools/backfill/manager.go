@@ -607,3 +607,230 @@ var (
 	ErrUnsupportedSource   = errors.New("unsupported data source type")
 	ErrEndOfData           = errors.New("end of data")
 )
+
+// AutoBackfillConfig configures the automatic backfill trigger.
+type AutoBackfillConfig struct {
+	// CheckInterval is how often to check for stale features.
+	CheckInterval time.Duration `json:"check_interval"`
+	// MaxConcurrentJobs limits how many auto-backfill jobs run simultaneously.
+	MaxConcurrentJobs int `json:"max_concurrent_jobs"`
+	// DefaultRetryLimit is the maximum number of retries for a failed trigger.
+	DefaultRetryLimit int `json:"default_retry_limit"`
+	// CooldownPeriod prevents re-triggering for the same feature within this window.
+	CooldownPeriod time.Duration `json:"cooldown_period"`
+}
+
+// DefaultAutoBackfillConfig returns sensible defaults.
+func DefaultAutoBackfillConfig() AutoBackfillConfig {
+	return AutoBackfillConfig{
+		CheckInterval:     5 * time.Minute,
+		MaxConcurrentJobs: 3,
+		DefaultRetryLimit: 3,
+		CooldownPeriod:    15 * time.Minute,
+	}
+}
+
+// BackfillRule defines when and how to auto-backfill a feature.
+type BackfillRule struct {
+	ID          string        `json:"id"`
+	Feature     string        `json:"feature"`
+	MaxStaleness time.Duration `json:"max_staleness"`
+	Source      DataSource    `json:"source"`
+	Enabled     bool          `json:"enabled"`
+	CreatedAt   time.Time     `json:"created_at"`
+}
+
+// AutoBackfillTrigger represents a triggered auto-backfill event.
+type AutoBackfillTrigger struct {
+	ID          string    `json:"id"`
+	RuleID      string    `json:"rule_id"`
+	Feature     string    `json:"feature"`
+	JobID       string    `json:"job_id,omitempty"`
+	Status      string    `json:"status"` // "pending", "triggered", "failed", "completed"
+	Retries     int       `json:"retries"`
+	TriggeredAt time.Time `json:"triggered_at"`
+	Error       string    `json:"error,omitempty"`
+}
+
+// AutoBackfiller monitors feature staleness and triggers backfill jobs.
+type AutoBackfiller struct {
+	config   AutoBackfillConfig
+	manager  *Manager
+	rules    map[string]*BackfillRule
+	triggers []*AutoBackfillTrigger
+	cooldowns map[string]time.Time // feature -> last trigger time
+	mu       sync.RWMutex
+}
+
+// NewAutoBackfiller creates a new auto-backfiller.
+func NewAutoBackfiller(config AutoBackfillConfig, manager *Manager) *AutoBackfiller {
+	return &AutoBackfiller{
+		config:    config,
+		manager:   manager,
+		rules:     make(map[string]*BackfillRule),
+		triggers:  make([]*AutoBackfillTrigger, 0),
+		cooldowns: make(map[string]time.Time),
+	}
+}
+
+// AddRule registers a backfill rule for a feature.
+func (ab *AutoBackfiller) AddRule(rule *BackfillRule) error {
+	ab.mu.Lock()
+	defer ab.mu.Unlock()
+
+	if rule.Feature == "" {
+		return errors.New("feature name is required")
+	}
+	if rule.ID == "" {
+		rule.ID = "rule-" + rule.Feature
+	}
+	rule.CreatedAt = time.Now()
+	ab.rules[rule.ID] = rule
+	return nil
+}
+
+// RemoveRule removes a backfill rule.
+func (ab *AutoBackfiller) RemoveRule(ruleID string) error {
+	ab.mu.Lock()
+	defer ab.mu.Unlock()
+
+	if _, ok := ab.rules[ruleID]; !ok {
+		return errors.New("rule not found")
+	}
+	delete(ab.rules, ruleID)
+	return nil
+}
+
+// ListRules returns all registered rules.
+func (ab *AutoBackfiller) ListRules() []*BackfillRule {
+	ab.mu.RLock()
+	defer ab.mu.RUnlock()
+
+	result := make([]*BackfillRule, 0, len(ab.rules))
+	for _, r := range ab.rules {
+		result = append(result, r)
+	}
+	return result
+}
+
+// CheckAndTrigger checks all rules and triggers backfills for stale features.
+// lastUpdated maps feature names to their last update time.
+func (ab *AutoBackfiller) CheckAndTrigger(ctx context.Context, lastUpdated map[string]time.Time) []*AutoBackfillTrigger {
+	ab.mu.Lock()
+	defer ab.mu.Unlock()
+
+	now := time.Now()
+	triggered := make([]*AutoBackfillTrigger, 0)
+
+	for _, rule := range ab.rules {
+		if !rule.Enabled {
+			continue
+		}
+
+		// Check cooldown
+		if lastTrigger, ok := ab.cooldowns[rule.Feature]; ok {
+			if now.Sub(lastTrigger) < ab.config.CooldownPeriod {
+				continue
+			}
+		}
+
+		// Check staleness
+		lastUpdate, ok := lastUpdated[rule.Feature]
+		if !ok {
+			lastUpdate = time.Time{} // Never updated = definitely stale
+		}
+
+		staleness := now.Sub(lastUpdate)
+		if staleness <= rule.MaxStaleness {
+			continue // Not stale
+		}
+
+		// Create backfill job
+		jobID := "auto-" + rule.Feature + "-" + now.Format("20060102T150405")
+		job := &Job{
+			ID:         jobID,
+			Name:       "Auto-backfill: " + rule.Feature,
+			Source:     rule.Source,
+			Features:   []string{rule.Feature},
+			Status:     StatusPending,
+			Config:     DefaultJobConfig(),
+			CreatedAt:  now,
+			CreatedBy:  "auto-backfiller",
+		}
+
+		trigger := &AutoBackfillTrigger{
+			ID:          "trigger-" + rule.Feature + "-" + now.Format("150405"),
+			RuleID:      rule.ID,
+			Feature:     rule.Feature,
+			TriggeredAt: now,
+		}
+
+		if err := ab.manager.CreateJob(job); err != nil {
+			trigger.Status = "failed"
+			trigger.Error = err.Error()
+		} else {
+			trigger.JobID = jobID
+			trigger.Status = "triggered"
+			ab.cooldowns[rule.Feature] = now
+		}
+
+		ab.triggers = append(ab.triggers, trigger)
+		triggered = append(triggered, trigger)
+	}
+
+	return triggered
+}
+
+// GetTriggers returns all auto-backfill triggers, optionally filtered by status.
+func (ab *AutoBackfiller) GetTriggers(status string) []*AutoBackfillTrigger {
+	ab.mu.RLock()
+	defer ab.mu.RUnlock()
+
+	if status == "" {
+		result := make([]*AutoBackfillTrigger, len(ab.triggers))
+		copy(result, ab.triggers)
+		return result
+	}
+
+	result := make([]*AutoBackfillTrigger, 0)
+	for _, t := range ab.triggers {
+		if t.Status == status {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
+// Stats returns auto-backfill statistics.
+type AutoBackfillStats struct {
+	TotalRules      int `json:"total_rules"`
+	EnabledRules    int `json:"enabled_rules"`
+	TotalTriggers   int `json:"total_triggers"`
+	PendingTriggers int `json:"pending_triggers"`
+	FailedTriggers  int `json:"failed_triggers"`
+}
+
+// GetStats returns auto-backfill statistics.
+func (ab *AutoBackfiller) GetStats() AutoBackfillStats {
+	ab.mu.RLock()
+	defer ab.mu.RUnlock()
+
+	stats := AutoBackfillStats{
+		TotalRules:    len(ab.rules),
+		TotalTriggers: len(ab.triggers),
+	}
+	for _, r := range ab.rules {
+		if r.Enabled {
+			stats.EnabledRules++
+		}
+	}
+	for _, t := range ab.triggers {
+		switch t.Status {
+		case "pending", "triggered":
+			stats.PendingTriggers++
+		case "failed":
+			stats.FailedTriggers++
+		}
+	}
+	return stats
+}
