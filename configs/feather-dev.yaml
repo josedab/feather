@@ -1,0 +1,42 @@
+# Feather Feature Store — Minimal Development Configuration
+#
+# Use this config for local development with zero external dependencies.
+# No Kafka, no tracing, no TLS — just the core feature store.
+#
+# Usage:
+#   make run-dev
+#   # or
+#   ./bin/feather -config configs/feather-dev.yaml
+
+storage:
+  hot:
+    max_memory: 512MB
+    eviction_policy: lru
+  warm:
+    path: ""          # empty = in-memory (no disk persistence)
+    sync_interval: 1s
+
+ingestion:
+  kafka:
+    enabled: false
+  http:
+    enabled: true
+    port: 8081
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 100
+  http:
+    port: 8080
+    read_timeout: 10s
+    write_timeout: 10s
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: debug
+  format: text        # human-readable for development

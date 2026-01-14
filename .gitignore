@@ -1,6 +1,9 @@
 # Binaries
 bin/
-feather-tui
+/feather
+/feather-tui
+/feather-cli
+/feather-mcp
 *.exe
 *.exe~
 *.dll

@@ -106,7 +106,7 @@ issues:
     - path: "cmd/.*\\.go"
       linters:
         - noctx
-    - path: "internal/warehouse/scheduler.go"
+    - path: "internal/integrations/warehouse/scheduler.go"
       linters:
         - contextcheck
 
