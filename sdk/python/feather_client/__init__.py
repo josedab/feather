@@ -44,10 +44,33 @@ from feather_client.models import (
     ValidationError,
 )
 
-__version__ = "1.0.0"
+from feather_client.devserver import DevServer
+from feather_client.notebook import FeatureExplorer
+
+try:
+    from feather_client.schema_inference import (
+        InferredSchema,
+        infer_from_pandas,
+        infer_from_polars,
+    )
+except ImportError:
+    pass
+
+try:
+    from feather_client.feature_decorator import (
+        FeatureGroupDefinition,
+        feature_group,
+        get_registry,
+    )
+except ImportError:
+    pass
+
+__version__ = "1.1.0"
 __all__ = [
     "FeatherClient",
     "AsyncFeatherClient",
+    "DevServer",
+    "FeatureExplorer",
     "Feature",
     "FeatureValue",
     "FeatureGroup",
@@ -56,4 +79,10 @@ __all__ = [
     "FeatherError",
     "NotFoundError",
     "ValidationError",
+    "InferredSchema",
+    "infer_from_pandas",
+    "infer_from_polars",
+    "FeatureGroupDefinition",
+    "feature_group",
+    "get_registry",
 ]
