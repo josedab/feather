@@ -31,7 +31,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 // Errors returned by warehouse connectors.
@@ -63,6 +63,8 @@ const (
 	ConnectorTypeSnowflake ConnectorType = "snowflake"
 	// ConnectorTypeBigQuery identifies the BigQuery connector.
 	ConnectorTypeBigQuery ConnectorType = "bigquery"
+	// ConnectorTypeRedshift identifies the Amazon Redshift connector.
+	ConnectorTypeRedshift ConnectorType = "redshift"
 )
 
 // ConnectionState represents the current state of a warehouse connection.
@@ -436,6 +438,8 @@ func mapFeatureTypeToWarehouse(dt domain.DataType, warehouseType ConnectorType) 
 		return mapFeatureTypeToSnowflake(dt)
 	case ConnectorTypeBigQuery:
 		return mapFeatureTypeToBigQuery(dt)
+	case ConnectorTypeRedshift:
+		return mapFeatureTypeToRedshift(dt)
 	default:
 		return "STRING"
 	}
@@ -490,6 +494,8 @@ func mapWarehouseTypeToFeature(warehouseType string, connectorType ConnectorType
 		return mapSnowflakeTypeToFeature(warehouseType)
 	case ConnectorTypeBigQuery:
 		return mapBigQueryTypeToFeature(warehouseType)
+	case ConnectorTypeRedshift:
+		return mapRedshiftTypeToFeature(warehouseType)
 	default:
 		return domain.DataTypeString
 	}
@@ -531,6 +537,48 @@ func mapBigQueryTypeToFeature(t string) domain.DataType {
 	case "ARRAY<FLOAT64>", "ARRAY<FLOAT>":
 		return domain.DataTypeVector
 	case "TIMESTAMP", "DATETIME", "DATE", "TIME":
+		return domain.DataTypeTimestamp
+	default:
+		return domain.DataTypeString
+	}
+}
+
+func mapFeatureTypeToRedshift(dt domain.DataType) string {
+	switch dt {
+	case domain.DataTypeInt64:
+		return "BIGINT"
+	case domain.DataTypeFloat64:
+		return "DOUBLE PRECISION"
+	case domain.DataTypeString:
+		return "VARCHAR(65535)"
+	case domain.DataTypeBool:
+		return "BOOLEAN"
+	case domain.DataTypeBytes:
+		return "VARBYTE"
+	case domain.DataTypeVector:
+		return "SUPER"
+	case domain.DataTypeTimestamp:
+		return "TIMESTAMP"
+	default:
+		return "VARCHAR(65535)"
+	}
+}
+
+func mapRedshiftTypeToFeature(t string) domain.DataType {
+	switch t {
+	case "BIGINT", "INTEGER", "INT", "INT4", "INT8", "SMALLINT", "INT2":
+		return domain.DataTypeInt64
+	case "DOUBLE PRECISION", "FLOAT", "FLOAT4", "FLOAT8", "REAL", "DECIMAL", "NUMERIC":
+		return domain.DataTypeFloat64
+	case "VARCHAR", "CHAR", "CHARACTER VARYING", "NCHAR", "NVARCHAR", "BPCHAR", "TEXT":
+		return domain.DataTypeString
+	case "BOOLEAN", "BOOL":
+		return domain.DataTypeBool
+	case "VARBYTE", "BINARY VARYING":
+		return domain.DataTypeBytes
+	case "SUPER":
+		return domain.DataTypeVector
+	case "TIMESTAMP", "TIMESTAMPTZ", "TIMESTAMP WITHOUT TIME ZONE", "TIMESTAMP WITH TIME ZONE", "DATE":
 		return domain.DataTypeTimestamp
 	default:
 		return domain.DataTypeString

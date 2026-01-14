@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/feather-store/feather/internal/logging"
+	"github.com/feather-store/feather/internal/core/logging"
 )
 
 // StreamEvent represents a streaming event for pub/sub.

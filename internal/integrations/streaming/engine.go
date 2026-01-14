@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 // Engine processes streaming events and computes real-time features.
