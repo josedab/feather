@@ -512,7 +512,7 @@ import (
     "context"
     "fmt"
 
-    "github.com/your-org/feather/internal/llm"
+    "github.com/feather-store/feather/internal/llm"
 )
 
 func main() {
@@ -544,7 +544,7 @@ package main
 import (
     "context"
 
-    "github.com/your-org/feather/internal/llm"
+    "github.com/feather-store/feather/internal/llm"
 )
 
 func main() {
@@ -592,7 +592,7 @@ import (
     "context"
     "fmt"
 
-    "github.com/your-org/feather/internal/llm"
+    "github.com/feather-store/feather/internal/llm"
 )
 
 func main() {

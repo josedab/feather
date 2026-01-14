@@ -9,15 +9,22 @@ Thank you for your interest in contributing to Feather! We welcome contributions
 git clone https://github.com/feather-store/feather.git
 cd feather
 
+# Install development tools (golangci-lint, goimports)
+make install-tools
+
 # Build and test
 make build
-make test
+make test-quick    # Fast feedback (~30s)
+make test          # Full tests with race detector
 
 # Run linter
 make lint
 
 # Run all checks before submitting
 make check
+
+# See all available targets
+make help
 ```
 
 ## How to Contribute
@@ -55,7 +62,7 @@ For detailed development guidelines, including:
 - Commit message format
 - Pull request process
 
-Please see our **[full contributing guide](https://feather.io/docs/contributing)** or the [source documentation](website/docs/contributing.md).
+Please see our **[full contributing guide](./docs/contributing.md)** or the [website documentation](website/docs/contributing.md).
 
 ## Code of Conduct
 

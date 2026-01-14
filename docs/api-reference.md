@@ -1102,7 +1102,7 @@ import (
     "context"
     "log"
 
-    pb "github.com/your-org/feather/api/proto/v1"
+    pb "github.com/feather-store/feather/api/proto/v1"
     "google.golang.org/grpc"
     "google.golang.org/grpc/credentials/insecure"
 )

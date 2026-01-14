@@ -28,7 +28,7 @@ Thank you for your interest in contributing to Feather! This guide will help you
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.24 or later
 - Make
 - Docker (for integration tests)
 
@@ -42,10 +42,16 @@ cd feather
 # Install dependencies
 go mod download
 
+# Install development tools
+make install-tools
+
 # Build
 make build
 
-# Run tests
+# Run quick tests (recommended first)
+make test-quick
+
+# Run full tests
 make test
 
 # Run linter
@@ -93,6 +99,9 @@ FEATHER_LOG_LEVEL=debug make run
 ### Running Tests
 
 ```bash
+# Quick tests — start here for fast feedback
+make test-quick
+
 # All tests
 make test
 
