@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feather-store/feather/internal/composition/expr"
-	"github.com/feather-store/feather/internal/storage"
-	"github.com/feather-store/feather/internal/transform"
+	"github.com/feather-store/feather/internal/extensions/composition/expr"
+	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/platform/transform"
 )
 
 // Engine provides the main interface for feature composition.

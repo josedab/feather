@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/domain"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // FeatureStoreSchema creates a GraphQL schema for the feature store.

@@ -728,3 +728,110 @@ func TestMathHelpers(t *testing.T) {
 		}
 	})
 }
+
+func TestAutoDecision(t *testing.T) {
+	e := NewEngine()
+
+	exp := &Experiment{
+		ID:     "exp-auto",
+		Name:   "Auto Decision Test",
+		Type:   ExperimentTypeABTest,
+		Status: StatusDraft,
+		Variants: []Variant{
+			{ID: "control", Name: "Control", IsControl: true, Weight: 0.5},
+			{ID: "treatment", Name: "Treatment", Weight: 0.5},
+		},
+		Allocation: AllocationConfig{Strategy: AllocationDeterministic, Percentage: 100, Salt: "salt"},
+		Metrics:    []MetricConfig{{ID: "m1", Name: "conversion"}},
+	}
+	if err := e.CreateExperiment(exp); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.StartExperiment("exp-auto"); err != nil {
+		t.Fatal(err)
+	}
+
+	config := DefaultAutoDecisionConfig()
+	config.MinRunDuration = 0 // disable for test
+
+	// Not enough samples
+	result, err := e.CheckAutoDecision("exp-auto", config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ShouldComplete {
+		t.Error("should not complete without samples")
+	}
+
+	// Non-existent experiment
+	_, err = e.CheckAutoDecision("non-existent", config)
+	if err == nil {
+		t.Error("expected error for non-existent experiment")
+	}
+}
+
+func TestGetFeatureImpact(t *testing.T) {
+	e := NewEngine()
+
+	exp := &Experiment{
+		ID:        "exp-impact",
+		Name:      "Impact Test",
+		Type:      ExperimentTypeABTest,
+		Status:    StatusDraft,
+		FeatureID: "feature-x",
+		Variants: []Variant{
+			{ID: "control", Name: "Control", IsControl: true, Weight: 0.5},
+			{ID: "treatment", Name: "Treatment", Weight: 0.5},
+		},
+		Allocation: AllocationConfig{Strategy: AllocationDeterministic, Percentage: 100, Salt: "salt"},
+		Metrics:    []MetricConfig{{ID: "m1", Name: "conversion"}},
+	}
+	if err := e.CreateExperiment(exp); err != nil {
+		t.Fatal(err)
+	}
+
+	impact, err := e.GetFeatureImpact("feature-x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if impact.TotalExperiments != 1 {
+		t.Errorf("expected 1 experiment, got %d", impact.TotalExperiments)
+	}
+
+	// Non-existent feature
+	_, err = e.GetFeatureImpact("non-existent")
+	if err == nil {
+		t.Error("expected error for non-existent feature")
+	}
+}
+
+func TestGetExperimentSummary(t *testing.T) {
+	e := NewEngine()
+
+	exp := &Experiment{
+		ID:        "exp-sum",
+		Name:      "Summary Test",
+		Type:      ExperimentTypeABTest,
+		Status:    StatusDraft,
+		FeatureID: "feat-1",
+		Variants: []Variant{
+			{ID: "control", Name: "Control", IsControl: true, Weight: 0.5},
+			{ID: "treatment", Name: "Treatment", Weight: 0.5},
+		},
+		Allocation: AllocationConfig{Strategy: AllocationDeterministic, Percentage: 100, Salt: "s"},
+		Metrics:    []MetricConfig{{ID: "m1", Name: "conv"}},
+	}
+	if err := e.CreateExperiment(exp); err != nil {
+		t.Fatal(err)
+	}
+
+	summary := e.GetExperimentSummary()
+	total, ok := summary["total_experiments"].(int)
+	if !ok || total != 1 {
+		t.Errorf("expected 1 total experiment, got %v", summary["total_experiments"])
+	}
+	ft, ok := summary["features_tested"].(int)
+	if !ok || ft != 1 {
+		t.Errorf("expected 1 feature tested, got %v", summary["features_tested"])
+	}
+}

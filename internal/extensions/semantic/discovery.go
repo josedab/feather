@@ -1437,31 +1437,45 @@ func (fd *FeatureDiscovery) InferFeatureRelationships(ctx context.Context) error
 	}
 
 	// Infer from usage (co-used features)
+	modelToFeatures := make(map[string][]string)
 	for _, meta := range allMetadata {
 		usage, err := fd.indexer.GetUsage(meta.FeatureID)
 		if err != nil {
 			continue
 		}
-
-		// Features used by the same models are co-used
 		for _, model := range usage.ModelsUsing {
-			// Find other features used by this model
-			for _, otherMeta := range allMetadata {
-				if otherMeta.FeatureID == meta.FeatureID {
+			modelToFeatures[model] = append(modelToFeatures[model], meta.FeatureID)
+		}
+	}
+
+	addedPairs := make(map[string]struct{})
+	for _, features := range modelToFeatures {
+		if len(features) < 2 {
+			continue
+		}
+		for i := 0; i < len(features); i++ {
+			for j := i + 1; j < len(features); j++ {
+				source := features[i]
+				target := features[j]
+				if source == target {
 					continue
 				}
-				otherUsage, err := fd.indexer.GetUsage(otherMeta.FeatureID)
-				if err != nil {
+
+				keyA, keyB := source, target
+				if keyA > keyB {
+					keyA, keyB = keyB, keyA
+				}
+				pairKey := keyA + "|" + keyB
+				if _, ok := addedPairs[pairKey]; ok {
 					continue
 				}
-				for _, otherModel := range otherUsage.ModelsUsing {
-					if otherModel == model {
-						// Same model uses both features
-						if err := fd.AddFeatureRelationship(meta.FeatureID, otherMeta.FeatureID, EdgeTypeCoUsed, 0.7); err != nil {
-							fd.logger.Warn("failed to add co-used edge", "source", meta.FeatureID, "target", otherMeta.FeatureID, "error", err)
-						}
-						break
-					}
+				addedPairs[pairKey] = struct{}{}
+
+				if err := fd.AddFeatureRelationship(source, target, EdgeTypeCoUsed, 0.7); err != nil {
+					fd.logger.Warn("failed to add co-used edge", "source", source, "target", target, "error", err)
+				}
+				if err := fd.AddFeatureRelationship(target, source, EdgeTypeCoUsed, 0.7); err != nil {
+					fd.logger.Warn("failed to add co-used edge", "source", target, "target", source, "error", err)
 				}
 			}
 		}
