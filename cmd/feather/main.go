@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -31,9 +33,22 @@ import (
 // version is set at build time via -ldflags "-X main.version=<value>".
 var version = "dev"
 
+// configSource records where configuration was loaded from (for the startup banner).
+var configSource string
+
+//go:embed default_config.yaml
+var defaultConfigData []byte
+
 func main() {
 	configPath := flag.String("config", "", "Path to configuration file")
+	showVersion := flag.Bool("version", false, "Print version and exit")
+	validateOnly := flag.Bool("validate", false, "Validate config and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("feather %s\n", version)
+		return
+	}
 
 	// Load configuration
 	var cfg *config.Config
@@ -43,10 +58,56 @@ func main() {
 		cfg, err = config.LoadFromFile(*configPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+			if os.IsNotExist(err) || strings.Contains(err.Error(), "no such file") {
+				fmt.Fprintln(os.Stderr, "")
+				fmt.Fprintln(os.Stderr, "Available config files:")
+				fmt.Fprintln(os.Stderr, "  configs/feather-dev.yaml   — local development (start here)")
+				fmt.Fprintln(os.Stderr, "  configs/feather-local.yaml — local with disk persistence")
+				fmt.Fprintln(os.Stderr, "  configs/feather.yaml       — production reference")
+				fmt.Fprintln(os.Stderr, "")
+				fmt.Fprintln(os.Stderr, "Or run without -config to use environment variable defaults.")
+			}
 			os.Exit(1)
 		}
+		configSource = *configPath
 	} else {
-		cfg = config.LoadFromEnv()
+		// Auto-detect dev config when no -config flag is given
+		devConfig := "configs/feather-dev.yaml"
+		if _, statErr := os.Stat(devConfig); statErr == nil {
+			fmt.Fprintf(os.Stderr, "No config specified, using %s (dev defaults)\n", devConfig)
+			cfg, err = config.LoadFromFile(devConfig)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
+				os.Exit(1)
+			}
+			configSource = devConfig
+		} else {
+			// Fall back to embedded dev config (works after go install)
+			fmt.Fprintln(os.Stderr, "No config specified, using built-in development defaults")
+			fmt.Fprintln(os.Stderr, "  Tip: pass -config <file> to use a custom configuration")
+			cfg, err = config.LoadFromBytes(defaultConfigData)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to load embedded config: %v\n", err)
+				os.Exit(1)
+			}
+			configSource = "built-in defaults"
+		}
+	}
+
+	// Validate-only mode: check config and exit
+	if *validateOnly {
+		if err := cfg.Validate(); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Config validation failed:\n%v\n", err)
+			os.Exit(1)
+		}
+		featureCount := 0
+		for _, g := range cfg.Schema.Groups {
+			featureCount += len(g.Features)
+		}
+		fmt.Printf("✅ Config is valid (%s)\n", configSource)
+		fmt.Printf("   HTTP: :%d  gRPC: :%d\n", cfg.Serving.HTTP.Port, cfg.Serving.GRPC.Port)
+		fmt.Printf("   Schema: %d groups, %d features\n", len(cfg.Schema.Groups), featureCount)
+		return
 	}
 
 	// Initialize logger first
@@ -287,7 +348,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				err = metricsServer.ListenAndServe()
 			}
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				logger.Error("metrics server error", "error", err)
+				logListenError(logger, "metrics server", cfg.Metrics.Prometheus.Port, err)
 			}
 		}()
 	}
@@ -346,7 +407,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		defer recoverPanic(logger, "http-server")
 		logger.Info("starting HTTP server", "port", cfg.Serving.HTTP.Port)
 		if err := httpServer.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("HTTP server error", "error", err)
+			logListenError(logger, "HTTP server", cfg.Serving.HTTP.Port, err)
 		}
 	}()
 
@@ -366,7 +427,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		defer recoverPanic(logger, "grpc-server")
 		logger.Info("starting gRPC server", "port", cfg.Serving.GRPC.Port)
 		if err := grpcServer.Start(); err != nil {
-			logger.Error("gRPC server error", "error", err)
+			logListenError(logger, "gRPC server", cfg.Serving.GRPC.Port, err)
 		}
 	}()
 
@@ -410,7 +471,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				err = ingestionServer.ListenAndServe()
 			}
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				logger.Error("HTTP ingestion server error", "error", err)
+				logListenError(logger, "HTTP ingestion server", cfg.Ingestion.HTTP.Port, err)
 			}
 		}()
 	}
@@ -451,6 +512,16 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	}
 
 	logger.Info("Feather Feature Store started successfully")
+	logger.Info("endpoints",
+		"http", fmt.Sprintf("http://localhost:%d", cfg.Serving.HTTP.Port),
+		"grpc", fmt.Sprintf("localhost:%d", cfg.Serving.GRPC.Port),
+		"health", fmt.Sprintf("http://localhost:%d/health", cfg.Serving.HTTP.Port),
+		"metrics", fmt.Sprintf("http://localhost:%d/metrics", cfg.Metrics.Prometheus.Port),
+	)
+
+	if cfg.Logging.Format == "text" {
+		printStartupBanner(cfg, configSource)
+	}
 
 	// Wait for shutdown signal
 	<-ctx.Done()
@@ -479,6 +550,43 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	return nil
 }
 
+// printStartupBanner prints a human-readable banner with service URLs.
+// Only called when logging format is "text" (dev mode).
+func printStartupBanner(cfg *config.Config, configSource string) {
+	httpURL := fmt.Sprintf("http://localhost:%d", cfg.Serving.HTTP.Port)
+	grpcAddr := fmt.Sprintf("localhost:%d", cfg.Serving.GRPC.Port)
+	healthURL := fmt.Sprintf("%s/health", httpURL)
+	metricsURL := fmt.Sprintf("http://localhost:%d/metrics", cfg.Metrics.Prometheus.Port)
+
+	// Count schema groups and features
+	groups := len(cfg.Schema.Groups)
+	features := 0
+	for _, g := range cfg.Schema.Groups {
+		features += len(g.Features)
+	}
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "  ╭─────────────────────────────────────────────────╮")
+	fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("🪶 Feather Feature Store %s", version))
+	fmt.Fprintln(os.Stderr, "  │                                                 │")
+	fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("HTTP API:  %s", httpURL))
+	fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("gRPC API:  %s", grpcAddr))
+	if cfg.Metrics.Prometheus.Enabled {
+		fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("Metrics:   %s", metricsURL))
+	}
+	fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("Health:    %s", healthURL))
+	fmt.Fprintln(os.Stderr, "  │                                                 │")
+	if configSource != "" {
+		fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("Config:    %s", configSource))
+	}
+	fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("Schema:    %d group(s), %d feature(s)", groups, features))
+	fmt.Fprintln(os.Stderr, "  │                                                 │")
+	fmt.Fprintf(os.Stderr, "  │  %-48s│\n", fmt.Sprintf("Try: curl %s", healthURL))
+	fmt.Fprintln(os.Stderr, "  │  Stop: Ctrl+C                                   │")
+	fmt.Fprintln(os.Stderr, "  ╰─────────────────────────────────────────────────╯")
+	fmt.Fprintln(os.Stderr)
+}
+
 // recoverPanic recovers from panics in goroutines and logs them.
 func recoverPanic(logger *slog.Logger, component string) {
 	if r := recover(); r != nil {
@@ -489,4 +597,16 @@ func recoverPanic(logger *slog.Logger, component string) {
 			"stack", string(stack),
 		)
 	}
+}
+
+// logListenError logs a server listen error with actionable hints.
+func logListenError(logger *slog.Logger, component string, port int, err error) {
+	if strings.Contains(err.Error(), "address already in use") {
+		logger.Error(fmt.Sprintf("%s error: port %d is already in use", component, port),
+			"error", err,
+			"hint", fmt.Sprintf("Run 'lsof -i :%d' to see what's using it, or set a different port", port),
+		)
+		return
+	}
+	logger.Error(fmt.Sprintf("%s error", component), "error", err)
 }
