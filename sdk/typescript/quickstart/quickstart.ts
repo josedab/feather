@@ -4,10 +4,21 @@
 
 import { FeatherClient } from '@feather-store/client';
 
+const FEATHER_URL = 'http://localhost:8080';
+
 async function main() {
+  // Preflight: ensure the Feather server is reachable
+  try {
+    await fetch(`${FEATHER_URL}/health`);
+  } catch {
+    console.error(`❌ Cannot connect to Feather at ${FEATHER_URL}`);
+    console.error('   Start the server first:  make run-dev');
+    process.exit(1);
+  }
+
   // 1. Connect to Feather
   const client = new FeatherClient({
-    baseUrl: 'http://localhost:8080',
+    baseUrl: FEATHER_URL,
   });
 
   // 2. Store features for an entity

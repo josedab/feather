@@ -10,6 +10,10 @@ Get started with Feather in 30 seconds.
 ## Step 1: Start Feather
 
 ```bash
+# From source (no Docker needed)
+cd /path/to/feather && make run-dev
+
+# Or with Docker
 docker run -d --name feather -p 8080:8080 ghcr.io/feather-store/feather:latest
 ```
 
@@ -18,6 +22,9 @@ docker run -d --name feather -p 8080:8080 ghcr.io/feather-store/feather:latest
 ```bash
 npm install
 ```
+
+> **Note:** The `@feather-store/client` package is included locally via `package.json`.
+> If running outside the repo, build it first with `cd sdk/typescript && npm run build`.
 
 ## Step 3: Run the Quickstart
 

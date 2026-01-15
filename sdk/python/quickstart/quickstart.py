@@ -1,9 +1,23 @@
 """Feather Python Quickstart - Get started in 30 seconds!"""
 
+import sys
+import urllib.request
+import urllib.error
+
 from feather_client import FeatherClient
 
+FEATHER_URL = "http://localhost:8080"
+
+# Preflight: ensure the Feather server is reachable
+try:
+    urllib.request.urlopen(f"{FEATHER_URL}/health", timeout=3)
+except (urllib.error.URLError, ConnectionRefusedError, OSError):
+    print(f"❌ Cannot connect to Feather at {FEATHER_URL}")
+    print("   Start the server first:  make run-dev")
+    sys.exit(1)
+
 # 1. Connect to Feather
-client = FeatherClient("http://localhost:8080")
+client = FeatherClient(FEATHER_URL)
 
 # 2. Store features for an entity
 client.put_features(

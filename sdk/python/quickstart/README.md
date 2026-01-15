@@ -10,13 +10,21 @@ Get started with Feather in 30 seconds.
 ## Step 1: Start Feather
 
 ```bash
+# From source (no Docker needed)
+cd /path/to/feather && make run-dev
+
+# Or with Docker
 docker run -d --name feather -p 8080:8080 ghcr.io/feather-store/feather:latest
 ```
 
 ## Step 2: Install the SDK
 
 ```bash
-pip install feather-client
+# From the repository root
+pip install -e sdk/python/
+
+# Or from this directory
+pip install -e ../
 ```
 
 ## Step 3: Run the Quickstart
