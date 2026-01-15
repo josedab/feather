@@ -1,0 +1,76 @@
+# Feather Feature Store — Local Configuration
+#
+# Uses a local ./data path for warm storage to avoid system permissions.
+#
+# Usage:
+#   ./bin/feather -config configs/feather-local.yaml
+
+schema:
+  groups:
+    - name: user_features
+      entity_type: user
+      ttl: 24h
+      features:
+        - name: click_count_1h
+          data_type: int64
+          aggregation:
+            function: count
+            window: 1h
+        - name: purchase_total_7d
+          data_type: float64
+          aggregation:
+            function: sum
+            window: 168h
+        - name: last_activity_ts
+          data_type: timestamp
+        - name: user_embedding
+          data_type: vector
+          dimensions: [128]
+
+storage:
+  hot:
+    max_memory: 4GB
+    eviction_policy: lru
+  warm:
+    path: ./data
+    sync_interval: 1s
+  historical:
+    enabled: true
+    retention: 720h  # 30 days
+
+ingestion:
+  kafka:
+    enabled: false
+    brokers:
+      - kafka-1:9092
+      - kafka-2:9092
+    topic: feature-updates
+    consumer_group: feather
+  http:
+    enabled: true
+    port: 8081
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 1000
+  http:
+    port: 8080
+    read_timeout: 10s
+    write_timeout: 10s
+
+sync:
+  enabled: false
+  mode: central  # or edge
+  central_address: feather-central:50051
+  sync_interval: 10s
+  batch_size: 1000
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: info
+  format: json
