@@ -1,0 +1,21 @@
+{
+  "name": "Feather",
+  "image": "mcr.microsoft.com/devcontainers/go:1.24",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "make install-tools && make build && echo '✅ Ready! Run: make run-dev'",
+  "postStartCommand": "echo '💡 Start Feather: make run-dev    Explore: make explore'",
+  "forwardPorts": [8080, 50051, 9090, 8081],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "go.lintTool": "golangci-lint",
+        "go.lintOnSave": "workspace"
+      },
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}

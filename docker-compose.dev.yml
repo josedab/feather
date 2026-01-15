@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  feather:
+    image: ghcr.io/feather-store/feather:latest
+    ports:
+      - "8080:8080"   # HTTP serving
+      - "50051:50051" # gRPC serving
+      - "8081:8081"   # HTTP ingestion
+      - "9090:9090"   # Prometheus metrics
+    volumes:
+      - ./configs:/etc/feather:ro
+    command: ["-config", "/etc/feather/feather-dev.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
