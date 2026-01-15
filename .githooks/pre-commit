@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Pre-commit hook: runs fast checks before each commit.
+# Installed by `make setup`. To skip once: git commit --no-verify
+
+set -euo pipefail
+
+echo "Running pre-commit checks..."
+
+# Fast pre-commit: format check + vet + lint + core tests (~20s)
+make check-quick
+
+echo "✅ Pre-commit checks passed."

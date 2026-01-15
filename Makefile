@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short lint run clean generate tidy fmt fmt-check vet proto help install-tools
+.PHONY: build test test-quick test-short test-core lint run run-config run-dev run-cli run-tui clean generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -24,21 +24,36 @@ install-tools:
 	go install golang.org/x/tools/cmd/goimports@latest
 	@echo "Development tools installed successfully."
 
-## build: Build the feather server binary
+## setup: One-command contributor setup (doctor, tools, hooks, build, test)
+setup: doctor install-tools
+	@git config core.hooksPath .githooks
+	@echo "Git hooks configured (.githooks/pre-commit)."
+	@$(MAKE) build
+	@$(MAKE) test-core
+	@echo ""
+	@echo "✅ Setup complete! You're ready to contribute."
+	@echo "   Run 'make run-dev' to start the server."
+	@echo "   Run 'make check-quick' before committing."
+
+## build: Build the feather server binary (CGO disabled; use build-cgo for Kafka)
 build:
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
+	CGO_ENABLED=0 $(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
+
+## build-cgo: Build with CGO enabled (required for Kafka/librdkafka support)
+build-cgo:
+	CGO_ENABLED=1 $(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
 
 ## build-tui: Build the terminal UI binary
 build-tui:
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME)-tui ./cmd/feather-tui
+	CGO_ENABLED=0 $(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME)-tui ./cmd/feather-tui
 
 ## build-mcp: Build the MCP server binary
 build-mcp:
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME)-mcp ./cmd/feather-mcp
+	CGO_ENABLED=0 $(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME)-mcp ./cmd/feather-mcp
 
 ## build-cli: Build the CLI client binary
 build-cli:
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS) -X github.com/feather-store/feather/cmd/feather-cli/cmd.Version=$(VERSION) -X github.com/feather-store/feather/cmd/feather-cli/cmd.GitCommit=$(GIT_COMMIT) -X github.com/feather-store/feather/cmd/feather-cli/cmd.BuildDate=$(BUILD_DATE)" -o $(BUILD_DIR)/$(APP_NAME)-cli ./cmd/feather-cli
+	CGO_ENABLED=0 $(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS) -X github.com/feather-store/feather/cmd/feather-cli/cmd.Version=$(VERSION) -X github.com/feather-store/feather/cmd/feather-cli/cmd.GitCommit=$(GIT_COMMIT) -X github.com/feather-store/feather/cmd/feather-cli/cmd.BuildDate=$(BUILD_DATE)" -o $(BUILD_DIR)/$(APP_NAME)-cli ./cmd/feather-cli
 
 ## build-all: Build all binaries (server, tui, mcp, cli)
 build-all: build build-tui build-mcp build-cli
@@ -48,15 +63,29 @@ build-race:
 
 ## test: Run all tests with race detector and coverage
 test:
-	$(GO) test -v -race -count=1 -cover ./...
+	$(GO) test -v -race -count=1 -cover -timeout 300s ./...
 
 ## test-quick: Run short tests without race detector (fast feedback)
 test-quick:
-	$(GO) test -short -count=1 ./...
+	@START=$$(date +%s); \
+	$(GO) test -short -count=1 -timeout 120s ./... 2>&1 | grep -E '(^ok|FAIL|---)'; \
+	EXIT=$$?; \
+	ELAPSED=$$(( $$(date +%s) - $$START )); \
+	if [ $$EXIT -eq 0 ]; then echo ""; echo "✅ All tests passed ($$ELAPSED""s)"; \
+	else echo ""; echo "❌ Some tests failed ($$ELAPSED""s)"; exit 1; fi
+
+## test-core: Run core package tests only (~10s)
+test-core:
+	@START=$$(date +%s); \
+	$(GO) test -short -count=1 -timeout 60s ./internal/core/... 2>&1 | grep -E '(^ok|FAIL|---)'; \
+	EXIT=$$?; \
+	ELAPSED=$$(( $$(date +%s) - $$START )); \
+	if [ $$EXIT -eq 0 ]; then echo ""; echo "✅ Core tests passed ($$ELAPSED""s)"; \
+	else echo ""; echo "❌ Some core tests failed ($$ELAPSED""s)"; exit 1; fi
 
 ## test-short: Run short tests with verbose output
 test-short:
-	$(GO) test -v -short -count=1 ./...
+	$(GO) test -v -short -count=1 -timeout 120s ./...
 
 ## test-coverage: Run tests and generate HTML coverage report
 test-coverage:
@@ -67,8 +96,9 @@ test-coverage:
 test-integration:
 	$(GO) test -v -tags=integration -count=1 ./test/...
 
-## lint: Run golangci-lint
+## lint: Run golangci-lint (auto-installs if missing)
 lint:
+	@command -v golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
 	golangci-lint run ./...
 
 ## run: Run the server with default configuration
@@ -82,6 +112,14 @@ run-config:
 ## run-dev: Run the server with the minimal dev config
 run-dev:
 	$(GO) run $(MAIN_PATH) -config configs/feather-dev.yaml
+
+## run-cli: Run the CLI client
+run-cli:
+	$(GO) run ./cmd/feather-cli
+
+## run-tui: Run the terminal UI
+run-tui:
+	$(GO) run ./cmd/feather-tui
 
 ## clean: Remove build artifacts and coverage files
 clean:
@@ -106,6 +144,11 @@ fmt-check:
 vet:
 	$(GO) vet ./...
 
+## validate-config: Validate a config file without starting the server
+validate-config: build
+	@./bin/feather -config $(CONFIG) -validate
+CONFIG ?= configs/feather.yaml
+
 # Generate protobuf (requires protoc, protoc-gen-go, and protoc-gen-go-grpc)
 # Install plugins: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 #                  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
@@ -117,8 +160,103 @@ proto:
 		api/proto/feather.proto
 
 # Development helpers
+
+## docs: Start the documentation site locally (requires Node.js)
+docs:
+	cd website && npm install --silent && npm start
 ## dev: Format, vet, test, and build
 dev: fmt vet test build
+
+## quickstart: Build, start, seed, and verify (auto-detects Docker vs source)
+quickstart:
+	@if command -v docker >/dev/null 2>&1 && timeout 5 docker info >/dev/null 2>&1; then \
+		echo "Docker detected — using container quickstart."; \
+		./scripts/quickstart.sh; \
+	elif command -v go >/dev/null 2>&1; then \
+		echo "Go detected — building from source."; \
+		./scripts/quickstart-local.sh; \
+	else \
+		echo "Neither Docker nor Go found." >&2; \
+		echo "Install one of:" >&2; \
+		echo "  • Go 1.24+: https://golang.org/dl/" >&2; \
+		echo "  • Docker:   https://docs.docker.com/get-docker/" >&2; \
+		exit 1; \
+	fi
+
+## quickstart-docker: Run the prebuilt Docker quickstart
+quickstart-docker:
+	./scripts/quickstart.sh
+
+## quickstart-local: Build, start, seed, and verify — one command from source
+quickstart-local:
+	./scripts/quickstart-local.sh
+
+## demo: Seed demo data against a running server
+demo:
+	./scripts/seed-demo.sh
+
+## doctor: Validate local prerequisites
+doctor:
+	./scripts/doctor.sh
+
+## smoke-test: Run end-to-end smoke tests against a running server
+smoke-test:
+	./scripts/smoke-test.sh
+
+## dev-start: Start server in background (use dev-stop to stop)
+dev-start: build
+	@if [ -f .feather.pid ] && kill -0 $$(cat .feather.pid) 2>/dev/null; then \
+		echo "Feather is already running (PID $$(cat .feather.pid))"; \
+		exit 0; \
+	fi
+	@./bin/feather -config configs/feather-dev.yaml > /dev/null 2>&1 & echo $$! > .feather.pid
+	@printf "Waiting for server..."
+	@for i in $$(seq 1 30); do \
+		curl -sf http://localhost:8080/health >/dev/null 2>&1 && break; \
+		sleep 0.5; printf "."; \
+	done
+	@echo ""
+	@if curl -sf http://localhost:8080/health >/dev/null 2>&1; then \
+		echo "✅ Feather running in background (PID $$(cat .feather.pid))"; \
+		echo "   Stop: make dev-stop"; \
+	else \
+		echo "❌ Server failed to start. Check logs."; \
+		rm -f .feather.pid; \
+		exit 1; \
+	fi
+
+## dev-stop: Stop a background dev server started by dev-start
+dev-stop:
+	@if [ -f .feather.pid ]; then \
+		kill $$(cat .feather.pid) 2>/dev/null && echo "Feather stopped." || echo "Process not running."; \
+		rm -f .feather.pid; \
+	else \
+		echo "No .feather.pid file found. Is Feather running?"; \
+	fi
+
+## stop-dev: Stop a running dev server started by quickstart-local
+stop-dev:
+	@if [ -f .feather.pid ]; then \
+		kill $$(cat .feather.pid) 2>/dev/null && echo "Feather stopped." || echo "Process not running."; \
+		rm -f .feather.pid; \
+	else \
+		echo "No .feather.pid file found. Is Feather running?"; \
+	fi
+
+## explore: Walk through all API operations interactively (requires running server)
+explore:
+	./scripts/explore.sh
+
+## examples: Run all examples (requires running server: make run-dev)
+examples:
+	@echo "Running Python examples..."
+	python3 examples/ml-pipeline.py
+	python3 examples/fraud-detection.py
+	@echo ""
+	@echo "Running Go example..."
+	cd examples/go-basic && go run main.go
+	@echo ""
+	@echo "✅ All examples completed."
 
 # Docker
 ## docker-build: Build the Docker image
@@ -136,3 +274,6 @@ bench:
 
 ## check: Run all checks (format check, vet, lint, test)
 check: fmt-check vet lint test
+
+## check-quick: Fast pre-commit checks (format, vet, lint, core tests — ~20s)
+check-quick: fmt-check vet lint test-core
