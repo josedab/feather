@@ -157,7 +157,7 @@ tracing:
   enabled: false
   endpoint: ""
   sampleRate: 0.1
-  insecure: true
+  insecure: false  # Set to true only for localhost/development endpoints
 
 # TLS configuration for servers
 tls:
