@@ -8,13 +8,13 @@ import (
 
 // BatchClient provides batched operations for efficiency.
 type BatchClient struct {
-	client      *Client
-	batchSize   int
+	client        *Client
+	batchSize     int
 	flushInterval time.Duration
-	pending     []batchItem
-	mu          sync.Mutex
-	stopCh      chan struct{}
-	wg          sync.WaitGroup
+	pending       []batchItem
+	mu            sync.Mutex
+	stopCh        chan struct{}
+	wg            sync.WaitGroup
 }
 
 type batchItem struct {
@@ -265,9 +265,9 @@ func WithRetry[T any](ctx context.Context, config *RetryConfig, fn func() (T, er
 
 // CacheConfig configures the client-side cache.
 type CacheConfig struct {
-	MaxSize    int
-	TTL        time.Duration
-	Enabled    bool
+	MaxSize int
+	TTL     time.Duration
+	Enabled bool
 }
 
 // CachedClient wraps a client with local caching.

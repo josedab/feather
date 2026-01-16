@@ -163,20 +163,22 @@ func TestEngine_Last(t *testing.T) {
 func TestEngine_WindowExpiry(t *testing.T) {
 	engine := NewEngine()
 
-	// 1 minute window
+	// Use a 5-minute window to avoid bucket boundary issues.
+	// With 1-minute buckets, this gives us enough margin for timing variations.
 	spec := &domain.AggregationSpec{
 		Function: domain.AggCount,
-		Window:   time.Minute,
+		Window:   5 * time.Minute,
 	}
 	engine.RegisterAggregation("events", spec)
 
 	now := time.Now()
 
-	// Add old events (should be outside window)
-	engine.Update("user:1", "events", 1.0, now.Add(-2*time.Minute))
+	// Add old events (well outside the 5-minute window)
+	engine.Update("user:1", "events", 1.0, now.Add(-10*time.Minute))
 
-	// Add recent events (should be inside window)
-	engine.Update("user:1", "events", 1.0, now.Add(-30*time.Second))
+	// Add recent events (safely inside the 5-minute window)
+	// Use -1 minute to ensure they're in a bucket that won't expire during the test
+	engine.Update("user:1", "events", 1.0, now.Add(-1*time.Minute))
 	engine.Update("user:1", "events", 1.0, now)
 
 	count, err := engine.Compute("user:1", "events", domain.AggCount)

@@ -40,18 +40,18 @@ func (h *GroupsHandler) RegisterRoutes(mux *http.ServeMux) {
 	// Group versions
 	mux.HandleFunc("GET /v1/groups/{id}/versions/{version}", h.handleGetVersion)
 
-	// Views
-	mux.HandleFunc("POST /v1/groups/views", h.handleCreateView)
-	mux.HandleFunc("GET /v1/groups/views", h.handleListViews)
-	mux.HandleFunc("GET /v1/groups/views/{id}", h.handleGetView)
-	mux.HandleFunc("DELETE /v1/groups/views/{id}", h.handleDeleteView)
+	// Views - use /v1/feature-views to avoid route conflict with /v1/groups/{id}/features
+	mux.HandleFunc("POST /v1/feature-views", h.handleCreateView)
+	mux.HandleFunc("GET /v1/feature-views", h.handleListViews)
+	mux.HandleFunc("GET /v1/feature-views/{id}", h.handleGetView)
+	mux.HandleFunc("DELETE /v1/feature-views/{id}", h.handleDeleteView)
 
-	// Query by entity/tag
-	mux.HandleFunc("GET /v1/groups/by-entity/{entity}", h.handleGetByEntity)
-	mux.HandleFunc("GET /v1/groups/by-tag/{tag}", h.handleGetByTag)
+	// Query by entity/tag - use different paths to avoid route conflicts
+	mux.HandleFunc("GET /v1/entities/{entity}/groups", h.handleGetByEntity)
+	mux.HandleFunc("GET /v1/tags/{tag}/groups", h.handleGetByTag)
 
 	// Stats
-	mux.HandleFunc("GET /v1/groups/stats", h.handleGetStats)
+	mux.HandleFunc("GET /v1/group-stats", h.handleGetStats)
 }
 
 // GetManager returns the groups manager for integration.
@@ -61,15 +61,15 @@ func (h *GroupsHandler) GetManager() *groups.Manager {
 
 // CreateGroupRequest represents a request to create a feature group.
 type CreateGroupRequest struct {
-	ID          string               `json:"id"`
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	EntityType  string               `json:"entity_type"`
+	ID          string                `json:"id"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	EntityType  string                `json:"entity_type"`
 	Features    []groups.GroupFeature `json:"features"`
-	Tags        []string             `json:"tags"`
-	Owner       string               `json:"owner"`
-	Team        string               `json:"team"`
-	Metadata    map[string]string    `json:"metadata"`
+	Tags        []string              `json:"tags"`
+	Owner       string                `json:"owner"`
+	Team        string                `json:"team"`
+	Metadata    map[string]string     `json:"metadata"`
 }
 
 // handleCreateGroup handles POST /v1/groups

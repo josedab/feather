@@ -12,16 +12,16 @@ import (
 type RuleType string
 
 const (
-	RuleTypeNotNull     RuleType = "not_null"
-	RuleTypeUnique      RuleType = "unique"
-	RuleTypeRange       RuleType = "range"
-	RuleTypePattern     RuleType = "pattern"
-	RuleTypeEnum        RuleType = "enum"
-	RuleTypeCustom      RuleType = "custom"
-	RuleTypeFreshness   RuleType = "freshness"
+	RuleTypeNotNull      RuleType = "not_null"
+	RuleTypeUnique       RuleType = "unique"
+	RuleTypeRange        RuleType = "range"
+	RuleTypePattern      RuleType = "pattern"
+	RuleTypeEnum         RuleType = "enum"
+	RuleTypeCustom       RuleType = "custom"
+	RuleTypeFreshness    RuleType = "freshness"
 	RuleTypeCompleteness RuleType = "completeness"
-	RuleTypeConsistency RuleType = "consistency"
-	RuleTypeAccuracy    RuleType = "accuracy"
+	RuleTypeConsistency  RuleType = "consistency"
+	RuleTypeAccuracy     RuleType = "accuracy"
 )
 
 // Severity defines the severity of a validation failure.

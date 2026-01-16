@@ -49,34 +49,34 @@ type ConsistencyResult struct {
 
 // ConsistencyReport summarizes consistency check results.
 type ConsistencyReport struct {
-	TotalChecks       int                  `json:"total_checks"`
-	ConsistentCount   int                  `json:"consistent_count"`
-	InconsistentCount int                  `json:"inconsistent_count"`
-	ConsistencyRate   float64              `json:"consistency_rate"`
+	TotalChecks       int                            `json:"total_checks"`
+	ConsistentCount   int                            `json:"consistent_count"`
+	InconsistentCount int                            `json:"inconsistent_count"`
+	ConsistencyRate   float64                        `json:"consistency_rate"`
 	ByFeature         map[string]*FeatureConsistency `json:"by_feature"`
-	StartTime         time.Time            `json:"start_time"`
-	EndTime           time.Time            `json:"end_time"`
-	Duration          time.Duration        `json:"duration"`
+	StartTime         time.Time                      `json:"start_time"`
+	EndTime           time.Time                      `json:"end_time"`
+	Duration          time.Duration                  `json:"duration"`
 }
 
 // FeatureConsistency contains consistency stats for a single feature.
 type FeatureConsistency struct {
-	Feature           string    `json:"feature"`
-	TotalChecks       int       `json:"total_checks"`
-	ConsistentCount   int       `json:"consistent_count"`
-	InconsistentCount int       `json:"inconsistent_count"`
-	ConsistencyRate   float64   `json:"consistency_rate"`
-	AvgDifference     float64   `json:"avg_difference,omitempty"`
-	MaxDifference     float64   `json:"max_difference,omitempty"`
+	Feature           string  `json:"feature"`
+	TotalChecks       int     `json:"total_checks"`
+	ConsistentCount   int     `json:"consistent_count"`
+	InconsistentCount int     `json:"inconsistent_count"`
+	ConsistencyRate   float64 `json:"consistency_rate"`
+	AvgDifference     float64 `json:"avg_difference,omitempty"`
+	MaxDifference     float64 `json:"max_difference,omitempty"`
 }
 
 // CheckerConfig configures the consistency checker.
 type CheckerConfig struct {
-	DefaultTolerance float64       // Default tolerance for numeric comparisons
+	DefaultTolerance float64            // Default tolerance for numeric comparisons
 	Tolerances       map[string]float64 // Per-feature tolerances
-	SampleSize       int           // Number of entities to sample
-	Concurrency      int           // Number of concurrent checks
-	Timeout          time.Duration // Timeout per check
+	SampleSize       int                // Number of entities to sample
+	Concurrency      int                // Number of concurrent checks
+	Timeout          time.Duration      // Timeout per check
 }
 
 // DefaultConfig returns a default checker configuration.
@@ -487,10 +487,10 @@ func (s *HTTPOfflineSource) GetFeaturesBatch(ctx context.Context, entityIDs []st
 
 // InMemoryOfflineSource is an in-memory offline source for testing.
 type InMemoryOfflineSource struct {
-	name   string
-	data   map[string]map[string]interface{}
-	times  map[string]map[string]time.Time
-	mu     sync.RWMutex
+	name  string
+	data  map[string]map[string]interface{}
+	times map[string]map[string]time.Time
+	mu    sync.RWMutex
 }
 
 // NewInMemoryOfflineSource creates an in-memory offline source.

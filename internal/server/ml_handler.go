@@ -42,7 +42,7 @@ type ConnectorRequest struct {
 	Name         string            `json:"name"`
 	Type         string            `json:"type"` // tensorflow, mlflow, sagemaker
 	Endpoint     string            `json:"endpoint"`
-	Region       string            `json:"region,omitempty"`       // for sagemaker
+	Region       string            `json:"region,omitempty"`        // for sagemaker
 	EndpointName string            `json:"endpoint_name,omitempty"` // for sagemaker
 	TrackingURI  string            `json:"tracking_uri,omitempty"`  // for mlflow
 	Headers      map[string]string `json:"headers,omitempty"`

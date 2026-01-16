@@ -306,11 +306,11 @@ func TestFederation_ReplicationPolicy(t *testing.T) {
 
 	// Set replication policy
 	policy := &ReplicationPolicy{
-		Mode:              ReplicationModeAsync,
-		TargetRegions:     []string{"us-east-1", "eu-west-1"},
-		MinReplicas:       2,
-		MaxReplicas:       5,
-		SyncInterval:      time.Minute,
+		Mode:               ReplicationModeAsync,
+		TargetRegions:      []string{"us-east-1", "eu-west-1"},
+		MinReplicas:        2,
+		MaxReplicas:        5,
+		SyncInterval:       time.Minute,
 		ConflictResolution: "last_write_wins",
 	}
 

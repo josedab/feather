@@ -56,21 +56,21 @@ func DefaultConfig() Config {
 
 // Result holds benchmark results for a single operation type.
 type Result struct {
-	Name            string         `json:"name"`
-	TotalOps        int64          `json:"total_ops"`
-	Duration        time.Duration  `json:"duration_ns"`
-	OpsPerSecond    float64        `json:"ops_per_second"`
-	LatencyP50      time.Duration  `json:"latency_p50_ns"`
-	LatencyP95      time.Duration  `json:"latency_p95_ns"`
-	LatencyP99      time.Duration  `json:"latency_p99_ns"`
-	LatencyP999     time.Duration  `json:"latency_p999_ns"`
-	LatencyMin      time.Duration  `json:"latency_min_ns"`
-	LatencyMax      time.Duration  `json:"latency_max_ns"`
-	LatencyMean     time.Duration  `json:"latency_mean_ns"`
-	LatencyStdDev   float64        `json:"latency_stddev_ns"`
-	Errors          int64          `json:"errors"`
-	BytesProcessed  int64          `json:"bytes_processed"`
-	ThroughputMBps  float64        `json:"throughput_mbps"`
+	Name           string        `json:"name"`
+	TotalOps       int64         `json:"total_ops"`
+	Duration       time.Duration `json:"duration_ns"`
+	OpsPerSecond   float64       `json:"ops_per_second"`
+	LatencyP50     time.Duration `json:"latency_p50_ns"`
+	LatencyP95     time.Duration `json:"latency_p95_ns"`
+	LatencyP99     time.Duration `json:"latency_p99_ns"`
+	LatencyP999    time.Duration `json:"latency_p999_ns"`
+	LatencyMin     time.Duration `json:"latency_min_ns"`
+	LatencyMax     time.Duration `json:"latency_max_ns"`
+	LatencyMean    time.Duration `json:"latency_mean_ns"`
+	LatencyStdDev  float64       `json:"latency_stddev_ns"`
+	Errors         int64         `json:"errors"`
+	BytesProcessed int64         `json:"bytes_processed"`
+	ThroughputMBps float64       `json:"throughput_mbps"`
 }
 
 // NewSuite creates a new benchmark suite.

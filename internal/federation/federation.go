@@ -44,11 +44,11 @@ func NewFederation(config Config) *Federation {
 	}
 
 	return &Federation{
-		config:     config,
-		localNode:  localNode,
-		nodes:      make(map[string]*Node),
-		catalog:    make(map[string]*CatalogEntry),
-		policies:   make(map[string]*ReplicationPolicy),
+		config:    config,
+		localNode: localNode,
+		nodes:     make(map[string]*Node),
+		catalog:   make(map[string]*CatalogEntry),
+		policies:  make(map[string]*ReplicationPolicy),
 		httpClient: &http.Client{
 			Timeout: config.RequestTimeout,
 		},

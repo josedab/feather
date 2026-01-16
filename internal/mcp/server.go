@@ -63,10 +63,10 @@ type jsonRPCRequest struct {
 }
 
 type jsonRPCResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      interface{}     `json:"id"`
-	Result  interface{}     `json:"result,omitempty"`
-	Error   *jsonRPCError   `json:"error,omitempty"`
+	JSONRPC string        `json:"jsonrpc"`
+	ID      interface{}   `json:"id"`
+	Result  interface{}   `json:"result,omitempty"`
+	Error   *jsonRPCError `json:"error,omitempty"`
 }
 
 type jsonRPCError struct {
@@ -431,9 +431,9 @@ func (s *Server) toolListFeatureGroups(ctx context.Context) toolCallResult {
 	var result []map[string]interface{}
 	for _, g := range groups {
 		result = append(result, map[string]interface{}{
-			"name":         g.Name,
-			"entity_type":  g.EntityType,
-			"description":  g.Description,
+			"name":          g.Name,
+			"entity_type":   g.EntityType,
+			"description":   g.Description,
 			"feature_count": len(g.Features),
 		})
 	}

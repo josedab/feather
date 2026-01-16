@@ -75,26 +75,26 @@ type DataSchema struct {
 
 // FeatureSuggestion represents a suggested feature.
 type FeatureSuggestion struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Expression  string            `json:"expression"`
-	DataType    string            `json:"data_type"`
-	Category    string            `json:"category"`
-	Tags        []string          `json:"tags"`
-	Confidence  float32           `json:"confidence"`
-	Rationale   string            `json:"rationale"`
-	Dependencies []string         `json:"dependencies,omitempty"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description"`
+	Expression   string            `json:"expression"`
+	DataType     string            `json:"data_type"`
+	Category     string            `json:"category"`
+	Tags         []string          `json:"tags"`
+	Confidence   float32           `json:"confidence"`
+	Rationale    string            `json:"rationale"`
+	Dependencies []string          `json:"dependencies,omitempty"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
 // GenerationRequest represents a feature generation request.
 type GenerationRequest struct {
-	Schema         *DataSchema         `json:"schema"`
-	ExistingFeatures []string          `json:"existing_features,omitempty"`
-	UseCase        string              `json:"use_case,omitempty"`
-	Constraints    *GenerationConstraints `json:"constraints,omitempty"`
-	MaxSuggestions int                 `json:"max_suggestions"`
+	Schema           *DataSchema            `json:"schema"`
+	ExistingFeatures []string               `json:"existing_features,omitempty"`
+	UseCase          string                 `json:"use_case,omitempty"`
+	Constraints      *GenerationConstraints `json:"constraints,omitempty"`
+	MaxSuggestions   int                    `json:"max_suggestions"`
 }
 
 // GenerationConstraints defines constraints for feature generation.

@@ -402,51 +402,51 @@ func TestAccessController_HasPermission(t *testing.T) {
 	ac := NewAccessController()
 
 	tests := []struct {
-		name        string
-		key         *APIKey
-		permission  Permission
+		name          string
+		key           *APIKey
+		permission    Permission
 		hasPermission bool
 	}{
 		{
-			name:        "direct permission",
-			key:         &APIKey{Permissions: []Permission{PermRead, PermWrite}},
-			permission:  PermRead,
+			name:          "direct permission",
+			key:           &APIKey{Permissions: []Permission{PermRead, PermWrite}},
+			permission:    PermRead,
 			hasPermission: true,
 		},
 		{
-			name:        "admin has all",
-			key:         &APIKey{Permissions: []Permission{PermAdmin}},
-			permission:  PermDelete,
+			name:          "admin has all",
+			key:           &APIKey{Permissions: []Permission{PermAdmin}},
+			permission:    PermDelete,
 			hasPermission: true,
 		},
 		{
-			name:        "missing direct permission",
-			key:         &APIKey{Permissions: []Permission{PermRead}},
-			permission:  PermWrite,
+			name:          "missing direct permission",
+			key:           &APIKey{Permissions: []Permission{PermRead}},
+			permission:    PermWrite,
 			hasPermission: false,
 		},
 		{
-			name:        "role permission - reader",
-			key:         &APIKey{Roles: []string{"reader"}},
-			permission:  PermRead,
+			name:          "role permission - reader",
+			key:           &APIKey{Roles: []string{"reader"}},
+			permission:    PermRead,
 			hasPermission: true,
 		},
 		{
-			name:        "role permission - writer",
-			key:         &APIKey{Roles: []string{"writer"}},
-			permission:  PermWrite,
+			name:          "role permission - writer",
+			key:           &APIKey{Roles: []string{"writer"}},
+			permission:    PermWrite,
 			hasPermission: true,
 		},
 		{
-			name:        "role missing permission",
-			key:         &APIKey{Roles: []string{"reader"}},
-			permission:  PermWrite,
+			name:          "role missing permission",
+			key:           &APIKey{Roles: []string{"reader"}},
+			permission:    PermWrite,
 			hasPermission: false,
 		},
 		{
-			name:        "admin role has all",
-			key:         &APIKey{Roles: []string{"admin"}},
-			permission:  PermDelete,
+			name:          "admin role has all",
+			key:           &APIKey{Roles: []string{"admin"}},
+			permission:    PermDelete,
 			hasPermission: true,
 		},
 	}

@@ -41,19 +41,19 @@ type GroupFeature struct {
 type GroupStatus string
 
 const (
-	GroupStatusDraft     GroupStatus = "draft"
-	GroupStatusActive    GroupStatus = "active"
+	GroupStatusDraft      GroupStatus = "draft"
+	GroupStatusActive     GroupStatus = "active"
 	GroupStatusDeprecated GroupStatus = "deprecated"
-	GroupStatusArchived  GroupStatus = "archived"
+	GroupStatusArchived   GroupStatus = "archived"
 )
 
 // GroupView represents a view/projection of a feature group.
 type GroupView struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	GroupID     string   `json:"group_id"`
-	Features    []string `json:"features"` // Subset of group features
-	Description string   `json:"description"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	GroupID     string    `json:"group_id"`
+	Features    []string  `json:"features"` // Subset of group features
+	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -61,8 +61,8 @@ type GroupView struct {
 type Manager struct {
 	groups   map[string]*FeatureGroup
 	views    map[string]*GroupView
-	byEntity map[string][]string // entity_type -> group IDs
-	byTag    map[string][]string // tag -> group IDs
+	byEntity map[string][]string        // entity_type -> group IDs
+	byTag    map[string][]string        // tag -> group IDs
 	versions map[string][]*FeatureGroup // group ID -> version history
 	mu       sync.RWMutex
 }
@@ -493,10 +493,10 @@ func (m *Manager) GetStats() GroupStats {
 	defer m.mu.RUnlock()
 
 	stats := GroupStats{
-		TotalGroups:   len(m.groups),
-		TotalViews:    len(m.views),
-		ByStatus:      make(map[GroupStatus]int),
-		ByEntityType:  make(map[string]int),
+		TotalGroups:  len(m.groups),
+		TotalViews:   len(m.views),
+		ByStatus:     make(map[GroupStatus]int),
+		ByEntityType: make(map[string]int),
 	}
 
 	totalFeatures := 0
@@ -514,11 +514,11 @@ func (m *Manager) GetStats() GroupStats {
 
 // GroupStats contains group manager statistics.
 type GroupStats struct {
-	TotalGroups    int                   `json:"total_groups"`
-	TotalViews     int                   `json:"total_views"`
-	TotalFeatures  int                   `json:"total_features"`
-	ByStatus       map[GroupStatus]int   `json:"by_status"`
-	ByEntityType   map[string]int        `json:"by_entity_type"`
+	TotalGroups   int                 `json:"total_groups"`
+	TotalViews    int                 `json:"total_views"`
+	TotalFeatures int                 `json:"total_features"`
+	ByStatus      map[GroupStatus]int `json:"by_status"`
+	ByEntityType  map[string]int      `json:"by_entity_type"`
 }
 
 // Errors

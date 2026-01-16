@@ -24,23 +24,23 @@ type StreamEvent struct {
 type StreamEventType string
 
 const (
-	StreamEventFeatureUpdate  StreamEventType = "feature_update"
-	StreamEventFeatureDelete  StreamEventType = "feature_delete"
-	StreamEventSchemaChange   StreamEventType = "schema_change"
-	StreamEventAlert          StreamEventType = "alert"
-	StreamEventDriftDetected  StreamEventType = "drift_detected"
-	StreamEventHeartbeat      StreamEventType = "heartbeat"
+	StreamEventFeatureUpdate StreamEventType = "feature_update"
+	StreamEventFeatureDelete StreamEventType = "feature_delete"
+	StreamEventSchemaChange  StreamEventType = "schema_change"
+	StreamEventAlert         StreamEventType = "alert"
+	StreamEventDriftDetected StreamEventType = "drift_detected"
+	StreamEventHeartbeat     StreamEventType = "heartbeat"
 )
 
 // Subscription represents a client subscription.
 type Subscription struct {
-	ID          string
-	ClientID    string
-	Features    []string            // Empty means all features
-	EntityIDs   []string            // Empty means all entities
-	EventTypes  []StreamEventType   // Empty means all event types
-	Filters     map[string]string   // Additional filters
-	CreatedAt   time.Time
+	ID         string
+	ClientID   string
+	Features   []string          // Empty means all features
+	EntityIDs  []string          // Empty means all entities
+	EventTypes []StreamEventType // Empty means all event types
+	Filters    map[string]string // Additional filters
+	CreatedAt  time.Time
 }
 
 // Hub manages streaming subscriptions and event distribution.

@@ -36,22 +36,22 @@ type SLOStatus struct {
 	ErrorBudget     float64        `json:"error_budget"`      // Remaining error budget (0-100%)
 	ErrorBudgetUsed float64        `json:"error_budget_used"` // Used error budget (0-100%)
 	InCompliance    bool           `json:"in_compliance"`
-	BurnRate        float64        `json:"burn_rate"`    // Current burn rate (1.0 = normal)
+	BurnRate        float64        `json:"burn_rate"` // Current burn rate (1.0 = normal)
 	TimeToExhaust   time.Duration  `json:"time_to_exhaust,omitempty"`
 	LastUpdated     time.Time      `json:"last_updated"`
 }
 
 // SLOBreach represents an SLO violation event.
 type SLOBreach struct {
-	SLOName      string    `json:"slo_name"`
-	Type         SLOType   `json:"type"`
-	ExpectedMin  float64   `json:"expected_min"`
-	ActualValue  float64   `json:"actual_value"`
-	Severity     string    `json:"severity"` // warning, critical
-	DetectedAt   time.Time `json:"detected_at"`
-	Component    string    `json:"component"`
-	ErrorBudget  float64   `json:"error_budget_remaining"`
-	BurnRate     float64   `json:"burn_rate"`
+	SLOName     string    `json:"slo_name"`
+	Type        SLOType   `json:"type"`
+	ExpectedMin float64   `json:"expected_min"`
+	ActualValue float64   `json:"actual_value"`
+	Severity    string    `json:"severity"` // warning, critical
+	DetectedAt  time.Time `json:"detected_at"`
+	Component   string    `json:"component"`
+	ErrorBudget float64   `json:"error_budget_remaining"`
+	BurnRate    float64   `json:"burn_rate"`
 }
 
 // SLOTracker tracks SLOs and calculates compliance.

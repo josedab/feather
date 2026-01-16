@@ -67,7 +67,7 @@ func (p *FilterProcessor) evaluateCondition(event *Event, cond FilterCondition) 
 
 // TransformProcessor transforms event data.
 type TransformProcessor struct {
-	name           string
+	name            string
 	transformations []Transformation
 }
 
@@ -84,21 +84,21 @@ type Transformation struct {
 type TransformationType string
 
 const (
-	TransformRename    TransformationType = "rename"
-	TransformCopy      TransformationType = "copy"
-	TransformDelete    TransformationType = "delete"
-	TransformCast      TransformationType = "cast"
-	TransformExtract   TransformationType = "extract"
-	TransformConcat    TransformationType = "concat"
-	TransformSplit     TransformationType = "split"
-	TransformDefault   TransformationType = "default"
-	TransformCompute   TransformationType = "compute"
+	TransformRename  TransformationType = "rename"
+	TransformCopy    TransformationType = "copy"
+	TransformDelete  TransformationType = "delete"
+	TransformCast    TransformationType = "cast"
+	TransformExtract TransformationType = "extract"
+	TransformConcat  TransformationType = "concat"
+	TransformSplit   TransformationType = "split"
+	TransformDefault TransformationType = "default"
+	TransformCompute TransformationType = "compute"
 )
 
 // NewTransformProcessor creates a new transform processor.
 func NewTransformProcessor(name string, transformations []Transformation) *TransformProcessor {
 	return &TransformProcessor{
-		name:           name,
+		name:            name,
 		transformations: transformations,
 	}
 }
@@ -205,8 +205,8 @@ func (p *TransformProcessor) extractValue(val, pattern string) string {
 
 // EnrichProcessor enriches events with additional data.
 type EnrichProcessor struct {
-	name      string
-	enricher  Enricher
+	name     string
+	enricher Enricher
 }
 
 // Enricher provides data enrichment.

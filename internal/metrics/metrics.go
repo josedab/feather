@@ -21,14 +21,14 @@ type Metrics struct {
 	grpcRequestDuration *prometheus.HistogramVec
 
 	// Storage metrics
-	cacheHits      prometheus.Counter
-	cacheMisses    prometheus.Counter
-	hotTierSize    prometheus.Gauge
-	warmTierSize   prometheus.Gauge
-	entityCount    prometheus.Gauge
-	warmTierOps    *prometheus.HistogramVec // Warm tier operation latency
-	evictionTotal  *prometheus.CounterVec   // Eviction events
-	shardWaitTime  *prometheus.HistogramVec // Shard lock contention
+	cacheHits     prometheus.Counter
+	cacheMisses   prometheus.Counter
+	hotTierSize   prometheus.Gauge
+	warmTierSize  prometheus.Gauge
+	entityCount   prometheus.Gauge
+	warmTierOps   *prometheus.HistogramVec // Warm tier operation latency
+	evictionTotal *prometheus.CounterVec   // Eviction events
+	shardWaitTime *prometheus.HistogramVec // Shard lock contention
 
 	// Ingestion metrics
 	messagesReceived  *prometheus.CounterVec

@@ -14,11 +14,11 @@ import (
 
 // Runtime manages WebAssembly plugin execution.
 type Runtime struct {
-	mu            sync.RWMutex
-	plugins       map[string]*Plugin
-	config        Config
-	logger        *slog.Logger
-	metrics       *Metrics
+	mu      sync.RWMutex
+	plugins map[string]*Plugin
+	config  Config
+	logger  *slog.Logger
+	metrics *Metrics
 }
 
 // Config configures the WASM runtime.
@@ -63,19 +63,19 @@ type Plugin struct {
 	State       PluginState       `json:"state"`
 
 	// Internal
-	wasmBytes   []byte
-	instance    *PluginInstance
+	wasmBytes []byte
+	instance  *PluginInstance
 }
 
 // PluginType indicates the type of plugin.
 type PluginType string
 
 const (
-	PluginTypeAggregation   PluginType = "aggregation"
+	PluginTypeAggregation    PluginType = "aggregation"
 	PluginTypeTransformation PluginType = "transformation"
-	PluginTypeFilter        PluginType = "filter"
-	PluginTypeEnrichment    PluginType = "enrichment"
-	PluginTypeValidation    PluginType = "validation"
+	PluginTypeFilter         PluginType = "filter"
+	PluginTypeEnrichment     PluginType = "enrichment"
+	PluginTypeValidation     PluginType = "validation"
 )
 
 // PluginState indicates the current state of a plugin.
@@ -90,10 +90,10 @@ const (
 
 // FunctionSpec describes a function exported by the plugin.
 type FunctionSpec struct {
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Inputs      []ParamSpec  `json:"inputs"`
-	Output      ParamSpec    `json:"output"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Inputs      []ParamSpec `json:"inputs"`
+	Output      ParamSpec   `json:"output"`
 }
 
 // ParamSpec describes a function parameter.
@@ -105,19 +105,19 @@ type ParamSpec struct {
 
 // PluginInstance represents an active instance of a plugin.
 type PluginInstance struct {
-	plugin       *Plugin
-	memoryLimit  int
-	execTimeout  time.Duration
-	callCount    int64
-	errorCount   int64
-	totalExecMs  float64
+	plugin      *Plugin
+	memoryLimit int
+	execTimeout time.Duration
+	callCount   int64
+	errorCount  int64
+	totalExecMs float64
 }
 
 // Metrics tracks runtime metrics.
 type Metrics struct {
-	mu           sync.RWMutex
-	TotalCalls   int64
-	TotalErrors  int64
+	mu            sync.RWMutex
+	TotalCalls    int64
+	TotalErrors   int64
 	PluginsLoaded int
 	AvgExecTimeMs float64
 }

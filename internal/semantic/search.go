@@ -15,12 +15,12 @@ import (
 
 // Search provides semantic search over features.
 type Search struct {
-	mu          sync.RWMutex
-	features    map[string]*FeatureDocument
-	embeddings  map[string][]float32
-	embedder    Embedder
-	dimension   int
-	logger      *slog.Logger
+	mu         sync.RWMutex
+	features   map[string]*FeatureDocument
+	embeddings map[string][]float32
+	embedder   Embedder
+	dimension  int
+	logger     *slog.Logger
 }
 
 // FeatureDocument represents a feature with metadata for search.
@@ -53,12 +53,12 @@ type SearchResult struct {
 
 // SearchOptions configures search behavior.
 type SearchOptions struct {
-	Limit       int      `json:"limit"`
-	MinScore    float32  `json:"min_score"`
-	Categories  []string `json:"categories,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	Owner       string   `json:"owner,omitempty"`
-	IncludeMetadata bool `json:"include_metadata"`
+	Limit           int      `json:"limit"`
+	MinScore        float32  `json:"min_score"`
+	Categories      []string `json:"categories,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
+	Owner           string   `json:"owner,omitempty"`
+	IncludeMetadata bool     `json:"include_metadata"`
 }
 
 // DefaultSearchOptions returns default search options.

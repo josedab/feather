@@ -292,13 +292,13 @@ func TestGenerator_ParseFeatureSuggestions(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "valid array",
-			input: `[{"id": "f1", "name": "Feature 1", "description": "Test", "expression": "x + 1", "data_type": "int", "category": "test", "confidence": 0.9, "rationale": "useful"}]`,
+			name:     "valid array",
+			input:    `[{"id": "f1", "name": "Feature 1", "description": "Test", "expression": "x + 1", "data_type": "int", "category": "test", "confidence": 0.9, "rationale": "useful"}]`,
 			expected: 1,
 		},
 		{
-			name: "array with markdown",
-			input: "```json\n[{\"id\": \"f1\", \"name\": \"F1\", \"description\": \"D\", \"expression\": \"E\", \"data_type\": \"int\", \"category\": \"C\", \"confidence\": 0.8, \"rationale\": \"R\"}]\n```",
+			name:     "array with markdown",
+			input:    "```json\n[{\"id\": \"f1\", \"name\": \"F1\", \"description\": \"D\", \"expression\": \"E\", \"data_type\": \"int\", \"category\": \"C\", \"confidence\": 0.8, \"rationale\": \"R\"}]\n```",
 			expected: 1,
 		},
 		{

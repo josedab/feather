@@ -43,30 +43,30 @@ func (h *ExperimentHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Analysis
 	mux.HandleFunc("GET /v1/experiments/{id}/results", h.handleAnalyzeExperiment)
-	mux.HandleFunc("GET /v1/experiments/feature/{featureId}", h.handleGetExperimentsByFeature)
+	mux.HandleFunc("GET /v1/features/{featureId}/experiments", h.handleGetExperimentsByFeature)
 }
 
 // ExperimentJSON represents an experiment in JSON format.
 type ExperimentJSON struct {
-	ID             string                   `json:"id"`
-	Name           string                   `json:"name"`
-	Description    string                   `json:"description,omitempty"`
-	Type           string                   `json:"type"`
-	Status         string                   `json:"status"`
-	FeatureID      string                   `json:"feature_id,omitempty"`
-	Hypothesis     string                   `json:"hypothesis,omitempty"`
-	Variants       []VariantJSON            `json:"variants"`
-	TargetingRules []TargetingRuleJSON      `json:"targeting_rules,omitempty"`
-	Allocation     AllocationConfigJSON     `json:"allocation"`
-	Metrics        []MetricConfigJSON       `json:"metrics,omitempty"`
-	Schedule       *ScheduleConfigJSON      `json:"schedule,omitempty"`
-	Owner          string                   `json:"owner,omitempty"`
-	Tags           []string                 `json:"tags,omitempty"`
-	Metadata       map[string]interface{}   `json:"metadata,omitempty"`
-	CreatedAt      string                   `json:"created_at,omitempty"`
-	UpdatedAt      string                   `json:"updated_at,omitempty"`
-	StartedAt      string                   `json:"started_at,omitempty"`
-	EndedAt        string                   `json:"ended_at,omitempty"`
+	ID             string                 `json:"id"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+	Type           string                 `json:"type"`
+	Status         string                 `json:"status"`
+	FeatureID      string                 `json:"feature_id,omitempty"`
+	Hypothesis     string                 `json:"hypothesis,omitempty"`
+	Variants       []VariantJSON          `json:"variants"`
+	TargetingRules []TargetingRuleJSON    `json:"targeting_rules,omitempty"`
+	Allocation     AllocationConfigJSON   `json:"allocation"`
+	Metrics        []MetricConfigJSON     `json:"metrics,omitempty"`
+	Schedule       *ScheduleConfigJSON    `json:"schedule,omitempty"`
+	Owner          string                 `json:"owner,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt      string                 `json:"created_at,omitempty"`
+	UpdatedAt      string                 `json:"updated_at,omitempty"`
+	StartedAt      string                 `json:"started_at,omitempty"`
+	EndedAt        string                 `json:"ended_at,omitempty"`
 }
 
 // VariantJSON represents a variant in JSON format.

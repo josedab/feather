@@ -177,10 +177,10 @@ func TestHTTPServer_GetFeaturesBatch(t *testing.T) {
 	ts.seedFeatures("user:3", map[string]interface{}{"score": float64(300)})
 
 	tests := []struct {
-		name        string
-		body        interface{}
-		wantStatus  int
-		wantCount   int
+		name       string
+		body       interface{}
+		wantStatus int
+		wantCount  int
 	}{
 		{
 			name: "batch get multiple entities",

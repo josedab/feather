@@ -11,53 +11,53 @@ import (
 
 // Tracker manages feature lineage and governance metadata.
 type Tracker struct {
-	mu           sync.RWMutex
-	features     map[string]*FeatureLineage
-	sources      map[string]*DataSource
-	consumers    map[string]*Consumer
-	graph        *DependencyGraph
-	piiRegistry  map[string]*PIIMetadata
-	auditLog     []AuditEvent
-	auditLimit   int
+	mu          sync.RWMutex
+	features    map[string]*FeatureLineage
+	sources     map[string]*DataSource
+	consumers   map[string]*Consumer
+	graph       *DependencyGraph
+	piiRegistry map[string]*PIIMetadata
+	auditLog    []AuditEvent
+	auditLimit  int
 }
 
 // FeatureLineage represents the complete lineage of a feature.
 type FeatureLineage struct {
-	FeatureID     string            `json:"feature_id"`
-	Name          string            `json:"name"`
-	Description   string            `json:"description"`
-	Version       int               `json:"version"`
-	CreatedAt     time.Time         `json:"created_at"`
-	UpdatedAt     time.Time         `json:"updated_at"`
-	CreatedBy     string            `json:"created_by"`
+	FeatureID   string    `json:"feature_id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Version     int       `json:"version"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedBy   string    `json:"created_by"`
 
 	// Source information
-	Sources       []SourceRef       `json:"sources"`
+	Sources []SourceRef `json:"sources"`
 
 	// Transformation chain
 	Transformations []Transformation `json:"transformations"`
 
 	// Downstream consumers
-	Consumers     []ConsumerRef     `json:"consumers"`
+	Consumers []ConsumerRef `json:"consumers"`
 
 	// Dependencies on other features
-	Dependencies  []string          `json:"dependencies"`
+	Dependencies []string `json:"dependencies"`
 
 	// Features that depend on this one
-	Dependents    []string          `json:"dependents"`
+	Dependents []string `json:"dependents"`
 
 	// Compliance metadata
-	PIILevel      PIILevel          `json:"pii_level"`
+	PIILevel      PIILevel           `json:"pii_level"`
 	DataClass     DataClassification `json:"data_classification"`
-	RetentionDays int               `json:"retention_days"`
+	RetentionDays int                `json:"retention_days"`
 
 	// Quality metrics
-	Freshness     time.Duration     `json:"freshness_sla"`
-	LastComputed  time.Time         `json:"last_computed"`
+	Freshness    time.Duration `json:"freshness_sla"`
+	LastComputed time.Time     `json:"last_computed"`
 
 	// Tags and metadata
-	Tags          []string          `json:"tags"`
-	Metadata      map[string]string `json:"metadata"`
+	Tags     []string          `json:"tags"`
+	Metadata map[string]string `json:"metadata"`
 }
 
 // DataSource represents an upstream data source.
@@ -88,9 +88,9 @@ const (
 
 // SourceRef references a data source in lineage.
 type SourceRef struct {
-	SourceID   string   `json:"source_id"`
-	Fields     []string `json:"fields,omitempty"`
-	Query      string   `json:"query,omitempty"`
+	SourceID string   `json:"source_id"`
+	Fields   []string `json:"fields,omitempty"`
+	Query    string   `json:"query,omitempty"`
 }
 
 // Transformation represents a transformation step.
@@ -122,24 +122,24 @@ const (
 
 // Consumer represents a downstream consumer of a feature.
 type Consumer struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
 	Type        ConsumerType `json:"type"`
-	Owner       string    `json:"owner"`
-	Description string    `json:"description"`
-	Endpoint    string    `json:"endpoint,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	Owner       string       `json:"owner"`
+	Description string       `json:"description"`
+	Endpoint    string       `json:"endpoint,omitempty"`
+	CreatedAt   time.Time    `json:"created_at"`
 }
 
 // ConsumerType indicates the type of consumer.
 type ConsumerType string
 
 const (
-	ConsumerTypeModel      ConsumerType = "model"
-	ConsumerTypeService    ConsumerType = "service"
-	ConsumerTypeDashboard  ConsumerType = "dashboard"
-	ConsumerTypeExport     ConsumerType = "export"
-	ConsumerTypeFeature    ConsumerType = "feature"
+	ConsumerTypeModel     ConsumerType = "model"
+	ConsumerTypeService   ConsumerType = "service"
+	ConsumerTypeDashboard ConsumerType = "dashboard"
+	ConsumerTypeExport    ConsumerType = "export"
+	ConsumerTypeFeature   ConsumerType = "feature"
 )
 
 // ConsumerRef references a consumer in lineage.
@@ -152,11 +152,11 @@ type ConsumerRef struct {
 type PIILevel int
 
 const (
-	PIINone PIILevel = iota
-	PIILow           // Indirect identifiers (zip code, age range)
-	PIIMedium        // Direct identifiers (name, email)
-	PIIHigh          // Sensitive (SSN, health data)
-	PIICritical      // Highly sensitive (biometric, financial)
+	PIINone     PIILevel = iota
+	PIILow               // Indirect identifiers (zip code, age range)
+	PIIMedium            // Direct identifiers (name, email)
+	PIIHigh              // Sensitive (SSN, health data)
+	PIICritical          // Highly sensitive (biometric, financial)
 )
 
 func (p PIILevel) String() string {

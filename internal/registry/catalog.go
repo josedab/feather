@@ -13,49 +13,49 @@ import (
 type FeatureDefinition struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
-	DataType    string            `json:"data_type"`    // int, float, string, bool, vector, etc.
-	EntityType  string            `json:"entity_type"`  // user, item, transaction, etc.
-	Owner       string            `json:"owner"`        // Team or person responsible
+	DataType    string            `json:"data_type"`   // int, float, string, bool, vector, etc.
+	EntityType  string            `json:"entity_type"` // user, item, transaction, etc.
+	Owner       string            `json:"owner"`       // Team or person responsible
 	Team        string            `json:"team"`
 	Tags        []string          `json:"tags"`
-	Category    string            `json:"category"`     // demographic, behavioral, derived, etc.
+	Category    string            `json:"category"` // demographic, behavioral, derived, etc.
 	Source      FeatureSource     `json:"source"`
 	Schema      *FeatureSchema    `json:"schema,omitempty"`
 	Freshness   FreshnessConfig   `json:"freshness"`
 	Metadata    map[string]string `json:"metadata"`
 
 	// Lifecycle
-	Status      FeatureStatus     `json:"status"`
-	Version     int               `json:"version"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
-	CreatedBy   string            `json:"created_by"`
-	UpdatedBy   string            `json:"updated_by"`
-	DeprecatedAt *time.Time       `json:"deprecated_at,omitempty"`
+	Status       FeatureStatus `json:"status"`
+	Version      int           `json:"version"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+	CreatedBy    string        `json:"created_by"`
+	UpdatedBy    string        `json:"updated_by"`
+	DeprecatedAt *time.Time    `json:"deprecated_at,omitempty"`
 
 	// Lineage
-	Upstream    []string          `json:"upstream"`     // Features this depends on
-	Downstream  []string          `json:"downstream"`   // Features depending on this
-	Transformations []string      `json:"transformations,omitempty"` // Applied transforms
+	Upstream        []string `json:"upstream"`                  // Features this depends on
+	Downstream      []string `json:"downstream"`                // Features depending on this
+	Transformations []string `json:"transformations,omitempty"` // Applied transforms
 }
 
 // FeatureSource describes where a feature comes from.
 type FeatureSource struct {
-	Type       string `json:"type"`       // batch, streaming, derived, external
-	System     string `json:"system"`     // kafka, snowflake, transform, etc.
-	Table      string `json:"table,omitempty"`
-	Topic      string `json:"topic,omitempty"`
-	Query      string `json:"query,omitempty"`
-	Schedule   string `json:"schedule,omitempty"` // Cron expression for batch
+	Type     string `json:"type"`   // batch, streaming, derived, external
+	System   string `json:"system"` // kafka, snowflake, transform, etc.
+	Table    string `json:"table,omitempty"`
+	Topic    string `json:"topic,omitempty"`
+	Query    string `json:"query,omitempty"`
+	Schedule string `json:"schedule,omitempty"` // Cron expression for batch
 }
 
 // FeatureSchema defines the expected schema for a feature.
 type FeatureSchema struct {
-	Type       string                 `json:"type"`
-	Nullable   bool                   `json:"nullable"`
-	Default    interface{}            `json:"default,omitempty"`
+	Type        string                 `json:"type"`
+	Nullable    bool                   `json:"nullable"`
+	Default     interface{}            `json:"default,omitempty"`
 	Constraints map[string]interface{} `json:"constraints,omitempty"` // min, max, enum, pattern
-	Dimensions []int                  `json:"dimensions,omitempty"`  // For vectors/arrays
+	Dimensions  []int                  `json:"dimensions,omitempty"`  // For vectors/arrays
 }
 
 // FreshnessConfig defines freshness requirements.
@@ -77,14 +77,14 @@ const (
 
 // Catalog is the central feature registry.
 type Catalog struct {
-	features    map[string]*FeatureDefinition
-	byTag       map[string][]string // tag -> feature names
-	byOwner     map[string][]string // owner -> feature names
-	byTeam      map[string][]string // team -> feature names
-	byCategory  map[string][]string // category -> feature names
-	byEntity    map[string][]string // entity_type -> feature names
-	versions    map[string][]*FeatureDefinition // feature name -> version history
-	mu          sync.RWMutex
+	features   map[string]*FeatureDefinition
+	byTag      map[string][]string             // tag -> feature names
+	byOwner    map[string][]string             // owner -> feature names
+	byTeam     map[string][]string             // team -> feature names
+	byCategory map[string][]string             // category -> feature names
+	byEntity   map[string][]string             // entity_type -> feature names
+	versions   map[string][]*FeatureDefinition // feature name -> version history
+	mu         sync.RWMutex
 }
 
 // NewCatalog creates a new feature catalog.
@@ -583,12 +583,12 @@ func (c *Catalog) GetStats() *CatalogStats {
 	defer c.mu.RUnlock()
 
 	stats := &CatalogStats{
-		TotalFeatures:   len(c.features),
-		ByStatus:        make(map[FeatureStatus]int),
-		ByCategory:      make(map[string]int),
-		ByEntityType:    make(map[string]int),
-		ByTeam:          make(map[string]int),
-		TagCounts:       make(map[string]int),
+		TotalFeatures: len(c.features),
+		ByStatus:      make(map[FeatureStatus]int),
+		ByCategory:    make(map[string]int),
+		ByEntityType:  make(map[string]int),
+		ByTeam:        make(map[string]int),
+		TagCounts:     make(map[string]int),
 	}
 
 	for _, def := range c.features {
@@ -674,13 +674,13 @@ type SchemaChange struct {
 
 // SchemaEvolution represents the evolution between two versions.
 type SchemaEvolution struct {
-	FeatureName    string             `json:"feature_name"`
-	FromVersion    int                `json:"from_version"`
-	ToVersion      int                `json:"to_version"`
-	OverallType    SchemaChangeType   `json:"overall_type"`
-	Changes        []SchemaChange     `json:"changes"`
-	IsBreaking     bool               `json:"is_breaking"`
-	MigrationNotes string             `json:"migration_notes,omitempty"`
+	FeatureName    string           `json:"feature_name"`
+	FromVersion    int              `json:"from_version"`
+	ToVersion      int              `json:"to_version"`
+	OverallType    SchemaChangeType `json:"overall_type"`
+	Changes        []SchemaChange   `json:"changes"`
+	IsBreaking     bool             `json:"is_breaking"`
+	MigrationNotes string           `json:"migration_notes,omitempty"`
 }
 
 // CompareVersions compares two versions and returns the schema evolution.

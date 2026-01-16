@@ -40,16 +40,16 @@ func (h *WASMHandler) RegisterRoutes(mux *http.ServeMux) {
 
 // PluginJSON represents a plugin in JSON format.
 type PluginJSON struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Description string              `json:"description,omitempty"`
-	Version     string              `json:"version,omitempty"`
-	Author      string              `json:"author,omitempty"`
-	Type        string              `json:"type"`
-	Functions   []FunctionSpecJSON  `json:"functions"`
-	Config      map[string]string   `json:"config,omitempty"`
-	State       string              `json:"state"`
-	LoadedAt    string              `json:"loaded_at"`
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description,omitempty"`
+	Version     string             `json:"version,omitempty"`
+	Author      string             `json:"author,omitempty"`
+	Type        string             `json:"type"`
+	Functions   []FunctionSpecJSON `json:"functions"`
+	Config      map[string]string  `json:"config,omitempty"`
+	State       string             `json:"state"`
+	LoadedAt    string             `json:"loaded_at"`
 }
 
 // FunctionSpecJSON represents a function spec in JSON.
@@ -111,15 +111,15 @@ func (h *WASMHandler) handleGetPlugin(w http.ResponseWriter, r *http.Request) {
 
 // LoadPluginRequest represents a request to load a plugin.
 type LoadPluginRequest struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Description string              `json:"description,omitempty"`
-	Version     string              `json:"version,omitempty"`
-	Author      string              `json:"author,omitempty"`
-	Type        string              `json:"type"`
-	Functions   []FunctionSpecJSON  `json:"functions"`
-	Config      map[string]string   `json:"config,omitempty"`
-	WASMBase64  string              `json:"wasm_base64"` // Base64 encoded WASM binary
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description,omitempty"`
+	Version     string             `json:"version,omitempty"`
+	Author      string             `json:"author,omitempty"`
+	Type        string             `json:"type"`
+	Functions   []FunctionSpecJSON `json:"functions"`
+	Config      map[string]string  `json:"config,omitempty"`
+	WASMBase64  string             `json:"wasm_base64"` // Base64 encoded WASM binary
 }
 
 // handleLoadPlugin handles POST /v1/plugins
@@ -341,9 +341,9 @@ func (h *WASMHandler) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := h.runtime.GetMetrics()
 
 	h.writeJSON(w, http.StatusOK, map[string]interface{}{
-		"total_calls":     metrics.TotalCalls,
-		"total_errors":    metrics.TotalErrors,
-		"plugins_loaded":  metrics.PluginsLoaded,
+		"total_calls":      metrics.TotalCalls,
+		"total_errors":     metrics.TotalErrors,
+		"plugins_loaded":   metrics.PluginsLoaded,
 		"avg_exec_time_ms": metrics.AvgExecTimeMs,
 	})
 }

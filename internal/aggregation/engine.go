@@ -12,9 +12,9 @@ import (
 // Engine computes time-window aggregations.
 type Engine struct {
 	// Entity -> Feature -> WindowManager
-	windows  map[string]map[string]*WindowManager
-	specs    map[string]*domain.AggregationSpec
-	mu       sync.RWMutex
+	windows map[string]map[string]*WindowManager
+	specs   map[string]*domain.AggregationSpec
+	mu      sync.RWMutex
 }
 
 // NewEngine creates a new aggregation engine.
