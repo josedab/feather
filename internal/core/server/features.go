@@ -78,6 +78,18 @@ type FeatureHandler interface {
 RegisterRoutes(mux *http.ServeMux)
 }
 
+// Maturity indicates the stability level of a handler.
+type Maturity string
+
+const (
+// MaturityStable means production-ready, well-tested, semver-protected.
+MaturityStable Maturity = "stable"
+// MaturityBeta means functional and tested, API may change between minor releases.
+MaturityBeta Maturity = "beta"
+// MaturityExperimental means working implementation, may be incomplete or change significantly.
+MaturityExperimental Maturity = "experimental"
+)
+
 // handlerDeps provides dependencies to handler factories.
 type handlerDeps struct {
 Ctx         context.Context
@@ -92,128 +104,158 @@ Config      HTTPServerConfig
 // Returns nil if the handler cannot be created.
 type handlerFactory func(deps *handlerDeps) FeatureHandler
 
+// HandlerSpec describes a registered handler and its maturity level.
+type HandlerSpec struct {
+Name     string
+Maturity Maturity
+Factory  handlerFactory
+}
+
 // featureRegistry maps feature names to factory functions.
 var featureRegistry = map[string]handlerFactory{}
 
-func init() {
-// --- Core handlers ---
-featureRegistry["groups"] = func(deps *handlerDeps) FeatureHandler {
-return NewGroupsHandler()
-}
-featureRegistry["backfill"] = func(deps *handlerDeps) FeatureHandler {
-return NewBackfillHandler(deps.Store)
-}
-featureRegistry["streaming"] = func(deps *handlerDeps) FeatureHandler {
-return NewStreamingHandler(deps.Ctx)
-}
-featureRegistry["catalog"] = func(deps *handlerDeps) FeatureHandler {
-return NewCatalogHandler()
-}
-featureRegistry["auth"] = func(deps *handlerDeps) FeatureHandler {
-return NewAuthHandler()
-}
-featureRegistry["ml"] = func(deps *handlerDeps) FeatureHandler {
-return NewMLHandler(deps.Store)
-}
-featureRegistry["transform"] = func(deps *handlerDeps) FeatureHandler {
-return NewTransformHandler(deps.Store)
-}
-featureRegistry["cache"] = func(deps *handlerDeps) FeatureHandler {
-return NewCacheHandler(deps.Store)
-}
-featureRegistry["consistency"] = func(deps *handlerDeps) FeatureHandler {
-return NewConsistencyHandler(deps.Store)
-}
-featureRegistry["observability"] = func(deps *handlerDeps) FeatureHandler {
-return NewObservabilityHandler(deps.Store)
-}
-featureRegistry["benchmark"] = func(deps *handlerDeps) FeatureHandler {
-return NewBenchmarkHandler(deps.Store)
-}
-featureRegistry["impact"] = func(deps *handlerDeps) FeatureHandler {
-return NewImpactHandler()
-}
-featureRegistry["model_serving"] = func(deps *handlerDeps) FeatureHandler {
-return NewModelServingHandler(deps.Store)
+// handlerSpecs stores maturity metadata for every registered handler.
+// Query with RegisteredHandlerSpecs() to inspect maturity levels.
+var handlerSpecs []HandlerSpec
+
+// registerHandler registers a handler with its maturity level.
+func registerHandler(name string, maturity Maturity, factory handlerFactory) {
+featureRegistry[name] = factory
+handlerSpecs = append(handlerSpecs, HandlerSpec{Name: name, Maturity: maturity, Factory: factory})
 }
 
-// --- Handlers with special dependency setup ---
-featureRegistry["tenant"] = func(deps *handlerDeps) FeatureHandler {
+func init() {
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  STABLE — Production-ready, well-tested, breaking changes      ║
+// ║  follow semver. Safe for all deployments.                       ║
+// ╚══════════════════════════════════════════════════════════════════╝
+registerHandler("groups", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewGroupsHandler()
+})
+registerHandler("backfill", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewBackfillHandler(deps.Store)
+})
+registerHandler("streaming", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewStreamingHandler(deps.Ctx)
+})
+registerHandler("catalog", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewCatalogHandler()
+})
+registerHandler("auth", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewAuthHandler()
+})
+registerHandler("ml", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewMLHandler(deps.Store)
+})
+registerHandler("transform", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewTransformHandler(deps.Store)
+})
+registerHandler("cache", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewCacheHandler(deps.Store)
+})
+registerHandler("consistency", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewConsistencyHandler(deps.Store)
+})
+registerHandler("observability", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewObservabilityHandler(deps.Store)
+})
+registerHandler("benchmark", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewBenchmarkHandler(deps.Store)
+})
+registerHandler("impact", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewImpactHandler()
+})
+registerHandler("model_serving", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+return NewModelServingHandler(deps.Store)
+})
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  BETA — Functional and tested, API may change between minor    ║
+// ║  releases. Suitable for staging and non-critical production.    ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+registerHandler("tenant", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 maxBytes := deps.Config.Core.TenantMaxBytes
 if maxBytes == 0 {
 maxBytes = 4 * 1024 * 1024 * 1024
 }
 return NewTenantHandler(maxBytes)
-}
-featureRegistry["warehouse"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("warehouse", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewWarehouseHandler(WarehouseHandlerConfig{
 Store:  deps.Store,
 Schema: deps.Schema,
 })
-}
-featureRegistry["governance"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("governance", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewGovernanceHandler(GovernanceHandlerConfig{})
-}
-featureRegistry["embedding"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("embedding", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewEmbeddingHandler(EmbeddingHandlerConfig{})
-}
-featureRegistry["composition"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("composition", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 engine := composition.NewEngine(composition.EngineConfig{
 Store:          deps.Store,
 ExecutorConfig: composition.DefaultExecutorConfig(),
 })
 return NewCompositionHandler(engine)
-}
-featureRegistry["freshness"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("freshness", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewFreshnessHandler(freshness.NewManager(freshness.DefaultManagerConfig()))
-}
-featureRegistry["migration"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("migration", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewMigrationHandler(migration.NewManager(migration.DefaultManagerConfig()))
-}
-featureRegistry["saas"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("saas", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 reg := saas.NewPlanRegistry()
 billing := saas.NewBillingManager(reg)
 return NewSaaSHandler(reg, billing, saas.NewProvisioningManager(reg, billing))
-}
-featureRegistry["gitops"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("gitops", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 loader := gitops.NewSchemaLoader(".")
 policy := gitops.NewPolicyEngine()
 return NewGitOpsHandler(loader, policy, gitops.NewSyncManager(loader, policy, nil, ".gitops-state.json"))
-}
-featureRegistry["cost"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("cost", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 tracker := cost.NewTracker("USD")
 return NewCostHandler(tracker, cost.NewBudgetManager(tracker), cost.NewChargebackManager(tracker))
-}
-featureRegistry["cluster"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("cluster", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 	// Cluster handler requires external cluster configuration.
 	// Return nil to skip registration when deps are not available.
 	return nil
-}
-featureRegistry["scheduler"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("scheduler", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewSchedulerHandler(warehouse.NewCronScheduler(nil, slog.Default()))
-}
-featureRegistry["sla"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("sla", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewSLAHandler(sla.NewManager(nil, sla.DefaultManagerConfig()))
-}
-featureRegistry["drift"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("drift", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewDriftHandler(drift.NewDetector(drift.DefaultConfig()))
-}
-featureRegistry["lineage"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("lineage", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewLineageHandler(lineage.NewTracker())
-}
-featureRegistry["semantic"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("semantic", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewSemanticHandler(semantic.NewSearch(semantic.NewLocalEmbedder(128), slog.Default()))
-}
-featureRegistry["wasm"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("wasm", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewWASMHandler(wasm.NewRuntime(wasm.DefaultConfig(), slog.Default()))
-}
-featureRegistry["federation"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("federation", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewFederationHandler(federation.NewFederation(federation.DefaultConfig()))
-}
-featureRegistry["quality"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("quality", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewQualityHandler(quality.NewValidator())
-}
-featureRegistry["graphql"] = func(deps *handlerDeps) FeatureHandler {
+})
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  EXPERIMENTAL — Working implementation, may be incomplete or    ║
+// ║  change significantly. Use at your own risk.                    ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+registerHandler("graphql", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 if deps.Store == nil || deps.Schema == nil {
 return nil
 }
@@ -222,137 +264,137 @@ if err != nil {
 return nil
 }
 return NewGraphQLHandler(s)
-}
-featureRegistry["autogen"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("autogen", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewAutogenHandler(autogen.NewGenerator(autogen.DefaultConfig()))
-}
-featureRegistry["experiment"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("experiment", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewExperimentHandler(experiment.NewEngine())
-}
-featureRegistry["ui"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("ui", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 h, err := ui.NewHandler()
 if err != nil {
 return nil
 }
 return h
-}
-featureRegistry["dbt"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("dbt", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewDBTHandler(deps.Config.Dependencies.DBTOptions)
-}
-featureRegistry["compute"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("compute", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewComputeHandler(compute.NewComputeEngine(compute.DefaultComputeConfig()))
-}
-featureRegistry["consensus"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("consensus", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 node := consensus.NewRaftNode(consensus.DefaultRaftConfig(), nil)
 return NewConsensusHandler(node, consensus.NewShardManager(16, node))
-}
-featureRegistry["stream_sql"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("stream_sql", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewStreamSQLHandler(streamsql.NewEngine(streamsql.DefaultEngineConfig()))
-}
-featureRegistry["control_plane"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("control_plane", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewControlPlaneHandler(controlplane.NewManager(controlplane.DefaultManagerConfig()))
-}
-featureRegistry["rag"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("rag", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewRAGHandler(rag.NewPipeline(rag.DefaultPipelineConfig()))
-}
-featureRegistry["plugin"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("plugin", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewPluginHandler(plugin.NewRegistry(plugin.DefaultRegistryConfig()))
-}
-featureRegistry["versioning"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("versioning", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewVersioningHandler(versioning.NewVersionStore())
-}
-featureRegistry["validation"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("validation", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewValidationHandler(validation.NewValidator(validation.DefaultValidatorConfig()))
-}
-featureRegistry["dashboard_v2"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("dashboard_v2", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewDashboardHandler(deps.Store, deps.Metrics)
-}
+})
 
-featureRegistry["sharding"] = func(deps *handlerDeps) FeatureHandler {
+registerHandler("sharding", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return nil
-}
+})
 
-featureRegistry["marketplace"] = func(deps *handlerDeps) FeatureHandler {
+registerHandler("marketplace", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewMarketplaceHandler()
-}
-featureRegistry["cloud_service"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("cloud_service", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewCloudServiceHandler()
-}
-featureRegistry["featherql"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("featherql", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewFeatherQLHandler()
-}
-featureRegistry["llm_cache"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("llm_cache", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewLLMCacheHandler()
-}
-featureRegistry["autofe"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("autofe", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewAutoFEHandler()
-}
-featureRegistry["geo_routing"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("geo_routing", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewGeoRoutingHandler()
-}
-featureRegistry["ab_rollout"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("ab_rollout", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewABRolloutHandler()
-}
-featureRegistry["edge_runtime"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("edge_runtime", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewEdgeRuntimeHandler()
-}
-featureRegistry["contracts"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("contracts", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewContractHandler(contract.NewManager(contract.DefaultManagerConfig(), nil))
-}
-featureRegistry["materialization"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("materialization", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewMaterializationHandler(materialization.NewEngine(materialization.DefaultEngineConfig()))
-}
-featureRegistry["playground"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("playground", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewPlaygroundHandler(playground.NewService(nil))
-}
-featureRegistry["replication"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("replication", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewReplicationHandler(replication.NewManager(replication.DefaultManagerConfig()))
-}
-featureRegistry["pushdown"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("pushdown", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewPushdownHandler(pushdown.NewEvaluator())
-}
-featureRegistry["llm_features"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("llm_features", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewLLMFeatureHandler(llmfeature.NewStore(llmfeature.DefaultStoreConfig()))
-}
-featureRegistry["finops"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("finops", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewFinOpsHandler(finops.NewManager(finops.DefaultManagerConfig()))
-}
-featureRegistry["parity"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("parity", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewParityHandler(parity.NewChecker(parity.DefaultConfig()))
-}
-featureRegistry["monitoring"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("monitoring", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewMonitoringHandler(monitoring.NewManager(monitoring.DefaultManagerConfig()))
-}
-featureRegistry["time_travel"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("time_travel", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewTimeTravelHandler(timetravel.NewDebugger(timetravel.DefaultDebuggerConfig()))
-}
-featureRegistry["catalog_ui"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("catalog_ui", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewCatalogUIHandler(catalog.NewService(catalog.DefaultConfig()))
-}
-featureRegistry["feather_cloud"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("feather_cloud", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewCloudHandler(cloud.NewControlPlane(cloud.DefaultConfig()))
-}
-featureRegistry["stream_dsl"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("stream_dsl", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewStreamDSLHandler(streamdsl.NewPipelineManager(streamdsl.DefaultCompilerConfig()))
-}
-featureRegistry["llm_gateway"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("llm_gateway", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewLLMGatewayHandler(llmgateway.NewGateway(llmgateway.DefaultGatewayConfig()))
-}
-featureRegistry["skew_detect"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("skew_detect", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewSkewDetectHandler(skewdetect.NewDetector(skewdetect.DefaultDetectorConfig()))
-}
-featureRegistry["compute_graph"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("compute_graph", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewComputeGraphHandler(computegraph.NewEngine(computegraph.DefaultEngineConfig()))
-}
-featureRegistry["k8s_autoscaler"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("k8s_autoscaler", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewAutoscalerHandler(autoscaler.NewAutoscaler(autoscaler.DefaultConfig()))
-}
-featureRegistry["multi_region"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("multi_region", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewMultiRegionHandler(multiregion.NewFederation(multiregion.DefaultFederationConfig()))
-}
-featureRegistry["bench_suite"] = func(deps *handlerDeps) FeatureHandler {
+})
+registerHandler("bench_suite", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewBenchSuiteHandler(benchsuite.NewSuite(benchsuite.DefaultSuiteConfig()))
-}
+})
 }
 
 // RegisteredFeatures returns all available feature names.
@@ -362,6 +404,14 @@ for name := range featureRegistry {
 names = append(names, name)
 }
 return names
+}
+
+// RegisteredHandlerSpecs returns handler specs grouped by maturity.
+// Useful for CLI tools and diagnostics (e.g., make api-routes).
+func RegisteredHandlerSpecs() []HandlerSpec {
+out := make([]HandlerSpec, len(handlerSpecs))
+copy(out, handlerSpecs)
+return out
 }
 
 // registerEnabledFeatures creates and registers all enabled feature handlers.
