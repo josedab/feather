@@ -25,6 +25,9 @@ Thank you for your interest in contributing to Feather! This guide will help you
 - **golangci-lint**: For code linting
 
 ```bash
+# Validate prerequisites
+make doctor
+
 # Install development tools (golangci-lint, goimports)
 make install-tools
 ```
@@ -73,7 +76,10 @@ make run-config
 ### Running Tests
 
 ```bash
-# Quick tests — start here for fast feedback (~30s)
+# Core tests only — start here (~10s)
+make test-core
+
+# All short tests (~30s)
 make test-quick
 
 # All tests with race detector
@@ -101,7 +107,10 @@ make lint
 # Format code
 make fmt
 
-# Run all checks (format check, vet, lint, test)
+# Fast pre-commit checks: fmt + vet + lint + core tests (~20s)
+make check-quick
+
+# Full checks: fmt + vet + lint + all tests with race detector
 make check
 ```
 
@@ -475,10 +484,11 @@ Fixes #89
 ### 4. Run Checks
 
 ```bash
-# Run all checks before pushing
-make check
+# Fast pre-commit checks (~20s)
+make check-quick
 
-# This runs: fmt, vet, lint, test
+# Full checks before pushing (fmt, vet, lint, all tests with race detector)
+make check
 ```
 
 ### 5. Push and Create PR

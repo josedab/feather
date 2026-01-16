@@ -9,19 +9,21 @@ Thank you for your interest in contributing to Feather! We welcome contributions
 git clone https://github.com/feather-store/feather.git
 cd feather
 
-# Install development tools (golangci-lint, goimports)
-make install-tools
+# One-command setup: checks prerequisites, installs tools, configures
+# git hooks, builds, and runs core tests
+make setup
 
-# Build and test
-make build
-make test-quick    # Fast feedback (~30s)
-make test          # Full tests with race detector
+# Or step by step:
+# make doctor          # Check prerequisites
+# make install-tools   # Install golangci-lint, goimports
+# make build           # Build the binary
+# make test-core       # Core tests only (~10s)
 
-# Run linter
-make lint
-
-# Run all checks before submitting
-make check
+# Recommended test workflow (fastest → most thorough):
+make test-core     # Core packages only (~10s, start here)
+make test-quick    # All packages, short mode (~60s)
+make check-quick   # Fast pre-commit: fmt + vet + lint + core tests (~20s)
+make check         # Full suite: fmt + vet + lint + all tests with race detector
 
 # See all available targets
 make help
@@ -47,7 +49,7 @@ make help
 2. Create a feature branch (`git checkout -b feature/your-feature`)
 3. Make your changes following our coding conventions
 4. Write or update tests as needed
-5. Run `make check` to ensure all tests and linting pass
+5. Run `make check-quick` before committing (or `make check` for the full suite)
 6. Commit using [conventional commits](https://www.conventionalcommits.org/) (e.g., `feat:`, `fix:`, `docs:`)
 7. Push and open a pull request
 
@@ -63,6 +65,8 @@ For detailed development guidelines, including:
 - Pull request process
 
 Please see our **[full contributing guide](./docs/contributing.md)** or the [website documentation](website/docs/contributing.md).
+
+To preview documentation changes locally, run `make docs` (requires Node.js).
 
 ## Code of Conduct
 
