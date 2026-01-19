@@ -57,6 +57,12 @@ make docker-run
 
 # See all targets
 make help
+
+# List all API handlers with maturity levels
+make api-routes
+
+# Show enabled vs available features
+make list-extensions
 ```
 
 ## Project Structure
@@ -108,7 +114,9 @@ feather/
 - **HTTPServer**: REST API at `/v1/features`, `/v1/schema/groups`, health endpoints
 - **GRPCServer**: gRPC serving with streaming support
 - **HealthChecker**: Deep health checks for Kubernetes probes
-- **features.go**: Handler factory registry for toggling optional features
+- **features.go**: Handler factory registry with maturity levels (stable/beta/experimental)
+  - Use `registerHandler(name, MaturityLevel, factory)` to add new handlers
+  - Run `make api-routes` to see all handlers with their maturity levels
 
 ### `internal/core/ingestion`
 - **KafkaConsumer**: Kafka consumer with circuit breaker pattern
@@ -263,6 +271,13 @@ Key environment variables:
 - `GET /v1/edge/devices/{id}/stats` - Get device statistics
 
 ## Common Tasks
+
+### Adding a New API Endpoint
+1. Create package in `internal/extensions/`, `internal/integrations/`, or `internal/platform/`
+2. Create handler in `internal/core/server/` implementing `FeatureHandler` interface
+3. Register with `registerHandler("name", MaturityLevel, factory)` in `features.go` `init()`
+4. Enable in `cmd/feather/main.go` `EnabledFeatures` map
+5. Add to `docs/package-guide.md`
 
 ### Adding a New Feature Type
 1. Add to `domain.DataType` enum in `internal/core/domain/types.go`
