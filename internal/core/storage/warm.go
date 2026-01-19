@@ -25,15 +25,17 @@ var (
 
 // WarmTier provides disk-based storage using BadgerDB.
 type WarmTier struct {
-	db           *badger.DB
-	syncInterval time.Duration
+	db             *badger.DB
+	syncInterval   time.Duration
+	gcDiscardRatio float64
 }
 
 // WarmTierOptions configures the warm tier.
 type WarmTierOptions struct {
-	Path         string
-	SyncInterval time.Duration
-	InMemory     bool // For testing
+	Path           string
+	SyncInterval   time.Duration
+	GCDiscardRatio float64 // BadgerDB GC discard ratio (0.0-1.0, default 0.5)
+	InMemory       bool    // For testing
 }
 
 // NewWarmTier creates a new warm tier.
@@ -55,8 +57,9 @@ func NewWarmTier(opts WarmTierOptions) (*WarmTier, error) {
 	}
 
 	return &WarmTier{
-		db:           db,
-		syncInterval: syncInterval,
+		db:             db,
+		syncInterval:   syncInterval,
+		gcDiscardRatio: opts.GCDiscardRatio,
 	}, nil
 }
 
@@ -237,9 +240,13 @@ func (w *WarmTier) Close() error {
 	return w.db.Close()
 }
 
-// RunGC runs garbage collection.
+// RunGC runs BadgerDB value log garbage collection.
 func (w *WarmTier) RunGC() error {
-	return w.db.RunValueLogGC(0.5)
+	ratio := w.gcDiscardRatio
+	if ratio <= 0 || ratio >= 1 {
+		ratio = 0.5
+	}
+	return w.db.RunValueLogGC(ratio)
 }
 
 func encodeFeatureValue(val *domain.FeatureValue) ([]byte, error) {
