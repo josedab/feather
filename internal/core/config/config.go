@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -365,6 +366,7 @@ func getEnvAsInt(key string, defaultVal int) int {
 		if i, err := strconv.Atoi(val); err == nil {
 			return i
 		}
+		slog.Warn("invalid integer env var, using default", "key", key, "value", val, "default", defaultVal)
 	}
 	return defaultVal
 }
@@ -374,6 +376,7 @@ func getEnvAsBool(key string, defaultVal bool) bool {
 		if b, err := strconv.ParseBool(val); err == nil {
 			return b
 		}
+		slog.Warn("invalid boolean env var, using default", "key", key, "value", val, "default", defaultVal)
 	}
 	return defaultVal
 }
@@ -383,6 +386,7 @@ func getEnvAsFloat(key string, defaultVal float64) float64 {
 		if f, err := strconv.ParseFloat(val, 64); err == nil {
 			return f
 		}
+		slog.Warn("invalid float env var, using default", "key", key, "value", val, "default", defaultVal)
 	}
 	return defaultVal
 }
@@ -392,6 +396,7 @@ func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
 		if d, err := time.ParseDuration(val); err == nil {
 			return d
 		}
+		slog.Warn("invalid duration env var, using default", "key", key, "value", val, "default", defaultVal)
 	}
 	return defaultVal
 }
