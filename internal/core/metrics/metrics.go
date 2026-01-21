@@ -322,9 +322,9 @@ func (m *Metrics) SetIngestionLag(lag time.Duration) {
 	m.ingestionLag.Set(lag.Seconds())
 }
 
-// SetFeatureFreshness sets the feature freshness gauge.
-func (m *Metrics) SetFeatureFreshness(group string, age time.Duration) {
-	m.featureFreshness.WithLabelValues(group).Set(age.Seconds())
+// SetFeatureFreshness sets the feature freshness gauge for a feature group.
+func (m *Metrics) SetFeatureFreshness(featureGroup string, age time.Duration) {
+	m.featureFreshness.WithLabelValues(featureGroup).Set(age.Seconds())
 }
 
 // RecordFeatureRequest records a feature request.
