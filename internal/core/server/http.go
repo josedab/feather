@@ -120,7 +120,6 @@ func NewHTTPServer(
 	m *metrics.Metrics,
 	cfg HTTPServerConfig,
 ) *HTTPServer {
-	_ = ctx
 	mux := http.NewServeMux()
 
 	s := &HTTPServer{
