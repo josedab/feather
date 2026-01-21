@@ -83,7 +83,7 @@ func (h *MonitoringHandler) handleRemoveMonitor(w http.ResponseWriter, r *http.R
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "monitor removed"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "monitor removed"})
 }
 
 func (h *MonitoringHandler) handleRecordValue(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +102,7 @@ func (h *MonitoringHandler) handleRecordValue(w http.ResponseWriter, r *http.Req
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "value recorded"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "value recorded"})
 }
 
 func (h *MonitoringHandler) handleListRules(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +142,7 @@ func (h *MonitoringHandler) handleRemoveRule(w http.ResponseWriter, r *http.Requ
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "rule removed"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "rule removed"})
 }
 
 func (h *MonitoringHandler) handleGetAlerts(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +171,7 @@ func (h *MonitoringHandler) handleAcknowledgeAlert(w http.ResponseWriter, r *htt
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "alert acknowledged"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "alert acknowledged"})
 }
 
 func (h *MonitoringHandler) handleSummary(w http.ResponseWriter, r *http.Request) {

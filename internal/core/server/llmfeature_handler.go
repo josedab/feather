@@ -103,7 +103,7 @@ func (h *LLMFeatureHandler) handleDeleteTemplate(w http.ResponseWriter, r *http.
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "template deleted"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "template deleted"})
 }
 
 func (h *LLMFeatureHandler) handleStoreCompletion(w http.ResponseWriter, r *http.Request) {

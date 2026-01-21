@@ -736,7 +736,7 @@ func (h *TenantHandler) handleRevokeShare(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 func (h *TenantHandler) handleGetAuditLog(w http.ResponseWriter, r *http.Request) {

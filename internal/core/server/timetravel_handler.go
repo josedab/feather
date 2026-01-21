@@ -96,7 +96,7 @@ func (h *TimeTravelHandler) handleCloseSession(w http.ResponseWriter, r *http.Re
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "session closed"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "session closed"})
 }
 
 func (h *TimeTravelHandler) handleAddSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +113,7 @@ func (h *TimeTravelHandler) handleAddSnapshot(w http.ResponseWriter, r *http.Req
 		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusCreated, map[string]interface{}{"success": true, "message": "snapshot added"})
+	writeJSONResponse(r.Context(), w, http.StatusCreated, SuccessResponse{Success: true, Message: "snapshot added"})
 }
 
 func (h *TimeTravelHandler) handleReplay(w http.ResponseWriter, r *http.Request) {

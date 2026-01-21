@@ -58,7 +58,7 @@ func (h *ValidationHandler) handleRemoveRule(w http.ResponseWriter, r *http.Requ
 		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 type validateRequest struct {

@@ -134,7 +134,7 @@ func (h *ConsensusHandler) handleRebalance(w http.ResponseWriter, r *http.Reques
 		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "rebalance initiated"})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "rebalance initiated"})
 }
 
 func (h *ConsensusHandler) handleListPeers(w http.ResponseWriter, r *http.Request) {

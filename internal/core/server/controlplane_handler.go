@@ -73,7 +73,7 @@ func (h *ControlPlaneHandler) handleDeregisterInstance(w http.ResponseWriter, r 
 		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 func (h *ControlPlaneHandler) handleListRegions(w http.ResponseWriter, r *http.Request) {
