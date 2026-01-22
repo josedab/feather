@@ -190,12 +190,12 @@ func TestPanicRecoveryMiddleware_Recovery(t *testing.T) {
 
 func TestSecurityHeadersMiddleware(t *testing.T) {
 	expectedHeaders := map[string]string{
-		"X-Content-Type-Options": "nosniff",
-		"X-Frame-Options":        "DENY",
-		"X-XSS-Protection":       "1; mode=block",
-		"Referrer-Policy":        "strict-origin-when-cross-origin",
+		"X-Content-Type-Options":  "nosniff",
+		"X-Frame-Options":         "DENY",
+		"X-XSS-Protection":        "1; mode=block",
+		"Referrer-Policy":         "strict-origin-when-cross-origin",
 		"Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'",
-		"Permissions-Policy":     "geolocation=(), microphone=(), camera=()",
+		"Permissions-Policy":      "geolocation=(), microphone=(), camera=()",
 	}
 
 	t.Run("sets security headers without TLS", func(t *testing.T) {

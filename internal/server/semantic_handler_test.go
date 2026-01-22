@@ -181,7 +181,7 @@ func TestSemanticHandler_DeleteFeature_NotConfigured(t *testing.T) {
 func TestSemanticHandler_Search_NotConfigured(t *testing.T) {
 	ts := newTestSemanticServer(t)
 
-	body := SearchRequest{
+	body := SemanticSearchRequest{
 		Query: "find user features",
 		Limit: 10,
 	}
@@ -207,7 +207,7 @@ func TestSemanticHandler_Search_InvalidBody(t *testing.T) {
 func TestSemanticHandler_Search_MissingQuery(t *testing.T) {
 	ts := newTestSemanticServer(t)
 
-	body := SearchRequest{
+	body := SemanticSearchRequest{
 		Limit: 10,
 	}
 
