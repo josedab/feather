@@ -53,6 +53,10 @@ Feather is a production-ready feature store designed for **sub-millisecond P99 l
 | **Multiple APIs** | HTTP REST and gRPC with streaming support |
 | **Vector Search** | HNSW-based similarity search for embeddings (cosine, euclidean, manhattan) |
 | **Schema Registry** | Feature group definitions with type validation and versioning |
+| **Drift Detection** | Statistical drift monitoring with KL divergence, JS divergence, and PSI metrics |
+| **Feature Freshness SLAs** | Adaptive TTL management, ML-driven predictions, and SLA enforcement with alerting |
+| **AI-Powered Discovery** | Semantic search, natural language queries, and personalized feature recommendations |
+| **Offline Sync** | Apache Spark and Flink connectors for batch training data export |
 | **Production Ready** | Prometheus metrics, OpenTelemetry tracing, structured logging, health probes |
 
 ## Quick Start
@@ -441,6 +445,11 @@ For complete deployment instructions, see [Deployment Guide](./docs/deployment.m
 | [Architecture Overview](./docs/architecture.md) | System design, data flow, components |
 | [API Reference](./docs/api-reference.md) | Complete HTTP and gRPC API documentation |
 | [Deployment Guide](./docs/deployment.md) | Docker, Kubernetes, Helm installation |
+| [Observability Guide](./docs/observability.md) | Prometheus metrics, Grafana dashboards, alerting |
+| [Feature Freshness](./docs/freshness.md) | Adaptive TTL, SLA management, alerting, remediation |
+| [AI-Powered Discovery](./docs/discovery.md) | Semantic search, NL queries, recommendations |
+| [Offline Sync](./docs/offline-sync.md) | Apache Spark and Flink integration for batch export |
+| [Performance Guide](./docs/performance.md) | Optimization tips and benchmarking |
 | [Contributing Guide](./docs/contributing.md) | Development setup, coding standards |
 
 ## Development
@@ -491,7 +500,11 @@ feather/
 │   ├── aggregation/      # Real-time aggregation engine
 │   ├── config/           # Configuration loading
 │   ├── domain/           # Core domain types
+│   ├── drift/            # Drift detection and monitoring
+│   ├── freshness/        # Feature freshness SLAs and TTL management
 │   ├── ingestion/        # Kafka and HTTP ingestion
+│   ├── offline/          # Spark and Flink connectors
+│   ├── semantic/         # AI-powered discovery and search
 │   ├── server/           # HTTP and gRPC servers
 │   ├── storage/          # Hot/warm tiered storage
 │   ├── metrics/          # Prometheus metrics
@@ -499,21 +512,28 @@ feather/
 │   └── vector/           # Vector similarity search
 ├── sdk/
 │   ├── go/               # Go client SDK
-│   └── python/           # Python client SDK
-├── api/                  # Protocol buffer definitions
+│   ├── python/           # Python client SDK
+│   ├── java/             # Java/Kotlin client SDK
+│   ├── rust/             # Rust client SDK
+│   └── typescript/       # TypeScript client SDK
+├── api/                  # Protocol buffer and OpenAPI definitions
 ├── configs/              # Example configurations
-├── deploy/               # Kubernetes manifests, Helm charts
+├── deploy/               # Kubernetes manifests, Helm charts, observability
 ├── docs/                 # Documentation
 └── test/                 # Integration and benchmark tests
 ```
 
 ## Roadmap
 
-- [ ] Offline feature store integration (Apache Spark, BigQuery)
+- [x] Offline feature store integration (Apache Spark, Flink)
+- [x] Drift detection and monitoring
+- [x] Feature freshness SLAs with auto-remediation
+- [x] AI-powered feature discovery and recommendations
 - [ ] Feature lineage tracking
 - [ ] A/B testing support for feature experimentation
 - [ ] Multi-tenant isolation
 - [ ] Distributed mode with automatic sharding
+- [ ] BigQuery integration for data warehouse sync
 
 ## Contributing
 
