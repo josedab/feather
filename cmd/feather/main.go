@@ -225,6 +225,8 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	var m *metrics.Metrics
 	if cfg.Metrics.Prometheus.Enabled {
 		m = metrics.NewMetrics("feather")
+		stopRuntimeMetrics := m.StartRuntimeMetricsCollector(15 * time.Second)
+		defer stopRuntimeMetrics()
 	}
 
 	// Initialize schema registry
@@ -404,6 +406,39 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 					"dbt":             cfg.DBT.Enabled,
 					"ml_integrations": true,
 				"smpc":            true,
+				// Next-gen features
+				"stream_compute":       true,
+				"sdk_codegen":          true,
+				"prompt_store":         true,
+				"consistency_validator": true,
+				"feature_dashboard":    true,
+				"featherql_v2":         true,
+				"embedding_mgmt":      true,
+				"schema_evolution":     true,
+				"feast_compat":         true,
+				"saas_control":         true,
+				// Next-gen v2 features
+				"lineage_graph":        true,
+				"adaptive_cache":       true,
+				"contract_test":        true,
+				"backpressure":         true,
+				"offline_store":        true,
+				"bench_pub":            true,
+				"gitops_defs":          true,
+				"ab_features":          true,
+				"federated_discovery":  true,
+				"wasm_udf":             true,
+				// Next-gen v3 features
+				"api_gateway":          true,
+				"importance_scoring":   true,
+				"anomaly_detect":       true,
+				"feather_cli":          true,
+				"incr_materialization": true,
+				"webhook_events":       true,
+				"cloud_storage":        true,
+				"audit_log":            true,
+				"openapi_sync":         true,
+				"terraform_provider":   true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
