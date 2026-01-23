@@ -29,6 +29,7 @@ import (
 "github.com/feather-store/feather/internal/extensions/autogen"
 "github.com/feather-store/feather/internal/extensions/composition"
 "github.com/feather-store/feather/internal/extensions/computegraph"
+"github.com/feather-store/feather/internal/extensions/consistencyvalidator"
 "github.com/feather-store/feather/internal/extensions/drift"
 "github.com/feather-store/feather/internal/extensions/experiment"
 "github.com/feather-store/feather/internal/extensions/freshness"
@@ -48,6 +49,35 @@ import (
 "github.com/feather-store/feather/internal/extensions/timetravel"
 "github.com/feather-store/feather/internal/extensions/versioning"
 "github.com/feather-store/feather/internal/extensions/wasm"
+"github.com/feather-store/feather/internal/extensions/streamcompute"
+"github.com/feather-store/feather/internal/extensions/sdkcodegen"
+"github.com/feather-store/feather/internal/extensions/schemaevolution"
+"github.com/feather-store/feather/internal/extensions/saascontrol"
+"github.com/feather-store/feather/internal/extensions/promptstore"
+"github.com/feather-store/feather/internal/extensions/featherqlv2"
+"github.com/feather-store/feather/internal/extensions/featuredashboard"
+"github.com/feather-store/feather/internal/extensions/feastcompat"
+"github.com/feather-store/feather/internal/extensions/embeddingmgmt"
+"github.com/feather-store/feather/internal/extensions/abfeatures"
+"github.com/feather-store/feather/internal/extensions/adaptivecache"
+"github.com/feather-store/feather/internal/extensions/backpressure"
+"github.com/feather-store/feather/internal/extensions/benchpub"
+"github.com/feather-store/feather/internal/extensions/contracttest"
+"github.com/feather-store/feather/internal/extensions/federateddiscovery"
+"github.com/feather-store/feather/internal/extensions/gitopsdefs"
+"github.com/feather-store/feather/internal/extensions/lineagegraph"
+"github.com/feather-store/feather/internal/extensions/offlinestore"
+"github.com/feather-store/feather/internal/extensions/wasmudf"
+"github.com/feather-store/feather/internal/extensions/anomalydetect"
+"github.com/feather-store/feather/internal/extensions/apigateway"
+"github.com/feather-store/feather/internal/extensions/auditlog"
+"github.com/feather-store/feather/internal/extensions/cloudstorage"
+"github.com/feather-store/feather/internal/extensions/feathercli"
+"github.com/feather-store/feather/internal/extensions/importancescoring"
+"github.com/feather-store/feather/internal/extensions/incrmat"
+"github.com/feather-store/feather/internal/extensions/openapisync"
+"github.com/feather-store/feather/internal/extensions/terraformprovider"
+"github.com/feather-store/feather/internal/extensions/webhooks"
 "github.com/feather-store/feather/internal/integrations/airflow"
 "github.com/feather-store/feather/internal/integrations/kubeflow"
 "github.com/feather-store/feather/internal/integrations/mlflow"
@@ -431,6 +461,111 @@ airflow.NewProvider(airflow.DefaultConfig()),
 registerHandler("smpc", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 return NewSMPCHandler(federation.NewSMPCEngine(federation.DefaultSMPCConfig()))
 })
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  NEXT-GEN — Advanced features for next-generation use cases.   ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+registerHandler("stream_compute", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewStreamComputeHandler(streamcompute.NewEngine(streamcompute.DefaultEngineConfig()))
+})
+registerHandler("sdk_codegen", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewSDKCodegenHandler(sdkcodegen.NewGenerator(sdkcodegen.DefaultGeneratorConfig()))
+})
+registerHandler("prompt_store", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewPromptStoreHandler(promptstore.NewStore(promptstore.DefaultStoreConfig()))
+})
+registerHandler("consistency_validator", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewConsistencyValidatorHandler(consistencyvalidator.NewValidator(consistencyvalidator.DefaultValidatorConfig()))
+})
+registerHandler("feature_dashboard", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewFeatureDashboardHandler(featuredashboard.NewDashboard(featuredashboard.DefaultDashboardConfig()))
+})
+registerHandler("featherql_v2", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewFeatherQLv2Handler(featherqlv2.NewEngine(featherqlv2.DefaultEngineConfig()))
+})
+registerHandler("embedding_mgmt", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewEmbeddingMgmtHandler(embeddingmgmt.NewManager(embeddingmgmt.DefaultManagerConfig()))
+})
+registerHandler("schema_evolution", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewSchemaEvolutionHandler(schemaevolution.NewManager(schemaevolution.DefaultManagerConfig()))
+})
+registerHandler("feast_compat", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewFeastCompatHandler(feastcompat.NewAdapter(feastcompat.DefaultAdapterConfig()))
+})
+registerHandler("saas_control", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewSaaSControlHandler(saascontrol.NewControlPlane(saascontrol.DefaultControlPlaneConfig()))
+})
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  NEXT-GEN v2 — Second wave of advanced features.               ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+registerHandler("lineage_graph", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewLineageGraphHandler(lineagegraph.NewGraph(lineagegraph.DefaultGraphConfig()))
+})
+registerHandler("adaptive_cache", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewAdaptiveCacheHandler(adaptivecache.NewPredictor(adaptivecache.DefaultPredictorConfig()))
+})
+registerHandler("contract_test", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewContractTestHandler(contracttest.NewRunner(contracttest.DefaultRunnerConfig()))
+})
+registerHandler("backpressure", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewBackpressureHandler(backpressure.NewMonitor(backpressure.DefaultMonitorConfig()))
+})
+registerHandler("offline_store", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewOfflineStoreHandler(offlinestore.NewStore(offlinestore.DefaultStoreConfig()))
+})
+registerHandler("bench_pub", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewBenchPubHandler(benchpub.NewSuite(benchpub.DefaultSuiteConfig()))
+})
+registerHandler("gitops_defs", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewGitOpsDefsHandler(gitopsdefs.NewReconciler(gitopsdefs.DefaultReconcilerConfig()))
+})
+registerHandler("ab_features", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewABFeaturesHandler(abfeatures.NewManager(abfeatures.DefaultExperimentConfig()))
+})
+registerHandler("federated_discovery", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewFederatedDiscoveryHandler(federateddiscovery.NewCatalog(federateddiscovery.DefaultCatalogConfig()))
+})
+registerHandler("wasm_udf", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewWasmUDFHandler(wasmudf.NewRuntime(wasmudf.DefaultRuntimeConfig()))
+})
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  NEXT-GEN v3 — Third wave: operations, governance, platform.   ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+registerHandler("api_gateway", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewAPIGatewayHandler(apigateway.NewGateway(apigateway.DefaultGatewayConfig()))
+})
+registerHandler("importance_scoring", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewImportanceScoringHandler(importancescoring.NewScorer(importancescoring.DefaultScorerConfig()))
+})
+registerHandler("anomaly_detect", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewAnomalyDetectHandler(anomalydetect.NewDetector(anomalydetect.DefaultDetectorConfig()))
+})
+registerHandler("feather_cli", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewFeatherCLIHandler(feathercli.NewClient(feathercli.DefaultClientConfig()))
+})
+registerHandler("incr_materialization", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewIncrMatHandler(incrmat.NewEngine(incrmat.DefaultEngineConfig()))
+})
+registerHandler("webhook_events", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewWebhooksHandler(webhooks.NewDispatcher(webhooks.DefaultDispatcherConfig()))
+})
+registerHandler("cloud_storage", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewCloudStorageHandler(cloudstorage.NewObjectStore(cloudstorage.DefaultStoreConfig()))
+})
+registerHandler("audit_log", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewAuditLogHandler(auditlog.NewLogger(auditlog.DefaultLoggerConfig()))
+})
+registerHandler("openapi_sync", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewOpenAPISyncHandler(openapisync.NewGenerator(openapisync.DefaultGeneratorConfig()))
+})
+registerHandler("terraform_provider", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewTerraformProviderHandler(terraformprovider.NewProvider(terraformprovider.DefaultProviderConfig()))
+})
 }
 
 // RegisteredFeatures returns all available feature names.
@@ -452,13 +587,45 @@ return out
 
 // registerEnabledFeatures creates and registers all enabled feature handlers.
 func registerEnabledFeatures(mux *http.ServeMux, enabled map[string]bool, deps *handlerDeps) {
+// Validate that all enabled feature names correspond to registered handlers
+for name := range enabled {
+if !enabled[name] {
+continue
+}
+if _, exists := featureRegistry[name]; !exists {
+slog.Warn("enabled feature has no registered handler, ignoring", "feature", name)
+}
+}
+
 for name, factory := range featureRegistry {
 if !enabled[name] {
 continue
 }
 handler := factory(deps)
-if handler != nil {
+if handler == nil {
+slog.Warn("feature handler factory returned nil, skipping", "handler", name)
+continue
+}
 handler.RegisterRoutes(mux)
 }
 }
+
+// HandlerInventory describes a registered handler for API documentation.
+type HandlerInventory struct {
+	Name     string `json:"name"`
+	Maturity string `json:"maturity"`
+	Enabled  bool   `json:"enabled"`
+}
+
+// GetHandlerInventory returns all handlers with maturity and enabled status.
+func GetHandlerInventory(enabled map[string]bool) []HandlerInventory {
+	inv := make([]HandlerInventory, 0, len(handlerSpecs))
+	for _, spec := range handlerSpecs {
+		inv = append(inv, HandlerInventory{
+			Name:     spec.Name,
+			Maturity: string(spec.Maturity),
+			Enabled:  enabled[spec.Name],
+		})
+	}
+	return inv
 }
