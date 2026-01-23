@@ -209,6 +209,17 @@ th {
   }
 }
 
+/* Navbar logo sizing */
+.navbar__logo img {
+  height: 32px;
+  width: auto;
+}
+
+/* Hero logo adjustments for dark mode */
+[data-theme='dark'] .heroLogo {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
 /* Print styles */
 @media print {
   .navbar,
