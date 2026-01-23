@@ -1,0 +1,1175 @@
+openapi: 3.0.3
+info:
+  title: Feather Feature Store API
+  description: |
+    Feather is a high-performance, real-time feature store providing sub-millisecond
+    feature retrieval through a tiered storage architecture.
+
+    ## Authentication
+    API requests can be authenticated using API keys passed in the `X-API-Key` header.
+
+    ## Rate Limiting
+    Requests are rate-limited per client IP using a token bucket algorithm.
+    Rate limit headers are included in responses:
+    - `X-RateLimit-Limit`: Maximum requests per window
+    - `X-RateLimit-Remaining`: Remaining requests in current window
+    - `X-RateLimit-Reset`: Unix timestamp when the window resets
+
+    ## Request Tracing
+    Include `X-Request-ID` header for distributed tracing. If not provided, one will be generated.
+  version: 1.0.0
+  contact:
+    name: Feather Support
+    url: https://github.com/feather-store/feather
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://feather.example.com
+    description: Production
+
+tags:
+  - name: Features
+    description: Feature retrieval and storage operations
+  - name: Schema
+    description: Feature group schema management
+  - name: Vectors
+    description: Vector similarity search operations
+  - name: Health
+    description: Health and readiness checks
+  - name: Drift
+    description: Feature drift detection
+  - name: Freshness
+    description: Feature freshness monitoring
+
+paths:
+  # ============================================
+  # Feature Operations
+  # ============================================
+  /v1/features:
+    get:
+      tags: [Features]
+      summary: Get features for an entity
+      description: Retrieve feature values for a specific entity
+      operationId: getFeatures
+      parameters:
+        - name: entity
+          in: query
+          required: true
+          description: Entity identifier (e.g., "user:12345")
+          schema:
+            type: string
+          example: "user:12345"
+        - name: features
+          in: query
+          required: false
+          description: Comma-separated list of feature names. If omitted, returns all features.
+          schema:
+            type: string
+          example: "click_count,last_active,purchase_total"
+      responses:
+        '200':
+          description: Features retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFeaturesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Features]
+      summary: Store features for an entity
+      description: Store or update feature values for an entity
+      operationId: putFeatures
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutFeaturesRequest'
+      responses:
+        '200':
+          description: Features stored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/features/batch:
+    post:
+      tags: [Features]
+      summary: Batch get features for multiple entities
+      description: Retrieve features for multiple entities in a single request
+      operationId: batchGetFeatures
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchGetRequest'
+      responses:
+        '200':
+          description: Features retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/features/history:
+    get:
+      tags: [Features]
+      summary: Get historical features (point-in-time)
+      description: Retrieve feature values as they existed at a specific point in time
+      operationId: getFeaturesAsOf
+      parameters:
+        - name: entity
+          in: query
+          required: true
+          description: Entity identifier
+          schema:
+            type: string
+          example: "user:12345"
+        - name: features
+          in: query
+          required: false
+          description: Comma-separated list of feature names
+          schema:
+            type: string
+        - name: as_of
+          in: query
+          required: true
+          description: Point-in-time timestamp (RFC3339 format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-15T10:30:00Z"
+      responses:
+        '200':
+          description: Historical features retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFeaturesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================
+  # Schema Operations
+  # ============================================
+  /v1/schema/groups:
+    get:
+      tags: [Schema]
+      summary: List all feature groups
+      description: Retrieve all registered feature group schemas
+      operationId: listFeatureGroups
+      responses:
+        '200':
+          description: Feature groups retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListFeatureGroupsResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Schema]
+      summary: Create a feature group
+      description: Register a new feature group schema
+      operationId: createFeatureGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureGroup'
+      responses:
+        '201':
+          description: Feature group created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Feature group already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/schema/groups/{name}:
+    get:
+      tags: [Schema]
+      summary: Get a feature group
+      description: Retrieve a specific feature group schema by name
+      operationId: getFeatureGroup
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Feature group name
+          schema:
+            type: string
+          example: "user_features"
+      responses:
+        '200':
+          description: Feature group retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureGroupResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Schema]
+      summary: Delete a feature group
+      description: Remove a feature group schema (does not delete stored data)
+      operationId: deleteFeatureGroup
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Feature group name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Feature group deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================
+  # Vector Operations
+  # ============================================
+  /v1/vectors:
+    get:
+      tags: [Vectors]
+      summary: List vector indexes
+      description: Retrieve all vector similarity search indexes
+      operationId: listVectorIndexes
+      responses:
+        '200':
+          description: Vector indexes retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListVectorIndexesResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Vectors]
+      summary: Create a vector index
+      description: Create a new vector similarity search index
+      operationId: createVectorIndex
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVectorIndexRequest'
+      responses:
+        '201':
+          description: Vector index created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Index already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/vectors/{index}:
+    get:
+      tags: [Vectors]
+      summary: Get vector index info
+      description: Retrieve information about a specific vector index
+      operationId: getVectorIndex
+      parameters:
+        - name: index
+          in: path
+          required: true
+          description: Index name
+          schema:
+            type: string
+          example: "product_embeddings"
+      responses:
+        '200':
+          description: Index info retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorIndexResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Vectors]
+      summary: Delete a vector index
+      description: Delete a vector index and all its vectors
+      operationId: deleteVectorIndex
+      parameters:
+        - name: index
+          in: path
+          required: true
+          description: Index name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Index deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/vectors/{index}/upsert:
+    post:
+      tags: [Vectors]
+      summary: Upsert vectors
+      description: Insert or update vectors in an index
+      operationId: upsertVectors
+      parameters:
+        - name: index
+          in: path
+          required: true
+          description: Index name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertVectorsRequest'
+      responses:
+        '200':
+          description: Vectors upserted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpsertVectorsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/vectors/{index}/search:
+    post:
+      tags: [Vectors]
+      summary: Search for similar vectors
+      description: Find vectors most similar to a query vector
+      operationId: searchVectors
+      parameters:
+        - name: index
+          in: path
+          required: true
+          description: Index name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VectorSearchRequest'
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================
+  # Drift Detection
+  # ============================================
+  /v1/drift/status:
+    get:
+      tags: [Drift]
+      summary: Get drift monitoring status
+      description: Retrieve drift detection status for all monitored features
+      operationId: getDriftStatus
+      responses:
+        '200':
+          description: Drift status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftStatusResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/drift/alerts:
+    get:
+      tags: [Drift]
+      summary: Get drift alerts
+      description: Retrieve drift alerts, optionally filtered by time
+      operationId: getDriftAlerts
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: Only return alerts since this timestamp (RFC3339)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Drift alerts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftAlertsResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================
+  # Freshness Monitoring
+  # ============================================
+  /v1/freshness/status:
+    get:
+      tags: [Freshness]
+      summary: Get feature freshness status
+      description: Retrieve freshness status for all features
+      operationId: getFreshnessStatus
+      responses:
+        '200':
+          description: Freshness status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FreshnessStatusResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/freshness/sla:
+    get:
+      tags: [Freshness]
+      summary: Get SLA compliance status
+      description: Retrieve SLA compliance status for feature freshness
+      operationId: getSLAStatus
+      responses:
+        '200':
+          description: SLA status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAStatusResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================
+  # Health Endpoints
+  # ============================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Deep health check
+      description: Comprehensive health check including all components
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: Check if service is ready to accept traffic
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "ready"
+        '503':
+          description: Service is not ready
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "not ready"
+
+  /live:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: Check if service is alive
+      operationId: livenessCheck
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "alive"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+  schemas:
+    # ============================================
+    # Common Schemas
+    # ============================================
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        request_id:
+          type: string
+          example: "req_abc123"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_REQUEST"
+            message:
+              type: string
+              example: "Entity ID is required"
+        request_id:
+          type: string
+          example: "req_abc123"
+
+    FeatureValue:
+      type: object
+      properties:
+        value:
+          oneOf:
+            - type: integer
+            - type: number
+            - type: string
+            - type: boolean
+            - type: array
+              items:
+                type: number
+          description: The feature value
+        timestamp:
+          type: string
+          format: date-time
+          description: When the value was recorded
+        version:
+          type: integer
+          format: int64
+          description: Version number for optimistic locking
+
+    # ============================================
+    # Feature Schemas
+    # ============================================
+    GetFeaturesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            entity_id:
+              type: string
+              example: "user:12345"
+            features:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/FeatureValue'
+        request_id:
+          type: string
+
+    PutFeaturesRequest:
+      type: object
+      required:
+        - entity_id
+        - features
+      properties:
+        entity_id:
+          type: string
+          example: "user:12345"
+        features:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: integer
+              - type: number
+              - type: string
+              - type: boolean
+          example:
+            click_count: 42
+            last_active: "2024-01-15T10:30:00Z"
+
+    BatchGetRequest:
+      type: object
+      required:
+        - entities
+      properties:
+        entities:
+          type: array
+          items:
+            type: string
+          maxItems: 100
+          example: ["user:12345", "user:67890"]
+        features:
+          type: array
+          items:
+            type: string
+          example: ["click_count", "last_active"]
+
+    BatchGetResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            results:
+              type: object
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/FeatureValue'
+        request_id:
+          type: string
+
+    # ============================================
+    # Schema Definitions
+    # ============================================
+    FeatureGroup:
+      type: object
+      required:
+        - name
+        - entity_type
+        - features
+      properties:
+        name:
+          type: string
+          example: "user_features"
+        entity_type:
+          type: string
+          example: "user"
+        description:
+          type: string
+        ttl:
+          type: string
+          description: Duration string (e.g., "24h", "7d")
+          example: "24h"
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeatureSpec'
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+
+    FeatureSpec:
+      type: object
+      required:
+        - name
+        - data_type
+      properties:
+        name:
+          type: string
+          example: "click_count"
+        data_type:
+          type: string
+          enum: [int64, float64, string, bool, bytes, vector, timestamp]
+        description:
+          type: string
+        aggregation:
+          $ref: '#/components/schemas/AggregationSpec'
+        validation:
+          $ref: '#/components/schemas/ValidationSpec'
+
+    AggregationSpec:
+      type: object
+      properties:
+        function:
+          type: string
+          enum: [count, sum, avg, min, max, last]
+        window:
+          type: string
+          example: "1h"
+        slide_by:
+          type: string
+          example: "5m"
+
+    ValidationSpec:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
+        not_null:
+          type: boolean
+        one_of:
+          type: array
+          items:
+            type: string
+        regex:
+          type: string
+
+    ListFeatureGroupsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            groups:
+              type: array
+              items:
+                $ref: '#/components/schemas/FeatureGroup'
+        request_id:
+          type: string
+
+    FeatureGroupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/FeatureGroup'
+        request_id:
+          type: string
+
+    # ============================================
+    # Vector Schemas
+    # ============================================
+    CreateVectorIndexRequest:
+      type: object
+      required:
+        - name
+        - dimensions
+      properties:
+        name:
+          type: string
+          example: "product_embeddings"
+        dimensions:
+          type: integer
+          minimum: 1
+          maximum: 4096
+          example: 768
+        metric:
+          type: string
+          enum: [cosine, euclidean, dot_product]
+          default: cosine
+        description:
+          type: string
+
+    ListVectorIndexesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            indexes:
+              type: array
+              items:
+                $ref: '#/components/schemas/VectorIndexInfo'
+        request_id:
+          type: string
+
+    VectorIndexInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        dimensions:
+          type: integer
+        metric:
+          type: string
+        vector_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    VectorIndexResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/VectorIndexInfo'
+        request_id:
+          type: string
+
+    UpsertVectorsRequest:
+      type: object
+      required:
+        - vectors
+      properties:
+        vectors:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorRecord'
+          maxItems: 1000
+
+    VectorRecord:
+      type: object
+      required:
+        - id
+        - values
+      properties:
+        id:
+          type: string
+          example: "product:abc123"
+        values:
+          type: array
+          items:
+            type: number
+          example: [0.1, 0.2, 0.3]
+        metadata:
+          type: object
+          additionalProperties: true
+
+    UpsertVectorsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            upserted_count:
+              type: integer
+        request_id:
+          type: string
+
+    VectorSearchRequest:
+      type: object
+      required:
+        - vector
+      properties:
+        vector:
+          type: array
+          items:
+            type: number
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 10
+        filter:
+          type: object
+          additionalProperties: true
+        include_metadata:
+          type: boolean
+          default: true
+
+    VectorSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            matches:
+              type: array
+              items:
+                $ref: '#/components/schemas/VectorMatch'
+        request_id:
+          type: string
+
+    VectorMatch:
+      type: object
+      properties:
+        id:
+          type: string
+        score:
+          type: number
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # ============================================
+    # Drift Schemas
+    # ============================================
+    DriftStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            features:
+              type: array
+              items:
+                $ref: '#/components/schemas/FeatureDriftStatus'
+        request_id:
+          type: string
+
+    FeatureDriftStatus:
+      type: object
+      properties:
+        feature:
+          type: string
+        status:
+          type: string
+          enum: [healthy, warning, drifted]
+        drift_score:
+          type: number
+        last_checked:
+          type: string
+          format: date-time
+
+    DriftAlertsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            alerts:
+              type: array
+              items:
+                $ref: '#/components/schemas/DriftAlert'
+        request_id:
+          type: string
+
+    DriftAlert:
+      type: object
+      properties:
+        id:
+          type: string
+        feature:
+          type: string
+        severity:
+          type: string
+          enum: [warning, critical]
+        drift_score:
+          type: number
+        message:
+          type: string
+        detected_at:
+          type: string
+          format: date-time
+
+    # ============================================
+    # Freshness Schemas
+    # ============================================
+    FreshnessStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            features:
+              type: array
+              items:
+                $ref: '#/components/schemas/FeatureFreshnessStatus'
+        request_id:
+          type: string
+
+    FeatureFreshnessStatus:
+      type: object
+      properties:
+        feature:
+          type: string
+        age_seconds:
+          type: number
+        last_updated:
+          type: string
+          format: date-time
+        sla_target_seconds:
+          type: number
+        within_sla:
+          type: boolean
+
+    SLAStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            overall_compliance:
+              type: number
+              description: Percentage of features meeting SLA
+            violations:
+              type: array
+              items:
+                $ref: '#/components/schemas/SLAViolation'
+        request_id:
+          type: string
+
+    SLAViolation:
+      type: object
+      properties:
+        feature:
+          type: string
+        target_seconds:
+          type: number
+        actual_seconds:
+          type: number
+        violation_duration:
+          type: string
+
+    # ============================================
+    # Health Schemas
+    # ============================================
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        components:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComponentHealth'
+        version:
+          type: string
+        uptime:
+          type: string
+
+    ComponentHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        message:
+          type: string
+        latency_ms:
+          type: number
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+security:
+  - ApiKeyAuth: []
