@@ -1,0 +1,407 @@
+# Feather Feature Store - Prometheus Alerting Rules
+# Deploy as PrometheusRule CRD in Kubernetes or include in Prometheus config
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: feather-alerts
+  labels:
+    app: feather
+    prometheus: feather
+spec:
+  groups:
+    # ============================================
+    # Service Health Alerts
+    # ============================================
+    - name: feather.service
+      rules:
+        - alert: FeatherDown
+          expr: up{job="feather"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Feather instance is down"
+            description: "Feather instance {{ $labels.instance }} has been down for more than 1 minute."
+            runbook_url: "https://docs.feather.dev/runbooks/instance-down"
+
+        - alert: FeatherHighRestartRate
+          expr: changes(process_start_time_seconds{job="feather"}[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Feather instance restarting frequently"
+            description: "Feather instance {{ $labels.instance }} has restarted {{ $value }} times in the last hour."
+            runbook_url: "https://docs.feather.dev/runbooks/frequent-restarts"
+
+    # ============================================
+    # HTTP API Alerts
+    # ============================================
+    - name: feather.http
+      rules:
+        - alert: FeatherHighHTTPErrorRate
+          expr: |
+            (
+              sum(rate(feather_http_requests_total{job="feather",status=~"5.."}[5m]))
+              /
+              sum(rate(feather_http_requests_total{job="feather"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High HTTP 5xx error rate"
+            description: "Feather HTTP error rate is {{ $value | humanizePercentage }} (threshold: 5%)."
+            runbook_url: "https://docs.feather.dev/runbooks/high-error-rate"
+
+        - alert: FeatherHighHTTPLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(feather_http_request_duration_seconds_bucket{job="feather"}[5m])) by (le)
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High HTTP request latency"
+            description: "Feather HTTP P99 latency is {{ $value | humanizeDuration }} (threshold: 500ms)."
+            runbook_url: "https://docs.feather.dev/runbooks/high-latency"
+
+        - alert: FeatherHTTPLatencyCritical
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(feather_http_request_duration_seconds_bucket{job="feather"}[5m])) by (le)
+            ) > 2
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical HTTP request latency"
+            description: "Feather HTTP P99 latency is {{ $value | humanizeDuration }} (threshold: 2s)."
+            runbook_url: "https://docs.feather.dev/runbooks/critical-latency"
+
+        - alert: FeatherNoHTTPTraffic
+          expr: sum(rate(feather_http_requests_total{job="feather"}[5m])) == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No HTTP traffic to Feather"
+            description: "Feather has received no HTTP requests in the last 10 minutes."
+            runbook_url: "https://docs.feather.dev/runbooks/no-traffic"
+
+    # ============================================
+    # gRPC API Alerts
+    # ============================================
+    - name: feather.grpc
+      rules:
+        - alert: FeatherHighGRPCErrorRate
+          expr: |
+            (
+              sum(rate(feather_grpc_requests_total{job="feather",status!="OK"}[5m]))
+              /
+              sum(rate(feather_grpc_requests_total{job="feather"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High gRPC error rate"
+            description: "Feather gRPC error rate is {{ $value | humanizePercentage }} (threshold: 5%)."
+            runbook_url: "https://docs.feather.dev/runbooks/grpc-errors"
+
+        - alert: FeatherHighGRPCLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(feather_grpc_request_duration_seconds_bucket{job="feather"}[5m])) by (le)
+            ) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High gRPC request latency"
+            description: "Feather gRPC P99 latency is {{ $value | humanizeDuration }} (threshold: 100ms)."
+            runbook_url: "https://docs.feather.dev/runbooks/grpc-latency"
+
+    # ============================================
+    # Cache & Storage Alerts
+    # ============================================
+    - name: feather.storage
+      rules:
+        - alert: FeatherLowCacheHitRate
+          expr: |
+            (
+              rate(feather_cache_hits_total{job="feather"}[5m])
+              /
+              (rate(feather_cache_hits_total{job="feather"}[5m]) + rate(feather_cache_misses_total{job="feather"}[5m]))
+            ) < 0.7
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Low cache hit rate"
+            description: "Feather cache hit rate is {{ $value | humanizePercentage }} (threshold: 70%)."
+            runbook_url: "https://docs.feather.dev/runbooks/low-cache-hit-rate"
+
+        - alert: FeatherCacheHitRateCritical
+          expr: |
+            (
+              rate(feather_cache_hits_total{job="feather"}[5m])
+              /
+              (rate(feather_cache_hits_total{job="feather"}[5m]) + rate(feather_cache_misses_total{job="feather"}[5m]))
+            ) < 0.5
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical cache hit rate"
+            description: "Feather cache hit rate is {{ $value | humanizePercentage }} (threshold: 50%)."
+            runbook_url: "https://docs.feather.dev/runbooks/critical-cache-hit-rate"
+
+        - alert: FeatherHighEvictionRate
+          expr: sum(rate(feather_eviction_total{job="feather"}[5m])) > 100
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High cache eviction rate"
+            description: "Feather is evicting {{ $value | humanize }} entries/second. Consider increasing cache size."
+            runbook_url: "https://docs.feather.dev/runbooks/high-eviction-rate"
+
+        - alert: FeatherWarmTierSlowOps
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(feather_warm_tier_operation_duration_seconds_bucket{job="feather"}[5m])) by (le, operation)
+            ) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Slow warm tier operations"
+            description: "Feather warm tier P99 latency is {{ $value | humanizeDuration }}. Check disk I/O."
+            runbook_url: "https://docs.feather.dev/runbooks/slow-warm-tier"
+
+        - alert: FeatherShardContention
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(feather_shard_wait_time_seconds_bucket{job="feather"}[5m])) by (le)
+            ) > 0.001
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High shard lock contention"
+            description: "Feather shard lock P99 wait time is {{ $value | humanizeDuration }}."
+            runbook_url: "https://docs.feather.dev/runbooks/shard-contention"
+
+    # ============================================
+    # Ingestion Alerts
+    # ============================================
+    - name: feather.ingestion
+      rules:
+        - alert: FeatherHighIngestionLag
+          expr: feather_ingestion_lag{job="feather"} > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High ingestion lag"
+            description: "Feather ingestion lag is {{ $value }} messages behind."
+            runbook_url: "https://docs.feather.dev/runbooks/ingestion-lag"
+
+        - alert: FeatherIngestionLagCritical
+          expr: feather_ingestion_lag{job="feather"} > 10000
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical ingestion lag"
+            description: "Feather ingestion lag is {{ $value }} messages behind. Features may be stale."
+            runbook_url: "https://docs.feather.dev/runbooks/critical-ingestion-lag"
+
+        - alert: FeatherIngestionDropping
+          expr: |
+            (
+              1 - (
+                sum(rate(feather_messages_processed_total{job="feather"}[5m]))
+                /
+                sum(rate(feather_messages_received_total{job="feather"}[5m]))
+              )
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Messages being dropped"
+            description: "Feather is dropping {{ $value | humanizePercentage }} of incoming messages."
+            runbook_url: "https://docs.feather.dev/runbooks/message-drops"
+
+        - alert: FeatherNoIngestion
+          expr: sum(rate(feather_messages_received_total{job="feather"}[10m])) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No messages being ingested"
+            description: "Feather has not received any messages in the last 15 minutes."
+            runbook_url: "https://docs.feather.dev/runbooks/no-ingestion"
+
+    # ============================================
+    # Feature Freshness Alerts
+    # ============================================
+    - name: feather.freshness
+      rules:
+        - alert: FeatherStaleFeatures
+          expr: feather_feature_freshness_seconds{job="feather"} > 3600
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Stale feature detected"
+            description: "Feature {{ $labels.feature }} is {{ $value | humanizeDuration }} old."
+            runbook_url: "https://docs.feather.dev/runbooks/stale-features"
+
+        - alert: FeatherFeatureFreshnessCritical
+          expr: feather_feature_freshness_seconds{job="feather"} > 86400
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical feature staleness"
+            description: "Feature {{ $labels.feature }} is {{ $value | humanizeDuration }} old (>24h)."
+            runbook_url: "https://docs.feather.dev/runbooks/critical-stale-features"
+
+    # ============================================
+    # Resource Alerts
+    # ============================================
+    - name: feather.resources
+      rules:
+        - alert: FeatherHighMemoryUsage
+          expr: |
+            (
+              feather_memory_alloc_bytes{job="feather"}
+              /
+              (feather_hot_tier_size_bytes{job="feather"} + 1073741824)
+            ) > 0.9
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage"
+            description: "Feather memory usage is {{ $value | humanizePercentage }} of allocated limit."
+            runbook_url: "https://docs.feather.dev/runbooks/high-memory"
+
+        - alert: FeatherHighGoroutineCount
+          expr: feather_goroutines{job="feather"} > 10000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High goroutine count"
+            description: "Feather has {{ $value }} goroutines running. Possible goroutine leak."
+            runbook_url: "https://docs.feather.dev/runbooks/goroutine-leak"
+
+        - alert: FeatherHighGCPause
+          expr: rate(feather_gc_pause_total_seconds{job="feather"}[5m]) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High GC pause time"
+            description: "Feather GC is consuming {{ $value | humanizePercentage }} of time."
+            runbook_url: "https://docs.feather.dev/runbooks/gc-pressure"
+
+        - alert: FeatherHighFDUsage
+          expr: |
+            process_open_fds{job="feather"} / process_max_fds{job="feather"} > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High file descriptor usage"
+            description: "Feather is using {{ $value | humanizePercentage }} of available file descriptors."
+            runbook_url: "https://docs.feather.dev/runbooks/fd-exhaustion"
+
+    # ============================================
+    # Error Alerts
+    # ============================================
+    - name: feather.errors
+      rules:
+        - alert: FeatherHighErrorRate
+          expr: sum(rate(feather_errors_total{job="feather"}[5m])) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High error rate"
+            description: "Feather is experiencing {{ $value | humanize }} errors/second."
+            runbook_url: "https://docs.feather.dev/runbooks/high-errors"
+
+        - alert: FeatherStorageErrors
+          expr: sum(rate(feather_errors_total{job="feather",type="storage"}[5m])) > 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Storage errors detected"
+            description: "Feather is experiencing {{ $value | humanize }} storage errors/second."
+            runbook_url: "https://docs.feather.dev/runbooks/storage-errors"
+
+    # ============================================
+    # SLO/SLI Alerts (Golden Signals)
+    # ============================================
+    - name: feather.slo
+      rules:
+        # Availability SLO: 99.9%
+        - alert: FeatherAvailabilitySLOBreach
+          expr: |
+            (
+              1 - (
+                sum(rate(feather_http_requests_total{job="feather",status=~"5.."}[1h]))
+                /
+                sum(rate(feather_http_requests_total{job="feather"}[1h]))
+              )
+            ) < 0.999
+          for: 5m
+          labels:
+            severity: critical
+            slo: availability
+          annotations:
+            summary: "Availability SLO breach"
+            description: "Feather availability is {{ $value | humanizePercentage }} (SLO: 99.9%)."
+            runbook_url: "https://docs.feather.dev/runbooks/slo-breach"
+
+        # Latency SLO: 99% of requests < 10ms
+        - alert: FeatherLatencySLOBreach
+          expr: |
+            (
+              sum(rate(feather_http_request_duration_seconds_bucket{job="feather",le="0.01"}[1h]))
+              /
+              sum(rate(feather_http_request_duration_seconds_count{job="feather"}[1h]))
+            ) < 0.99
+          for: 5m
+          labels:
+            severity: warning
+            slo: latency
+          annotations:
+            summary: "Latency SLO breach"
+            description: "Only {{ $value | humanizePercentage }} of requests complete within 10ms (SLO: 99%)."
+            runbook_url: "https://docs.feather.dev/runbooks/latency-slo-breach"
+
+        # Feature Freshness SLO: All features < 1 hour old
+        - alert: FeatherFreshnessSLOBreach
+          expr: |
+            (
+              count(feather_feature_freshness_seconds{job="feather"} > 3600)
+              /
+              count(feather_feature_freshness_seconds{job="feather"})
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: warning
+            slo: freshness
+          annotations:
+            summary: "Freshness SLO breach"
+            description: "{{ $value | humanizePercentage }} of features are older than 1 hour (SLO: <1%)."
+            runbook_url: "https://docs.feather.dev/runbooks/freshness-slo-breach"
