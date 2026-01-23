@@ -1,0 +1,219 @@
+/**
+ * Feather Feature Store - Custom Docusaurus Theme
+ * Brand colors derived from the feather logo (green-blue gradient)
+ */
+
+:root {
+  /* Primary brand colors */
+  --ifm-color-primary: #4CAF50;
+  --ifm-color-primary-dark: #43A047;
+  --ifm-color-primary-darker: #388E3C;
+  --ifm-color-primary-darkest: #2E7D32;
+  --ifm-color-primary-light: #66BB6A;
+  --ifm-color-primary-lighter: #81C784;
+  --ifm-color-primary-lightest: #A5D6A7;
+
+  /* Secondary accent (blue from gradient) */
+  --ifm-color-secondary: #2196F3;
+
+  /* Code highlighting */
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(76, 175, 80, 0.1);
+
+  /* Font */
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-heading-font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, 'Andale Mono', monospace;
+
+  /* Navbar */
+  --ifm-navbar-background-color: #ffffff;
+  --ifm-navbar-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+
+  /* Footer */
+  --ifm-footer-background-color: #1a1a2e;
+}
+
+/* Dark mode */
+[data-theme='dark'] {
+  --ifm-color-primary: #66BB6A;
+  --ifm-color-primary-dark: #4CAF50;
+  --ifm-color-primary-darker: #43A047;
+  --ifm-color-primary-darkest: #388E3C;
+  --ifm-color-primary-light: #81C784;
+  --ifm-color-primary-lighter: #A5D6A7;
+  --ifm-color-primary-lightest: #C8E6C9;
+
+  --docusaurus-highlighted-code-line-bg: rgba(102, 187, 106, 0.15);
+  --ifm-background-color: #1a1a2e;
+  --ifm-navbar-background-color: #16213e;
+  --ifm-footer-background-color: #0f0f1a;
+}
+
+/* GitHub link icon in navbar */
+.header-github-link::before {
+  content: '';
+  width: 24px;
+  height: 24px;
+  display: flex;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23333' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat;
+}
+
+[data-theme='dark'] .header-github-link::before {
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23fff' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat;
+}
+
+.header-github-link:hover {
+  opacity: 0.7;
+}
+
+/* Hero section styling */
+.hero {
+  background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%);
+  padding: 4rem 0;
+}
+
+.hero--primary {
+  --ifm-hero-background-color: transparent;
+  --ifm-hero-text-color: #ffffff;
+}
+
+.hero__title {
+  font-size: 3.5rem;
+  font-weight: 800;
+}
+
+.hero__subtitle {
+  font-size: 1.5rem;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* Feature cards */
+.feature-card {
+  background: var(--ifm-card-background-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Code blocks */
+.prism-code {
+  font-size: 0.9rem;
+}
+
+/* Copy button styling */
+.copyButton {
+  background: var(--ifm-color-primary) !important;
+}
+
+/* Admonitions */
+.admonition {
+  border-radius: 8px;
+}
+
+/* Tables */
+table {
+  display: table;
+  width: 100%;
+}
+
+th {
+  background: var(--ifm-color-primary-lightest);
+}
+
+[data-theme='dark'] th {
+  background: var(--ifm-color-primary-darkest);
+}
+
+/* Badges */
+.badge {
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge--success {
+  background: #4CAF50;
+  color: white;
+}
+
+.badge--info {
+  background: #2196F3;
+  color: white;
+}
+
+.badge--warning {
+  background: #FF9800;
+  color: white;
+}
+
+/* Terminal/command styling */
+.terminal {
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: var(--ifm-font-family-monospace);
+  color: #e0e0e0;
+}
+
+.terminal-prompt::before {
+  content: '$ ';
+  color: #4CAF50;
+}
+
+/* Performance numbers highlight */
+.perf-number {
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+}
+
+/* Announcement bar link */
+.announcementBarContent a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* Sidebar styling */
+.theme-doc-sidebar-menu {
+  font-size: 0.9rem;
+}
+
+/* TOC styling */
+.table-of-contents {
+  font-size: 0.85rem;
+}
+
+/* Search modal */
+.DocSearch-Button {
+  border-radius: 8px !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 996px) {
+  .hero__title {
+    font-size: 2.5rem;
+  }
+
+  .hero__subtitle {
+    font-size: 1.2rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .navbar,
+  .footer,
+  .pagination-nav {
+    display: none;
+  }
+}
