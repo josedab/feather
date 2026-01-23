@@ -1,0 +1,21 @@
+{
+  "name": "@feather/transforms",
+  "version": "0.1.0",
+  "description": "Feather TypeScript Transform SDK — write feature transformations that compile to WASM",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc --noEmit"
+  },
+  "keywords": [
+    "feather",
+    "feature-store",
+    "transforms",
+    "wasm"
+  ],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
