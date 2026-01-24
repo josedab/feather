@@ -419,6 +419,46 @@ func TestStore_WithSchemaRegistry(t *testing.T) {
 	}
 }
 
+func TestStore_Stats(t *testing.T) {
+	store := newTestStore(t)
+
+	store.Put("user:1", map[string]*domain.FeatureValue{
+		"f1": {Value: "v1", Timestamp: time.Now().UnixNano(), Version: 1},
+	})
+
+	stats := store.Stats()
+	if stats.HotEntityCount < 1 {
+		t.Errorf("Expected at least 1 entity in stats, got %d", stats.HotEntityCount)
+	}
+	if stats.HotSize <= 0 {
+		t.Error("Expected positive hot size in stats")
+	}
+}
+
+func TestStore_NewStore_NilContext(t *testing.T) {
+	store, err := NewStore(nil, StoreOptions{
+		HotMaxSize:   1024 * 1024,
+		WarmInMemory: true,
+	}, nil)
+	if err != nil {
+		t.Fatalf("NewStore with nil context failed: %v", err)
+	}
+	defer store.Close()
+}
+
+func TestStore_NewStore_DefaultWorkers(t *testing.T) {
+	store, err := NewStore(context.Background(), StoreOptions{
+		HotMaxSize:       1024 * 1024,
+		WarmInMemory:     true,
+		WarmWriteWorkers: 0,
+		WarmWriteBuffer:  0,
+	}, nil)
+	if err != nil {
+		t.Fatalf("NewStore failed: %v", err)
+	}
+	defer store.Close()
+}
+
 func BenchmarkStore_Put(b *testing.B) {
 	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
