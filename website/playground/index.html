@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feather Playground — Try the Feature Store</title>
+  <style>
+    :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; --red: #f85149; --orange: #d29922; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+    .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header h1 span { color: var(--accent); }
+    .header .badge { background: var(--accent); color: #000; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .container { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 49px); }
+    .panel { display: flex; flex-direction: column; }
+    .panel-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+    .editor { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+    .response { flex: 1; display: flex; flex-direction: column; }
+    textarea { flex: 1; background: var(--bg); color: var(--text); border: none; padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; resize: none; outline: none; line-height: 1.6; }
+    pre { flex: 1; background: var(--bg); color: var(--text); padding: 16px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; overflow: auto; line-height: 1.6; white-space: pre-wrap; }
+    .toolbar { background: var(--surface); border-top: 1px solid var(--border); padding: 8px 16px; display: flex; gap: 8px; align-items: center; }
+    .btn { background: var(--accent); color: #000; border: none; padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn:hover { filter: brightness(1.1); }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    select { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 13px; }
+    .status { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .status.ok { color: var(--green); }
+    .status.err { color: var(--red); }
+    .examples { padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
+    .example-btn { background: none; color: var(--accent); border: 1px solid var(--border); padding: 3px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; }
+    .example-btn:hover { background: var(--border); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🪶 <span>Feather</span> Playground</h1>
+    <div class="badge">INTERACTIVE</div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+      <label style="font-size: 13px; color: var(--muted);">Server:</label>
+      <input id="serverUrl" type="text" value="http://localhost:8080" style="background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; font-size: 13px; width: 220px;">
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="panel editor">
+      <div class="panel-header">
+        <span>Request</span>
+        <select id="method">
+          <option value="GET">GET</option>
+          <option value="POST" selected>POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+      <div class="examples">
+        <button class="example-btn" onclick="loadExample('store')">Store Features</button>
+        <button class="example-btn" onclick="loadExample('get')">Get Features</button>
+        <button class="example-btn" onclick="loadExample('health')">Health Check</button>
+        <button class="example-btn" onclick="loadExample('schema')">List Groups</button>
+        <button class="example-btn" onclick="loadExample('drift')">Drift Status</button>
+        <button class="example-btn" onclick="loadExample('query')">FeatherQL</button>
+      </div>
+      <div style="padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);">
+        <input id="path" type="text" placeholder="/v1/features" value="/v1/features" style="width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 13px; font-family: monospace;">
+      </div>
+      <textarea id="body" placeholder="Request body (JSON)...">{
+  "entity": "user:1001",
+  "features": {
+    "age": {"value": 28, "timestamp": 0},
+    "score": {"value": 0.95, "timestamp": 0}
+  }
+}</textarea>
+      <div class="toolbar">
+        <button class="btn" onclick="sendRequest()">▶ Send Request</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+        <span id="status" class="status"></span>
+      </div>
+    </div>
+
+    <div class="panel response">
+      <div class="panel-header">
+        <span>Response</span>
+        <span id="responseInfo" style="font-size: 12px; color: var(--muted);"></span>
+      </div>
+      <pre id="output">// Click "Send Request" or try an example above.
+//
+// Make sure Feather is running:
+//   make run-dev
+//
+// Available endpoints:
+//   GET  /health              — Health check
+//   GET  /v1/features         — Get features
+//   POST /v1/features         — Store features
+//   GET  /v1/schema/groups    — List feature groups
+//   GET  /v1/drift/status     — Drift monitoring
+//   POST /v1/featherql/v2/execute — Run FeatherQL query
+//   GET  /v1/openapi.json     — API handler inventory</pre>
+    </div>
+  </div>
+
+  <script>
+    const examples = {
+      store: { method: 'POST', path: '/v1/features', body: JSON.stringify({ entity: 'user:1001', features: { age: { value: 28, timestamp: 0 }, score: { value: 0.95, timestamp: 0 }, active: { value: true, timestamp: 0 } } }, null, 2) },
+      get: { method: 'GET', path: '/v1/features?entity=user:1001&feature=age&feature=score', body: '' },
+      health: { method: 'GET', path: '/health', body: '' },
+      schema: { method: 'GET', path: '/v1/schema/groups', body: '' },
+      drift: { method: 'GET', path: '/v1/drift/status', body: '' },
+      query: { method: 'POST', path: '/v1/featherql/v2/execute', body: JSON.stringify({ query: "SELECT avg(amount) AS avg_spend FROM transactions" }, null, 2) },
+    };
+
+    function loadExample(name) {
+      const ex = examples[name];
+      document.getElementById('method').value = ex.method;
+      document.getElementById('path').value = ex.path;
+      document.getElementById('body').value = ex.body;
+    }
+
+    async function sendRequest() {
+      const server = document.getElementById('serverUrl').value;
+      const method = document.getElementById('method').value;
+      const path = document.getElementById('path').value;
+      const body = document.getElementById('body').value;
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+      const infoEl = document.getElementById('responseInfo');
+
+      statusEl.textContent = 'Sending...';
+      statusEl.className = 'status';
+
+      const start = performance.now();
+      try {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (method !== 'GET' && method !== 'HEAD' && body.trim()) {
+          opts.body = body;
+        }
+        const resp = await fetch(server + path, opts);
+        const elapsed = (performance.now() - start).toFixed(1);
+        const text = await resp.text();
+
+        let formatted;
+        try { formatted = JSON.stringify(JSON.parse(text), null, 2); } catch { formatted = text; }
+
+        outputEl.textContent = formatted;
+        infoEl.textContent = `${resp.status} ${resp.statusText} • ${elapsed}ms`;
+        statusEl.textContent = `✓ ${resp.status}`;
+        statusEl.className = resp.ok ? 'status ok' : 'status err';
+      } catch (err) {
+        const elapsed = (performance.now() - start).toFixed(1);
+        outputEl.textContent = `Error: ${err.message}\n\nMake sure Feather is running:\n  make run-dev`;
+        statusEl.textContent = '✗ Failed';
+        statusEl.className = 'status err';
+        infoEl.textContent = `${elapsed}ms`;
+      }
+    }
+
+    function clearAll() {
+      document.getElementById('body').value = '';
+      document.getElementById('output').textContent = '';
+      document.getElementById('status').textContent = '';
+      document.getElementById('responseInfo').textContent = '';
+    }
+
+    // Ctrl+Enter to send
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') sendRequest();
+    });
+  </script>
+</body>
+</html>
