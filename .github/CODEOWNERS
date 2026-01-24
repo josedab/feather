@@ -2,35 +2,64 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default owners for everything in the repo
-*                           @feather-store/maintainers
+*                               @feather-store/maintainers
 
 # Core storage engine
-/internal/storage/          @feather-store/storage-team
+/internal/core/storage/         @feather-store/storage-team
 
 # API and server components
-/internal/server/           @feather-store/api-team
-/api/                       @feather-store/api-team
+/internal/core/server/          @feather-store/api-team
+/api/                           @feather-store/api-team
 
 # Ingestion pipeline
-/internal/ingestion/        @feather-store/data-team
+/internal/core/ingestion/       @feather-store/data-team
 
 # Aggregation engine
-/internal/aggregation/      @feather-store/data-team
+/internal/core/aggregation/     @feather-store/data-team
+
+# Export and training data
+/internal/core/export/          @feather-store/data-team
+
+# Domain types and errors
+/internal/core/domain/          @feather-store/maintainers
 
 # Configuration and infrastructure
-/internal/config/           @feather-store/maintainers
-/internal/tracing/          @feather-store/maintainers
-/internal/metrics/          @feather-store/maintainers
-/internal/logging/          @feather-store/maintainers
+/internal/core/config/          @feather-store/maintainers
+/internal/core/tracing/         @feather-store/maintainers
+/internal/core/metrics/         @feather-store/maintainers
+/internal/core/logging/         @feather-store/maintainers
+
+# Extensions
+/internal/extensions/           @feather-store/maintainers
+
+# Integrations
+/internal/integrations/         @feather-store/maintainers
+
+# Platform services
+/internal/platform/             @feather-store/platform-team
+
+# Application bootstrap
+/internal/app/                  @feather-store/maintainers
+/cmd/                           @feather-store/maintainers
+
+# SDKs
+/sdk/                           @feather-store/maintainers
 
 # Documentation
-/docs/                      @feather-store/docs-team
-*.md                        @feather-store/docs-team
+/docs/                          @feather-store/docs-team
+/website/                       @feather-store/docs-team
+*.md                            @feather-store/docs-team
 
 # CI/CD and build
-/.github/                   @feather-store/maintainers
-/Makefile                   @feather-store/maintainers
-/Dockerfile                 @feather-store/maintainers
+/.github/                       @feather-store/maintainers
+/Makefile                       @feather-store/maintainers
+/Dockerfile                     @feather-store/maintainers
+/.goreleaser.yml                @feather-store/maintainers
 
 # Kubernetes and deployment
-/deploy/                    @feather-store/platform-team
+/deploy/                        @feather-store/platform-team
+/configs/                       @feather-store/maintainers
+
+# Developer tools
+/scripts/                       @feather-store/maintainers
+/internal/tools/                @feather-store/maintainers
