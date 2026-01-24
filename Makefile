@@ -261,19 +261,19 @@ examples:
 # Developer Experience
 ## api-routes: List all registered API handlers with maturity levels
 api-routes:
-	@echo "Registered API handlers (from internal/core/server/features.go):"
+	@echo "Registered API handlers (from internal/core/server/features_*.go):"
 	@echo ""
 	@echo "STABLE (production-ready):"
-	@grep 'registerHandler(' internal/core/server/features.go | grep 'MaturityStable' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
+	@grep 'registerHandler(' internal/core/server/features_*.go | grep 'MaturityStable' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
 	@echo ""
 	@echo "BETA (functional, API may change):"
-	@grep 'registerHandler(' internal/core/server/features.go | grep 'MaturityBeta' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
+	@grep 'registerHandler(' internal/core/server/features_*.go | grep 'MaturityBeta' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
 	@echo ""
 	@echo "EXPERIMENTAL (may be incomplete):"
-	@grep 'registerHandler(' internal/core/server/features.go | grep 'MaturityExperimental' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
+	@grep 'registerHandler(' internal/core/server/features_*.go | grep 'MaturityExperimental' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
 	@echo ""
 	@echo "OpenAPI spec: api/openapi/feather.yaml"
-	@echo "Handler registry: internal/core/server/features.go"
+	@echo "Handler registry: internal/core/server/features_*.go"
 
 ## list-extensions: Show enabled features vs available features
 list-extensions:
@@ -283,7 +283,7 @@ list-extensions:
 	@echo "CONDITIONALLY ENABLED:"
 	@grep -E '"[a-z_]+":[[:space:]]*cfg\.' cmd/feather/main.go | sed 's/.*"\([a-z_]*\)".*/  ⚙️  \1/' | sort
 	@echo ""
-	@TOTAL=$$(grep -c 'registerHandler(' internal/core/server/features.go); \
+	@TOTAL=$$(grep -c 'registerHandler(' internal/core/server/features_*.go); \
 	ENABLED=$$(grep -cE '"[a-z_]+":[[:space:]]*true' cmd/feather/main.go); \
 	echo "Total available: $$TOTAL | Enabled by default: $$ENABLED"
 

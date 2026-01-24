@@ -1,0 +1,80 @@
+package server
+
+import (
+	"log/slog"
+
+	"github.com/feather-store/feather/internal/extensions/drift"
+	"github.com/feather-store/feather/internal/extensions/freshness"
+	"github.com/feather-store/feather/internal/extensions/semantic"
+	"github.com/feather-store/feather/internal/platform/quality"
+	"github.com/feather-store/feather/internal/platform/sla"
+)
+
+// Handler registrations: Stable — Production-ready, well-tested, breaking changes
+// follow semver. Safe for all deployments.
+
+func init() {
+	registerHandler("groups", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewGroupsHandler()
+	})
+	registerHandler("backfill", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewBackfillHandler(deps.Store)
+	})
+	registerHandler("streaming", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewStreamingHandler(deps.Ctx)
+	})
+	registerHandler("catalog", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewCatalogHandler()
+	})
+	registerHandler("auth", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewAuthHandler()
+	})
+	registerHandler("ml", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewMLHandler(deps.Store)
+	})
+	registerHandler("transform", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewTransformHandler(deps.Store)
+	})
+	registerHandler("cache", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewCacheHandler(deps.Store)
+	})
+	registerHandler("consistency", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewConsistencyHandler(deps.Store)
+	})
+	registerHandler("observability", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewObservabilityHandler(deps.Store)
+	})
+	registerHandler("benchmark", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewBenchmarkHandler(deps.Store)
+	})
+	registerHandler("impact", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewImpactHandler()
+	})
+	registerHandler("model_serving", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewModelServingHandler(deps.Store)
+	})
+	registerHandler("governance", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewGovernanceHandler(GovernanceHandlerConfig{})
+	})
+	registerHandler("freshness", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewFreshnessHandler(freshness.NewManager(freshness.DefaultManagerConfig()))
+	})
+	registerHandler("sla", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewSLAHandler(sla.NewManager(nil, sla.DefaultManagerConfig()))
+	})
+	registerHandler("drift", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewDriftHandler(drift.NewDetector(drift.DefaultConfig()))
+	})
+	registerHandler("semantic", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewSemanticHandler(semantic.NewSearch(semantic.NewLocalEmbedder(128), slog.Default()))
+	})
+	registerHandler("quality", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewQualityHandler(quality.NewValidator())
+	})
+	registerHandler("sharding", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return nil
+	})
+	registerHandler("marketplace", MaturityStable, func(deps *handlerDeps) FeatureHandler {
+		return NewMarketplaceHandler()
+	})
+}
