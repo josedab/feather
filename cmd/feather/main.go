@@ -11,15 +11,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime/debug"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
+	"github.com/feather-store/feather/internal/app"
 	"github.com/feather-store/feather/internal/core/aggregation"
 	"github.com/feather-store/feather/internal/core/config"
-	"github.com/feather-store/feather/internal/integrations/dbt"
 	"github.com/feather-store/feather/internal/core/domain"
 	"github.com/feather-store/feather/internal/core/ingestion"
 	"github.com/feather-store/feather/internal/core/logging"
@@ -28,6 +26,7 @@ import (
 	"github.com/feather-store/feather/internal/core/storage"
 	"github.com/feather-store/feather/internal/core/tracing"
 	"github.com/feather-store/feather/internal/core/vector"
+	"github.com/feather-store/feather/internal/integrations/dbt"
 )
 
 // version is set at build time via -ldflags "-X main.version=<value>".
@@ -135,56 +134,6 @@ func main() {
 	}
 }
 
-// serverManager tracks all running servers for graceful shutdown.
-type serverManager struct {
-	mu      sync.Mutex
-	servers map[string]shutdownable
-	logger  *slog.Logger
-}
-
-type shutdownable interface {
-	Shutdown(ctx context.Context) error
-}
-
-type httpServerWrapper struct {
-	server *http.Server
-}
-
-func (h *httpServerWrapper) Shutdown(ctx context.Context) error {
-	return h.server.Shutdown(ctx)
-}
-
-func newServerManager(logger *slog.Logger) *serverManager {
-	return &serverManager{
-		servers: make(map[string]shutdownable),
-		logger:  logger,
-	}
-}
-
-func (m *serverManager) register(name string, s shutdownable) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.servers[name] = s
-}
-
-func (m *serverManager) shutdownAll(ctx context.Context) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	var wg sync.WaitGroup
-	for name, s := range m.servers {
-		wg.Add(1)
-		go func(name string, s shutdownable) {
-			defer wg.Done()
-			m.logger.Info("shutting down server", "name", name)
-			if err := s.Shutdown(ctx); err != nil {
-				m.logger.Error("shutdown error", "name", name, "error", err)
-			}
-		}(name, s)
-	}
-	wg.Wait()
-}
-
 func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	logger.Info("starting Feather Feature Store",
 		"version", version,
@@ -193,7 +142,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	)
 
 	// Initialize server manager for graceful shutdown
-	serverMgr := newServerManager(logger)
+	serverMgr := app.NewServerManager(logger)
 
 	// Initialize tracing
 	var tracer *tracing.Tracer
@@ -335,10 +284,10 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			}
 		}
 
-		serverMgr.register("metrics", &httpServerWrapper{metricsServer})
+		serverMgr.Register("metrics", &app.HTTPServerWrapper{Server: metricsServer})
 
 		go func() {
-			defer recoverPanic(logger, "metrics-server")
+			defer app.RecoverPanic(logger, "metrics-server")
 			logger.Info("starting metrics server",
 				"port", cfg.Metrics.Prometheus.Port,
 				"tls", cfg.TLS.Enabled,
@@ -350,7 +299,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				err = metricsServer.ListenAndServe()
 			}
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				logListenError(logger, "metrics server", cfg.Metrics.Prometheus.Port, err)
+				app.LogListenError(logger, "metrics server", cfg.Metrics.Prometheus.Port, err)
 			}
 		}()
 	}
@@ -457,13 +406,13 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			},
 		},
 	)
-	serverMgr.register("http", httpServer)
+	serverMgr.Register("http", httpServer)
 
 	go func() {
-		defer recoverPanic(logger, "http-server")
+		defer app.RecoverPanic(logger, "http-server")
 		logger.Info("starting HTTP server", "port", cfg.Serving.HTTP.Port)
 		if err := httpServer.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logListenError(logger, "HTTP server", cfg.Serving.HTTP.Port, err)
+			app.LogListenError(logger, "HTTP server", cfg.Serving.HTTP.Port, err)
 		}
 	}()
 
@@ -480,10 +429,10 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	)
 
 	go func() {
-		defer recoverPanic(logger, "grpc-server")
+		defer app.RecoverPanic(logger, "grpc-server")
 		logger.Info("starting gRPC server", "port", cfg.Serving.GRPC.Port)
 		if err := grpcServer.Start(); err != nil {
-			logListenError(logger, "gRPC server", cfg.Serving.GRPC.Port, err)
+			app.LogListenError(logger, "gRPC server", cfg.Serving.GRPC.Port, err)
 		}
 	}()
 
@@ -512,10 +461,10 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			}
 		}
 
-		serverMgr.register("ingestion", &httpServerWrapper{ingestionServer})
+		serverMgr.Register("ingestion", &app.HTTPServerWrapper{Server: ingestionServer})
 
 		go func() {
-			defer recoverPanic(logger, "ingestion-server")
+			defer app.RecoverPanic(logger, "ingestion-server")
 			logger.Info("starting HTTP ingestion server",
 				"port", cfg.Ingestion.HTTP.Port,
 				"tls", cfg.TLS.Enabled,
@@ -527,7 +476,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				err = ingestionServer.ListenAndServe()
 			}
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				logListenError(logger, "HTTP ingestion server", cfg.Ingestion.HTTP.Port, err)
+				app.LogListenError(logger, "HTTP ingestion server", cfg.Ingestion.HTTP.Port, err)
 			}
 		}()
 	}
@@ -555,7 +504,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			logger.Warn("failed to create Kafka consumer", "error", err)
 		} else {
 			go func() {
-				defer recoverPanic(logger, "kafka-consumer")
+				defer app.RecoverPanic(logger, "kafka-consumer")
 				logger.Info("starting Kafka consumer",
 					"brokers", cfg.Ingestion.Kafka.Brokers,
 					"topic", cfg.Ingestion.Kafka.Topic,
@@ -588,7 +537,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	defer shutdownCancel()
 
 	// Shutdown all managed servers in parallel
-	serverMgr.shutdownAll(shutdownCtx)
+	serverMgr.ShutdownAll(shutdownCtx)
 
 	// Stop gRPC server with timeout
 	grpcServer.Stop(shutdownCtx)
@@ -641,28 +590,4 @@ func printStartupBanner(cfg *config.Config, configSource string) {
 	fmt.Fprintln(os.Stderr, "  │  Stop: Ctrl+C                                   │")
 	fmt.Fprintln(os.Stderr, "  ╰─────────────────────────────────────────────────╯")
 	fmt.Fprintln(os.Stderr)
-}
-
-// recoverPanic recovers from panics in goroutines and logs them.
-func recoverPanic(logger *slog.Logger, component string) {
-	if r := recover(); r != nil {
-		stack := debug.Stack()
-		logger.Error("panic recovered",
-			"component", component,
-			"panic", r,
-			"stack", string(stack),
-		)
-	}
-}
-
-// logListenError logs a server listen error with actionable hints.
-func logListenError(logger *slog.Logger, component string, port int, err error) {
-	if strings.Contains(err.Error(), "address already in use") {
-		logger.Error(fmt.Sprintf("%s error: port %d is already in use", component, port),
-			"error", err,
-			"hint", fmt.Sprintf("Run 'lsof -i :%d' to see what's using it, or set a different port", port),
-		)
-		return
-	}
-	logger.Error(fmt.Sprintf("%s error", component), "error", err)
 }
