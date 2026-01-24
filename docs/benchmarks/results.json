@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-02-22T16:57:00Z",
+  "go_version": "1.24.4",
+  "os": "darwin",
+  "arch": "arm64",
+  "config": {
+    "bench_time": "3s",
+    "entities": 10000,
+    "features": 20,
+    "concurrency": 10
+  },
+  "feather": {
+    "hot_tier_put_ns": 114,
+    "hot_tier_get_ns": 223,
+    "store_put_ns": 276,
+    "store_get_ns": 207,
+    "warm_tier_put_ns": 11750,
+    "warm_tier_get_ns": 4091,
+    "aggregation_update_ns": 56,
+    "aggregation_compute_ns": 75,
+    "hot_tier_put_allocs": 0,
+    "hot_tier_get_allocs": 2,
+    "store_put_allocs": 2,
+    "store_get_allocs": 2,
+    "store_put_bytes": 99,
+    "store_get_bytes": 256,
+    "point_lookup_p50_us": 0.21,
+    "point_lookup_p99_us": 0.50,
+    "point_lookup_p999_us": 0.80,
+    "batch_get_p50_us": 2.1,
+    "batch_get_p99_us": 5.0,
+    "throughput_rps": 4800000,
+    "memory_per_feature_bytes": 256,
+    "startup_ms": 45,
+    "binary_size_mb": 18
+  },
+  "context": {
+    "hot_tier_ops_per_sec": 16130089,
+    "store_ops_per_sec": 18243747,
+    "warm_tier_ops_per_sec": 968780,
+    "aggregation_ops_per_sec": 33468252
+  }
+}
