@@ -1,0 +1,72 @@
+# Label configuration for actions/labeler
+# See: https://github.com/actions/labeler
+
+"area: core":
+  - changed-files:
+      - any-glob-to-any-file: "internal/core/**"
+
+"area: extensions":
+  - changed-files:
+      - any-glob-to-any-file: "internal/extensions/**"
+
+"area: integrations":
+  - changed-files:
+      - any-glob-to-any-file: "internal/integrations/**"
+
+"area: platform":
+  - changed-files:
+      - any-glob-to-any-file: "internal/platform/**"
+
+"area: storage":
+  - changed-files:
+      - any-glob-to-any-file: "internal/core/storage/**"
+
+"area: server":
+  - changed-files:
+      - any-glob-to-any-file: "internal/core/server/**"
+
+"area: api":
+  - changed-files:
+      - any-glob-to-any-file: "api/**"
+
+"area: sdk":
+  - changed-files:
+      - any-glob-to-any-file: "sdk/**"
+
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "website/**"
+          - "*.md"
+
+"ci/cd":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "Makefile"
+          - "Dockerfile"
+          - "docker-compose*.yml"
+          - ".goreleaser.yml"
+
+"deployment":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "deploy/**"
+          - "configs/**"
+
+"tests":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "test/**"
+          - "**/*_test.go"
+
+"tools":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "internal/tools/**"
+          - "scripts/**"
+
+"examples":
+  - changed-files:
+      - any-glob-to-any-file: "examples/**"

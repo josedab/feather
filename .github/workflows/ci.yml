@@ -47,6 +47,20 @@ jobs:
       - name: Run full tests with race detector
         run: go test -v -race -coverprofile=coverage.out ./...
 
+      - name: Check core package coverage threshold
+        run: |
+          # Extract coverage for core packages and enforce 60% minimum
+          COVERAGE=$(go test -short -count=1 -coverprofile=core-coverage.out ./internal/core/... 2>&1 \
+            | grep -oP 'coverage: \K[0-9.]+' \
+            | awk '{sum+=$1; n++} END {if(n>0) printf "%.1f", sum/n; else print "0"}')
+          echo "Core package average coverage: ${COVERAGE}%"
+          THRESHOLD=60
+          if [ "$(echo "${COVERAGE} < ${THRESHOLD}" | bc -l)" -eq 1 ]; then
+            echo "::error::Core package coverage ${COVERAGE}% is below the ${THRESHOLD}% threshold"
+            exit 1
+          fi
+          echo "✅ Core coverage ${COVERAGE}% meets ${THRESHOLD}% threshold"
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
