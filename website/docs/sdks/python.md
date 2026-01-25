@@ -349,6 +349,76 @@ client.vectors.delete("product_embeddings", "product:123")
 client.vectors.delete_index("product_embeddings")
 ```
 
+## LLM Framework Integrations
+
+Feather provides native integrations with popular LLM frameworks for building RAG applications.
+
+### LangChain Integration
+
+Use Feather as a vector store in LangChain:
+
+```bash
+pip install feather-client[langchain]
+```
+
+```python
+from feather_client import FeatherClient
+from feather_client.integrations.langchain import FeatherVectorStore
+from langchain_openai import OpenAIEmbeddings
+
+client = FeatherClient("http://localhost:8080")
+embeddings = OpenAIEmbeddings()
+
+vector_store = FeatherVectorStore(
+    client=client,
+    index_name="documents",
+    embedding=embeddings,
+)
+
+# Add documents
+vector_store.add_texts(["Hello world", "Goodbye world"])
+
+# Search
+results = vector_store.similarity_search("greeting", k=2)
+```
+
+See the [LangChain Integration Guide](/docs/guides/langchain) for complete documentation.
+
+### LlamaIndex Integration
+
+Use Feather as a vector store in LlamaIndex:
+
+```bash
+pip install feather-client[llamaindex]
+```
+
+```python
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from feather_client import FeatherClient
+from feather_client.integrations.llamaindex import FeatherVectorStore
+
+client = FeatherClient("http://localhost:8080")
+vector_store = FeatherVectorStore(client=client, index_name="documents")
+
+# Build index from documents
+documents = SimpleDirectoryReader("./data").load_data()
+index = VectorStoreIndex.from_documents(documents, vector_store=vector_store)
+
+# Query
+query_engine = index.as_query_engine()
+response = query_engine.query("What is Feather?")
+```
+
+See the [LlamaIndex Integration Guide](/docs/guides/llamaindex) for complete documentation.
+
+### All LLM Extras
+
+Install all LLM integrations at once:
+
+```bash
+pip install feather-client[llm]
+```
+
 ## Async Client
 
 For async applications:

@@ -26,6 +26,10 @@ const sidebars: SidebarsConfig = {
         'guides/drift-detection',
         'guides/offline-sync',
         'guides/freshness',
+        'guides/catalog-ui',
+        'guides/dbt-integration',
+        'guides/langchain',
+        'guides/llamaindex',
       ],
     },
     {
@@ -40,6 +44,7 @@ const sidebars: SidebarsConfig = {
         'sdks/rest-api',
       ],
     },
+    'cli',
     'api-reference',
     'configuration',
     {
