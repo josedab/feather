@@ -79,6 +79,10 @@ func init() {
 	registerHandler("feast_compat", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewFeastCompatHandler(feastcompat.NewAdapter(feastcompat.DefaultAdapterConfig()))
 	})
+	registerHandler("feast_gateway", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		adapter := feastcompat.NewAdapter(feastcompat.DefaultAdapterConfig())
+		return NewFeastGatewayHandler(feastcompat.NewGateway(adapter))
+	})
 	registerHandler("saas_control", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewSaaSControlHandler(saascontrol.NewControlPlane(saascontrol.DefaultControlPlaneConfig()))
 	})

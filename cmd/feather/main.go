@@ -389,6 +389,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"openapi_sync":         true,
 				"terraform_provider":   true,
 				"flink_pipeline":       true,
+				"feast_gateway":        true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
