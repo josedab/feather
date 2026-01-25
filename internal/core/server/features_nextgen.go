@@ -39,6 +39,7 @@ import (
 	"github.com/feather-store/feather/internal/integrations/kubeflow"
 	"github.com/feather-store/feather/internal/integrations/mlflow"
 	"github.com/feather-store/feather/internal/platform/autoscaler"
+	"github.com/feather-store/feather/internal/platform/cloudcontrol"
 	"github.com/feather-store/feather/internal/platform/finops"
 	"github.com/feather-store/feather/internal/platform/monitoring"
 	"github.com/feather-store/feather/internal/platform/multiregion"
@@ -199,5 +200,10 @@ func init() {
 	// Streaming feature pipelines (Flink/Kafka Streams)
 	registerHandler("flink_pipeline", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewFlinkPipelineHandler(flinkpipeline.NewManager(flinkpipeline.DefaultManagerConfig()))
+	})
+
+	// Managed cloud control plane
+	registerHandler("cloud_control", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewCloudControlHandler(cloudcontrol.NewControlPlane(cloudcontrol.DefaultControlPlaneConfig()))
 	})
 }

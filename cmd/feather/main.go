@@ -390,6 +390,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"terraform_provider":   true,
 				"flink_pipeline":       true,
 				"feast_gateway":        true,
+				"cloud_control":        true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
