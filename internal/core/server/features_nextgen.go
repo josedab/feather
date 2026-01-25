@@ -41,6 +41,7 @@ import (
 	"github.com/feather-store/feather/internal/platform/autoscaler"
 	"github.com/feather-store/feather/internal/platform/cloudcontrol"
 	"github.com/feather-store/feather/internal/platform/finops"
+	"github.com/feather-store/feather/internal/platform/realtimemonitor"
 	"github.com/feather-store/feather/internal/platform/monitoring"
 	"github.com/feather-store/feather/internal/platform/multiregion"
 	"github.com/feather-store/feather/internal/platform/parity"
@@ -205,5 +206,10 @@ func init() {
 	// Managed cloud control plane
 	registerHandler("cloud_control", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewCloudControlHandler(cloudcontrol.NewControlPlane(cloudcontrol.DefaultControlPlaneConfig()))
+	})
+
+	// Real-time monitoring dashboard
+	registerHandler("realtime_monitor", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewRealtimeMonitorHandler(realtimemonitor.NewDashboard(realtimemonitor.DefaultDashboardConfig()))
 	})
 }

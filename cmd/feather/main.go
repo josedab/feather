@@ -391,6 +391,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"flink_pipeline":       true,
 				"feast_gateway":        true,
 				"cloud_control":        true,
+				"realtime_monitor":     true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
