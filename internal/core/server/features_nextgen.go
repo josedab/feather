@@ -35,6 +35,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/wasmudf"
 	"github.com/feather-store/feather/internal/extensions/webhooks"
 	"github.com/feather-store/feather/internal/integrations/airflow"
+	"github.com/feather-store/feather/internal/integrations/flinkpipeline"
 	"github.com/feather-store/feather/internal/integrations/kubeflow"
 	"github.com/feather-store/feather/internal/integrations/mlflow"
 	"github.com/feather-store/feather/internal/platform/autoscaler"
@@ -189,5 +190,10 @@ func init() {
 	})
 	registerHandler("smpc", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewSMPCHandler(federation.NewSMPCEngine(federation.DefaultSMPCConfig()))
+	})
+
+	// Streaming feature pipelines (Flink/Kafka Streams)
+	registerHandler("flink_pipeline", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewFlinkPipelineHandler(flinkpipeline.NewManager(flinkpipeline.DefaultManagerConfig()))
 	})
 }
