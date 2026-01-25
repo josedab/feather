@@ -23,6 +23,24 @@ type Config struct {
 	Logging   LoggingConfig   `yaml:"logging"`
 	Tracing   TracingConfig   `yaml:"tracing"`
 	TLS       TLSConfig       `yaml:"tls"`
+	UI        UIConfig        `yaml:"ui"`
+	DBT       DBTConfig       `yaml:"dbt"`
+}
+
+// UIConfig defines feature catalog UI configuration.
+type UIConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+// DBTConfig defines dbt integration configuration.
+type DBTConfig struct {
+	Enabled           bool              `yaml:"enabled"`
+	DefaultEntityType string            `yaml:"default_entity_type"`
+	Owner             string            `yaml:"owner"`
+	Team              string            `yaml:"team"`
+	IncludeSources    bool              `yaml:"include_sources"`
+	IncludeMetrics    bool              `yaml:"include_metrics"`
+	EntityTypeMapping map[string]string `yaml:"entity_type_mapping"`
 }
 
 // TLSConfig defines TLS/HTTPS configuration for all servers.
@@ -266,6 +284,17 @@ func LoadFromEnv() *Config {
 			CentralAddress: getEnv("FEATHER_SYNC_CENTRAL_ADDRESS", ""),
 			SyncInterval:   getEnvAsDuration("FEATHER_SYNC_INTERVAL", 5*time.Second),
 			BatchSize:      getEnvAsInt("FEATHER_SYNC_BATCH_SIZE", 1000),
+		},
+		UI: UIConfig{
+			Enabled: getEnvAsBool("FEATHER_UI_ENABLED", true),
+		},
+		DBT: DBTConfig{
+			Enabled:           getEnvAsBool("FEATHER_DBT_ENABLED", true),
+			DefaultEntityType: getEnv("FEATHER_DBT_DEFAULT_ENTITY_TYPE", "unknown"),
+			Owner:             getEnv("FEATHER_DBT_OWNER", ""),
+			Team:              getEnv("FEATHER_DBT_TEAM", ""),
+			IncludeSources:    getEnvAsBool("FEATHER_DBT_INCLUDE_SOURCES", false),
+			IncludeMetrics:    getEnvAsBool("FEATHER_DBT_INCLUDE_METRICS", false),
 		},
 	}
 }
