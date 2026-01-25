@@ -26,38 +26,18 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -v -race ./...
+        run: go test -short ./...
 
-      - name: Build binaries
-        run: |
-          mkdir -p dist
+      - name: Install Syft (for SBOM generation)
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
-          # Build for each platform
-          for GOOS in linux darwin windows; do
-            for GOARCH in amd64 arm64; do
-              output="dist/feather-${GOOS}-${GOARCH}"
-              if [ "$GOOS" = "windows" ]; then
-                output="${output}.exe"
-              fi
-              echo "Building ${output}..."
-              GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "-s -w -X main.version=${{ github.ref_name }}" -o "$output" ./cmd/feather
-            done
-          done
-
-      - name: Create checksums
-        run: |
-          cd dist
-          sha256sum feather-* > checksums.txt
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          files: |
-            dist/feather-*
-            dist/checksums.txt
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     name: Docker

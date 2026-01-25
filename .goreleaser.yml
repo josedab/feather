@@ -1,0 +1,121 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go test -short ./...
+
+builds:
+  - id: feather
+    main: ./cmd/feather
+    binary: feather
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.gitCommit={{.ShortCommit}}
+      - -X main.buildDate={{.Date}}
+
+  - id: feather-cli
+    main: ./cmd/feather-cli
+    binary: feather-cli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/feather-store/feather/cmd/feather-cli/cmd.Version={{.Version}}
+      - -X github.com/feather-store/feather/cmd/feather-cli/cmd.GitCommit={{.ShortCommit}}
+      - -X github.com/feather-store/feather/cmd/feather-cli/cmd.BuildDate={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - configs/feather-dev.yaml
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+    - title: Performance
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+    - title: Other
+      order: 999
+
+dockers:
+  - image_templates:
+      - "ghcr.io/feather-store/feather:{{ .Version }}-amd64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    dockerfile: Dockerfile
+  - image_templates:
+      - "ghcr.io/feather-store/feather:{{ .Version }}-arm64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    goarch: arm64
+    dockerfile: Dockerfile
+
+docker_manifests:
+  - name_template: "ghcr.io/feather-store/feather:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/feather-store/feather:{{ .Version }}-amd64"
+      - "ghcr.io/feather-store/feather:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/feather-store/feather:latest"
+    image_templates:
+      - "ghcr.io/feather-store/feather:{{ .Version }}-amd64"
+      - "ghcr.io/feather-store/feather:{{ .Version }}-arm64"
+
+release:
+  github:
+    owner: feather-store
+    name: feather
+  draft: false
+  prerelease: auto
+  name_template: "v{{ .Version }}"
