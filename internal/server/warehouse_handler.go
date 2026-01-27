@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -66,6 +67,17 @@ func (h *WarehouseHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/warehouse/stats", h.handleGetStats)
 }
 
+// Validation constants for connector credentials.
+const (
+	maxConnectorIDLength   = 64
+	maxCredentialLength    = 1024
+	maxAccountLength       = 256
+	maxProjectIDLength     = 128
+	maxDatabaseLength      = 128
+	maxSchemaLength        = 128
+	maxDescriptionLength   = 512
+)
+
 // Request/Response types
 
 // WarehouseConnectorRequest represents a connector registration request.
@@ -74,6 +86,110 @@ type WarehouseConnectorRequest struct {
 	Type        string                 `json:"type"` // "snowflake" or "bigquery"
 	Config      map[string]interface{} `json:"config"`
 	Description string                 `json:"description,omitempty"`
+}
+
+// validateConnectorRequest validates a connector registration request.
+func validateConnectorRequest(req *WarehouseConnectorRequest) error {
+	if req.ID == "" {
+		return fmt.Errorf("connector id is required")
+	}
+	if len(req.ID) > maxConnectorIDLength {
+		return fmt.Errorf("connector id exceeds maximum length of %d characters", maxConnectorIDLength)
+	}
+	if req.Type == "" {
+		return fmt.Errorf("connector type is required")
+	}
+	if req.Type != "snowflake" && req.Type != "bigquery" {
+		return fmt.Errorf("unsupported connector type: %s", req.Type)
+	}
+	if len(req.Description) > maxDescriptionLength {
+		return fmt.Errorf("description exceeds maximum length of %d characters", maxDescriptionLength)
+	}
+	return nil
+}
+
+// validateSnowflakeConfig validates Snowflake connector configuration.
+func validateSnowflakeConfig(config map[string]interface{}) error {
+	// Required fields
+	account, _ := config["account"].(string)
+	if account == "" {
+		return fmt.Errorf("snowflake account is required")
+	}
+	if len(account) > maxAccountLength {
+		return fmt.Errorf("account exceeds maximum length of %d characters", maxAccountLength)
+	}
+
+	user, _ := config["user"].(string)
+	if user == "" {
+		return fmt.Errorf("snowflake user is required")
+	}
+	if len(user) > maxCredentialLength {
+		return fmt.Errorf("user exceeds maximum length of %d characters", maxCredentialLength)
+	}
+
+	// Password validation (required, length check, no empty string)
+	password, _ := config["password"].(string)
+	if password == "" {
+		return fmt.Errorf("snowflake password is required")
+	}
+	if len(password) > maxCredentialLength {
+		return fmt.Errorf("password exceeds maximum length of %d characters", maxCredentialLength)
+	}
+
+	// Optional fields with length validation
+	if db, ok := config["database"].(string); ok && len(db) > maxDatabaseLength {
+		return fmt.Errorf("database exceeds maximum length of %d characters", maxDatabaseLength)
+	}
+	if wh, ok := config["warehouse"].(string); ok && len(wh) > maxDatabaseLength {
+		return fmt.Errorf("warehouse exceeds maximum length of %d characters", maxDatabaseLength)
+	}
+	if schema, ok := config["schema"].(string); ok && len(schema) > maxSchemaLength {
+		return fmt.Errorf("schema exceeds maximum length of %d characters", maxSchemaLength)
+	}
+	if role, ok := config["role"].(string); ok && len(role) > maxCredentialLength {
+		return fmt.Errorf("role exceeds maximum length of %d characters", maxCredentialLength)
+	}
+
+	return nil
+}
+
+// validateBigQueryConfig validates BigQuery connector configuration.
+func validateBigQueryConfig(config map[string]interface{}) error {
+	// Required field
+	projectID, _ := config["project_id"].(string)
+	if projectID == "" {
+		return fmt.Errorf("bigquery project_id is required")
+	}
+	if len(projectID) > maxProjectIDLength {
+		return fmt.Errorf("project_id exceeds maximum length of %d characters", maxProjectIDLength)
+	}
+
+	// At least one authentication method must be provided
+	credsFile, hasFile := config["credentials_file"].(string)
+	credsJSON, hasJSON := config["credentials_json"].(string)
+
+	if !hasFile && !hasJSON {
+		return fmt.Errorf("bigquery requires either credentials_file or credentials_json")
+	}
+
+	// Length validation for credentials
+	if hasFile && len(credsFile) > maxCredentialLength {
+		return fmt.Errorf("credentials_file path exceeds maximum length of %d characters", maxCredentialLength)
+	}
+	// credentials_json can be larger but still bounded
+	if hasJSON && len(credsJSON) > maxCredentialLength*10 {
+		return fmt.Errorf("credentials_json exceeds maximum length")
+	}
+
+	// Optional fields
+	if dataset, ok := config["dataset"].(string); ok && len(dataset) > maxDatabaseLength {
+		return fmt.Errorf("dataset exceeds maximum length of %d characters", maxDatabaseLength)
+	}
+	if location, ok := config["location"].(string); ok && len(location) > maxSchemaLength {
+		return fmt.Errorf("location exceeds maximum length of %d characters", maxSchemaLength)
+	}
+
+	return nil
 }
 
 // SyncJobRequest represents a sync job creation request.
@@ -132,12 +248,22 @@ func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector id is required")
+	// Validate base request
+	if err := validateConnectorRequest(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if req.Type == "" {
-		h.writeError(w, http.StatusBadRequest, "connector type is required")
+
+	// Validate connector-specific configuration
+	var configErr error
+	switch req.Type {
+	case "snowflake":
+		configErr = validateSnowflakeConfig(req.Config)
+	case "bigquery":
+		configErr = validateBigQueryConfig(req.Config)
+	}
+	if configErr != nil {
+		h.writeError(w, http.StatusBadRequest, configErr.Error())
 		return
 	}
 
@@ -149,9 +275,6 @@ func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *htt
 		connector, err = h.createSnowflakeConnector(req)
 	case "bigquery":
 		connector, err = h.createBigQueryConnector(req)
-	default:
-		h.writeError(w, http.StatusBadRequest, "unsupported connector type: "+req.Type)
-		return
 	}
 
 	if err != nil {
