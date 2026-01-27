@@ -1,5 +1,7 @@
 # Contributing to Feather
 
+> **This is the canonical contributing guide.** The root [CONTRIBUTING.md](../CONTRIBUTING.md) provides a quick-start summary and links here for full details.
+
 Thank you for your interest in contributing to Feather! This guide will help you get started with development and explain our coding standards and processes.
 
 ## Table of Contents
