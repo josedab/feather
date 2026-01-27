@@ -397,6 +397,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"region_federation":   true,
 				"lineage_analysis":    true,
 				"wasm_runtime":        true,
+				"llm_store":           true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{

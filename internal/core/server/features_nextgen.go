@@ -23,6 +23,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/incrmat"
 	"github.com/feather-store/feather/internal/extensions/lineageanalysis"
 	"github.com/feather-store/feather/internal/extensions/lineagegraph"
+	"github.com/feather-store/feather/internal/extensions/llmstore"
 	"github.com/feather-store/feather/internal/extensions/mobilesync"
 	"github.com/feather-store/feather/internal/extensions/offlinestore"
 	"github.com/feather-store/feather/internal/extensions/openapisync"
@@ -239,5 +240,10 @@ func init() {
 	// Serverless edge runtime (WASM)
 	registerHandler("wasm_runtime", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewWasmRuntimeHandler(wasmruntime.NewEdgeManager(wasmruntime.DefaultEdgeManagerConfig()))
+	})
+
+	// LLM Feature Store (Prompt/Embedding/RAG)
+	registerHandler("llm_store", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewLLMStoreHandler(llmstore.NewStore(llmstore.DefaultStoreConfig()))
 	})
 }
