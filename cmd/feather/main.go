@@ -392,6 +392,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"feast_gateway":        true,
 				"cloud_control":        true,
 				"realtime_monitor":     true,
+				"cdc_materialization":  true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{

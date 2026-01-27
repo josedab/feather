@@ -212,4 +212,9 @@ func init() {
 	registerHandler("realtime_monitor", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewRealtimeMonitorHandler(realtimemonitor.NewDashboard(realtimemonitor.DefaultDashboardConfig()))
 	})
+
+	// CDC incremental materialization
+	registerHandler("cdc_materialization", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewCDCHandler(incrmat.NewEngine(incrmat.DefaultEngineConfig()))
+	})
 }
