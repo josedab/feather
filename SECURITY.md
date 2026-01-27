@@ -53,9 +53,57 @@ When deploying Feather in production:
 
 ### Network Security
 
-- Run the metrics endpoint (port 9090) on an internal network only
-- Use TLS for all external-facing endpoints
+#### Metrics Endpoint Security (Port 9090)
+
+The Prometheus metrics endpoint on port 9090 exposes operational data that could reveal sensitive information about your deployment:
+
+- Request rates and patterns
+- Error rates and types
+- Cache hit rates and memory usage
+- Feature names and access patterns
+- Internal service topology
+
+**Recommended mitigations:**
+
+1. **Network isolation**: Bind the metrics port to a private network interface or localhost only
+   ```yaml
+   # In your configuration
+   metrics:
+     address: "127.0.0.1:9090"  # Only accessible locally
+   ```
+
+2. **Kubernetes NetworkPolicy**: Restrict access to metrics pods
+   ```yaml
+   apiVersion: networking.k8s.io/v1
+   kind: NetworkPolicy
+   metadata:
+     name: feather-metrics-policy
+   spec:
+     podSelector:
+       matchLabels:
+         app: feather
+     ingress:
+       - from:
+           - namespaceSelector:
+               matchLabels:
+                 name: monitoring
+         ports:
+           - port: 9090
+   ```
+
+3. **Firewall rules**: Block external access to port 9090 at the infrastructure level
+
+4. **Service mesh**: Use a service mesh (Istio, Linkerd) to enforce mTLS for metrics scraping
+
+5. **Reverse proxy authentication**: Place metrics behind an authenticated reverse proxy if external access is required
+
+**Never expose port 9090 directly to the public internet.**
+
+#### Other Network Recommendations
+
+- Use TLS for all external-facing endpoints (ports 8080, 8081, 50051)
 - Configure firewall rules to restrict access to management ports
+- Use private subnets for inter-service communication
 
 ### Authentication
 
