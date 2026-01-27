@@ -42,6 +42,8 @@ func (r *RingBuffer) Push(bucket AggregationBucket) {
 }
 
 // Get returns the bucket at the given index (0 = oldest).
+// The oldest bucket starts at (head - size) in the circular array.
+// Adding capacity before modulo ensures correct wrapping for negative values.
 func (r *RingBuffer) Get(index int) *AggregationBucket {
 	if index < 0 || index >= r.size {
 		return nil
@@ -52,6 +54,8 @@ func (r *RingBuffer) Get(index int) *AggregationBucket {
 }
 
 // GetLatest returns the most recent bucket.
+// head points to the next write position, so the latest bucket is at head-1.
+// Modular arithmetic with +capacity handles the wrap-around when head is 0.
 func (r *RingBuffer) GetLatest() *AggregationBucket {
 	if r.size == 0 {
 		return nil
@@ -95,6 +99,9 @@ func (r *RingBuffer) PopOldest() {
 }
 
 // Aggregate computes aggregate statistics across all buckets.
+// Iterates from oldest to newest using Range(), which resolves circular
+// indices via Get(). Min/Max are initialized to ±MaxFloat64 sentinels
+// and reset to 0 when the buffer is empty.
 func (r *RingBuffer) Aggregate() AggregationBucket {
 	result := AggregationBucket{
 		Min: math.MaxFloat64,
