@@ -10,6 +10,8 @@
 - [Rust SDK](#rust-sdk)
 - [TypeScript SDK](#typescript-sdk)
 - [Java SDK](#java-sdk)
+- [Swift SDK](#swift-sdk)
+- [Kotlin SDK](#kotlin-sdk)
 - [Common Patterns](#common-patterns)
 - [Error Handling](#error-handling)
 - [Best Practices](#best-practices)
@@ -35,6 +37,8 @@ Feather provides official client SDKs for seamless integration with your applica
 | Rust | `cargo add` | tokio | Yes | Yes |
 | TypeScript | `npm install` | Promise | Yes | No |
 | Java | Maven/Gradle | CompletableFuture | Yes | Yes |
+| Swift | Swift Package Manager | async/await | No | No |
+| Kotlin | Gradle | Coroutines | No | Yes |
 
 ---
 
@@ -648,6 +652,82 @@ public class UserService {
         );
         return new UserFeatures(features);
     }
+}
+```
+
+---
+
+## Swift SDK
+
+> **Source:** [`sdk/swift/`](../sdk/swift/)
+
+The Swift SDK uses Swift Package Manager and provides async/await support for iOS, macOS, and server-side Swift.
+
+### Installation
+
+Add to your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(path: "../sdk/swift")  // or use a URL for remote
+]
+```
+
+### Basic Usage
+
+```swift
+import FeatherSDK
+
+let client = FeatherClient(host: "localhost", port: 8080)
+
+// Store features
+try await client.putFeatures("user:123", features: [
+    "click_count": .int64(42),
+    "purchase_total": .float64(1250.75),
+])
+
+// Get features
+let features = try await client.getFeatures("user:123", names: ["click_count"])
+print("Clicks: \(features["click_count"]?.int64Value ?? 0)")
+```
+
+---
+
+## Kotlin SDK
+
+> **Source:** [`sdk/kotlin/`](../sdk/kotlin/)
+
+The Kotlin SDK provides coroutine-based async operations and is compatible with Android and JVM targets.
+
+### Installation
+
+**Gradle (Kotlin DSL):**
+```kotlin
+dependencies {
+    implementation(project(":sdk:kotlin"))  // or published coordinates
+}
+```
+
+### Basic Usage
+
+```kotlin
+import io.feather.sdk.FeatherClient
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val client = FeatherClient("localhost", 8080)
+
+    // Store features
+    client.putFeatures("user:123", mapOf(
+        "click_count" to 42,
+        "purchase_total" to 1250.75,
+    ))
+
+    // Get features
+    val features = client.getFeatures("user:123", listOf("click_count"))
+    println("Clicks: ${features["click_count"]?.asLong()}")
+
+    client.close()
 }
 ```
 
