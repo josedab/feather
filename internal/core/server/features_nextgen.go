@@ -21,6 +21,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/gitopsdefs"
 	"github.com/feather-store/feather/internal/extensions/importancescoring"
 	"github.com/feather-store/feather/internal/extensions/incrmat"
+	"github.com/feather-store/feather/internal/extensions/lineageanalysis"
 	"github.com/feather-store/feather/internal/extensions/lineagegraph"
 	"github.com/feather-store/feather/internal/extensions/mobilesync"
 	"github.com/feather-store/feather/internal/extensions/offlinestore"
@@ -227,5 +228,10 @@ func init() {
 	// Multi-region federation
 	registerHandler("region_federation", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewRegionFederationHandler(multiregion.NewFederation(multiregion.DefaultFederationConfig()))
+	})
+
+	// Feature lineage & impact analysis
+	registerHandler("lineage_analysis", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewLineageAnalysisHandler(lineageanalysis.NewTracker(lineageanalysis.DefaultTrackerConfig()))
 	})
 }

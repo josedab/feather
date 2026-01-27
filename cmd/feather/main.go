@@ -395,6 +395,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"cdc_materialization":  true,
 				"python_transforms":   true,
 				"region_federation":   true,
+				"lineage_analysis":    true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
