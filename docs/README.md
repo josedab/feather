@@ -2,6 +2,50 @@
 
 Welcome to the Feather Feature Store documentation. This guide covers everything from getting started to advanced production deployments.
 
+## Table of Contents
+
+- **Getting Started**
+  - [Quick Start](../README.md#quick-start)
+  - [API Examples](../README.md#api-examples)
+  - [Configuration](../README.md#configuration)
+  - [Troubleshooting](../README.md#troubleshooting)
+
+- **Core Documentation**
+  - [Architecture Overview](./architecture.md) — System design, data flow, concurrency model
+  - [API Reference](./api-reference.md) — Complete HTTP REST, gRPC, and extension APIs
+  - [Client SDK Guide](./sdk-guide.md) — Go, Python, Rust, TypeScript, Java, Swift, Kotlin SDKs
+  - [Package Guide](./package-guide.md) — Maturity matrix for all internal packages
+
+- **Features & Capabilities**
+  - [Real-Time Streaming](./streaming.md) — Streaming pipelines, windowed aggregations, CEP
+  - [LLM Embeddings](./llm-embeddings.md) — OpenAI, Ollama, HuggingFace embedding generation
+  - [Feature Freshness](./freshness.md) — Adaptive TTL, SLA management, alerting
+  - [AI-Powered Discovery](./discovery.md) — Semantic search, NL queries, recommendations
+  - [Feature Flags](./feature-flags.md) — Feature flag management
+  - [Drift Detection](./api-reference.md#drift-detection) — KL divergence, JS divergence, PSI
+  - [Vector Search](./api-reference.md#vector-search) — HNSW similarity search for embeddings
+  - [Offline Sync](./offline-sync.md) — Apache Spark and Flink integration
+  - [Extension Maturity](./EXTENSION_MATURITY.md) — Maturity levels for extension modules
+
+- **Operations & Deployment**
+  - [Deployment Guide](./deployment.md) — Docker, Kubernetes, Helm instructions
+  - [Kubernetes Operator](./operator.md) — Custom resources (FeatureStore, FeatureGroup, FeatureView)
+  - [Cloud Storage Backends](./cloud-storage.md) — DynamoDB, S3, GCS, Bigtable
+  - [Dashboard & Web UI](./dashboard.md) — Monitoring, exploration, alert management
+  - [Observability Guide](./observability.md) — Prometheus metrics, Grafana dashboards, alerting
+  - [Performance Guide](./performance.md) — Benchmarking, optimization, capacity planning
+
+- **Development**
+  - [Contributing Guide](./contributing.md) — Setup, coding standards, PR workflow
+  - [ADRs](./adr/README.md) — Architecture Decision Records
+
+- **Additional Resources**
+  - [Tutorials](./tutorials/) — Step-by-step guides
+  - [Benchmarks](./benchmarks/) — Performance benchmark results
+  - [Blog](./blog/) — Engineering blog posts
+  - [Talks](./talks/) — Conference talks and presentations
+  - [Community](./community/) — Community resources
+
 ## Quick Links
 
 | Getting Started | Core Concepts | Operations |
@@ -9,46 +53,6 @@ Welcome to the Feather Feature Store documentation. This guide covers everything
 | [Quick Start](../README.md#quick-start) | [Architecture](./architecture.md) | [Deployment](./deployment.md) |
 | [API Examples](../README.md#api-examples) | [API Reference](./api-reference.md) | [Observability](./observability.md) |
 | [Configuration](../README.md#configuration) | [SDK Guide](./sdk-guide.md) | [Performance](./performance.md) |
-
-## Documentation Index
-
-### Core Documentation
-
-| Document | Description |
-|----------|-------------|
-| [Architecture Overview](./architecture.md) | System design with Mermaid diagrams, data flow, concurrency model, and component interactions |
-| [API Reference](./api-reference.md) | Complete HTTP REST and gRPC API documentation with examples |
-| [Client SDK Guide](./sdk-guide.md) | Official SDKs for Go, Python, Rust, TypeScript, and Java |
-
-### Features & Capabilities
-
-| Document | Description |
-|----------|-------------|
-| [Real-Time Streaming](./streaming.md) | Build streaming pipelines with windowed aggregations and complex event processing |
-| [LLM Embeddings](./llm-embeddings.md) | Generate embeddings using OpenAI, Ollama, or HuggingFace models |
-| [Feature Freshness](./freshness.md) | Adaptive TTL management, ML-driven predictions, and SLA enforcement |
-| [AI-Powered Discovery](./discovery.md) | Semantic search, natural language queries, and feature recommendations |
-| [Drift Detection](./api-reference.md#drift-detection) | Statistical drift monitoring with KL divergence, JS divergence, and PSI |
-| [Vector Search](./api-reference.md#vector-search) | HNSW-based similarity search for embeddings |
-| [Offline Sync](./offline-sync.md) | Apache Spark and Flink integration for batch training data export |
-
-### Operations & Deployment
-
-| Document | Description |
-|----------|-------------|
-| [Deployment Guide](./deployment.md) | Docker, Kubernetes, and Helm deployment instructions |
-| [Kubernetes Operator](./operator.md) | Deploy and manage Feather with custom resources (FeatureStore, FeatureGroup, FeatureView) |
-| [Cloud Storage Backends](./cloud-storage.md) | Integrate with DynamoDB, S3, Google Cloud Storage, and Bigtable |
-| [Dashboard & Web UI](./dashboard.md) | Web interface for monitoring, exploration, and alert management |
-| [Observability Guide](./observability.md) | Prometheus metrics, Grafana dashboards, and alerting rules |
-| [Performance Guide](./performance.md) | Benchmarking, optimization strategies, and capacity planning |
-
-### Development
-
-| Document | Description |
-|----------|-------------|
-| [Contributing Guide](./contributing.md) | Development setup, coding standards, and contribution workflow |
-| [ADRs](./adr/README.md) | Architecture Decision Records documenting key design choices |
 
 ## Architecture Decision Records
 
