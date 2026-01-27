@@ -393,6 +393,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"cloud_control":        true,
 				"realtime_monitor":     true,
 				"cdc_materialization":  true,
+				"python_transforms":   true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{

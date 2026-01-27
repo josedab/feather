@@ -26,6 +26,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/offlinestore"
 	"github.com/feather-store/feather/internal/extensions/openapisync"
 	"github.com/feather-store/feather/internal/extensions/promptstore"
+	"github.com/feather-store/feather/internal/extensions/pythonsdk"
 	"github.com/feather-store/feather/internal/extensions/qualityscore"
 	"github.com/feather-store/feather/internal/extensions/saascontrol"
 	"github.com/feather-store/feather/internal/extensions/schemaevolution"
@@ -216,5 +217,10 @@ func init() {
 	// CDC incremental materialization
 	registerHandler("cdc_materialization", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewCDCHandler(incrmat.NewEngine(incrmat.DefaultEngineConfig()))
+	})
+
+	// Python feature transform SDK
+	registerHandler("python_transforms", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewPythonSDKHandler(pythonsdk.NewRegistry(pythonsdk.DefaultRegistryConfig()))
 	})
 }
