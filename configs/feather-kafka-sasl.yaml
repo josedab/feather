@@ -1,0 +1,56 @@
+# Feather Feature Store — Kafka with SASL/SSL Configuration Example
+#
+# This config enables Kafka ingestion with SASL_SSL authentication,
+# suitable for managed Kafka services (Confluent Cloud, AWS MSK, etc.).
+#
+# Environment variable overrides (recommended for secrets):
+#   export FEATHER_KAFKA_SASL_USERNAME=your-api-key
+#   export FEATHER_KAFKA_SASL_PASSWORD=your-api-secret
+
+storage:
+  hot:
+    max_memory: 4GB
+    eviction_policy: lru
+  warm:
+    path: /var/lib/feather/data
+    sync_interval: 1s
+
+ingestion:
+  kafka:
+    enabled: true
+    brokers:
+      - broker-1.kafka.example.com:9093
+      - broker-2.kafka.example.com:9093
+      - broker-3.kafka.example.com:9093
+    topic: feature-updates
+    consumer_group: feather-prod
+    security:
+      protocol: SASL_SSL                    # PLAINTEXT, SSL, SASL_PLAINTEXT, SASL_SSL
+      sasl_mechanism: SCRAM-SHA-256         # PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+      sasl_username: ${FEATHER_KAFKA_SASL_USERNAME}
+      sasl_password: ${FEATHER_KAFKA_SASL_PASSWORD}
+      ssl_ca_file: /etc/feather/kafka/ca.crt
+      # For mTLS with Kafka (optional):
+      # ssl_cert_file: /etc/feather/kafka/client.crt
+      # ssl_key_file: /etc/feather/kafka/client.key
+  http:
+    enabled: true
+    port: 8081
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 1000
+  http:
+    port: 8080
+    read_timeout: 10s
+    write_timeout: 10s
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: info
+  format: json

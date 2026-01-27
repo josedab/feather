@@ -242,6 +242,15 @@ func LoadFromEnv() *Config {
 				Brokers:       getEnvAsSlice("FEATHER_KAFKA_BROKERS", []string{"localhost:9092"}),
 				Topic:         getEnv("FEATHER_KAFKA_TOPIC", "feature-updates"),
 				ConsumerGroup: getEnv("FEATHER_KAFKA_CONSUMER_GROUP", "feather"),
+				Security: KafkaSecurityConfig{
+					Protocol:      getEnv("FEATHER_KAFKA_SECURITY_PROTOCOL", ""),
+					SASLMechanism: getEnv("FEATHER_KAFKA_SASL_MECHANISM", ""),
+					SASLUsername:  getEnv("FEATHER_KAFKA_SASL_USERNAME", ""),
+					SASLPassword:  getEnv("FEATHER_KAFKA_SASL_PASSWORD", ""),
+					SSLCAFile:     getEnv("FEATHER_KAFKA_SSL_CA_FILE", ""),
+					SSLCertFile:   getEnv("FEATHER_KAFKA_SSL_CERT_FILE", ""),
+					SSLKeyFile:    getEnv("FEATHER_KAFKA_SSL_KEY_FILE", ""),
+				},
 			},
 			HTTP: HTTPIngestionConfig{
 				Enabled: getEnvAsBool("FEATHER_HTTP_INGESTION_ENABLED", true),
