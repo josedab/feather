@@ -396,6 +396,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"python_transforms":   true,
 				"region_federation":   true,
 				"lineage_analysis":    true,
+				"wasm_runtime":        true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{

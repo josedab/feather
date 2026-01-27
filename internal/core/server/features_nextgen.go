@@ -35,6 +35,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/streamcompute"
 	"github.com/feather-store/feather/internal/extensions/terraformprovider"
 	"github.com/feather-store/feather/internal/extensions/wasmudf"
+	"github.com/feather-store/feather/internal/extensions/wasmruntime"
 	"github.com/feather-store/feather/internal/extensions/webhooks"
 	"github.com/feather-store/feather/internal/integrations/airflow"
 	"github.com/feather-store/feather/internal/integrations/flinkpipeline"
@@ -233,5 +234,10 @@ func init() {
 	// Feature lineage & impact analysis
 	registerHandler("lineage_analysis", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewLineageAnalysisHandler(lineageanalysis.NewTracker(lineageanalysis.DefaultTrackerConfig()))
+	})
+
+	// Serverless edge runtime (WASM)
+	registerHandler("wasm_runtime", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+		return NewWasmRuntimeHandler(wasmruntime.NewEdgeManager(wasmruntime.DefaultEdgeManagerConfig()))
 	})
 }
