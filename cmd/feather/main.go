@@ -394,6 +394,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"realtime_monitor":     true,
 				"cdc_materialization":  true,
 				"python_transforms":   true,
+				"region_federation":   true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{

@@ -223,4 +223,9 @@ func init() {
 	registerHandler("python_transforms", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewPythonSDKHandler(pythonsdk.NewRegistry(pythonsdk.DefaultRegistryConfig()))
 	})
+
+	// Multi-region federation
+	registerHandler("region_federation", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewRegionFederationHandler(multiregion.NewFederation(multiregion.DefaultFederationConfig()))
+	})
 }
