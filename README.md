@@ -385,7 +385,7 @@ go test -bench=. -benchtime=10s ./test/benchmark/...
     └───────────────────────────────────┘
 ```
 
-For detailed architecture documentation with Mermaid diagrams, see [Architecture Overview](./docs/architecture.md).
+For detailed architecture documentation with Mermaid diagrams, data flow, and concurrency model, see **[Architecture Overview](./docs/architecture.md)**.
 
 ## Deployment
 
