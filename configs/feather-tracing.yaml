@@ -1,0 +1,49 @@
+# Feather Feature Store — OpenTelemetry Tracing Configuration Example
+#
+# This config enables distributed tracing via OTLP export to a collector
+# (e.g., Jaeger, Tempo, Datadog, or an OpenTelemetry Collector).
+#
+# Quick start with Jaeger:
+#   docker run -d --name jaeger \
+#     -p 4317:4317 -p 16686:16686 \
+#     jaegertracing/all-in-one:latest
+#
+# Then open http://localhost:16686 for the Jaeger UI.
+
+storage:
+  hot:
+    max_memory: 4GB
+    eviction_policy: lru
+  warm:
+    path: /var/lib/feather/data
+    sync_interval: 1s
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 1000
+  http:
+    port: 8080
+    read_timeout: 10s
+    write_timeout: 10s
+
+ingestion:
+  http:
+    enabled: true
+    port: 8081
+
+tracing:
+  enabled: true
+  endpoint: localhost:4317                  # OTLP gRPC endpoint
+  service_name: feather                     # Service name in traces
+  sample_rate: 0.1                          # 10% sampling (use 1.0 for dev)
+  insecure: true                            # Set false for production TLS
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: info
+  format: json

@@ -1,0 +1,49 @@
+# Feather Feature Store — TLS/mTLS Configuration Example
+#
+# This config enables TLS on all servers with optional mutual TLS (mTLS)
+# for client certificate verification.
+#
+# Generate test certificates:
+#   openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt \
+#     -days 365 -nodes -subj '/CN=feather'
+#   openssl req -x509 -newkey rsa:4096 -keyout client.key -out client.crt \
+#     -days 365 -nodes -subj '/CN=feather-client'
+
+tls:
+  enabled: true
+  cert_file: /etc/feather/tls/server.crt
+  key_file: /etc/feather/tls/server.key
+  ca_file: /etc/feather/tls/ca.crt        # CA for verifying client certs
+  min_version: "1.2"                        # "1.2" or "1.3"
+  client_auth: verify                       # none, request, require, verify
+
+storage:
+  hot:
+    max_memory: 4GB
+    eviction_policy: lru
+  warm:
+    path: /var/lib/feather/data
+    sync_interval: 1s
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 1000
+  http:
+    port: 8443                              # Use HTTPS port
+    read_timeout: 10s
+    write_timeout: 10s
+
+ingestion:
+  http:
+    enabled: true
+    port: 8444
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: info
+  format: json

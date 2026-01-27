@@ -1,0 +1,77 @@
+# Feather Feature Store — High Availability (HA) Configuration Example
+#
+# This config is designed for production HA deployments:
+# - TLS enabled for all traffic
+# - Kafka for durable ingestion
+# - Tracing and metrics enabled
+# - Historical storage for point-in-time queries
+# - Tuned timeouts and concurrency
+#
+# Deploy multiple replicas behind a load balancer. Each instance is
+# stateless for the hot tier; the warm tier uses local disk with
+# BadgerDB. For shared warm storage, mount a networked volume.
+#
+# Kubernetes: see deploy/helm/feather/ for Helm chart with HPA.
+
+tls:
+  enabled: true
+  cert_file: /etc/feather/tls/server.crt
+  key_file: /etc/feather/tls/server.key
+  ca_file: /etc/feather/tls/ca.crt
+  min_version: "1.2"
+  client_auth: none                         # Set to "verify" for mTLS
+
+storage:
+  hot:
+    max_memory: 8GB
+    eviction_policy: lru
+  warm:
+    path: /var/lib/feather/data
+    sync_interval: 500ms
+  historical:
+    enabled: true
+    retention: 2160h                        # 90 days
+
+ingestion:
+  kafka:
+    enabled: true
+    brokers:
+      - kafka-1:9093
+      - kafka-2:9093
+      - kafka-3:9093
+    topic: feature-updates
+    consumer_group: feather-prod
+    security:
+      protocol: SASL_SSL
+      sasl_mechanism: SCRAM-SHA-256
+      sasl_username: ${FEATHER_KAFKA_SASL_USERNAME}
+      sasl_password: ${FEATHER_KAFKA_SASL_PASSWORD}
+      ssl_ca_file: /etc/feather/kafka/ca.crt
+  http:
+    enabled: true
+    port: 8081
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 5000
+  http:
+    port: 8443
+    read_timeout: 30s
+    write_timeout: 30s
+
+tracing:
+  enabled: true
+  endpoint: otel-collector:4317
+  service_name: feather
+  sample_rate: 0.01                         # 1% sampling for production
+  insecure: false
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: info
+  format: json
