@@ -76,30 +76,30 @@ func DefaultSpecForTier(tier InstanceTier) InstanceSpec {
 
 // Instance represents a managed Feather instance.
 type Instance struct {
-	ID          string            `json:"id"`
-	TenantID    string            `json:"tenant_id"`
-	Name        string            `json:"name"`
-	Spec        InstanceSpec      `json:"spec"`
-	Status      InstanceStatus    `json:"status"`
-	Endpoint    string            `json:"endpoint,omitempty"`
-	GRPCAddr    string            `json:"grpc_addr,omitempty"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Metrics     *InstanceMetrics  `json:"metrics,omitempty"`
-	LastError   string            `json:"last_error,omitempty"`
+	ID        string            `json:"id"`
+	TenantID  string            `json:"tenant_id"`
+	Name      string            `json:"name"`
+	Spec      InstanceSpec      `json:"spec"`
+	Status    InstanceStatus    `json:"status"`
+	Endpoint  string            `json:"endpoint,omitempty"`
+	GRPCAddr  string            `json:"grpc_addr,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	Metrics   *InstanceMetrics  `json:"metrics,omitempty"`
+	LastError string            `json:"last_error,omitempty"`
 }
 
 // InstanceMetrics tracks runtime metrics for an instance.
 type InstanceMetrics struct {
-	CPUUsagePct     float64 `json:"cpu_usage_pct"`
-	MemoryUsagePct  float64 `json:"memory_usage_pct"`
-	StorageUsedGB   float64 `json:"storage_used_gb"`
-	RequestsPerSec  float64 `json:"requests_per_sec"`
-	P99LatencyMs    float64 `json:"p99_latency_ms"`
-	ActiveReplicas  int     `json:"active_replicas"`
-	FeatureCount    int64   `json:"feature_count"`
-	EntityCount     int64   `json:"entity_count"`
+	CPUUsagePct    float64 `json:"cpu_usage_pct"`
+	MemoryUsagePct float64 `json:"memory_usage_pct"`
+	StorageUsedGB  float64 `json:"storage_used_gb"`
+	RequestsPerSec float64 `json:"requests_per_sec"`
+	P99LatencyMs   float64 `json:"p99_latency_ms"`
+	ActiveReplicas int     `json:"active_replicas"`
+	FeatureCount   int64   `json:"feature_count"`
+	EntityCount    int64   `json:"entity_count"`
 }
 
 // ScaleDecision represents an auto-scaling decision.

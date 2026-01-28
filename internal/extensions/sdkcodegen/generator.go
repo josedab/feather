@@ -50,21 +50,21 @@ type SchemaDefinition struct {
 
 // GeneratedCode represents the output of code generation.
 type GeneratedCode struct {
-	SchemaName string    `json:"schema_name"`
-	Language   Language  `json:"language"`
-	FileName   string    `json:"file_name"`
-	Code       string    `json:"code"`
+	SchemaName  string    `json:"schema_name"`
+	Language    Language  `json:"language"`
+	FileName    string    `json:"file_name"`
+	Code        string    `json:"code"`
 	GeneratedAt time.Time `json:"generated_at"`
-	Version    string    `json:"version"`
+	Version     string    `json:"version"`
 }
 
 // GeneratorConfig configures the code generator.
 type GeneratorConfig struct {
-	PackageName    string   `json:"package_name"`
-	OutputDir      string   `json:"output_dir"`
-	Languages      []Language `json:"languages"`
-	IncludeTests   bool     `json:"include_tests"`
-	ServerURL      string   `json:"server_url"`
+	PackageName  string     `json:"package_name"`
+	OutputDir    string     `json:"output_dir"`
+	Languages    []Language `json:"languages"`
+	IncludeTests bool       `json:"include_tests"`
+	ServerURL    string     `json:"server_url"`
 }
 
 // DefaultGeneratorConfig returns sensible defaults.
@@ -79,10 +79,10 @@ func DefaultGeneratorConfig() GeneratorConfig {
 
 // Generator produces type-safe SDK clients from feature schemas.
 type Generator struct {
-	mu       sync.RWMutex
-	config   GeneratorConfig
-	schemas  map[string]*SchemaDefinition
-	history  []GeneratedCode
+	mu      sync.RWMutex
+	config  GeneratorConfig
+	schemas map[string]*SchemaDefinition
+	history []GeneratedCode
 }
 
 // NewGenerator creates a new code generator.

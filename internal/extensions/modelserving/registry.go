@@ -93,7 +93,7 @@ type Registry struct {
 	versions map[string][]*ModelVersion
 	bundles  map[string]*FeatureBundle
 
-	cacheHits   int64
+	cacheHits    int64
 	cacheLookups int64
 }
 

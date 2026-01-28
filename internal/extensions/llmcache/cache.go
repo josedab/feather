@@ -102,8 +102,8 @@ type Embedder interface {
 // Cache provides semantic and exact-match caching for LLM calls.
 type Cache struct {
 	config   CacheConfig
-	entries  map[string]*CacheEntry   // hash -> entry (exact match)
-	semantic []*CacheEntry            // all entries with embeddings
+	entries  map[string]*CacheEntry // hash -> entry (exact match)
+	semantic []*CacheEntry          // all entries with embeddings
 	embedder Embedder
 	stats    CacheStats
 	mu       sync.RWMutex
@@ -332,10 +332,10 @@ func cosineSimilarity(a, b []float64) float64 {
 
 // ProviderPricing holds token pricing for a provider/model.
 type ProviderPricing struct {
-	Provider     Provider `json:"provider"`
-	Model        string   `json:"model"`
-	InputPer1K   float64  `json:"input_per_1k"`
-	OutputPer1K  float64  `json:"output_per_1k"`
+	Provider    Provider `json:"provider"`
+	Model       string   `json:"model"`
+	InputPer1K  float64  `json:"input_per_1k"`
+	OutputPer1K float64  `json:"output_per_1k"`
 }
 
 // EstimateCost estimates the cost of an LLM call.
@@ -356,9 +356,9 @@ func DefaultPricing() []ProviderPricing {
 
 // CostTracker tracks LLM API costs.
 type CostTracker struct {
-	mu       sync.RWMutex
-	costs    map[string]float64 // provider:model -> total cost
-	savings  map[string]float64 // provider:model -> total savings from cache
+	mu      sync.RWMutex
+	costs   map[string]float64 // provider:model -> total cost
+	savings map[string]float64 // provider:model -> total savings from cache
 }
 
 // NewCostTracker creates a new cost tracker.
@@ -400,11 +400,11 @@ func (ct *CostTracker) Summary() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_cost_usd":    totalCost,
-		"total_saved_usd":   totalSaved,
-		"savings_pct":       safeDivide(totalSaved, totalCost+totalSaved) * 100,
-		"costs_by_model":    ct.costs,
-		"savings_by_model":  ct.savings,
+		"total_cost_usd":   totalCost,
+		"total_saved_usd":  totalSaved,
+		"savings_pct":      safeDivide(totalSaved, totalCost+totalSaved) * 100,
+		"costs_by_model":   ct.costs,
+		"savings_by_model": ct.savings,
 	}
 }
 

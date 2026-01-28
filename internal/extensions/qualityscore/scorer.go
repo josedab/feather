@@ -23,25 +23,25 @@ const (
 // Signal represents a quality measurement for a feature.
 type Signal struct {
 	Type      SignalType `json:"type"`
-	Value     float64   `json:"value"`
-	Weight    float64   `json:"weight"`
-	Timestamp time.Time `json:"timestamp"`
+	Value     float64    `json:"value"`
+	Weight    float64    `json:"weight"`
+	Timestamp time.Time  `json:"timestamp"`
 }
 
 // FeatureScore represents the computed quality score for a feature.
 type FeatureScore struct {
-	FeatureID       string                  `json:"feature_id"`
-	OverallScore    float64                 `json:"overall_score"`
-	Signals         map[SignalType]*Signal   `json:"signals"`
-	Grade           string                  `json:"grade"`
-	Recommendations []string                `json:"recommendations"`
-	ScoredAt        time.Time               `json:"scored_at"`
+	FeatureID       string                 `json:"feature_id"`
+	OverallScore    float64                `json:"overall_score"`
+	Signals         map[SignalType]*Signal `json:"signals"`
+	Grade           string                 `json:"grade"`
+	Recommendations []string               `json:"recommendations"`
+	ScoredAt        time.Time              `json:"scored_at"`
 }
 
 // ScoringConfig holds weights and thresholds for scoring.
 type ScoringConfig struct {
 	Weights         map[SignalType]float64 `json:"weights"`
-	GradeThresholds GradeThresholds       `json:"grade_thresholds"`
+	GradeThresholds GradeThresholds        `json:"grade_thresholds"`
 }
 
 // GradeThresholds defines minimum scores for each grade.
@@ -91,11 +91,10 @@ func DefaultScoringConfig() ScoringConfig {
 
 // Scorer computes automated quality scores for features.
 type Scorer struct {
-	mu                    sync.RWMutex
-	config                ScoringConfig
-	scores                map[string]*FeatureScore
-	signals               map[string]map[SignalType]*Signal
-	deprecationCandidates []*DeprecationCandidate
+	mu      sync.RWMutex
+	config  ScoringConfig
+	scores  map[string]*FeatureScore
+	signals map[string]map[SignalType]*Signal
 }
 
 // NewScorer creates a new Scorer with the given configuration.

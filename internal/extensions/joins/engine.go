@@ -71,11 +71,11 @@ type JoinPlan struct {
 
 // JoinResult represents a single joined entity.
 type JoinResult struct {
-	EntityKey     string                  `json:"entity_key"`
+	EntityKey     string                   `json:"entity_key"`
 	LeftFeatures  map[string]*FeatureValue `json:"left_features,omitempty"`
 	RightFeatures map[string]*FeatureValue `json:"right_features,omitempty"`
-	JoinedAt      time.Time               `json:"joined_at"`
-	Watermark     time.Time               `json:"watermark"`
+	JoinedAt      time.Time                `json:"joined_at"`
+	Watermark     time.Time                `json:"watermark"`
 }
 
 // JoinOutput contains the results of a join execution.

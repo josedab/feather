@@ -40,11 +40,11 @@ type LineageEdge struct {
 
 // ImpactReport shows the downstream effects of changing an upstream node.
 type ImpactReport struct {
-	SourceNode      string         `json:"source_node"`
-	AffectedNodes   []AffectedNode `json:"affected_nodes"`
-	TotalAffected   int            `json:"total_affected"`
-	MaxDepth        int            `json:"max_depth"`
-	GeneratedAt     time.Time      `json:"generated_at"`
+	SourceNode    string         `json:"source_node"`
+	AffectedNodes []AffectedNode `json:"affected_nodes"`
+	TotalAffected int            `json:"total_affected"`
+	MaxDepth      int            `json:"max_depth"`
+	GeneratedAt   time.Time      `json:"generated_at"`
 }
 
 // AffectedNode describes a node affected by an upstream change.
@@ -64,9 +64,9 @@ type LineagePath struct {
 
 // TrackerConfig configures the lineage tracker.
 type TrackerConfig struct {
-	MaxNodes    int `json:"max_nodes"`
-	MaxEdges    int `json:"max_edges"`
-	MaxDepth    int `json:"max_depth"`
+	MaxNodes int `json:"max_nodes"`
+	MaxEdges int `json:"max_edges"`
+	MaxDepth int `json:"max_depth"`
 }
 
 // DefaultTrackerConfig returns sensible defaults.
@@ -80,11 +80,11 @@ func DefaultTrackerConfig() TrackerConfig {
 
 // Tracker manages the lineage graph and dependency tracking.
 type Tracker struct {
-	mu       sync.RWMutex
-	config   TrackerConfig
-	nodes    map[string]*LineageNode
-	edges    map[string][]string // fromID -> []toID
-	redges   map[string][]string // toID -> []fromID (reverse edges)
+	mu     sync.RWMutex
+	config TrackerConfig
+	nodes  map[string]*LineageNode
+	edges  map[string][]string // fromID -> []toID
+	redges map[string][]string // toID -> []fromID (reverse edges)
 }
 
 // NewTracker creates a new lineage tracker.
@@ -317,8 +317,8 @@ func (t *Tracker) Stats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_nodes":  len(t.nodes),
-		"total_edges":  edgeCount,
-		"by_type":      byType,
+		"total_nodes": len(t.nodes),
+		"total_edges": edgeCount,
+		"by_type":     byType,
 	}
 }

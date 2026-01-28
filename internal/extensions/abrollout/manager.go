@@ -41,21 +41,21 @@ type FeatureVersion struct {
 
 // Rollout represents a gradual rollout of a feature version.
 type Rollout struct {
-	ID             string        `json:"id"`
-	FeatureName    string        `json:"feature_name"`
-	BaseVersion    int           `json:"base_version"`
-	CanaryVersion  int           `json:"canary_version"`
-	TrafficPct     float64       `json:"traffic_pct"`     // 0-100% sent to canary
-	Status         RolloutStatus `json:"status"`
-	Steps          []RolloutStep `json:"steps"`
-	CurrentStep    int           `json:"current_step"`
-	AutoPromote    bool          `json:"auto_promote"`
-	AutoRollback   bool          `json:"auto_rollback"`
-	QualityGate    *QualityGate  `json:"quality_gate,omitempty"`
-	Metrics        *RolloutMetrics `json:"metrics,omitempty"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-	CompletedAt    time.Time     `json:"completed_at,omitempty"`
+	ID            string          `json:"id"`
+	FeatureName   string          `json:"feature_name"`
+	BaseVersion   int             `json:"base_version"`
+	CanaryVersion int             `json:"canary_version"`
+	TrafficPct    float64         `json:"traffic_pct"` // 0-100% sent to canary
+	Status        RolloutStatus   `json:"status"`
+	Steps         []RolloutStep   `json:"steps"`
+	CurrentStep   int             `json:"current_step"`
+	AutoPromote   bool            `json:"auto_promote"`
+	AutoRollback  bool            `json:"auto_rollback"`
+	QualityGate   *QualityGate    `json:"quality_gate,omitempty"`
+	Metrics       *RolloutMetrics `json:"metrics,omitempty"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+	CompletedAt   time.Time       `json:"completed_at,omitempty"`
 }
 
 // RolloutStep defines a traffic increase step.
@@ -66,10 +66,10 @@ type RolloutStep struct {
 
 // QualityGate defines thresholds for automatic promotion/rollback.
 type QualityGate struct {
-	MaxDriftScore    float64 `json:"max_drift_score"`
-	MaxErrorRate     float64 `json:"max_error_rate"`
-	MaxLatencyMs     float64 `json:"max_latency_ms"`
-	MinDataQuality   float64 `json:"min_data_quality"`
+	MaxDriftScore  float64 `json:"max_drift_score"`
+	MaxErrorRate   float64 `json:"max_error_rate"`
+	MaxLatencyMs   float64 `json:"max_latency_ms"`
+	MinDataQuality float64 `json:"min_data_quality"`
 }
 
 // DefaultQualityGate returns a reasonable quality gate.
@@ -84,14 +84,14 @@ func DefaultQualityGate() *QualityGate {
 
 // RolloutMetrics tracks per-version performance.
 type RolloutMetrics struct {
-	BaseRequests   int64   `json:"base_requests"`
-	CanaryRequests int64   `json:"canary_requests"`
-	BaseErrorRate  float64 `json:"base_error_rate"`
+	BaseRequests    int64   `json:"base_requests"`
+	CanaryRequests  int64   `json:"canary_requests"`
+	BaseErrorRate   float64 `json:"base_error_rate"`
 	CanaryErrorRate float64 `json:"canary_error_rate"`
-	BaseLatencyMs  float64 `json:"base_latency_ms"`
+	BaseLatencyMs   float64 `json:"base_latency_ms"`
 	CanaryLatencyMs float64 `json:"canary_latency_ms"`
-	BaseDrift      float64 `json:"base_drift"`
-	CanaryDrift    float64 `json:"canary_drift"`
+	BaseDrift       float64 `json:"base_drift"`
+	CanaryDrift     float64 `json:"canary_drift"`
 }
 
 // DefaultRolloutSteps returns a standard canary rollout sequence.
@@ -374,8 +374,8 @@ func (m *Manager) Stats() map[string]interface{} {
 	defer m.mu.RUnlock()
 
 	return map[string]interface{}{
-		"total_features": len(m.versions),
-		"total_rollouts": len(m.rollouts),
+		"total_features":  len(m.versions),
+		"total_rollouts":  len(m.rollouts),
 		"active_rollouts": len(m.active),
 	}
 }

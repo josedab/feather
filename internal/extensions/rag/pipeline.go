@@ -64,9 +64,9 @@ type Document struct {
 	Content   string            `json:"content"`
 	Metadata  map[string]string `json:"metadata,omitempty"`
 	Source    string            `json:"source,omitempty"`
-	Chunks   []*Chunk          `json:"chunks,omitempty"`
-	CreatedAt time.Time        `json:"created_at"`
-	UpdatedAt time.Time        `json:"updated_at"`
+	Chunks    []*Chunk          `json:"chunks,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // Chunk represents a piece of a document with position and embedding info.
@@ -315,8 +315,8 @@ func (p *Pipeline) RetrieveWithFilter(ctx context.Context, query string, topK in
 	p.mu.RUnlock()
 
 	result := &RetrievalResult{
-		Query:   query,
-		Chunks:  make([]*ScoredChunk, 0, topK),
+		Query:    query,
+		Chunks:   make([]*ScoredChunk, 0, topK),
 		Duration: time.Since(start),
 	}
 

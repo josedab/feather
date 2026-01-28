@@ -11,15 +11,15 @@ import (
 type NodeType string
 
 const (
-	NodeSelect     NodeType = "SELECT"
-	NodeFrom       NodeType = "FROM"
-	NodeWhere      NodeType = "WHERE"
-	NodeGroupBy    NodeType = "GROUP_BY"
-	NodeWindow     NodeType = "WINDOW"
+	NodeSelect      NodeType = "SELECT"
+	NodeFrom        NodeType = "FROM"
+	NodeWhere       NodeType = "WHERE"
+	NodeGroupBy     NodeType = "GROUP_BY"
+	NodeWindow      NodeType = "WINDOW"
 	NodeAggregation NodeType = "AGGREGATION"
-	NodeColumn     NodeType = "COLUMN"
-	NodeLiteral    NodeType = "LITERAL"
-	NodeJoin       NodeType = "JOIN"
+	NodeColumn      NodeType = "COLUMN"
+	NodeLiteral     NodeType = "LITERAL"
+	NodeJoin        NodeType = "JOIN"
 )
 
 // ASTNode represents a node in the abstract syntax tree.
@@ -42,19 +42,19 @@ type ParseResult struct {
 
 // ExecutionStep represents a step in an execution plan.
 type ExecutionStep struct {
-	ID          int    `json:"id"`
-	Operation   string `json:"operation"`
-	Description string `json:"description"`
+	ID            int     `json:"id"`
+	Operation     string  `json:"operation"`
+	Description   string  `json:"description"`
 	EstimatedCost float64 `json:"estimated_cost"`
 }
 
 // CompiledPipeline represents a compiled query ready for execution.
 type CompiledPipeline struct {
-	ID          string          `json:"id"`
-	Query       string          `json:"query"`
-	Steps       []ExecutionStep `json:"steps"`
-	OutputCols  []string        `json:"output_columns"`
-	CompiledAt  time.Time       `json:"compiled_at"`
+	ID         string          `json:"id"`
+	Query      string          `json:"query"`
+	Steps      []ExecutionStep `json:"steps"`
+	OutputCols []string        `json:"output_columns"`
+	CompiledAt time.Time       `json:"compiled_at"`
 }
 
 // ExecutionResult represents the output of executing a query.
@@ -69,9 +69,9 @@ type ExecutionResult struct {
 
 // EngineConfig configures the FeatherQL v2 engine.
 type EngineConfig struct {
-	MaxPipelines    int `json:"max_pipelines"`
-	MaxQueryLength  int `json:"max_query_length"`
-	MaxResultRows   int `json:"max_result_rows"`
+	MaxPipelines   int `json:"max_pipelines"`
+	MaxQueryLength int `json:"max_query_length"`
+	MaxResultRows  int `json:"max_result_rows"`
 }
 
 // DefaultEngineConfig returns sensible defaults.

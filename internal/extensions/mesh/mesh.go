@@ -317,10 +317,10 @@ func (rt *Router) RouteWithFallback(key string, nodes []*Node) (*Node, error) {
 
 // MeshStats holds mesh-wide statistics.
 type MeshStats struct {
-	TotalNodes      int                       `json:"total_nodes"`
-	ActiveNodes     int                       `json:"active_nodes"`
-	TotalRoutes     int                       `json:"total_routes"`
-	CircuitBreakers map[string]*CircuitStats  `json:"circuit_breakers"`
+	TotalNodes      int                      `json:"total_nodes"`
+	ActiveNodes     int                      `json:"active_nodes"`
+	TotalRoutes     int                      `json:"total_routes"`
+	CircuitBreakers map[string]*CircuitStats `json:"circuit_breakers"`
 }
 
 // MeshManager orchestrates the mesh network components.

@@ -8,13 +8,13 @@ import (
 
 // RouteInfo describes a single HTTP route for OpenAPI spec generation.
 type RouteInfo struct {
-	Method      string           `json:"method"`
-	Path        string           `json:"path"`
-	Summary     string           `json:"summary"`
-	Description string           `json:"description,omitempty"`
-	Tags        []string         `json:"tags,omitempty"`
-	Parameters  []Parameter      `json:"parameters,omitempty"`
-	RequestBody *SchemaRef       `json:"request_body,omitempty"`
+	Method      string            `json:"method"`
+	Path        string            `json:"path"`
+	Summary     string            `json:"summary"`
+	Description string            `json:"description,omitempty"`
+	Tags        []string          `json:"tags,omitempty"`
+	Parameters  []Parameter       `json:"parameters,omitempty"`
+	RequestBody *SchemaRef        `json:"request_body,omitempty"`
 	Responses   map[int]SchemaRef `json:"responses,omitempty"`
 }
 
@@ -37,10 +37,10 @@ type SchemaRef struct {
 
 // OpenAPISpec represents a complete OpenAPI 3.1 specification.
 type OpenAPISpec struct {
-	OpenAPI string                            `json:"openapi"`
-	Info    SpecInfo                          `json:"info"`
+	OpenAPI string                              `json:"openapi"`
+	Info    SpecInfo                            `json:"info"`
 	Paths   map[string]map[string]OperationSpec `json:"paths"`
-	Tags    []TagSpec                         `json:"tags,omitempty"`
+	Tags    []TagSpec                           `json:"tags,omitempty"`
 }
 
 // SpecInfo holds API metadata.
@@ -52,13 +52,13 @@ type SpecInfo struct {
 
 // OperationSpec describes a single API operation.
 type OperationSpec struct {
-	Summary     string                    `json:"summary"`
-	Description string                    `json:"description,omitempty"`
-	OperationID string                    `json:"operationId"`
-	Tags        []string                  `json:"tags,omitempty"`
-	Parameters  []Parameter               `json:"parameters,omitempty"`
-	RequestBody *RequestBodySpec          `json:"requestBody,omitempty"`
-	Responses   map[string]ResponseSpec   `json:"responses"`
+	Summary     string                  `json:"summary"`
+	Description string                  `json:"description,omitempty"`
+	OperationID string                  `json:"operationId"`
+	Tags        []string                `json:"tags,omitempty"`
+	Parameters  []Parameter             `json:"parameters,omitempty"`
+	RequestBody *RequestBodySpec        `json:"requestBody,omitempty"`
+	Responses   map[string]ResponseSpec `json:"responses"`
 }
 
 // RequestBodySpec describes a request body.

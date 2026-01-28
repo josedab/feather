@@ -35,11 +35,11 @@ type DeltaEntry struct {
 
 // DeltaStats provides statistics about the delta log.
 type DeltaStats struct {
-	TotalEntries    int       `json:"total_entries"`
-	CompactedEntries int      `json:"compacted_entries"`
-	AvgBatchSize    int       `json:"avg_batch_size"`
-	OldestEntry     time.Time `json:"oldest_entry"`
-	NewestEntry     time.Time `json:"newest_entry"`
+	TotalEntries     int       `json:"total_entries"`
+	CompactedEntries int       `json:"compacted_entries"`
+	AvgBatchSize     int       `json:"avg_batch_size"`
+	OldestEntry      time.Time `json:"oldest_entry"`
+	NewestEntry      time.Time `json:"newest_entry"`
 }
 
 // DeltaLog maintains an append-only log of changes for delta synchronisation.

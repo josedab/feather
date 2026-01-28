@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feather-store/feather/internal/extensions/composition/expr"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/extensions/composition/expr"
 	"github.com/feather-store/feather/internal/platform/transform"
 )
 

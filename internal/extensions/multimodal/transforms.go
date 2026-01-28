@@ -23,7 +23,7 @@ type TransformConfig map[string]interface{}
 // TransformResult holds the output of a transform pipeline execution.
 type TransformResult struct {
 	InputID    string            `json:"input_id"`
-	OutputData []byte           `json:"output_data"`
+	OutputData []byte            `json:"output_data"`
 	OutputType string            `json:"output_type"`
 	Transform  TransformType     `json:"transform"`
 	Duration   time.Duration     `json:"duration"`

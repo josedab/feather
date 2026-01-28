@@ -24,35 +24,35 @@ type PromptTemplate struct {
 
 // Embedding represents a stored vector embedding.
 type Embedding struct {
-	ID        string    `json:"id"`
-	Vector    []float64 `json:"vector"`
-	Text      string    `json:"text,omitempty"`
+	ID        string            `json:"id"`
+	Vector    []float64         `json:"vector"`
+	Text      string            `json:"text,omitempty"`
 	Metadata  map[string]string `json:"metadata,omitempty"`
-	Model     string    `json:"model,omitempty"` // embedding model used
-	CreatedAt time.Time `json:"created_at"`
+	Model     string            `json:"model,omitempty"` // embedding model used
+	CreatedAt time.Time         `json:"created_at"`
 }
 
 // SimilarityResult represents a vector similarity search result.
 type SimilarityResult struct {
-	ID       string    `json:"id"`
-	Score    float64   `json:"score"`
-	Text     string    `json:"text,omitempty"`
+	ID       string            `json:"id"`
+	Score    float64           `json:"score"`
+	Text     string            `json:"text,omitempty"`
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // RAGPipeline defines a Retrieval-Augmented Generation pipeline.
 type RAGPipeline struct {
-	ID              string   `json:"id"`
-	Name            string   `json:"name"`
-	Description     string   `json:"description,omitempty"`
-	PromptTemplateID string  `json:"prompt_template_id"`
-	EmbeddingModel  string   `json:"embedding_model"`
-	TopK            int      `json:"top_k"`
-	MinScore        float64  `json:"min_score"`
-	ChunkSize       int      `json:"chunk_size,omitempty"`
-	ChunkOverlap    int      `json:"chunk_overlap,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID               string    `json:"id"`
+	Name             string    `json:"name"`
+	Description      string    `json:"description,omitempty"`
+	PromptTemplateID string    `json:"prompt_template_id"`
+	EmbeddingModel   string    `json:"embedding_model"`
+	TopK             int       `json:"top_k"`
+	MinScore         float64   `json:"min_score"`
+	ChunkSize        int       `json:"chunk_size,omitempty"`
+	ChunkOverlap     int       `json:"chunk_overlap,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // RAGRequest represents a RAG query request.
@@ -65,19 +65,19 @@ type RAGRequest struct {
 
 // RAGResponse represents a RAG query response.
 type RAGResponse struct {
-	Query          string             `json:"query"`
-	Context        []SimilarityResult `json:"context"`
-	AugmentedPrompt string            `json:"augmented_prompt"`
-	PipelineID     string             `json:"pipeline_id"`
-	Duration       time.Duration      `json:"duration_ns"`
+	Query           string             `json:"query"`
+	Context         []SimilarityResult `json:"context"`
+	AugmentedPrompt string             `json:"augmented_prompt"`
+	PipelineID      string             `json:"pipeline_id"`
+	Duration        time.Duration      `json:"duration_ns"`
 }
 
 // StoreConfig configures the LLM store.
 type StoreConfig struct {
-	MaxPrompts      int `json:"max_prompts"`
-	MaxEmbeddings   int `json:"max_embeddings"`
-	MaxPipelines    int `json:"max_pipelines"`
-	DefaultTopK     int `json:"default_top_k"`
+	MaxPrompts    int `json:"max_prompts"`
+	MaxEmbeddings int `json:"max_embeddings"`
+	MaxPipelines  int `json:"max_pipelines"`
+	DefaultTopK   int `json:"default_top_k"`
 }
 
 // DefaultStoreConfig returns sensible defaults.

@@ -22,21 +22,21 @@ const (
 
 // FieldChange represents a change to a schema field.
 type FieldChange struct {
-	Field     string `json:"field"`
+	Field      string `json:"field"`
 	ChangeType string `json:"change_type"` // "added", "removed", "modified"
-	OldType   string `json:"old_type,omitempty"`
-	NewType   string `json:"new_type,omitempty"`
-	HasDefault bool  `json:"has_default"`
+	OldType    string `json:"old_type,omitempty"`
+	NewType    string `json:"new_type,omitempty"`
+	HasDefault bool   `json:"has_default"`
 }
 
 // SchemaVersion represents a versioned schema definition.
 type SchemaVersion struct {
-	Group      string            `json:"group"`
-	Version    int               `json:"version"`
-	Fields     map[string]string `json:"fields"` // field name -> type
-	Defaults   map[string]string `json:"defaults,omitempty"`
-	CreatedAt  time.Time         `json:"created_at"`
-	Active     bool              `json:"active"`
+	Group     string            `json:"group"`
+	Version   int               `json:"version"`
+	Fields    map[string]string `json:"fields"` // field name -> type
+	Defaults  map[string]string `json:"defaults,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	Active    bool              `json:"active"`
 }
 
 // MigrationStatus represents the status of a migration.
@@ -52,26 +52,26 @@ const (
 
 // Migration represents a schema migration.
 type Migration struct {
-	ID            string          `json:"id"`
-	Group         string          `json:"group"`
-	FromVersion   int             `json:"from_version"`
-	ToVersion     int             `json:"to_version"`
-	Changes       []FieldChange   `json:"changes"`
-	Status        MigrationStatus `json:"status"`
-	Compatible    bool            `json:"compatible"`
+	ID            string            `json:"id"`
+	Group         string            `json:"group"`
+	FromVersion   int               `json:"from_version"`
+	ToVersion     int               `json:"to_version"`
+	Changes       []FieldChange     `json:"changes"`
+	Status        MigrationStatus   `json:"status"`
+	Compatible    bool              `json:"compatible"`
 	Compatibility CompatibilityMode `json:"compatibility_mode"`
-	CreatedAt     time.Time       `json:"created_at"`
-	CompletedAt   *time.Time      `json:"completed_at,omitempty"`
-	ErrorMessage  string          `json:"error_message,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
+	CompletedAt   *time.Time        `json:"completed_at,omitempty"`
+	ErrorMessage  string            `json:"error_message,omitempty"`
 }
 
 // CompatibilityReport describes compatibility of a schema change.
 type CompatibilityReport struct {
-	Compatible  bool          `json:"compatible"`
-	Mode        CompatibilityMode `json:"mode"`
-	Changes     []FieldChange `json:"changes"`
-	Warnings    []string      `json:"warnings,omitempty"`
-	Errors      []string      `json:"errors,omitempty"`
+	Compatible bool              `json:"compatible"`
+	Mode       CompatibilityMode `json:"mode"`
+	Changes    []FieldChange     `json:"changes"`
+	Warnings   []string          `json:"warnings,omitempty"`
+	Errors     []string          `json:"errors,omitempty"`
 }
 
 // ManagerConfig configures the schema evolution manager.

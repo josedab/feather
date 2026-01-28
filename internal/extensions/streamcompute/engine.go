@@ -36,8 +36,8 @@ func (w WindowType) String() string {
 type WindowConfig struct {
 	Type    WindowType    `json:"type"`
 	Size    time.Duration `json:"size"`
-	Slide   time.Duration `json:"slide,omitempty"`   // Only for sliding windows
-	Gap     time.Duration `json:"gap,omitempty"`     // Only for session windows
+	Slide   time.Duration `json:"slide,omitempty"`    // Only for sliding windows
+	Gap     time.Duration `json:"gap,omitempty"`      // Only for session windows
 	MaxLate time.Duration `json:"max_late,omitempty"` // Allowed lateness for events
 }
 
@@ -85,8 +85,8 @@ type Event struct {
 
 // WindowResult represents the output of a window computation.
 type WindowResult struct {
-	PipelineID string    `json:"pipeline_id"`
-	Key        string    `json:"key"`
+	PipelineID  string    `json:"pipeline_id"`
+	Key         string    `json:"key"`
 	WindowStart time.Time `json:"window_start"`
 	WindowEnd   time.Time `json:"window_end"`
 	Value       float64   `json:"value"`
@@ -96,13 +96,13 @@ type WindowResult struct {
 
 // PipelineConfig defines a stream processing pipeline.
 type PipelineConfig struct {
-	ID          string          `json:"id"`
-	Description string          `json:"description,omitempty"`
-	Window      WindowConfig    `json:"window"`
-	GroupByKey  bool            `json:"group_by_key"`
-	Aggregation AggregationType `json:"aggregation"`
-	OutputEntity string         `json:"output_entity,omitempty"`
-	OutputFeature string        `json:"output_feature,omitempty"`
+	ID            string          `json:"id"`
+	Description   string          `json:"description,omitempty"`
+	Window        WindowConfig    `json:"window"`
+	GroupByKey    bool            `json:"group_by_key"`
+	Aggregation   AggregationType `json:"aggregation"`
+	OutputEntity  string          `json:"output_entity,omitempty"`
+	OutputFeature string          `json:"output_feature,omitempty"`
 }
 
 // PipelineStatus represents the runtime status of a pipeline.
@@ -158,14 +158,14 @@ type windowState struct {
 
 // pipeline is the runtime representation of a processing pipeline.
 type pipeline struct {
-	config     PipelineConfig
-	status     PipelineStatus
-	eventsIn   int64
-	eventsOut  int64
+	config       PipelineConfig
+	status       PipelineStatus
+	eventsIn     int64
+	eventsOut    int64
 	windowsFired int64
-	lateEvents int64
-	lastEvent  time.Time
-	startedAt  time.Time
+	lateEvents   int64
+	lastEvent    time.Time
+	startedAt    time.Time
 
 	// Per-key window state
 	windows map[string]*windowState
@@ -174,10 +174,10 @@ type pipeline struct {
 
 // EngineConfig configures the stream compute engine.
 type EngineConfig struct {
-	MaxPipelines     int           `json:"max_pipelines"`
+	MaxPipelines       int           `json:"max_pipelines"`
 	CheckpointInterval time.Duration `json:"checkpoint_interval"`
-	MaxLateAllowed   time.Duration `json:"max_late_allowed"`
-	ResultBufferSize int           `json:"result_buffer_size"`
+	MaxLateAllowed     time.Duration `json:"max_late_allowed"`
+	ResultBufferSize   int           `json:"result_buffer_size"`
 }
 
 // DefaultEngineConfig returns sensible defaults.
@@ -433,15 +433,15 @@ func (e *Engine) Stats() EngineStats {
 
 // EngineStats provides aggregate engine statistics.
 type EngineStats struct {
-	TotalPipelines   int   `json:"total_pipelines"`
-	RunningPipelines int   `json:"running_pipelines"`
-	StoppedPipelines int   `json:"stopped_pipelines"`
-	FailedPipelines  int   `json:"failed_pipelines"`
-	TotalEventsIn    int64 `json:"total_events_in"`
-	TotalEventsOut   int64 `json:"total_events_out"`
+	TotalPipelines    int   `json:"total_pipelines"`
+	RunningPipelines  int   `json:"running_pipelines"`
+	StoppedPipelines  int   `json:"stopped_pipelines"`
+	FailedPipelines   int   `json:"failed_pipelines"`
+	TotalEventsIn     int64 `json:"total_events_in"`
+	TotalEventsOut    int64 `json:"total_events_out"`
 	TotalWindowsFired int64 `json:"total_windows_fired"`
-	TotalLateEvents  int64 `json:"total_late_events"`
-	TotalResults     int   `json:"total_results"`
+	TotalLateEvents   int64 `json:"total_late_events"`
+	TotalResults      int   `json:"total_results"`
 }
 
 func (e *Engine) initWindow(p *pipeline, ts time.Time) *windowState {

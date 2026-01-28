@@ -45,12 +45,12 @@ var (
 
 // StoreConfig configures the MultiModalStore.
 type StoreConfig struct {
-	MaxBlobSize          int64
-	DefaultCompression   CompressionType
-	EnableDeduplication  bool
-	EnableLazyLoading    bool
-	MaxCacheSize         int
-	ThumbnailSize        int
+	MaxBlobSize         int64
+	DefaultCompression  CompressionType
+	EnableDeduplication bool
+	EnableLazyLoading   bool
+	MaxCacheSize        int
+	ThumbnailSize       int
 }
 
 // DefaultStoreConfig returns sensible defaults for the multi-modal store.
@@ -97,7 +97,7 @@ type StoreStats struct {
 	TotalSize         int64          `json:"total_size"`
 	CompressedSize    int64          `json:"compressed_size"`
 	CompressionRatio  float64        `json:"compression_ratio"`
-	DuplicatesAvoided int           `json:"duplicates_avoided"`
+	DuplicatesAvoided int            `json:"duplicates_avoided"`
 	BlobsByModality   map[string]int `json:"blobs_by_modality"`
 	AvgBlobSize       int64          `json:"avg_blob_size"`
 	CacheHitRate      float64        `json:"cache_hit_rate"`
@@ -107,9 +107,9 @@ type StoreStats struct {
 type MultiModalStore struct {
 	mu       sync.RWMutex
 	config   StoreConfig
-	blobs    map[string][]byte       // id -> compressed data
+	blobs    map[string][]byte        // id -> compressed data
 	metadata map[string]*BlobMetadata // id -> metadata
-	hashIdx  map[string]string       // hash -> id (for dedup)
+	hashIdx  map[string]string        // hash -> id (for dedup)
 	nextID   int
 
 	duplicatesAvoided atomic.Int64

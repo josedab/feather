@@ -18,12 +18,12 @@ type EmbeddingModel struct {
 
 // Collection represents a named collection of embeddings.
 type Collection struct {
-	Name       string          `json:"name"`
-	ModelID    string          `json:"model_id"`
-	Dimensions int             `json:"dimensions"`
-	Count      int             `json:"count"`
-	CreatedAt  time.Time       `json:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at"`
+	Name       string            `json:"name"`
+	ModelID    string            `json:"model_id"`
+	Dimensions int               `json:"dimensions"`
+	Count      int               `json:"count"`
+	CreatedAt  time.Time         `json:"created_at"`
+	UpdatedAt  time.Time         `json:"updated_at"`
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 

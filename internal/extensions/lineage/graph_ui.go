@@ -20,21 +20,21 @@ type GraphStats struct {
 
 // BlastRadius represents the impact blast radius of changing a node.
 type BlastRadius struct {
-	NodeID          string          `json:"node_id"`
-	DirectImpact    []*GraphNode    `json:"direct_impact"`
-	TransitiveImpact []*GraphNode   `json:"transitive_impact"`
-	AffectedSources  []*GraphNode   `json:"affected_sources"`
-	AffectedConsumers []*GraphNode  `json:"affected_consumers"`
-	TotalAffected   int             `json:"total_affected"`
-	RiskScore       float64         `json:"risk_score"`
-	ComputedAt      time.Time       `json:"computed_at"`
+	NodeID            string       `json:"node_id"`
+	DirectImpact      []*GraphNode `json:"direct_impact"`
+	TransitiveImpact  []*GraphNode `json:"transitive_impact"`
+	AffectedSources   []*GraphNode `json:"affected_sources"`
+	AffectedConsumers []*GraphNode `json:"affected_consumers"`
+	TotalAffected     int          `json:"total_affected"`
+	RiskScore         float64      `json:"risk_score"`
+	ComputedAt        time.Time    `json:"computed_at"`
 }
 
 // PathResult represents a path between two nodes.
 type PathResult struct {
-	From   string       `json:"from"`
-	To     string       `json:"to"`
-	Paths  [][]string   `json:"paths"`
+	From     string     `json:"from"`
+	To       string     `json:"to"`
+	Paths    [][]string `json:"paths"`
 	Shortest int        `json:"shortest_length"`
 }
 

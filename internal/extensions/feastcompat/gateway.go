@@ -9,13 +9,13 @@ import (
 // FeatureService groups multiple feature views for a specific use case,
 // matching Feast's FeatureService concept.
 type FeatureService struct {
-	Name         string   `json:"name"`
-	Description  string   `json:"description,omitempty"`
-	FeatureViews []string `json:"feature_views"`
-	Owner        string   `json:"owner,omitempty"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description,omitempty"`
+	FeatureViews []string          `json:"feature_views"`
+	Owner        string            `json:"owner,omitempty"`
 	Tags         map[string]string `json:"tags,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
 }
 
 // PushRequest represents a Feast-compatible push endpoint request.
@@ -27,10 +27,10 @@ type PushRequest struct {
 
 // PushResponse represents the response from a push operation.
 type PushResponse struct {
-	Success       bool   `json:"success"`
-	RowsIngested  int    `json:"rows_ingested"`
-	PushSource    string `json:"push_source"`
-	Destination   string `json:"destination"`
+	Success      bool   `json:"success"`
+	RowsIngested int    `json:"rows_ingested"`
+	PushSource   string `json:"push_source"`
+	Destination  string `json:"destination"`
 }
 
 // ApplyRequest represents a Feast-compatible apply request for registering feature definitions.
@@ -42,12 +42,12 @@ type ApplyRequest struct {
 
 // FeatureViewDef defines a feature view for apply.
 type FeatureViewDef struct {
-	Name     string       `json:"name"`
-	Entities []string     `json:"entities"`
-	Schema   []FieldDef   `json:"schema"`
-	Source   string       `json:"source,omitempty"`
-	TTL      string       `json:"ttl,omitempty"`
-	Online   bool         `json:"online"`
+	Name     string            `json:"name"`
+	Entities []string          `json:"entities"`
+	Schema   []FieldDef        `json:"schema"`
+	Source   string            `json:"source,omitempty"`
+	TTL      string            `json:"ttl,omitempty"`
+	Online   bool              `json:"online"`
 	Tags     map[string]string `json:"tags,omitempty"`
 }
 
@@ -75,21 +75,21 @@ type FieldDef struct {
 
 // ApplyResponse is returned from the apply operation.
 type ApplyResponse struct {
-	Success            bool     `json:"success"`
+	Success             bool     `json:"success"`
 	FeatureViewsApplied []string `json:"feature_views_applied,omitempty"`
-	ServicesApplied    []string `json:"services_applied,omitempty"`
-	EntitiesApplied    []string `json:"entities_applied,omitempty"`
-	Message            string   `json:"message"`
+	ServicesApplied     []string `json:"services_applied,omitempty"`
+	EntitiesApplied     []string `json:"entities_applied,omitempty"`
+	Message             string   `json:"message"`
 }
 
 // SavedDataset represents a point-in-time join snapshot for training.
 type SavedDataset struct {
-	Name         string    `json:"name"`
-	FeatureService string  `json:"feature_service"`
-	EntityDf     []map[string]interface{} `json:"entity_df,omitempty"`
-	RowCount     int       `json:"row_count"`
-	CreatedAt    time.Time `json:"created_at"`
-	Storage      string    `json:"storage,omitempty"` // storage location or "memory"
+	Name           string                   `json:"name"`
+	FeatureService string                   `json:"feature_service"`
+	EntityDf       []map[string]interface{} `json:"entity_df,omitempty"`
+	RowCount       int                      `json:"row_count"`
+	CreatedAt      time.Time                `json:"created_at"`
+	Storage        string                   `json:"storage,omitempty"` // storage location or "memory"
 }
 
 // Gateway extends the Feast compatibility adapter with full gateway capabilities.
@@ -104,9 +104,9 @@ type Gateway struct {
 
 // PushStats tracks push endpoint statistics.
 type PushStats struct {
-	TotalPushes    int64 `json:"total_pushes"`
-	TotalRows      int64 `json:"total_rows"`
-	FailedPushes   int64 `json:"failed_pushes"`
+	TotalPushes  int64 `json:"total_pushes"`
+	TotalRows    int64 `json:"total_rows"`
+	FailedPushes int64 `json:"failed_pushes"`
 }
 
 // NewGateway creates a new Feast-compatible gateway.

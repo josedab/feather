@@ -8,46 +8,46 @@ import (
 
 // Plan represents a subscription plan.
 type Plan struct {
-	ID              string  `json:"id"`
-	Name            string  `json:"name"`
-	MaxInstances    int     `json:"max_instances"`
-	MaxFeatures     int     `json:"max_features"`
-	MaxRequestsPerSec int   `json:"max_requests_per_sec"`
-	MaxStorageGB    int     `json:"max_storage_gb"`
-	PricePerMonth   float64 `json:"price_per_month"`
+	ID                string  `json:"id"`
+	Name              string  `json:"name"`
+	MaxInstances      int     `json:"max_instances"`
+	MaxFeatures       int     `json:"max_features"`
+	MaxRequestsPerSec int     `json:"max_requests_per_sec"`
+	MaxStorageGB      int     `json:"max_storage_gb"`
+	PricePerMonth     float64 `json:"price_per_month"`
 }
 
 // Tenant represents a customer tenant.
 type Tenant struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Email       string    `json:"email"`
-	PlanID      string    `json:"plan_id"`
-	Status      string    `json:"status"` // active, suspended, terminated
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	PlanID    string    `json:"plan_id"`
+	Status    string    `json:"status"` // active, suspended, terminated
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Instance represents a provisioned Feather instance for a tenant.
 type Instance struct {
-	ID         string    `json:"id"`
-	TenantID   string    `json:"tenant_id"`
-	Region     string    `json:"region"`
-	Status     string    `json:"status"` // provisioning, running, stopped, terminated
-	Replicas   int       `json:"replicas"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	Region    string    `json:"region"`
+	Status    string    `json:"status"` // provisioning, running, stopped, terminated
+	Replicas  int       `json:"replicas"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // UsageRecord tracks resource consumption.
 type UsageRecord struct {
-	TenantID    string    `json:"tenant_id"`
-	Requests    int64     `json:"requests"`
-	Features    int       `json:"features"`
-	StorageMB   int64     `json:"storage_mb"`
-	Instances   int       `json:"instances"`
-	Period      string    `json:"period"`
-	RecordedAt  time.Time `json:"recorded_at"`
+	TenantID   string    `json:"tenant_id"`
+	Requests   int64     `json:"requests"`
+	Features   int       `json:"features"`
+	StorageMB  int64     `json:"storage_mb"`
+	Instances  int       `json:"instances"`
+	Period     string    `json:"period"`
+	RecordedAt time.Time `json:"recorded_at"`
 }
 
 // Invoice represents a billing invoice.
@@ -63,8 +63,8 @@ type Invoice struct {
 
 // ControlPlaneConfig configures the SaaS control plane.
 type ControlPlaneConfig struct {
-	MaxTenants    int `json:"max_tenants"`
-	MaxInstances  int `json:"max_instances_total"`
+	MaxTenants    int    `json:"max_tenants"`
+	MaxInstances  int    `json:"max_instances_total"`
 	DefaultRegion string `json:"default_region"`
 }
 

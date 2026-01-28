@@ -33,12 +33,12 @@ type AnomalyResult struct {
 
 // DetectorConfig configures the anomaly detector.
 type DetectorConfig struct {
-	ZScoreThreshold    float64
-	IQRMultiplier      float64
-	WindowSize         int
-	QuarantineEnabled  bool
-	LearningPeriod     int
-	MaxFeatures        int
+	ZScoreThreshold   float64
+	IQRMultiplier     float64
+	WindowSize        int
+	QuarantineEnabled bool
+	LearningPeriod    int
+	MaxFeatures       int
 }
 
 // DefaultDetectorConfig returns sensible defaults.

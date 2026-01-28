@@ -52,10 +52,10 @@ func DefaultStoreConfig() StoreConfig {
 
 // BucketStats holds bucket-level statistics.
 type BucketStats struct {
-	TotalObjects  int    `json:"total_objects"`
-	TotalSizeBytes int64 `json:"total_size_bytes"`
-	Provider      string `json:"provider"`
-	Bucket        string `json:"bucket"`
+	TotalObjects   int    `json:"total_objects"`
+	TotalSizeBytes int64  `json:"total_size_bytes"`
+	Provider       string `json:"provider"`
+	Bucket         string `json:"bucket"`
 }
 
 // StoreStats holds store-level statistics.

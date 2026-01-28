@@ -39,19 +39,19 @@ type Node struct {
 
 // Edge represents a directed dependency between two nodes.
 type Edge struct {
-	From        string    `json:"from"`
-	To          string    `json:"to"`
-	Label       string    `json:"label,omitempty"`
-	Latency     float64   `json:"latency_ms,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	From      string    `json:"from"`
+	To        string    `json:"to"`
+	Label     string    `json:"label,omitempty"`
+	Latency   float64   `json:"latency_ms,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // GraphView represents the entire lineage DAG for rendering.
 type GraphView struct {
-	Nodes      []Node   `json:"nodes"`
-	Edges      []Edge   `json:"edges"`
-	TotalNodes int      `json:"total_nodes"`
-	TotalEdges int      `json:"total_edges"`
+	Nodes      []Node    `json:"nodes"`
+	Edges      []Edge    `json:"edges"`
+	TotalNodes int       `json:"total_nodes"`
+	TotalEdges int       `json:"total_edges"`
 	Timestamp  time.Time `json:"timestamp"`
 }
 
@@ -64,9 +64,9 @@ type ImpactReport struct {
 
 // GraphConfig configures the lineage graph.
 type GraphConfig struct {
-	MaxNodes        int           `json:"max_nodes"`
-	MaxEdges        int           `json:"max_edges"`
-	StaleThreshold  time.Duration `json:"stale_threshold"`
+	MaxNodes       int           `json:"max_nodes"`
+	MaxEdges       int           `json:"max_edges"`
+	StaleThreshold time.Duration `json:"stale_threshold"`
 }
 
 // DefaultGraphConfig returns sensible defaults.
@@ -80,10 +80,10 @@ func DefaultGraphConfig() GraphConfig {
 
 // Graph manages the feature lineage DAG.
 type Graph struct {
-	mu     sync.RWMutex
-	config GraphConfig
-	nodes  map[string]*Node
-	edges  map[string][]Edge // from -> edges
+	mu      sync.RWMutex
+	config  GraphConfig
+	nodes   map[string]*Node
+	edges   map[string][]Edge // from -> edges
 	inEdges map[string][]Edge // to -> edges (reverse index)
 }
 

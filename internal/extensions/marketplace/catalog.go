@@ -305,9 +305,9 @@ func (c *Catalog) Stats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_features":     len(c.features),
-		"published":          published,
-		"deprecated":         deprecated,
+		"total_features":      len(c.features),
+		"published":           published,
+		"deprecated":          deprecated,
 		"total_subscriptions": totalSubs,
 	}
 }

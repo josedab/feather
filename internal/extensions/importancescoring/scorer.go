@@ -20,10 +20,10 @@ type FeatureScore struct {
 
 // ScorerConfig configures the importance scorer.
 type ScorerConfig struct {
-	MinSamples              int
-	ScoringInterval         time.Duration
-	LowImportanceThreshold  float64
-	MaxTracked              int
+	MinSamples             int
+	ScoringInterval        time.Duration
+	LowImportanceThreshold float64
+	MaxTracked             int
 }
 
 // DefaultScorerConfig returns sensible defaults.
@@ -45,10 +45,10 @@ type featureData struct {
 
 // ScorerStats holds aggregate scorer statistics.
 type ScorerStats struct {
-	TotalFeatures        int
-	ScoredFeatures       int
+	TotalFeatures         int
+	ScoredFeatures        int
 	DeprecationCandidates int
-	AvgImportance        float64
+	AvgImportance         float64
 }
 
 // Scorer computes feature importance from access patterns and value distributions.
@@ -99,9 +99,9 @@ func (s *Scorer) ScoreAll() []FeatureScore {
 
 	// Collect raw metrics
 	type rawMetric struct {
-		name        string
-		accessFreq  float64
-		variance    float64
+		name       string
+		accessFreq float64
+		variance   float64
 	}
 	var metrics []rawMetric
 	for name, fd := range s.features {

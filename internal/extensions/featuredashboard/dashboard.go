@@ -8,8 +8,8 @@ import (
 
 // DashboardConfig configures the observability dashboard.
 type DashboardConfig struct {
-	RetentionPeriod time.Duration `json:"retention_period"`
-	MaxFeatures     int           `json:"max_features"`
+	RetentionPeriod  time.Duration `json:"retention_period"`
+	MaxFeatures      int           `json:"max_features"`
 	SnapshotInterval time.Duration `json:"snapshot_interval"`
 }
 
@@ -24,16 +24,16 @@ func DefaultDashboardConfig() DashboardConfig {
 
 // FeatureHealth represents the health status of a feature.
 type FeatureHealth struct {
-	Name         string         `json:"name"`
-	Status       HealthStatus   `json:"status"`
-	Latency      LatencyStats   `json:"latency"`
-	Freshness    FreshnessInfo  `json:"freshness"`
-	DriftScore   float64        `json:"drift_score"`
-	QualityScore float64        `json:"quality_score"`
-	RequestRate  float64        `json:"request_rate"`
-	ErrorRate    float64        `json:"error_rate"`
-	LastUpdated  time.Time      `json:"last_updated"`
-	Dependencies []string       `json:"dependencies,omitempty"`
+	Name         string        `json:"name"`
+	Status       HealthStatus  `json:"status"`
+	Latency      LatencyStats  `json:"latency"`
+	Freshness    FreshnessInfo `json:"freshness"`
+	DriftScore   float64       `json:"drift_score"`
+	QualityScore float64       `json:"quality_score"`
+	RequestRate  float64       `json:"request_rate"`
+	ErrorRate    float64       `json:"error_rate"`
+	LastUpdated  time.Time     `json:"last_updated"`
+	Dependencies []string      `json:"dependencies,omitempty"`
 }
 
 // HealthStatus indicates the overall health of a feature.
@@ -74,13 +74,13 @@ type DashboardSnapshot struct {
 
 // HealthSummary provides aggregate health statistics.
 type HealthSummary struct {
-	Healthy     int     `json:"healthy"`
-	Degraded    int     `json:"degraded"`
-	Unhealthy   int     `json:"unhealthy"`
-	Unknown     int     `json:"unknown"`
-	AvgLatency  float64 `json:"avg_latency_ms"`
-	AvgDrift    float64 `json:"avg_drift_score"`
-	AvgQuality  float64 `json:"avg_quality_score"`
+	Healthy    int     `json:"healthy"`
+	Degraded   int     `json:"degraded"`
+	Unhealthy  int     `json:"unhealthy"`
+	Unknown    int     `json:"unknown"`
+	AvgLatency float64 `json:"avg_latency_ms"`
+	AvgDrift   float64 `json:"avg_drift_score"`
+	AvgQuality float64 `json:"avg_quality_score"`
 }
 
 type featureTracker struct {
@@ -97,9 +97,9 @@ type featureTracker struct {
 
 // Dashboard aggregates feature observability metrics.
 type Dashboard struct {
-	mu       sync.RWMutex
-	config   DashboardConfig
-	features map[string]*featureTracker
+	mu        sync.RWMutex
+	config    DashboardConfig
+	features  map[string]*featureTracker
 	snapshots []DashboardSnapshot
 }
 

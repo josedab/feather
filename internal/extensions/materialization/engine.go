@@ -24,19 +24,19 @@ const (
 type TriggerType string
 
 const (
-	TriggerCron    TriggerType = "cron"
-	TriggerEvent   TriggerType = "event"
-	TriggerManual  TriggerType = "manual"
+	TriggerCron   TriggerType = "cron"
+	TriggerEvent  TriggerType = "event"
+	TriggerManual TriggerType = "manual"
 )
 
 var (
-	ErrPipelineNotFound    = errors.New("pipeline not found")
-	ErrPipelineExists      = errors.New("pipeline already exists")
-	ErrCyclicDependency    = errors.New("cyclic dependency detected")
-	ErrStepNotFound        = errors.New("step not found")
-	ErrInvalidPipeline     = errors.New("invalid pipeline definition")
-	ErrPipelineRunning     = errors.New("pipeline is already running")
-	ErrRunNotFound         = errors.New("pipeline run not found")
+	ErrPipelineNotFound = errors.New("pipeline not found")
+	ErrPipelineExists   = errors.New("pipeline already exists")
+	ErrCyclicDependency = errors.New("cyclic dependency detected")
+	ErrStepNotFound     = errors.New("step not found")
+	ErrInvalidPipeline  = errors.New("invalid pipeline definition")
+	ErrPipelineRunning  = errors.New("pipeline is already running")
+	ErrRunNotFound      = errors.New("pipeline run not found")
 )
 
 // TransformFunc is a user-defined transformation applied during a step.
@@ -84,11 +84,11 @@ type Pipeline struct {
 
 // StepResult records the outcome of a single step execution.
 type StepResult struct {
-	StepName  string         `json:"step_name"`
-	Status    PipelineStatus `json:"status"`
-	StartedAt time.Time     `json:"started_at"`
-	EndedAt   time.Time     `json:"ended_at"`
-	Error     string         `json:"error,omitempty"`
+	StepName  string                 `json:"step_name"`
+	Status    PipelineStatus         `json:"status"`
+	StartedAt time.Time              `json:"started_at"`
+	EndedAt   time.Time              `json:"ended_at"`
+	Error     string                 `json:"error,omitempty"`
 	Output    map[string]interface{} `json:"output,omitempty"`
 }
 

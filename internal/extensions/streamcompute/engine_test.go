@@ -27,7 +27,7 @@ func TestCreateAndListPipelines(t *testing.T) {
 			Size: 1 * time.Minute,
 		},
 		Aggregation: AggSum,
-		GroupByKey:   true,
+		GroupByKey:  true,
 	}
 
 	if err := e.CreatePipeline(cfg); err != nil {

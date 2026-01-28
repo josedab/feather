@@ -102,12 +102,12 @@ func NewMonitor(config MonitorConfig) *Monitor {
 	}
 
 	return &Monitor{
-		config:       config,
-		queueSamples: make([]MetricSample, 0),
+		config:         config,
+		queueSamples:   make([]MetricSample, 0),
 		latencySamples: make([]MetricSample, 0),
-		errorSamples:  make([]MetricSample, 0),
-		reports:      make([]PressureReport, 0),
-		currentLevel: None,
+		errorSamples:   make([]MetricSample, 0),
+		reports:        make([]PressureReport, 0),
+		currentLevel:   None,
 	}
 }
 

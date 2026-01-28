@@ -51,40 +51,40 @@ type Peer struct {
 
 // ReplicationMessage carries a single replicated mutation.
 type ReplicationMessage struct {
-	Type        MessageType        `json:"type"`
-	SourcePeer  string             `json:"source_peer"`
-	TargetPeer  string             `json:"target_peer"`
-	Payload     map[string]string  `json:"payload"`
-	VectorClock map[string]uint64  `json:"vector_clock"`
-	Timestamp   time.Time          `json:"timestamp"`
+	Type        MessageType       `json:"type"`
+	SourcePeer  string            `json:"source_peer"`
+	TargetPeer  string            `json:"target_peer"`
+	Payload     map[string]string `json:"payload"`
+	VectorClock map[string]uint64 `json:"vector_clock"`
+	Timestamp   time.Time         `json:"timestamp"`
 }
 
 // AntiEntropyResult summarises a Merkle-tree reconciliation pass.
 type AntiEntropyResult struct {
-	PeerID        string `json:"peer_id"`
-	KeysCompared  int    `json:"keys_compared"`
-	KeysMissing   int    `json:"keys_missing"`
-	KeysRepaired  int    `json:"keys_repaired"`
-	DurationMs    int64  `json:"duration_ms"`
+	PeerID       string `json:"peer_id"`
+	KeysCompared int    `json:"keys_compared"`
+	KeysMissing  int    `json:"keys_missing"`
+	KeysRepaired int    `json:"keys_repaired"`
+	DurationMs   int64  `json:"duration_ms"`
 }
 
 // GossipState tracks gossip protocol metadata.
 type GossipState struct {
-	Generation   uint64            `json:"generation"`
-	Members      int               `json:"members"`
-	Suspects     int               `json:"suspects"`
-	Unreachable  int               `json:"unreachable"`
-	LastGossip   time.Time         `json:"last_gossip"`
-	VectorClock  map[string]uint64 `json:"vector_clock"`
+	Generation  uint64            `json:"generation"`
+	Members     int               `json:"members"`
+	Suspects    int               `json:"suspects"`
+	Unreachable int               `json:"unreachable"`
+	LastGossip  time.Time         `json:"last_gossip"`
+	VectorClock map[string]uint64 `json:"vector_clock"`
 }
 
 // ReplicatorStats exposes operational counters.
 type ReplicatorStats struct {
-	PeersTotal       int64 `json:"peers_total"`
-	MessagesSent     int64 `json:"messages_sent"`
-	MessagesReceived int64 `json:"messages_received"`
+	PeersTotal        int64 `json:"peers_total"`
+	MessagesSent      int64 `json:"messages_sent"`
+	MessagesReceived  int64 `json:"messages_received"`
 	ConflictsResolved int64 `json:"conflicts_resolved"`
-	AntiEntropyRuns  int64 `json:"anti_entropy_runs"`
+	AntiEntropyRuns   int64 `json:"anti_entropy_runs"`
 }
 
 // ReplicatorConfig configures the active-active replicator.

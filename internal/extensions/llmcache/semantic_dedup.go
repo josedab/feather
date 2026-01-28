@@ -34,35 +34,35 @@ type DedupResult struct {
 
 // ProviderCostReport provides per-provider cost breakdown.
 type ProviderCostReport struct {
-	Provider     Provider  `json:"provider"`
-	TotalCost    float64   `json:"total_cost_usd"`
-	TotalSaved   float64   `json:"total_saved_usd"`
-	TotalTokens  int64     `json:"total_tokens"`
-	CacheHits    int64     `json:"cache_hits"`
-	CacheMisses  int64     `json:"cache_misses"`
-	HitRate      float64   `json:"hit_rate"`
-	SavingsRate  float64   `json:"savings_rate"`
-	Models       []ModelCost `json:"models"`
+	Provider    Provider    `json:"provider"`
+	TotalCost   float64     `json:"total_cost_usd"`
+	TotalSaved  float64     `json:"total_saved_usd"`
+	TotalTokens int64       `json:"total_tokens"`
+	CacheHits   int64       `json:"cache_hits"`
+	CacheMisses int64       `json:"cache_misses"`
+	HitRate     float64     `json:"hit_rate"`
+	SavingsRate float64     `json:"savings_rate"`
+	Models      []ModelCost `json:"models"`
 }
 
 // ModelCost breaks down costs by model within a provider.
 type ModelCost struct {
-	Model       string  `json:"model"`
-	Cost        float64 `json:"cost_usd"`
-	Saved       float64 `json:"saved_usd"`
-	Requests    int64   `json:"requests"`
+	Model        string  `json:"model"`
+	Cost         float64 `json:"cost_usd"`
+	Saved        float64 `json:"saved_usd"`
+	Requests     int64   `json:"requests"`
 	AvgLatencyMs float64 `json:"avg_latency_ms"`
 }
 
 // CostDashboard provides a comprehensive cost overview.
 type CostDashboard struct {
-	TotalCost     float64              `json:"total_cost_usd"`
-	TotalSaved    float64              `json:"total_saved_usd"`
-	SavingsRate   float64              `json:"savings_rate"`
-	ByProvider    []ProviderCostReport `json:"by_provider"`
-	DailyTrend    []DailyCost          `json:"daily_trend"`
-	TopExpensive  []ExpensiveQuery     `json:"top_expensive_queries"`
-	GeneratedAt   time.Time            `json:"generated_at"`
+	TotalCost    float64              `json:"total_cost_usd"`
+	TotalSaved   float64              `json:"total_saved_usd"`
+	SavingsRate  float64              `json:"savings_rate"`
+	ByProvider   []ProviderCostReport `json:"by_provider"`
+	DailyTrend   []DailyCost          `json:"daily_trend"`
+	TopExpensive []ExpensiveQuery     `json:"top_expensive_queries"`
+	GeneratedAt  time.Time            `json:"generated_at"`
 }
 
 // DailyCost tracks cost per day.
@@ -86,28 +86,27 @@ type ExpensiveQuery struct {
 
 // EnhancedCostTracker extends cost tracking with time-series and per-model detail.
 type EnhancedCostTracker struct {
-	mu          sync.RWMutex
-	byProvider  map[Provider]*providerDetail
-	dailyCosts  []DailyCost
-	expensive   []ExpensiveQuery
-	totalCost   float64
-	totalSaved  float64
+	mu         sync.RWMutex
+	byProvider map[Provider]*providerDetail
+	expensive  []ExpensiveQuery
+	totalCost  float64
+	totalSaved float64
 }
 
 type providerDetail struct {
-	cost     float64
-	saved    float64
-	tokens   int64
-	hits     int64
-	misses   int64
-	models   map[string]*modelDetail
+	cost   float64
+	saved  float64
+	tokens int64
+	hits   int64
+	misses int64
+	models map[string]*modelDetail
 }
 
 type modelDetail struct {
-	cost        float64
-	saved       float64
-	requests    int64
-	totalLatMs  float64
+	cost       float64
+	saved      float64
+	requests   int64
+	totalLatMs float64
 }
 
 // NewEnhancedCostTracker creates a new enhanced cost tracker.

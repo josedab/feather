@@ -78,23 +78,23 @@ type SyncOperation struct {
 
 // SyncResult captures the outcome of a sync cycle.
 type SyncResult struct {
-	PushedCount   int       `json:"pushed_count"`
-	PulledCount   int       `json:"pulled_count"`
-	ConflictCount int       `json:"conflict_count"`
-	ErrorCount    int       `json:"error_count"`
+	PushedCount   int           `json:"pushed_count"`
+	PulledCount   int           `json:"pulled_count"`
+	ConflictCount int           `json:"conflict_count"`
+	ErrorCount    int           `json:"error_count"`
 	Duration      time.Duration `json:"duration"`
-	Timestamp     time.Time `json:"timestamp"`
+	Timestamp     time.Time     `json:"timestamp"`
 }
 
 // Runtime is a lightweight feature store for edge devices.
 type Runtime struct {
-	config     RuntimeConfig
-	store      map[string]map[string]*FeatureValue // entityKey -> featureKey -> value
-	syncQueue  []SyncOperation
-	syncState  SyncState
-	lastSync   time.Time
+	config      RuntimeConfig
+	store       map[string]map[string]*FeatureValue // entityKey -> featureKey -> value
+	syncQueue   []SyncOperation
+	syncState   SyncState
+	lastSync    time.Time
 	syncHistory []SyncResult
-	mu         sync.RWMutex
+	mu          sync.RWMutex
 }
 
 // NewRuntime creates a new edge runtime.
@@ -271,14 +271,14 @@ func (r *Runtime) Stats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"device_id":       r.config.DeviceID,
-		"total_entities":  len(r.store),
-		"total_features":  totalFeatures,
-		"dirty_features":  dirtyFeatures,
-		"pending_sync":    len(r.syncQueue),
-		"sync_state":      string(r.syncState),
-		"last_sync":       r.lastSync,
-		"sync_history":    len(r.syncHistory),
+		"device_id":      r.config.DeviceID,
+		"total_entities": len(r.store),
+		"total_features": totalFeatures,
+		"dirty_features": dirtyFeatures,
+		"pending_sync":   len(r.syncQueue),
+		"sync_state":     string(r.syncState),
+		"last_sync":      r.lastSync,
+		"sync_history":   len(r.syncHistory),
 	}
 }
 

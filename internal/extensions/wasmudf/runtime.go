@@ -35,20 +35,20 @@ type Module struct {
 
 // ExecutionResult captures the output of a module execution.
 type ExecutionResult struct {
-	ModuleID    string
-	Success     bool
-	Output      map[string]interface{}
-	DurationMs  float64
+	ModuleID     string
+	Success      bool
+	Output       map[string]interface{}
+	DurationMs   float64
 	MemoryUsedMB int
-	Error       string
+	Error        string
 }
 
 // RuntimeConfig configures the WASM runtime.
 type RuntimeConfig struct {
-	MaxModules      int
-	DefaultMemoryMB int
+	MaxModules       int
+	DefaultMemoryMB  int
 	DefaultTimeoutMs int
-	MaxConcurrent   int
+	MaxConcurrent    int
 }
 
 // DefaultRuntimeConfig returns sensible defaults.

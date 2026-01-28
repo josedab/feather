@@ -48,11 +48,11 @@ type Prediction struct {
 
 // PredictorStats contains predictor statistics.
 type PredictorStats struct {
-	TotalRecords    int64
+	TotalRecords     int64
 	TotalPredictions int64
-	HitRate         float64
-	AvgScore        float64
-	TrackedKeys     int
+	HitRate          float64
+	AvgScore         float64
+	TrackedKeys      int
 }
 
 // keyState tracks the access state for a single key.
@@ -200,11 +200,11 @@ func (p *Predictor) Stats() PredictorStats {
 	}
 
 	return PredictorStats{
-		TotalRecords:    p.totalRecords.Load(),
+		TotalRecords:     p.totalRecords.Load(),
 		TotalPredictions: p.totalPreds.Load(),
-		HitRate:         hitRate,
-		AvgScore:        avgScore,
-		TrackedKeys:     len(p.accessCounts),
+		HitRate:          hitRate,
+		AvgScore:         avgScore,
+		TrackedKeys:      len(p.accessCounts),
 	}
 }
 

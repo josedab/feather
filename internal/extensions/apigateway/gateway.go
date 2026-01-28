@@ -57,11 +57,11 @@ func DefaultGatewayConfig() GatewayConfig {
 
 // RouteResult contains the outcome of a routing decision.
 type RouteResult struct {
-	BackendID    string
-	BackendURL   string
-	Coalesced    bool
+	BackendID     string
+	BackendURL    string
+	Coalesced     bool
 	CoalesceCount int
-	LatencyMs    float64
+	LatencyMs     float64
 }
 
 // BackendStat holds per-backend statistics.

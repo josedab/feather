@@ -52,12 +52,12 @@ type Region struct {
 
 // RegionMetrics holds measured latency and health for a region.
 type RegionMetrics struct {
-	RegionID      string    `json:"region_id"`
-	LatencyMs     float64   `json:"latency_ms"`
-	ErrorRate     float64   `json:"error_rate"`
-	RequestCount  int64     `json:"request_count"`
-	LastProbe     time.Time `json:"last_probe"`
-	Available     bool      `json:"available"`
+	RegionID     string    `json:"region_id"`
+	LatencyMs    float64   `json:"latency_ms"`
+	ErrorRate    float64   `json:"error_rate"`
+	RequestCount int64     `json:"request_count"`
+	LastProbe    time.Time `json:"last_probe"`
+	Available    bool      `json:"available"`
 }
 
 // RoutingDecision captures why a region was selected.
@@ -70,11 +70,11 @@ type RoutingDecision struct {
 
 // RouterConfig configures the geo-router.
 type RouterConfig struct {
-	DefaultRegion      string
-	MaxLatencyMs       float64
+	DefaultRegion       string
+	MaxLatencyMs        float64
 	HealthCheckInterval time.Duration
-	FailoverEnabled    bool
-	ResidencyPolicies  map[string]ResidencyPolicy // entity prefix -> policy
+	FailoverEnabled     bool
+	ResidencyPolicies   map[string]ResidencyPolicy // entity prefix -> policy
 }
 
 // DefaultRouterConfig returns sensible defaults.

@@ -60,9 +60,9 @@ type Tag struct {
 
 // VersionStats holds summary statistics about the version store.
 type VersionStats struct {
-	BranchCount int    `json:"branch_count"`
-	CommitCount int    `json:"commit_count"`
-	TagCount    int    `json:"tag_count"`
+	BranchCount  int    `json:"branch_count"`
+	CommitCount  int    `json:"commit_count"`
+	TagCount     int    `json:"tag_count"`
 	ActiveBranch string `json:"active_branch"`
 }
 

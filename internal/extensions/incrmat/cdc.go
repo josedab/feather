@@ -28,32 +28,32 @@ const (
 
 // CDCSourceConfig configures a CDC source connection.
 type CDCSourceConfig struct {
-	ID              string            `json:"id"`
-	Name            string            `json:"name"`
-	Type            CDCSourceType     `json:"type"`
-	ConnectionURL   string            `json:"connection_url,omitempty"`
-	Database        string            `json:"database,omitempty"`
-	Table           string            `json:"table,omitempty"`
-	Topic           string            `json:"topic,omitempty"`
-	SlotName        string            `json:"slot_name,omitempty"` // PostgreSQL replication slot
-	FeatureGroup    string            `json:"feature_group"`
-	FieldMapping    map[string]string `json:"field_mapping,omitempty"`
-	PollInterval    time.Duration     `json:"poll_interval_ns,omitempty"`
-	BatchSize       int               `json:"batch_size,omitempty"`
-	Enabled         bool              `json:"enabled"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Type          CDCSourceType     `json:"type"`
+	ConnectionURL string            `json:"connection_url,omitempty"`
+	Database      string            `json:"database,omitempty"`
+	Table         string            `json:"table,omitempty"`
+	Topic         string            `json:"topic,omitempty"`
+	SlotName      string            `json:"slot_name,omitempty"` // PostgreSQL replication slot
+	FeatureGroup  string            `json:"feature_group"`
+	FieldMapping  map[string]string `json:"field_mapping,omitempty"`
+	PollInterval  time.Duration     `json:"poll_interval_ns,omitempty"`
+	BatchSize     int               `json:"batch_size,omitempty"`
+	Enabled       bool              `json:"enabled"`
 }
 
 // CDCEvent represents a captured change from a source database.
 type CDCEvent struct {
-	SourceID    string                 `json:"source_id"`
-	Operation   CDCOperation           `json:"operation"`
-	Table       string                 `json:"table"`
-	EntityID    string                 `json:"entity_id"`
-	Before      map[string]interface{} `json:"before,omitempty"`
-	After       map[string]interface{} `json:"after,omitempty"`
-	Timestamp   time.Time              `json:"timestamp"`
-	LSN         int64                  `json:"lsn,omitempty"` // Log Sequence Number
-	Version     int64                  `json:"version"`
+	SourceID  string                 `json:"source_id"`
+	Operation CDCOperation           `json:"operation"`
+	Table     string                 `json:"table"`
+	EntityID  string                 `json:"entity_id"`
+	Before    map[string]interface{} `json:"before,omitempty"`
+	After     map[string]interface{} `json:"after,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	LSN       int64                  `json:"lsn,omitempty"` // Log Sequence Number
+	Version   int64                  `json:"version"`
 }
 
 // CDCSourceStatus represents the health of a CDC source.
@@ -69,13 +69,13 @@ type CDCSourceStatus struct {
 
 // CDCStats holds aggregate CDC statistics.
 type CDCStats struct {
-	TotalSources     int            `json:"total_sources"`
-	ActiveSources    int            `json:"active_sources"`
-	TotalCaptured    int64          `json:"total_captured"`
-	TotalProcessed   int64          `json:"total_processed"`
-	TotalErrors      int64          `json:"total_errors"`
-	ByOperation      map[string]int64 `json:"by_operation"`
-	BySource         map[string]int64 `json:"by_source"`
+	TotalSources   int              `json:"total_sources"`
+	ActiveSources  int              `json:"active_sources"`
+	TotalCaptured  int64            `json:"total_captured"`
+	TotalProcessed int64            `json:"total_processed"`
+	TotalErrors    int64            `json:"total_errors"`
+	ByOperation    map[string]int64 `json:"by_operation"`
+	BySource       map[string]int64 `json:"by_source"`
 }
 
 // CDCManager manages CDC sources and feeds change events to the Engine.

@@ -10,26 +10,26 @@ import (
 type TokenType int
 
 const (
-	TokenEOF TokenType = iota
-	TokenKeyword        // SELECT, FROM, WHERE, GROUP, BY, AS, OVER, PARTITION, WINDOW, ORDER, LIMIT, JOIN, ON, AND, OR, NOT, IN, HAVING
-	TokenIdent          // column names, table names
-	TokenNumber         // integer or float literals
-	TokenString         // 'quoted string'
-	TokenComma          // ,
-	TokenDot            // .
-	TokenStar           // *
-	TokenLParen         // (
-	TokenRParen         // )
-	TokenOp             // =, <, >, <=, >=, !=, <>
-	TokenPlus           // +
-	TokenMinus          // -
+	TokenEOF     TokenType = iota
+	TokenKeyword           // SELECT, FROM, WHERE, GROUP, BY, AS, OVER, PARTITION, WINDOW, ORDER, LIMIT, JOIN, ON, AND, OR, NOT, IN, HAVING
+	TokenIdent             // column names, table names
+	TokenNumber            // integer or float literals
+	TokenString            // 'quoted string'
+	TokenComma             // ,
+	TokenDot               // .
+	TokenStar              // *
+	TokenLParen            // (
+	TokenRParen            // )
+	TokenOp                // =, <, >, <=, >=, !=, <>
+	TokenPlus              // +
+	TokenMinus             // -
 )
 
 // Token represents a single lexer token.
 type Token struct {
-	Type    TokenType
-	Value   string
-	Pos     int
+	Type  TokenType
+	Value string
+	Pos   int
 }
 
 var keywords = map[string]bool{
@@ -188,15 +188,15 @@ func scanOperator(input string, start int) (string, int) {
 
 // SelectStatement represents a parsed SELECT query.
 type SelectStatement struct {
-	Columns   []SelectColumn   `json:"columns"`
-	From      string           `json:"from"`
-	Joins     []JoinClause     `json:"joins,omitempty"`
-	Where     *WhereClause     `json:"where,omitempty"`
-	GroupBy   []string         `json:"group_by,omitempty"`
-	Having    *WhereClause     `json:"having,omitempty"`
-	OrderBy   []OrderByColumn  `json:"order_by,omitempty"`
-	Limit     int              `json:"limit,omitempty"`
-	HasWindow bool             `json:"has_window"`
+	Columns   []SelectColumn  `json:"columns"`
+	From      string          `json:"from"`
+	Joins     []JoinClause    `json:"joins,omitempty"`
+	Where     *WhereClause    `json:"where,omitempty"`
+	GroupBy   []string        `json:"group_by,omitempty"`
+	Having    *WhereClause    `json:"having,omitempty"`
+	OrderBy   []OrderByColumn `json:"order_by,omitempty"`
+	Limit     int             `json:"limit,omitempty"`
+	HasWindow bool            `json:"has_window"`
 }
 
 // SelectColumn represents a column in the SELECT clause.

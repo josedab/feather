@@ -65,7 +65,7 @@ func TestGenerateSpec(t *testing.T) {
 	spec := g.GenerateSpec()
 	assert.Equal(t, "3.1.0", spec.OpenAPI)
 	assert.Equal(t, "Feather Feature Store API", spec.Info.Title)
-	assert.Len(t, spec.Paths, 2) // /v1/features and /v1/features/{id}
+	assert.Len(t, spec.Paths, 2)                 // /v1/features and /v1/features/{id}
 	assert.Len(t, spec.Paths["/v1/features"], 2) // GET and POST
 }
 

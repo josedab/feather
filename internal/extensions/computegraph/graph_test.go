@@ -221,12 +221,12 @@ func TestTopologicalSort(t *testing.T) {
 
 func TestCompute(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(*Engine)
-		target   string
-		inputs   map[string]interface{}
-		want     interface{}
-		wantErr  string
+		name    string
+		setup   func(*Engine)
+		target  string
+		inputs  map[string]interface{}
+		want    interface{}
+		wantErr string
 	}{
 		{
 			name: "identity",

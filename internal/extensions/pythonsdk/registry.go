@@ -12,7 +12,7 @@ type TransformType string
 const (
 	TransformOnDemand  TransformType = "on_demand"
 	TransformBatch     TransformType = "batch"
-	TransformStreaming  TransformType = "streaming"
+	TransformStreaming TransformType = "streaming"
 )
 
 // TransformStatus represents the current state of a transform.
@@ -27,28 +27,28 @@ const (
 
 // FieldSchema defines a single input or output field.
 type FieldSchema struct {
-	Name     string `json:"name"`
-	DType    string `json:"dtype"` // "int64", "float64", "string", "bool", "timestamp"
-	Required bool   `json:"required"`
+	Name     string      `json:"name"`
+	DType    string      `json:"dtype"` // "int64", "float64", "string", "bool", "timestamp"
+	Required bool        `json:"required"`
 	Default  interface{} `json:"default,omitempty"`
 }
 
 // TransformDef defines a Python feature transformation.
 type TransformDef struct {
-	ID           string          `json:"id"`
-	Name         string          `json:"name"`
-	Description  string          `json:"description,omitempty"`
-	Type         TransformType   `json:"type"`
-	SourceCode   string          `json:"source_code"`
-	EntryPoint   string          `json:"entry_point"` // Python function name
-	Inputs       []FieldSchema   `json:"inputs"`
-	Outputs      []FieldSchema   `json:"outputs"`
-	Dependencies []string        `json:"dependencies,omitempty"` // pip packages
-	FeatureGroup string          `json:"feature_group,omitempty"`
-	Status       TransformStatus `json:"status"`
-	Version      int             `json:"version"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description,omitempty"`
+	Type         TransformType     `json:"type"`
+	SourceCode   string            `json:"source_code"`
+	EntryPoint   string            `json:"entry_point"` // Python function name
+	Inputs       []FieldSchema     `json:"inputs"`
+	Outputs      []FieldSchema     `json:"outputs"`
+	Dependencies []string          `json:"dependencies,omitempty"` // pip packages
+	FeatureGroup string            `json:"feature_group,omitempty"`
+	Status       TransformStatus   `json:"status"`
+	Version      int               `json:"version"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
 	Tags         map[string]string `json:"tags,omitempty"`
 }
 
@@ -64,8 +64,8 @@ type ExecutionResult struct {
 
 // RegistryConfig configures the transform registry.
 type RegistryConfig struct {
-	MaxTransforms   int    `json:"max_transforms"`
-	WorkerEndpoint  string `json:"worker_endpoint"`
+	MaxTransforms    int           `json:"max_transforms"`
+	WorkerEndpoint   string        `json:"worker_endpoint"`
 	ExecutionTimeout time.Duration `json:"execution_timeout"`
 }
 
@@ -91,13 +91,13 @@ type RegistryStats struct {
 
 // Registry manages Python transform definitions.
 type Registry struct {
-	mu         sync.RWMutex
-	config     RegistryConfig
-	transforms map[string]*TransformDef
-	executions []ExecutionResult
-	totalExecs int64
-	successExecs int64
-	failedExecs  int64
+	mu            sync.RWMutex
+	config        RegistryConfig
+	transforms    map[string]*TransformDef
+	executions    []ExecutionResult
+	totalExecs    int64
+	successExecs  int64
+	failedExecs   int64
 	totalExecTime time.Duration
 }
 

@@ -76,10 +76,10 @@ func TestImpactAnalyzer_NotFound(t *testing.T) {
 
 func TestImpactAnalyzer_RiskLevels(t *testing.T) {
 	tests := []struct {
-		name          string
-		depCount      int
-		piiLevel      PIILevel
-		expectedRisk  RiskLevel
+		name         string
+		depCount     int
+		piiLevel     PIILevel
+		expectedRisk RiskLevel
 	}{
 		{"low_risk_few_deps", 2, PIINone, RiskLow},
 		{"medium_risk_several_deps", 5, PIINone, RiskMedium},

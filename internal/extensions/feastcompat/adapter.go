@@ -17,15 +17,15 @@ type FeatureViewMapping struct {
 
 // OnlineFeatureRequest represents a Feast-compatible GetOnlineFeatures request.
 type OnlineFeatureRequest struct {
-	Features []string               `json:"features"`
-	Entities map[string][]interface{} `json:"entities"`
-	FullFeatureNames bool           `json:"full_feature_names"`
+	Features         []string                 `json:"features"`
+	Entities         map[string][]interface{} `json:"entities"`
+	FullFeatureNames bool                     `json:"full_feature_names"`
 }
 
 // OnlineFeatureResponse represents a Feast-compatible GetOnlineFeatures response.
 type OnlineFeatureResponse struct {
-	Metadata FeatureResponseMetadata  `json:"metadata"`
-	Results  []FeatureResult          `json:"results"`
+	Metadata FeatureResponseMetadata `json:"metadata"`
+	Results  []FeatureResult         `json:"results"`
 }
 
 // FeatureResponseMetadata contains response metadata.
@@ -35,9 +35,9 @@ type FeatureResponseMetadata struct {
 
 // FeatureResult represents a single feature value in a Feast response.
 type FeatureResult struct {
-	Values    []interface{} `json:"values"`
-	Statuses  []string      `json:"statuses"`
-	EventTimestamps []string `json:"event_timestamps"`
+	Values          []interface{} `json:"values"`
+	Statuses        []string      `json:"statuses"`
+	EventTimestamps []string      `json:"event_timestamps"`
 }
 
 // MaterializeRequest represents a Feast-compatible materialize request.
@@ -49,9 +49,9 @@ type MaterializeRequest struct {
 
 // MaterializeResponse represents a Feast-compatible materialize response.
 type MaterializeResponse struct {
-	Success     bool     `json:"success"`
+	Success      bool     `json:"success"`
 	FeatureViews []string `json:"feature_views"`
-	Message     string   `json:"message"`
+	Message      string   `json:"message"`
 }
 
 // AdapterConfig configures the Feast compatibility adapter.
@@ -271,11 +271,11 @@ func (a *Adapter) Stats() AdapterStats {
 
 // AdapterStats provides adapter statistics.
 type AdapterStats struct {
-	TotalRequests        int64 `json:"total_requests"`
-	SuccessfulRequests   int64 `json:"successful_requests"`
-	FailedRequests       int64 `json:"failed_requests"`
-	MaterializeRequests  int64 `json:"materialize_requests"`
-	TotalMappings        int   `json:"total_mappings"`
+	TotalRequests       int64 `json:"total_requests"`
+	SuccessfulRequests  int64 `json:"successful_requests"`
+	FailedRequests      int64 `json:"failed_requests"`
+	MaterializeRequests int64 `json:"materialize_requests"`
+	TotalMappings       int   `json:"total_mappings"`
 }
 
 func parseFeatureRef(ref string) (view, feature string) {

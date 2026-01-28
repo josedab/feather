@@ -60,8 +60,8 @@ func TestServiceRegistry_Discover(t *testing.T) {
 		feature string
 		want    int
 	}{
-		{"clicks", 1},  // n3 is draining, only n1
-		{"views", 2},   // n1 and n2
+		{"clicks", 1}, // n3 is draining, only n1
+		{"views", 2},  // n1 and n2
 		{"unknown", 0},
 	}
 	for _, tt := range tests {

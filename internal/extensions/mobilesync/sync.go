@@ -53,11 +53,11 @@ type Device struct {
 
 // SyncRequest is sent by a mobile client to request feature updates.
 type SyncRequest struct {
-	DeviceID      string   `json:"device_id"`
-	Mode          SyncMode `json:"mode"`
+	DeviceID      string    `json:"device_id"`
+	Mode          SyncMode  `json:"mode"`
 	Since         time.Time `json:"since"`
-	Features      []string `json:"features"`
-	ClientVersion int64    `json:"client_version"`
+	Features      []string  `json:"features"`
+	ClientVersion int64     `json:"client_version"`
 }
 
 // SyncResponse is returned to the client with feature updates.

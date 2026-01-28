@@ -32,10 +32,10 @@ const (
 
 // Token is a single lexer token.
 type Token struct {
-	Type    TokenType
-	Value   string
-	Line    int
-	Column  int
+	Type   TokenType
+	Value  string
+	Line   int
+	Column int
 }
 
 var keywords = map[string]bool{
@@ -174,7 +174,7 @@ func (l *Lexer) readOperator() Token {
 	l.advance()
 	// Handle two-char operators
 	if l.pos < len(l.input) {
-		twoChar := l.input[start:l.pos+1]
+		twoChar := l.input[start : l.pos+1]
 		if twoChar == "<=" || twoChar == ">=" || twoChar == "!=" || twoChar == "<>" {
 			l.advance()
 			return Token{Type: TokenOperator, Value: twoChar, Line: startLine, Column: startCol}
@@ -183,9 +183,11 @@ func (l *Lexer) readOperator() Token {
 	return Token{Type: TokenOperator, Value: l.input[start:l.pos], Line: startLine, Column: startCol}
 }
 
-func isDigit(ch byte) bool    { return ch >= '0' && ch <= '9' }
-func isLetter(ch byte) bool   { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') }
-func isOperator(ch byte) bool { return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '<' || ch == '>' || ch == '!' }
+func isDigit(ch byte) bool  { return ch >= '0' && ch <= '9' }
+func isLetter(ch byte) bool { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') }
+func isOperator(ch byte) bool {
+	return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '=' || ch == '<' || ch == '>' || ch == '!'
+}
 func isPunctuation(ch byte) bool {
 	return ch == '(' || ch == ')' || ch == ',' || ch == ';' || ch == '.'
 }
@@ -223,13 +225,13 @@ type ASTNode struct {
 
 // Pipeline represents a compiled feature pipeline.
 type Pipeline struct {
-	Name       string         `json:"name"`
-	EntityType string         `json:"entity_type"`
-	Columns    []PipelineCol  `json:"columns"`
-	Filter     *FilterExpr    `json:"filter,omitempty"`
-	Window     *WindowSpec    `json:"window,omitempty"`
-	Schedule   time.Duration  `json:"schedule,omitempty"`
-	CreatedAt  time.Time      `json:"created_at"`
+	Name       string        `json:"name"`
+	EntityType string        `json:"entity_type"`
+	Columns    []PipelineCol `json:"columns"`
+	Filter     *FilterExpr   `json:"filter,omitempty"`
+	Window     *WindowSpec   `json:"window,omitempty"`
+	Schedule   time.Duration `json:"schedule,omitempty"`
+	CreatedAt  time.Time     `json:"created_at"`
 }
 
 // PipelineCol defines a column in the pipeline output.

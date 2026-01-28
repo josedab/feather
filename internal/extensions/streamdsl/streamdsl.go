@@ -383,16 +383,16 @@ func (c *Compiler) buildGraph(spec PipelineSpec) ([]ExecutionNode, []ExecutionEd
 	for _, w := range spec.Windows {
 		nodes = append(nodes, ExecutionNode{
 			ID: w.Name, Type: NodeWindow, Name: w.Name,
-			Config:  map[string]string{"type": string(w.Type), "size": w.Size.String()},
-			Inputs:  []string{w.Input}, Outputs: nil,
+			Config: map[string]string{"type": string(w.Type), "size": w.Size.String()},
+			Inputs: []string{w.Input}, Outputs: nil,
 		})
 		edges = append(edges, ExecutionEdge{From: w.Input, To: w.Name})
 	}
 	for _, j := range spec.Joins {
 		nodes = append(nodes, ExecutionNode{
 			ID: j.Name, Type: NodeJoin, Name: j.Name,
-			Config:  map[string]string{"on": j.On, "type": j.Type},
-			Inputs:  []string{j.Left, j.Right}, Outputs: nil,
+			Config: map[string]string{"on": j.On, "type": j.Type},
+			Inputs: []string{j.Left, j.Right}, Outputs: nil,
 		})
 		edges = append(edges, ExecutionEdge{From: j.Left, To: j.Name})
 		edges = append(edges, ExecutionEdge{From: j.Right, To: j.Name})
@@ -400,16 +400,16 @@ func (c *Compiler) buildGraph(spec PipelineSpec) ([]ExecutionNode, []ExecutionEd
 	for _, f := range spec.Filters {
 		nodes = append(nodes, ExecutionNode{
 			ID: f.Name, Type: NodeFilter, Name: f.Name,
-			Config:  map[string]string{"condition": f.Condition},
-			Inputs:  []string{f.Input}, Outputs: nil,
+			Config: map[string]string{"condition": f.Condition},
+			Inputs: []string{f.Input}, Outputs: nil,
 		})
 		edges = append(edges, ExecutionEdge{From: f.Input, To: f.Name})
 	}
 	for _, a := range spec.Aggregations {
 		nodes = append(nodes, ExecutionNode{
 			ID: a.Name, Type: NodeAggregate, Name: a.Name,
-			Config:  map[string]string{"function": string(a.Function), "field": a.Field},
-			Inputs:  []string{a.Input}, Outputs: nil,
+			Config: map[string]string{"function": string(a.Function), "field": a.Field},
+			Inputs: []string{a.Input}, Outputs: nil,
 		})
 		edges = append(edges, ExecutionEdge{From: a.Input, To: a.Name})
 	}

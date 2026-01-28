@@ -37,16 +37,16 @@ const (
 
 // CandidateFeature represents a generated feature candidate.
 type CandidateFeature struct {
-	Name            string        `json:"name"`
-	Expression      string        `json:"expression"`
-	Transform       TransformType `json:"transform"`
-	SourceFeatures  []string      `json:"source_features"`
-	Score           float64       `json:"score"` // 0-1, higher is better
-	Correlation     float64       `json:"correlation"`
-	Coverage        float64       `json:"coverage"` // % non-null
-	Explanation     string        `json:"explanation"`
-	DataType        string        `json:"data_type"`
-	GeneratedAt     time.Time     `json:"generated_at"`
+	Name           string        `json:"name"`
+	Expression     string        `json:"expression"`
+	Transform      TransformType `json:"transform"`
+	SourceFeatures []string      `json:"source_features"`
+	Score          float64       `json:"score"` // 0-1, higher is better
+	Correlation    float64       `json:"correlation"`
+	Coverage       float64       `json:"coverage"` // % non-null
+	Explanation    string        `json:"explanation"`
+	DataType       string        `json:"data_type"`
+	GeneratedAt    time.Time     `json:"generated_at"`
 }
 
 // ColumnStats holds descriptive statistics for a data column.
@@ -73,23 +73,23 @@ type Dataset struct {
 
 // EngineConfig configures the AutoFE engine.
 type EngineConfig struct {
-	MaxCandidates       int
+	MaxCandidates        int
 	CorrelationThreshold float64
-	MinCoverage         float64
-	EnableInteractions  bool
-	EnableTimeBased     bool
-	BinCounts           []int
+	MinCoverage          float64
+	EnableInteractions   bool
+	EnableTimeBased      bool
+	BinCounts            []int
 }
 
 // DefaultEngineConfig returns sensible defaults.
 func DefaultEngineConfig() EngineConfig {
 	return EngineConfig{
-		MaxCandidates:       100,
+		MaxCandidates:        100,
 		CorrelationThreshold: 0.95,
-		MinCoverage:         0.8,
-		EnableInteractions:  true,
-		EnableTimeBased:     true,
-		BinCounts:           []int{5, 10, 20},
+		MinCoverage:          0.8,
+		EnableInteractions:   true,
+		EnableTimeBased:      true,
+		BinCounts:            []int{5, 10, 20},
 	}
 }
 
@@ -269,9 +269,9 @@ func (e *Engine) Stats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_candidates":  len(e.candidates),
-		"max_candidates":    e.config.MaxCandidates,
-		"transform_counts":  transformCounts,
+		"total_candidates": len(e.candidates),
+		"max_candidates":   e.config.MaxCandidates,
+		"transform_counts": transformCounts,
 	}
 }
 

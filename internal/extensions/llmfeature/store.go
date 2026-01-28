@@ -43,19 +43,19 @@ type PromptTemplate struct {
 
 // CompletionRecord stores a cached LLM completion.
 type CompletionRecord struct {
-	ID            string    `json:"id"`
-	TemplateID    string    `json:"template_id,omitempty"`
-	Prompt        string    `json:"prompt"`
-	Completion    string    `json:"completion"`
-	Model         string    `json:"model"`
-	TokensPrompt  int       `json:"tokens_prompt"`
-	TokensCompletion int   `json:"tokens_completion"`
-	TokensTotal   int       `json:"tokens_total"`
-	CostUSD       float64   `json:"cost_usd"`
-	LatencyMs     int64     `json:"latency_ms"`
-	CacheHit      bool      `json:"cache_hit"`
-	CreatedAt     time.Time `json:"created_at"`
-	ExpiresAt     time.Time `json:"expires_at,omitempty"`
+	ID               string    `json:"id"`
+	TemplateID       string    `json:"template_id,omitempty"`
+	Prompt           string    `json:"prompt"`
+	Completion       string    `json:"completion"`
+	Model            string    `json:"model"`
+	TokensPrompt     int       `json:"tokens_prompt"`
+	TokensCompletion int       `json:"tokens_completion"`
+	TokensTotal      int       `json:"tokens_total"`
+	CostUSD          float64   `json:"cost_usd"`
+	LatencyMs        int64     `json:"latency_ms"`
+	CacheHit         bool      `json:"cache_hit"`
+	CreatedAt        time.Time `json:"created_at"`
+	ExpiresAt        time.Time `json:"expires_at,omitempty"`
 }
 
 // TokenUsage tracks per-model token consumption.
@@ -71,17 +71,17 @@ type TokenUsage struct {
 
 // ModelPricing defines per-token costs for a model.
 type ModelPricing struct {
-	Model            string  `json:"model"`
-	PromptCostPer1K  float64 `json:"prompt_cost_per_1k"`
+	Model               string  `json:"model"`
+	PromptCostPer1K     float64 `json:"prompt_cost_per_1k"`
 	CompletionCostPer1K float64 `json:"completion_cost_per_1k"`
 }
 
 // StoreConfig configures the LLM feature store.
 type StoreConfig struct {
-	MaxTemplates    int
-	MaxCompletions  int
-	CompletionTTL   time.Duration
-	DefaultPricing  map[string]*ModelPricing
+	MaxTemplates   int
+	MaxCompletions int
+	CompletionTTL  time.Duration
+	DefaultPricing map[string]*ModelPricing
 }
 
 // DefaultStoreConfig returns sensible defaults.
@@ -91,9 +91,9 @@ func DefaultStoreConfig() StoreConfig {
 		MaxCompletions: 10000,
 		CompletionTTL:  time.Hour,
 		DefaultPricing: map[string]*ModelPricing{
-			"gpt-4":       {Model: "gpt-4", PromptCostPer1K: 0.03, CompletionCostPer1K: 0.06},
-			"gpt-3.5":     {Model: "gpt-3.5", PromptCostPer1K: 0.0005, CompletionCostPer1K: 0.0015},
-			"claude-3":    {Model: "claude-3", PromptCostPer1K: 0.015, CompletionCostPer1K: 0.075},
+			"gpt-4":    {Model: "gpt-4", PromptCostPer1K: 0.03, CompletionCostPer1K: 0.06},
+			"gpt-3.5":  {Model: "gpt-3.5", PromptCostPer1K: 0.0005, CompletionCostPer1K: 0.0015},
+			"claude-3": {Model: "claude-3", PromptCostPer1K: 0.015, CompletionCostPer1K: 0.075},
 		},
 	}
 }

@@ -940,11 +940,11 @@ func matchesRegex(value, pattern interface{}) bool {
 
 // AutoDecisionConfig configures automatic experiment decisioning.
 type AutoDecisionConfig struct {
-	Enabled           bool    `json:"enabled"`
-	MinSampleSize     int     `json:"min_sample_size"`
-	MaxPValue         float64 `json:"max_p_value"`
+	Enabled           bool          `json:"enabled"`
+	MinSampleSize     int           `json:"min_sample_size"`
+	MaxPValue         float64       `json:"max_p_value"`
 	MinRunDuration    time.Duration `json:"min_run_duration"`
-	StopOnSignificant bool    `json:"stop_on_significant"`
+	StopOnSignificant bool          `json:"stop_on_significant"`
 }
 
 // DefaultAutoDecisionConfig returns sensible defaults.
@@ -1032,11 +1032,11 @@ func (e *Engine) CheckAutoDecision(experimentID string, config AutoDecisionConfi
 
 // FeatureImpact tracks the cumulative impact of experiments on a feature.
 type FeatureImpact struct {
-	FeatureID        string             `json:"feature_id"`
-	TotalExperiments int                `json:"total_experiments"`
-	CompletedCount   int                `json:"completed_count"`
-	ActiveCount      int                `json:"active_count"`
-	CumulativeLift   float64            `json:"cumulative_lift"`
+	FeatureID         string             `json:"feature_id"`
+	TotalExperiments  int                `json:"total_experiments"`
+	CompletedCount    int                `json:"completed_count"`
+	ActiveCount       int                `json:"active_count"`
+	CumulativeLift    float64            `json:"cumulative_lift"`
 	ExperimentImpacts []ExperimentImpact `json:"experiment_impacts"`
 }
 
@@ -1122,10 +1122,10 @@ func (e *Engine) GetExperimentSummary() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_experiments":  total,
-		"by_status":          byStatus,
-		"features_tested":    len(features),
-		"total_exposures":    len(e.exposures),
+		"total_experiments":   total,
+		"by_status":           byStatus,
+		"features_tested":     len(features),
+		"total_exposures":     len(e.exposures),
 		"total_metric_events": len(e.metrics),
 	}
 }

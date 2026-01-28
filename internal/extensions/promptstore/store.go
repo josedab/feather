@@ -38,10 +38,10 @@ type PromptUsage struct {
 
 // RenderResult represents a rendered prompt with metadata.
 type RenderResult struct {
-	PromptID    string `json:"prompt_id"`
-	Version     int    `json:"version"`
-	Rendered    string `json:"rendered"`
-	TokenEstimate int  `json:"token_estimate"`
+	PromptID      string `json:"prompt_id"`
+	Version       int    `json:"version"`
+	Rendered      string `json:"rendered"`
+	TokenEstimate int    `json:"token_estimate"`
 }
 
 // StoreConfig configures the prompt store.
@@ -62,10 +62,10 @@ func DefaultStoreConfig() StoreConfig {
 
 // Store manages LLM prompt templates with versioning and tracking.
 type Store struct {
-	mu       sync.RWMutex
-	config   StoreConfig
-	prompts  map[string][]*PromptTemplate // ID -> versions (sorted)
-	usage    map[string]*PromptUsage       // "id:version" -> usage
+	mu      sync.RWMutex
+	config  StoreConfig
+	prompts map[string][]*PromptTemplate // ID -> versions (sorted)
+	usage   map[string]*PromptUsage      // "id:version" -> usage
 }
 
 // NewStore creates a new prompt store.

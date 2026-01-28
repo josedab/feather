@@ -60,8 +60,8 @@ type RevenueShare struct {
 
 // UsageMeter tracks real-time usage for a feature subscription.
 type UsageMeter struct {
-	FeatureID    string     `json:"feature_id"`
-	SubscriberID string     `json:"subscriber_id"`
+	FeatureID    string `json:"feature_id"`
+	SubscriberID string `json:"subscriber_id"`
 	RequestCount atomic.Int64
 	DataBytes    atomic.Int64
 	WindowStart  time.Time `json:"window_start"`

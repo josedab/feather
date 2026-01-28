@@ -10,11 +10,11 @@ import (
 
 // ValidatorConfig configures the consistency validator.
 type ValidatorConfig struct {
-	SampleSize      int           `json:"sample_size"`
-	DivergenceThreshold float64   `json:"divergence_threshold"`
-	CheckInterval   time.Duration `json:"check_interval"`
-	MaxAlerts       int           `json:"max_alerts"`
-	AlertCooldown   time.Duration `json:"alert_cooldown"`
+	SampleSize          int           `json:"sample_size"`
+	DivergenceThreshold float64       `json:"divergence_threshold"`
+	CheckInterval       time.Duration `json:"check_interval"`
+	MaxAlerts           int           `json:"max_alerts"`
+	AlertCooldown       time.Duration `json:"alert_cooldown"`
 }
 
 // DefaultValidatorConfig returns sensible defaults.
@@ -32,37 +32,37 @@ func DefaultValidatorConfig() ValidatorConfig {
 type SkewType string
 
 const (
-	SkewNone          SkewType = "none"
-	SkewDistribution  SkewType = "distribution"
-	SkewMean          SkewType = "mean"
-	SkewMissing       SkewType = "missing_values"
-	SkewRange         SkewType = "range"
+	SkewNone         SkewType = "none"
+	SkewDistribution SkewType = "distribution"
+	SkewMean         SkewType = "mean"
+	SkewMissing      SkewType = "missing_values"
+	SkewRange        SkewType = "range"
 )
 
 // FeatureConsistency tracks online vs offline data for a single feature.
 type FeatureConsistency struct {
-	Name         string    `json:"name"`
+	Name          string    `json:"name"`
 	OnlineValues  []float64 `json:"-"`
 	OfflineValues []float64 `json:"-"`
-	LastChecked  time.Time `json:"last_checked"`
-	LastAlerted  time.Time `json:"-"`
+	LastChecked   time.Time `json:"last_checked"`
+	LastAlerted   time.Time `json:"-"`
 }
 
 // ConsistencyReport represents the result of a consistency check.
 type ConsistencyReport struct {
-	Feature        string    `json:"feature"`
-	Consistent     bool      `json:"consistent"`
-	SkewType       SkewType  `json:"skew_type"`
-	DivergenceScore float64  `json:"divergence_score"`
-	OnlineMean     float64   `json:"online_mean"`
-	OfflineMean    float64   `json:"offline_mean"`
-	OnlineStdDev   float64   `json:"online_std_dev"`
-	OfflineStdDev  float64   `json:"offline_std_dev"`
-	OnlineMissing  float64   `json:"online_missing_rate"`
-	OfflineMissing float64   `json:"offline_missing_rate"`
-	SampleSize     int       `json:"sample_size"`
-	CheckedAt      time.Time `json:"checked_at"`
-	Message        string    `json:"message,omitempty"`
+	Feature         string    `json:"feature"`
+	Consistent      bool      `json:"consistent"`
+	SkewType        SkewType  `json:"skew_type"`
+	DivergenceScore float64   `json:"divergence_score"`
+	OnlineMean      float64   `json:"online_mean"`
+	OfflineMean     float64   `json:"offline_mean"`
+	OnlineStdDev    float64   `json:"online_std_dev"`
+	OfflineStdDev   float64   `json:"offline_std_dev"`
+	OnlineMissing   float64   `json:"online_missing_rate"`
+	OfflineMissing  float64   `json:"offline_missing_rate"`
+	SampleSize      int       `json:"sample_size"`
+	CheckedAt       time.Time `json:"checked_at"`
+	Message         string    `json:"message,omitempty"`
 }
 
 // ConsistencyAlert represents a detected consistency violation.

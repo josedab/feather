@@ -27,31 +27,31 @@ func DefaultIncrementalConfig() IncrementalConfig {
 
 // ChangeEvent represents an upstream feature change.
 type ChangeEvent struct {
-	EntityKey   string                 `json:"entity_key"`
-	FeatureName string                 `json:"feature_name"`
-	OldValue    interface{}            `json:"old_value,omitempty"`
-	NewValue    interface{}            `json:"new_value"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Metadata    map[string]string      `json:"metadata,omitempty"`
+	EntityKey   string            `json:"entity_key"`
+	FeatureName string            `json:"feature_name"`
+	OldValue    interface{}       `json:"old_value,omitempty"`
+	NewValue    interface{}       `json:"new_value"`
+	Timestamp   time.Time         `json:"timestamp"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
 // Checkpoint stores the state of incremental processing.
 type Checkpoint struct {
-	PipelineName  string    `json:"pipeline_name"`
-	StepName      string    `json:"step_name"`
-	Offset        int64     `json:"offset"`
-	ProcessedAt   time.Time `json:"processed_at"`
-	RecordCount   int64     `json:"record_count"`
-	State         map[string]interface{} `json:"state,omitempty"`
+	PipelineName string                 `json:"pipeline_name"`
+	StepName     string                 `json:"step_name"`
+	Offset       int64                  `json:"offset"`
+	ProcessedAt  time.Time              `json:"processed_at"`
+	RecordCount  int64                  `json:"record_count"`
+	State        map[string]interface{} `json:"state,omitempty"`
 }
 
 // DAGNode represents a node in the materialization DAG.
 type DAGNode struct {
-	Name         string   `json:"name"`
-	Dependencies []string `json:"dependencies"`
-	Dirty        bool     `json:"dirty"`
+	Name         string    `json:"name"`
+	Dependencies []string  `json:"dependencies"`
+	Dirty        bool      `json:"dirty"`
 	LastComputed time.Time `json:"last_computed"`
-	ComputeCount int64    `json:"compute_count"`
+	ComputeCount int64     `json:"compute_count"`
 }
 
 // IncrementalEngine extends the base Engine with incremental processing.

@@ -29,7 +29,7 @@ type Variant struct {
 
 // VariantMetrics tracks performance metrics for a variant.
 type VariantMetrics struct {
-	Requests   int64
+	Requests     int64
 	AvgLatencyMs float64
 	ErrorRate    float64
 	CustomScore  float64

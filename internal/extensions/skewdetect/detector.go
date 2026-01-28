@@ -113,13 +113,13 @@ type SkewAlert struct {
 
 // DataContract defines constraints that a feature must satisfy.
 type DataContract struct {
-	Feature      string   `json:"feature"`
-	MinValue     *float64 `json:"min_value,omitempty"`
-	MaxValue     *float64 `json:"max_value,omitempty"`
-	NotNull      bool     `json:"not_null"`
-	MaxNullRate  float64  `json:"max_null_rate"`
-	MaxSkew      float64  `json:"max_skew"`
-	AllowedTypes []string `json:"allowed_types,omitempty"`
+	Feature      string    `json:"feature"`
+	MinValue     *float64  `json:"min_value,omitempty"`
+	MaxValue     *float64  `json:"max_value,omitempty"`
+	NotNull      bool      `json:"not_null"`
+	MaxNullRate  float64   `json:"max_null_rate"`
+	MaxSkew      float64   `json:"max_skew"`
+	AllowedTypes []string  `json:"allowed_types,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

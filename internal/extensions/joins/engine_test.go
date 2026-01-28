@@ -248,12 +248,12 @@ func TestExecuteWithWatermarkFiltering(t *testing.T) {
 	}
 
 	leftData := map[string]map[string]*FeatureValue{
-		"old_entity":  {"age": {Value: 25, Timestamp: oldTimestamp}},
-		"new_entity":  {"age": {Value: 30, Timestamp: newTimestamp}},
+		"old_entity": {"age": {Value: 25, Timestamp: oldTimestamp}},
+		"new_entity": {"age": {Value: 30, Timestamp: newTimestamp}},
 	}
 	rightData := map[string]map[string]*FeatureValue{
-		"old_entity":  {"amount": {Value: 100.0, Timestamp: oldTimestamp}},
-		"new_entity":  {"amount": {Value: 200.0, Timestamp: newTimestamp}},
+		"old_entity": {"amount": {Value: 100.0, Timestamp: oldTimestamp}},
+		"new_entity": {"amount": {Value: 200.0, Timestamp: newTimestamp}},
 	}
 
 	output, err := engine.ExecuteJoin(context.Background(), plan.ID, leftData, rightData)

@@ -45,38 +45,38 @@ type Module struct {
 
 // Device represents an edge device in the fleet.
 type Device struct {
-	ID             string            `json:"id"`
-	Name           string            `json:"name"`
-	Region         string            `json:"region,omitempty"`
-	Status         DeviceStatus      `json:"status"`
-	DeployedModules []string         `json:"deployed_modules"`
-	LastSyncAt     time.Time         `json:"last_sync_at"`
-	LastHeartbeat  time.Time         `json:"last_heartbeat"`
-	CachedFeatures int64            `json:"cached_features"`
-	PendingSync    int64             `json:"pending_sync"`
-	Metadata       map[string]string `json:"metadata,omitempty"`
-	CreatedAt      time.Time         `json:"created_at"`
+	ID              string            `json:"id"`
+	Name            string            `json:"name"`
+	Region          string            `json:"region,omitempty"`
+	Status          DeviceStatus      `json:"status"`
+	DeployedModules []string          `json:"deployed_modules"`
+	LastSyncAt      time.Time         `json:"last_sync_at"`
+	LastHeartbeat   time.Time         `json:"last_heartbeat"`
+	CachedFeatures  int64             `json:"cached_features"`
+	PendingSync     int64             `json:"pending_sync"`
+	Metadata        map[string]string `json:"metadata,omitempty"`
+	CreatedAt       time.Time         `json:"created_at"`
 }
 
 // SyncResult represents the outcome of a device synchronization.
 type SyncResult struct {
-	DeviceID        string    `json:"device_id"`
-	FeaturesUpdated int64     `json:"features_updated"`
-	ModulesDeployed int       `json:"modules_deployed"`
+	DeviceID        string        `json:"device_id"`
+	FeaturesUpdated int64         `json:"features_updated"`
+	ModulesDeployed int           `json:"modules_deployed"`
 	Duration        time.Duration `json:"duration_ns"`
-	Success         bool      `json:"success"`
-	Error           string    `json:"error,omitempty"`
-	Timestamp       time.Time `json:"timestamp"`
+	Success         bool          `json:"success"`
+	Error           string        `json:"error,omitempty"`
+	Timestamp       time.Time     `json:"timestamp"`
 }
 
 // EdgeManagerConfig configures the edge manager.
 type EdgeManagerConfig struct {
-	MaxModules        int           `json:"max_modules"`
-	MaxDevices        int           `json:"max_devices"`
-	DefaultMemLimit   int64         `json:"default_memory_limit"`
-	DefaultTimeout    int           `json:"default_timeout_ms"`
-	HeartbeatTimeout  time.Duration `json:"heartbeat_timeout"`
-	SyncInterval      time.Duration `json:"sync_interval"`
+	MaxModules       int           `json:"max_modules"`
+	MaxDevices       int           `json:"max_devices"`
+	DefaultMemLimit  int64         `json:"default_memory_limit"`
+	DefaultTimeout   int           `json:"default_timeout_ms"`
+	HeartbeatTimeout time.Duration `json:"heartbeat_timeout"`
+	SyncInterval     time.Duration `json:"sync_interval"`
 }
 
 // DefaultEdgeManagerConfig returns sensible defaults.

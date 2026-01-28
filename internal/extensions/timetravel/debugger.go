@@ -76,8 +76,8 @@ type TimeWindow struct {
 // FeatureDiff shows how a feature changed between windows.
 type FeatureDiff struct {
 	FeatureName string      `json:"feature_name"`
-	ValueA      interface{} `json:"value_a"`    // Value in window A
-	ValueB      interface{} `json:"value_b"`    // Value in window B
+	ValueA      interface{} `json:"value_a"`     // Value in window A
+	ValueB      interface{} `json:"value_b"`     // Value in window B
 	ChangeType  string      `json:"change_type"` // "increased", "decreased", "changed", "unchanged", "missing"
 	ChangePct   float64     `json:"change_pct"`  // Percentage change for numeric values
 }

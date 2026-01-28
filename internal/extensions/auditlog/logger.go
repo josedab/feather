@@ -81,11 +81,11 @@ func DefaultLoggerConfig() LoggerConfig {
 
 // LoggerStats holds audit logger statistics.
 type LoggerStats struct {
-	TotalEntries int64              `json:"total_entries"`
-	TotalLogged  int64              `json:"total_logged"`
-	OldestEntry  time.Time          `json:"oldest_entry"`
-	NewestEntry  time.Time          `json:"newest_entry"`
-	ActionCounts map[string]int64   `json:"action_counts"`
+	TotalEntries int64            `json:"total_entries"`
+	TotalLogged  int64            `json:"total_logged"`
+	OldestEntry  time.Time        `json:"oldest_entry"`
+	NewestEntry  time.Time        `json:"newest_entry"`
+	ActionCounts map[string]int64 `json:"action_counts"`
 }
 
 // Logger provides an immutable, queryable audit log.
@@ -152,7 +152,9 @@ func (l *Logger) Log(entry AuditEntry) error {
 		data, err := json.Marshal(entry)
 		if err == nil {
 			data = append(data, '\n')
-			l.file.Write(data)
+			if _, writeErr := l.file.Write(data); writeErr != nil {
+				log.Printf("auditlog: failed to write entry to file: %v", writeErr)
+			}
 		}
 	}
 

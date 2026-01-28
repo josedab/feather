@@ -14,7 +14,7 @@ import (
 type TokenType int
 
 const (
-	TokenSelect     TokenType = iota
+	TokenSelect TokenType = iota
 	TokenFrom
 	TokenWhere
 	TokenJoin

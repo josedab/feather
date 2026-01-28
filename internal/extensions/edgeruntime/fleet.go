@@ -64,12 +64,12 @@ type FleetHealth struct {
 
 // FleetStats provides aggregate statistics for the fleet.
 type FleetStats struct {
-	TotalDevices    int               `json:"total_devices"`
-	TotalFeatures   int               `json:"total_features"`
-	TotalPendingSync int              `json:"total_pending_sync"`
-	AvgSyncLatency  time.Duration     `json:"avg_sync_latency"`
-	DevicesByRegion map[string]int    `json:"devices_by_region"`
-	DevicesByStatus map[string]int    `json:"devices_by_status"`
+	TotalDevices     int            `json:"total_devices"`
+	TotalFeatures    int            `json:"total_features"`
+	TotalPendingSync int            `json:"total_pending_sync"`
+	AvgSyncLatency   time.Duration  `json:"avg_sync_latency"`
+	DevicesByRegion  map[string]int `json:"devices_by_region"`
+	DevicesByStatus  map[string]int `json:"devices_by_status"`
 }
 
 // FleetManager manages a fleet of edge devices.

@@ -65,17 +65,17 @@ type Gateway struct {
 
 // CacheEntry represents a cached LLM response.
 type CacheEntry struct {
-	Key       string   `json:"key"`
-	Prompt    string   `json:"prompt"`
-	Response  string   `json:"response"`
-	Model     string   `json:"model"`
-	Provider  Provider `json:"provider"`
-	TokensIn  int      `json:"tokens_in"`
-	TokensOut int      `json:"tokens_out"`
-	CostUSD   float64  `json:"cost_usd"`
+	Key       string    `json:"key"`
+	Prompt    string    `json:"prompt"`
+	Response  string    `json:"response"`
+	Model     string    `json:"model"`
+	Provider  Provider  `json:"provider"`
+	TokensIn  int       `json:"tokens_in"`
+	TokensOut int       `json:"tokens_out"`
+	CostUSD   float64   `json:"cost_usd"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
-	HitCount  int64    `json:"hit_count"`
+	HitCount  int64     `json:"hit_count"`
 }
 
 // PromptTemplate defines a reusable prompt template with {{.variable}} syntax.
@@ -560,4 +560,3 @@ func hashToBucket(entityID string) int {
 	val := int(h[0])<<8 | int(h[1])
 	return val % 100
 }
-
