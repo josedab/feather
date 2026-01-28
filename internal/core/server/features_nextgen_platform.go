@@ -1,6 +1,8 @@
 package server
 
 import (
+	"github.com/feather-store/feather/internal/extensions/ftl"
+	"github.com/feather-store/feather/internal/extensions/incrmat"
 	"github.com/feather-store/feather/internal/extensions/lineageanalysis"
 	"github.com/feather-store/feather/internal/extensions/llmstore"
 	"github.com/feather-store/feather/internal/extensions/mobilesync"
@@ -19,8 +21,6 @@ import (
 	"github.com/feather-store/feather/internal/platform/multiregion"
 	"github.com/feather-store/feather/internal/platform/parity"
 	"github.com/feather-store/feather/internal/platform/realtimemonitor"
-	"github.com/feather-store/feather/internal/extensions/ftl"
-	"github.com/feather-store/feather/internal/extensions/incrmat"
 	"github.com/feather-store/feather/internal/tools/benchsuite"
 	"github.com/feather-store/feather/internal/tools/dashboard"
 )
