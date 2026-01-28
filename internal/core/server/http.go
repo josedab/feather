@@ -68,44 +68,96 @@ func (c HTTPServerFeatureConfig) IsEnabled(name string) bool {
 	return c.EnabledFeatures[name]
 }
 
+// Plugin interfaces for optional handler dependencies.
+// These provide compile-time contract enforcement for dependency injection.
+
+// DriftPlugin detects feature drift and manages alerting.
+type DriftPlugin interface {
+	RegisterAlerter(alerter interface{})
+}
+
+// LineagePlugin tracks feature lineage relationships.
+type LineagePlugin interface {
+	GetLineage(featureName string) (interface{}, error)
+}
+
+// SemanticPlugin provides semantic search over features.
+type SemanticPlugin interface {
+	Search(query string, limit int) ([]interface{}, error)
+}
+
+// WASMPlugin executes WebAssembly user-defined functions.
+type WASMPlugin interface {
+	Execute(functionName string, input []byte) ([]byte, error)
+}
+
+// FederationPlugin queries features across federated nodes.
+type FederationPlugin interface {
+	Query(nodeID string, request interface{}) (interface{}, error)
+}
+
+// QualityPlugin validates feature quality.
+type QualityPlugin interface {
+	Validate(featureName string, value interface{}) error
+}
+
+// AutogenPlugin generates features automatically.
+type AutogenPlugin interface {
+	Generate(spec interface{}) (interface{}, error)
+}
+
+// ExperimentPlugin manages feature experiments.
+type ExperimentPlugin interface {
+	GetExperiment(id string) (interface{}, error)
+}
+
+// GraphQLPlugin executes GraphQL queries.
+type GraphQLPlugin interface {
+	Execute(query string, variables map[string]interface{}) (interface{}, error)
+}
+
+// ClusterMembershipPlugin provides cluster membership information.
+type ClusterMembershipPlugin interface {
+	LocalNode() interface{}
+}
+
+// ClusterRingPlugin provides hash ring information.
+type ClusterRingPlugin interface {
+	NodeCount() int
+}
+
+// ClusterPartitionPlugin provides partition map information.
+type ClusterPartitionPlugin interface {
+	TotalPartitions() int
+}
+
+// ClusterRebalancerPlugin provides rebalancer statistics.
+type ClusterRebalancerPlugin interface {
+	Stats() interface{}
+}
+
 // HTTPServerDependencies supplies optional handler dependencies.
 type HTTPServerDependencies struct {
 	// Optional dbt configuration
 	DBTOptions *dbt.SyncOptions
 
-	// Optional dependencies for extended handlers
-	// Handlers are only registered if both Enable* flag is true AND dependency is provided
-	DriftDetector  interface{ RegisterAlerter(interface{}) }
-	LineageTracker interface {
-		GetLineage(string) (interface{}, error)
-	}
-	SemanticSearch interface {
-		Search(string, int) ([]interface{}, error)
-	}
-	WASMRuntime interface {
-		Execute(string, []byte) ([]byte, error)
-	}
-	FederationClient interface {
-		Query(string, interface{}) (interface{}, error)
-	}
-	QualityValidator interface {
-		Validate(string, interface{}) error
-	}
-	AutogenGenerator interface {
-		Generate(interface{}) (interface{}, error)
-	}
-	ExperimentEngine interface {
-		GetExperiment(string) (interface{}, error)
-	}
-	GraphQLSchema interface {
-		Execute(string, map[string]interface{}) (interface{}, error)
-	}
+	// Optional dependencies for extended handlers.
+	// Handlers are only registered if both Enable* flag is true AND dependency is provided.
+	DriftDetector    DriftPlugin
+	LineageTracker   LineagePlugin
+	SemanticSearch   SemanticPlugin
+	WASMRuntime      WASMPlugin
+	FederationClient FederationPlugin
+	QualityValidator QualityPlugin
+	AutogenGenerator AutogenPlugin
+	ExperimentEngine ExperimentPlugin
+	GraphQLSchema    GraphQLPlugin
 
 	// Cluster components
-	ClusterMembership   interface{ LocalNode() interface{} }
-	ClusterRing         interface{ NodeCount() int }
-	ClusterPartitionMap interface{ TotalPartitions() int }
-	ClusterRebalancer   interface{ Stats() interface{} }
+	ClusterMembership   ClusterMembershipPlugin
+	ClusterRing         ClusterRingPlugin
+	ClusterPartitionMap ClusterPartitionPlugin
+	ClusterRebalancer   ClusterRebalancerPlugin
 }
 
 // DefaultMaxRequestSize is the default maximum request body size (1MB).
