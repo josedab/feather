@@ -4,9 +4,31 @@
 
 set -euo pipefail
 
+# Check if there are any staged Go files
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+if [ -z "$STAGED_GO_FILES" ]; then
+	exit 0
+fi
+
 echo "Running pre-commit checks..."
 
-# Fast pre-commit: format check + vet + lint + core tests (~20s)
+# Quick gofmt check on staged files only (instant feedback)
+UNFORMATTED=$(gofmt -l $STAGED_GO_FILES 2>/dev/null || true)
+if [ -n "$UNFORMATTED" ]; then
+	echo "❌ The following files need gofmt:"
+	echo "$UNFORMATTED"
+	echo "   Run 'make fmt' to fix."
+	exit 1
+fi
+
+# Quick go vet on staged packages
+STAGED_PACKAGES=$(echo "$STAGED_GO_FILES" | xargs -I{} dirname {} | sort -u | sed 's|^|./|')
+go vet $STAGED_PACKAGES 2>&1 || {
+	echo "❌ go vet failed. Fix issues before committing."
+	exit 1
+}
+
+# Full check: format, vet, lint, core tests
 make check-quick
 
 echo "✅ Pre-commit checks passed."
