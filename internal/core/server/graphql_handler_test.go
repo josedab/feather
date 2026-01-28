@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/feather-store/feather/internal/extensions/graphql"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/extensions/graphql"
 )
 
 // testGraphQLServer wraps a GraphQLHandler for testing.

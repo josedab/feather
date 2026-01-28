@@ -1,11 +1,12 @@
 package server
 
 import (
-"net/http"
-"time"
+	"net/http"
+	"time"
 
-"github.com/feather-store/feather/internal/platform/governance"
+	"github.com/feather-store/feather/internal/platform/governance"
 )
+
 // handleListACLs handles GET /v1/governance/acl
 func (h *GovernanceHandler) handleListACLs(w http.ResponseWriter, r *http.Request) {
 	if h.acl == nil {

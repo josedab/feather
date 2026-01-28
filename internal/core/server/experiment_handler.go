@@ -714,8 +714,8 @@ func (h *ExperimentHandler) handleCheckAutoDecision(w http.ResponseWriter, r *ht
 
 	// Allow overriding via request body
 	var req struct {
-		MinSampleSize  *int     `json:"min_sample_size,omitempty"`
-		MaxPValue      *float64 `json:"max_p_value,omitempty"`
+		MinSampleSize *int     `json:"min_sample_size,omitempty"`
+		MaxPValue     *float64 `json:"max_p_value,omitempty"`
 	}
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {

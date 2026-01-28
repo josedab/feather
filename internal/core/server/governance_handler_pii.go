@@ -1,11 +1,12 @@
 package server
 
 import (
-"net/http"
-"strconv"
+	"net/http"
+	"strconv"
 
-"github.com/feather-store/feather/internal/platform/governance"
+	"github.com/feather-store/feather/internal/platform/governance"
 )
+
 // handleDetectPII handles POST /v1/governance/pii/detect
 func (h *GovernanceHandler) handleDetectPII(w http.ResponseWriter, r *http.Request) {
 	if h.pii == nil {

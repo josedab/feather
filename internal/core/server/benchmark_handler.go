@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/feather-store/feather/internal/tools/benchmark"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/tools/benchmark"
 )
 
 // BenchmarkHandler handles benchmark API requests.

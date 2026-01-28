@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/feather-store/feather/internal/extensions/graphql"
 	"github.com/feather-store/feather/internal/core/logging"
+	"github.com/feather-store/feather/internal/extensions/graphql"
 )
 
 // GraphQLHandler handles GraphQL API requests.

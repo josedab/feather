@@ -88,8 +88,8 @@ func (h *VersioningHandler) handleDeleteBranch(w http.ResponseWriter, r *http.Re
 }
 
 type createCommitRequest struct {
-	Message string              `json:"message"`
-	Author  string              `json:"author"`
+	Message string               `json:"message"`
+	Author  string               `json:"author"`
 	Changes []*versioning.Change `json:"changes"`
 }
 

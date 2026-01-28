@@ -141,7 +141,7 @@ func TestDashboardLatency(t *testing.T) {
 
 	// Record various latencies
 	for i := 0; i < 100; i++ {
-		ts.handler.overview.RecordReadLatency(50)   // <100us bucket
+		ts.handler.overview.RecordReadLatency(50)    // <100us bucket
 		ts.handler.overview.RecordWriteLatency(2000) // <5000us bucket
 	}
 	// Record a few high latencies

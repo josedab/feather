@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/feather-store/feather/internal/platform/gitops"
 	"github.com/feather-store/feather/internal/core/logging"
+	"github.com/feather-store/feather/internal/platform/gitops"
 )
 
 // GitOpsHandler handles GitOps API requests.

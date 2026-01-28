@@ -36,7 +36,7 @@ func (h *OrchestratorHandler) RegisterRoutes(mux *http.ServeMux) {
 
 // createDAGRequest is the request body for creating a DAG.
 type createDAGRequest struct {
-	Name  string             `json:"name"`
+	Name  string              `json:"name"`
 	Nodes []*backfill.DAGNode `json:"nodes"`
 }
 

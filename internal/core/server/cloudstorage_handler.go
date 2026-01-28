@@ -83,7 +83,7 @@ func (h *CloudStorageHandler) handleGetObject(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", info.ContentType)
 	w.Header().Set("ETag", info.ETag)
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 // handleDeleteObject handles DELETE /v1/storage/objects/{key}

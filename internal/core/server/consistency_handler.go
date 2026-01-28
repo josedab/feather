@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/feather-store/feather/internal/platform/consistency"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/platform/consistency"
 )
 
 // ConsistencyHandler handles consistency checking API requests.

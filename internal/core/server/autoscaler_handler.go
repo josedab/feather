@@ -89,8 +89,8 @@ func (h *AutoscalerHandler) handleGetShards(w http.ResponseWriter, r *http.Reque
 func (h *AutoscalerHandler) handleRebalance(w http.ResponseWriter, r *http.Request) {
 	assignments := h.scaler.RebalanceShards()
 	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
-		"shards":    assignments,
-		"total":     len(assignments),
+		"shards":     assignments,
+		"total":      len(assignments),
 		"rebalanced": true,
 	})
 }

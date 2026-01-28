@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/feather-store/feather/internal/extensions/cache"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/extensions/cache"
 )
 
 // CacheHandler handles predictive cache API requests.

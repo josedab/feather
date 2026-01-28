@@ -29,10 +29,10 @@ func (h *SDKCodegenHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 type registerSchemaRequest struct {
-	Name        string                 `json:"name"`
-	EntityType  string                 `json:"entity_type"`
-	Description string                 `json:"description,omitempty"`
-	Version     string                 `json:"version"`
+	Name        string                   `json:"name"`
+	EntityType  string                   `json:"entity_type"`
+	Description string                   `json:"description,omitempty"`
+	Version     string                   `json:"version"`
 	Fields      []sdkcodegen.SchemaField `json:"fields"`
 }
 

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/feather-store/feather/internal/tools/ml"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/tools/ml"
 )
 
 // MLHandler handles ML connector API requests.

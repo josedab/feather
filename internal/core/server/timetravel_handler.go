@@ -135,9 +135,9 @@ func (h *TimeTravelHandler) handleCompare(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req struct {
-		EntityKey string               `json:"entity_key"`
-		WindowA   timetravel.TimeWindow `json:"window_a"`
-		WindowB   timetravel.TimeWindow `json:"window_b"`
+		EntityKey string                 `json:"entity_key"`
+		WindowA   timetravel.TimeWindow  `json:"window_a"`
+		WindowB   timetravel.TimeWindow  `json:"window_b"`
 		Snapshots []*timetravel.Snapshot `json:"snapshots"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

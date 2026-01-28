@@ -99,8 +99,8 @@ func (h *StreamComputeHandler) handleCreatePipeline(w http.ResponseWriter, r *ht
 	agg := parseAggregation(req.Aggregation)
 
 	cfg := streamcompute.PipelineConfig{
-		ID:            req.ID,
-		Description:   req.Description,
+		ID:          req.ID,
+		Description: req.Description,
 		Window: streamcompute.WindowConfig{
 			Type:    windowType,
 			Size:    windowSize,

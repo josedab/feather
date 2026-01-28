@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/feather-store/feather/internal/tools/ml"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/tools/ml"
 )
 
 // ModelServingHandler handles model-aware feature serving API requests.

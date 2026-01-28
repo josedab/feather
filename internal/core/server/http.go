@@ -11,13 +11,13 @@ import (
 
 	"github.com/feather-store/feather/internal/core/aggregation"
 	"github.com/feather-store/feather/internal/core/config"
-	"github.com/feather-store/feather/internal/integrations/dbt"
 	"github.com/feather-store/feather/internal/core/domain"
 	"github.com/feather-store/feather/internal/core/logging"
 	"github.com/feather-store/feather/internal/core/metrics"
 	"github.com/feather-store/feather/internal/core/storage"
 	"github.com/feather-store/feather/internal/core/tracing"
 	"github.com/feather-store/feather/internal/core/vector"
+	"github.com/feather-store/feather/internal/integrations/dbt"
 )
 
 // HTTPServer provides HTTP REST API for feature serving.
