@@ -98,8 +98,8 @@ test-integration:
 
 ## lint: Run golangci-lint (auto-installs if missing)
 lint:
-	@command -v golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
-	golangci-lint run ./...
+	@command -v $(shell go env GOPATH)/bin/golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
+	$(shell go env GOPATH)/bin/golangci-lint run ./...
 
 ## run: Run the server with default configuration
 run:
