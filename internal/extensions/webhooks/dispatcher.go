@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -209,6 +210,7 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 				d.totalFailed.Add(1)
 				d.deadLetter = append(d.deadLetter, event)
 			} else {
+				io.Copy(io.Discard, resp.Body)
 				resp.Body.Close()
 				result.StatusCode = resp.StatusCode
 				if resp.StatusCode >= 400 {
