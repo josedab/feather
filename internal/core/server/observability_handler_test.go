@@ -234,34 +234,74 @@ func TestObservabilityHandler_GetUsagePattern_NotFound(t *testing.T) {
 }
 
 func TestObservabilityHandler_GetQualityScore_NotFound(t *testing.T) {
-	// Skip: Quality monitor is nil when store doesn't implement required interface.
-	// This is a pre-existing issue in the handler that doesn't check for nil Quality.
-	t.Skip("Quality monitor is nil for in-memory store - handler needs nil check")
+	ts := newTestObservabilityServer(t)
+
+	rr := ts.get("/v1/observability/quality/nonexistent")
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, rr.Code)
+	}
 }
 
 func TestObservabilityHandler_AddQualityRule(t *testing.T) {
-	// Skip: Quality monitor is nil when store doesn't implement required interface.
-	t.Skip("Quality monitor is nil for in-memory store - handler needs nil check")
+	ts := newTestObservabilityServer(t)
+
+	body := QualityRuleRequest{
+		Name:     "test-rule",
+		Feature:  "test-feature",
+		RuleType: "not_null",
+		Severity: "warning",
+	}
+
+	rr := ts.postJSON("/v1/observability/quality/rules", body)
+
+	if rr.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())
+	}
 }
 
 func TestObservabilityHandler_AddQualityRule_MissingFields(t *testing.T) {
-	// Skip: Quality monitor is nil when store doesn't implement required interface.
-	t.Skip("Quality monitor is nil for in-memory store - handler needs nil check")
+	ts := newTestObservabilityServer(t)
+
+	body := QualityRuleRequest{
+		Name: "test-rule",
+	}
+
+	rr := ts.postJSON("/v1/observability/quality/rules", body)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
 }
 
 func TestObservabilityHandler_AddQualityRule_InvalidBody(t *testing.T) {
-	// Skip: Quality monitor is nil when store doesn't implement required interface.
-	t.Skip("Quality monitor is nil for in-memory store - handler needs nil check")
+	ts := newTestObservabilityServer(t)
+
+	rr := ts.request(http.MethodPost, "/v1/observability/quality/rules", "invalid json")
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
 }
 
 func TestObservabilityHandler_GetViolations(t *testing.T) {
-	// Skip: Quality monitor is nil when store doesn't implement required interface.
-	t.Skip("Quality monitor is nil for in-memory store - handler needs nil check")
+	ts := newTestObservabilityServer(t)
+
+	rr := ts.get("/v1/observability/quality/violations")
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rr.Code)
+	}
 }
 
 func TestObservabilityHandler_GetViolations_WithFilters(t *testing.T) {
-	// Skip: Quality monitor is nil when store doesn't implement required interface.
-	t.Skip("Quality monitor is nil for in-memory store - handler needs nil check")
+	ts := newTestObservabilityServer(t)
+
+	rr := ts.get("/v1/observability/quality/violations?feature=test&since=2024-01-01T00:00:00Z")
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rr.Code)
+	}
 }
 
 func TestObservabilityHandler_GetAlerts(t *testing.T) {
