@@ -19,7 +19,7 @@ func (s *HTTPServer) registerDocsRoutes() {
 func (s *HTTPServer) handleOpenAPISpec(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write(openapiSpec)
+	_, _ = w.Write(openapiSpec)
 }
 
 // handleOpenAPIJSON serves a dynamically generated API inventory from the handler registry.
@@ -54,7 +54,7 @@ func (s *HTTPServer) handleOpenAPIJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(info)
+	_ = json.NewEncoder(w).Encode(info)
 }
 
 func (s *HTTPServer) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +65,7 @@ func (s *HTTPServer) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
 	specURL := scheme + "://" + r.Host + "/v1/openapi.yaml"
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(`<!doctype html>
+	_, _ = w.Write([]byte(`<!doctype html>
 <html>
 <head>
   <title>Feather API Reference</title>
