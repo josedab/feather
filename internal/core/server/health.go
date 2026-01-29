@@ -176,18 +176,13 @@ func (h *HealthChecker) checkWarmTier(ctx context.Context) *ComponentHealth {
 		}
 	}
 
-	start := time.Now()
-	warm := h.store.Warm()
-	if warm == nil {
+	latency, err := h.store.CheckWarmHealth()
+	if err != nil {
 		return &ComponentHealth{
 			Status:  HealthStatusUnhealthy,
-			Message: "warm tier not initialized",
+			Message: err.Error(),
 		}
 	}
-
-	// Perform a simple read operation to verify functionality
-	_, _ = warm.Get("__health_check__", []string{"test"})
-	latency := time.Since(start)
 
 	health := &ComponentHealth{
 		Status:  HealthStatusHealthy,

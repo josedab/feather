@@ -292,8 +292,8 @@ type featureStatsResponse struct {
 }
 
 type topFeatureEntry struct {
-	Name       string `json:"name"`
-	AccessCount int64 `json:"access_count"`
+	Name        string `json:"name"`
+	AccessCount int64  `json:"access_count"`
 }
 
 type latencyResponse struct {
@@ -397,9 +397,11 @@ func (h *DashboardHandler) handleHealth(w http.ResponseWriter, r *http.Request) 
 	warmStatus := "healthy"
 	warmLatency := int64(0)
 	if h.store != nil {
-		start := time.Now()
-		_, _ = h.store.Warm().Get("__health_check__", []string{"__ping__"})
-		warmLatency = time.Since(start).Microseconds()
+		latency, err := h.store.CheckWarmHealth()
+		warmLatency = latency.Microseconds()
+		if err != nil {
+			warmStatus = "unavailable"
+		}
 	} else {
 		warmStatus = "unavailable"
 	}
@@ -672,8 +674,4 @@ func (h *DashboardHandler) handleTimeline(w http.ResponseWriter, r *http.Request
 
 func (h *DashboardHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
 	writeJSONResponse(ctx, w, status, data)
-}
-
-func (h *DashboardHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
-	writeJSONError(ctx, w, status, message)
 }
