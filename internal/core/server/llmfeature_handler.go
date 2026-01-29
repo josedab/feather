@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/llmfeature"
@@ -54,7 +55,7 @@ func (h *LLMFeatureHandler) handleCreateTemplate(w http.ResponseWriter, r *http.
 	}
 	if err := h.store.CreateTemplate(&tmpl); err != nil {
 		status := http.StatusBadRequest
-		if err == llmfeature.ErrTemplateExists {
+		if errors.Is(err, llmfeature.ErrTemplateExists) {
 			status = http.StatusConflict
 		}
 		writeJSONError(r.Context(), w, status, err.Error())

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -57,7 +58,7 @@ func (h *MaterializationHandler) handleCreatePipeline(w http.ResponseWriter, r *
 
 	if err := h.engine.RegisterPipeline(&pipeline); err != nil {
 		status := http.StatusBadRequest
-		if err == materialization.ErrPipelineExists {
+		if errors.Is(err, materialization.ErrPipelineExists) {
 			status = http.StatusConflict
 		}
 		writeJSONError(r.Context(), w, status, err.Error())
@@ -142,7 +143,7 @@ func (h *MaterializationHandler) handleExecutePipeline(w http.ResponseWriter, r 
 	run, err := h.engine.ExecutePipeline(r.Context(), name, materialization.TriggerManual)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if err == materialization.ErrPipelineNotFound {
+		if errors.Is(err, materialization.ErrPipelineNotFound) {
 			status = http.StatusNotFound
 		}
 		writeJSONError(r.Context(), w, status, err.Error())

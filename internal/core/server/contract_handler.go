@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -58,7 +59,7 @@ func (h *ContractHandler) handleCreateContract(w http.ResponseWriter, r *http.Re
 
 	if err := h.manager.CreateContract(&spec); err != nil {
 		status := http.StatusBadRequest
-		if err == contract.ErrContractExists {
+		if errors.Is(err, contract.ErrContractExists) {
 			status = http.StatusConflict
 		}
 		writeJSONError(r.Context(), w, status, err.Error())
@@ -106,7 +107,7 @@ func (h *ContractHandler) handleUpdateContract(w http.ResponseWriter, r *http.Re
 
 	if err := h.manager.UpdateContract(&spec); err != nil {
 		status := http.StatusBadRequest
-		if err == contract.ErrContractNotFound {
+		if errors.Is(err, contract.ErrContractNotFound) {
 			status = http.StatusNotFound
 		}
 		writeJSONError(r.Context(), w, status, err.Error())
