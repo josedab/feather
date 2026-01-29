@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/feather-store/feather/internal/platform/observability"
 	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/platform/observability"
 )
 
 // ObservabilityHandler handles observability API requests.
@@ -162,6 +162,11 @@ func (h *ObservabilityHandler) handleGetUsagePattern(w http.ResponseWriter, r *h
 
 // handleGetQualityScore handles GET /v1/observability/quality/{feature}
 func (h *ObservabilityHandler) handleGetQualityScore(w http.ResponseWriter, r *http.Request) {
+	if h.stack.Quality == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality monitor not available")
+		return
+	}
+
 	feature := r.PathValue("feature")
 	if feature == "" {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
@@ -188,6 +193,11 @@ type QualityRuleRequest struct {
 
 // handleAddQualityRule handles POST /v1/observability/quality/rules
 func (h *ObservabilityHandler) handleAddQualityRule(w http.ResponseWriter, r *http.Request) {
+	if h.stack.Quality == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality monitor not available")
+		return
+	}
+
 	var req QualityRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
@@ -222,6 +232,11 @@ func (h *ObservabilityHandler) handleAddQualityRule(w http.ResponseWriter, r *ht
 
 // handleGetViolations handles GET /v1/observability/quality/violations
 func (h *ObservabilityHandler) handleGetViolations(w http.ResponseWriter, r *http.Request) {
+	if h.stack.Quality == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "quality monitor not available")
+		return
+	}
+
 	feature := r.URL.Query().Get("feature")
 	since := time.Now().Add(-24 * time.Hour)
 
