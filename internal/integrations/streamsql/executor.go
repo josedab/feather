@@ -22,20 +22,17 @@ type executorState struct {
 }
 
 type windowBucket struct {
-	start   time.Time
-	end     time.Time
-	records []*Record
 }
 
 type groupState struct {
-	key     string
-	count   int64
-	sum     float64
-	min     float64
-	max     float64
-	hasMin  bool
-	hasMax  bool
-	values  map[string]interface{}
+	key    string
+	count  int64
+	sum    float64
+	min    float64
+	max    float64
+	hasMin bool
+	hasMax bool
+	values map[string]interface{}
 }
 
 // newQueryExecutor creates a new executor for the given statement.

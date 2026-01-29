@@ -11,7 +11,7 @@ import (
 type TokenType int
 
 const (
-	TokenSelect     TokenType = iota
+	TokenSelect TokenType = iota
 	TokenFrom
 	TokenWhere
 	TokenGroupBy
@@ -250,9 +250,11 @@ func keywordType(upper string) TokenType {
 	}
 }
 
-func isDigit(ch byte) bool       { return ch >= '0' && ch <= '9' }
-func isIdentStart(ch byte) bool  { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' }
-func isIdentChar(ch byte) bool   { return isIdentStart(ch) || isDigit(ch) }
+func isDigit(ch byte) bool { return ch >= '0' && ch <= '9' }
+func isIdentStart(ch byte) bool {
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_'
+}
+func isIdentChar(ch byte) bool    { return isIdentStart(ch) || isDigit(ch) }
 func isOperatorChar(ch byte) bool { return ch == '=' || ch == '<' || ch == '>' || ch == '!' }
 
 // Statement represents a parsed SQL statement.

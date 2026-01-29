@@ -12,12 +12,12 @@ import (
 
 // Errors for the compute package.
 var (
-	ErrFeatureNotFound    = errors.New("feature definition not found")
-	ErrFeatureExists      = errors.New("feature definition already exists")
-	ErrInvalidDefinition  = errors.New("invalid feature definition")
-	ErrComputeFailed      = errors.New("compute failed")
-	ErrCyclicDependency   = errors.New("cyclic dependency detected")
-	ErrMissingInput       = errors.New("missing required input")
+	ErrFeatureNotFound   = errors.New("feature definition not found")
+	ErrFeatureExists     = errors.New("feature definition already exists")
+	ErrInvalidDefinition = errors.New("invalid feature definition")
+	ErrComputeFailed     = errors.New("compute failed")
+	ErrCyclicDependency  = errors.New("cyclic dependency detected")
+	ErrMissingInput      = errors.New("missing required input")
 )
 
 // ComputeMode determines when a feature is computed.
@@ -64,10 +64,10 @@ type ComputeResult struct {
 
 // ComputeLineage describes the dependency lineage of a feature.
 type ComputeLineage struct {
-	Feature      string            `json:"feature"`
-	Dependencies []string          `json:"dependencies"`
-	Dependents   []string          `json:"dependents"`
-	Depth        int               `json:"depth"`
+	Feature      string              `json:"feature"`
+	Dependencies []string            `json:"dependencies"`
+	Dependents   []string            `json:"dependents"`
+	Depth        int                 `json:"depth"`
 	Graph        map[string][]string `json:"graph"`
 }
 

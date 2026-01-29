@@ -23,7 +23,7 @@ type TransformDef struct {
 	Description  string            `json:"description"`
 	InputSchema  map[string]string `json:"input_schema"`
 	OutputSchema map[string]string `json:"output_schema"`
-	Parameters   []ParameterDef   `json:"parameters,omitempty"`
+	Parameters   []ParameterDef    `json:"parameters,omitempty"`
 }
 
 // TransformRegistry is a thread-safe registry of transform definitions.

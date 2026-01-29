@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -136,7 +137,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 			return fmt.Errorf("reading input: %w", err)
@@ -734,7 +735,7 @@ func (s *Server) toolDescribeSchema(ctx context.Context) toolCallResult {
 	}
 
 	jsonResult, _ := json.MarshalIndent(map[string]interface{}{
-		"groups":      schema,
+		"groups":       schema,
 		"total_groups": len(schema),
 	}, "", "  ")
 	return successResult(string(jsonResult))

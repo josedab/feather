@@ -11,10 +11,10 @@ import (
 type ResourceType string
 
 const (
-	ResourceSchema     ResourceType = "schema"
-	ResourceFeature    ResourceType = "feature"
-	ResourceStats      ResourceType = "stats"
-	ResourceIndex      ResourceType = "vector_index"
+	ResourceSchema  ResourceType = "schema"
+	ResourceFeature ResourceType = "feature"
+	ResourceStats   ResourceType = "stats"
+	ResourceIndex   ResourceType = "vector_index"
 )
 
 // Resource represents an MCP resource exposed to AI agents.
@@ -186,14 +186,14 @@ func BuiltinPrompts() []PromptTemplate {
 
 // ServerInfo provides extended information about the MCP server.
 type ServerInfo struct {
-	Name         string    `json:"name"`
-	Version      string    `json:"version"`
-	Description  string    `json:"description"`
-	Capabilities []string  `json:"capabilities"`
-	ToolCount    int       `json:"tool_count"`
-	ResourceCount int     `json:"resource_count"`
-	PromptCount  int       `json:"prompt_count"`
-	StartedAt    time.Time `json:"started_at"`
+	Name          string    `json:"name"`
+	Version       string    `json:"version"`
+	Description   string    `json:"description"`
+	Capabilities  []string  `json:"capabilities"`
+	ToolCount     int       `json:"tool_count"`
+	ResourceCount int       `json:"resource_count"`
+	PromptCount   int       `json:"prompt_count"`
+	StartedAt     time.Time `json:"started_at"`
 }
 
 // GetServerInfo returns information about this MCP server instance.

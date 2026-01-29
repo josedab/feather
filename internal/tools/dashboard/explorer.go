@@ -49,20 +49,20 @@ type CorrelationResult struct {
 
 // UsagePattern captures access patterns for a feature.
 type UsagePattern struct {
-	FeatureID     string    `json:"feature_id"`
-	HourlyAccess  [24]int64 `json:"hourly_access"`
-	PeakHour      int       `json:"peak_hour"`
-	TotalAccesses int64     `json:"total_accesses"`
-	UniqueEntities int64    `json:"unique_entities"`
-	AvgLatencyUs  float64   `json:"avg_latency_us"`
+	FeatureID      string    `json:"feature_id"`
+	HourlyAccess   [24]int64 `json:"hourly_access"`
+	PeakHour       int       `json:"peak_hour"`
+	TotalAccesses  int64     `json:"total_accesses"`
+	UniqueEntities int64     `json:"unique_entities"`
+	AvgLatencyUs   float64   `json:"avg_latency_us"`
 }
 
 // CostBreakdown estimates the resource cost for a feature.
 type CostBreakdown struct {
-	FeatureID              string  `json:"feature_id"`
-	StorageMB              float64 `json:"storage_mb"`
-	ReadOps                int64   `json:"read_ops"`
-	WriteOps               int64   `json:"write_ops"`
+	FeatureID               string  `json:"feature_id"`
+	StorageMB               float64 `json:"storage_mb"`
+	ReadOps                 int64   `json:"read_ops"`
+	WriteOps                int64   `json:"write_ops"`
 	EstimatedMonthlyCostUSD float64 `json:"estimated_monthly_cost_usd"`
 }
 

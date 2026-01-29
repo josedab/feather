@@ -17,18 +17,18 @@ type WindowFunction struct {
 
 // WindowSpec defines window parameters for window functions.
 type WindowSpec struct {
-	Type     string        // tumbling, sliding, session
-	Size     time.Duration
-	Slide    time.Duration
-	GapSize  time.Duration // for session windows
+	Type    string // tumbling, sliding, session
+	Size    time.Duration
+	Slide   time.Duration
+	GapSize time.Duration // for session windows
 }
 
 // WindowResult holds the output of a window function evaluation.
 type WindowResult struct {
 	WindowStart time.Time              `json:"window_start"`
 	WindowEnd   time.Time              `json:"window_end"`
-	GroupKey    string                  `json:"group_key,omitempty"`
-	Values     map[string]interface{}  `json:"values"`
+	GroupKey    string                 `json:"group_key,omitempty"`
+	Values      map[string]interface{} `json:"values"`
 	RecordCount int                    `json:"record_count"`
 }
 
@@ -67,9 +67,9 @@ func (wa *WindowAggregator) Aggregate(records []*Record) ([]WindowResult, error)
 			wr := WindowResult{
 				WindowStart: w.start,
 				WindowEnd:   w.end,
-				GroupKey:     groupKey,
-				Values:       make(map[string]interface{}),
-				RecordCount:  len(groupRecords),
+				GroupKey:    groupKey,
+				Values:      make(map[string]interface{}),
+				RecordCount: len(groupRecords),
 			}
 
 			for _, fn := range wa.functions {

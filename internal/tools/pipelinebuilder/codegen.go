@@ -3,6 +3,9 @@ package pipelinebuilder
 import (
 	"fmt"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // CodeGenConfig controls code generation output.
@@ -66,7 +69,7 @@ func (g *CodeGenerator) generateGoCode(p *Pipeline, reg *TransformRegistry, orde
 		if g.config.IncludeComments {
 			b.WriteString(fmt.Sprintf("\t// Step: %s (%s)\n", node.Name, node.Type))
 		}
-		b.WriteString(fmt.Sprintf("\t%s, err := execute%s(ctx", varName, strings.Title(string(node.Type))))
+		b.WriteString(fmt.Sprintf("\t%s, err := execute%s(ctx", varName, cases.Title(language.English).String(string(node.Type))))
 		for _, inp := range node.Inputs {
 			if inNode, ok := p.Nodes[inp]; ok {
 				b.WriteString(fmt.Sprintf(", %s", sanitizeIdentifier(inNode.Name)))

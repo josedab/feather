@@ -46,9 +46,9 @@ type Event struct {
 
 // PatternCondition defines a single condition within a pattern.
 type PatternCondition struct {
-	EventType     string             `json:"event_type"`
-	Predicate     func(*Event) bool  `json:"-"`
-	PredicateExpr string             `json:"predicate_expr"`
+	EventType     string            `json:"event_type"`
+	Predicate     func(*Event) bool `json:"-"`
+	PredicateExpr string            `json:"predicate_expr"`
 }
 
 // Pattern defines a sequence of conditions to detect in the event stream.
@@ -64,11 +64,11 @@ type Pattern struct {
 
 // PatternMatch represents a successful pattern match.
 type PatternMatch struct {
-	PatternID  string    `json:"pattern_id"`
-	Events     []*Event  `json:"events"`
-	MatchedAt  time.Time `json:"matched_at"`
+	PatternID  string        `json:"pattern_id"`
+	Events     []*Event      `json:"events"`
+	MatchedAt  time.Time     `json:"matched_at"`
 	Duration   time.Duration `json:"duration"`
-	Confidence float64   `json:"confidence"`
+	Confidence float64       `json:"confidence"`
 }
 
 // CEPStats provides runtime statistics about the CEP engine.
@@ -83,10 +83,10 @@ type CEPStats struct {
 
 // partialMatch tracks an in-progress pattern match attempt.
 type partialMatch struct {
-	patternID    string
-	matchedIdx   int
-	events       []*Event
-	startedAt    time.Time
+	patternID  string
+	matchedIdx int
+	events     []*Event
+	startedAt  time.Time
 }
 
 // CEPEngine is a thread-safe Complex Event Processing engine.

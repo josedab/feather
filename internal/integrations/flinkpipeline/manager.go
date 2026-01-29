@@ -21,9 +21,9 @@ const (
 type RuntimeType string
 
 const (
-	RuntimeFlink       RuntimeType = "flink"
+	RuntimeFlink        RuntimeType = "flink"
 	RuntimeKafkaStreams RuntimeType = "kafka_streams"
-	RuntimeBuiltin     RuntimeType = "builtin"
+	RuntimeBuiltin      RuntimeType = "builtin"
 )
 
 // WindowType defines the windowing strategy.
@@ -39,14 +39,14 @@ const (
 type AggregationType string
 
 const (
-	AggCount       AggregationType = "count"
-	AggSum         AggregationType = "sum"
-	AggAvg         AggregationType = "avg"
-	AggMin         AggregationType = "min"
-	AggMax         AggregationType = "max"
-	AggDistinct    AggregationType = "distinct_count"
-	AggPercentile  AggregationType = "percentile"
-	AggLastValue   AggregationType = "last_value"
+	AggCount      AggregationType = "count"
+	AggSum        AggregationType = "sum"
+	AggAvg        AggregationType = "avg"
+	AggMin        AggregationType = "min"
+	AggMax        AggregationType = "max"
+	AggDistinct   AggregationType = "distinct_count"
+	AggPercentile AggregationType = "percentile"
+	AggLastValue  AggregationType = "last_value"
 )
 
 // Source defines an event stream source.
@@ -96,7 +96,7 @@ type Pipeline struct {
 	Description  string           `json:"description,omitempty"`
 	Runtime      RuntimeType      `json:"runtime"`
 	Source       Source           `json:"source"`
-	Sink         Sink            `json:"sink"`
+	Sink         Sink             `json:"sink"`
 	Stages       []TransformStage `json:"stages"`
 	Parallelism  int              `json:"parallelism"`
 	Status       PipelineStatus   `json:"status"`

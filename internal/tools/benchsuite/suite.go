@@ -14,11 +14,11 @@ type WorkloadType string
 
 const (
 	WorkloadReadHeavy  WorkloadType = "read_heavy"  // 90% read, 10% write
-	WorkloadWriteHeavy WorkloadType = "write_heavy"  // 10% read, 90% write
-	WorkloadMixed      WorkloadType = "mixed"         // 50% read, 50% write
-	WorkloadBurst      WorkloadType = "burst"         // periodic high load
-	WorkloadLatency    WorkloadType = "latency"       // focus on p99
-	WorkloadThroughput WorkloadType = "throughput"    // focus on max QPS
+	WorkloadWriteHeavy WorkloadType = "write_heavy" // 10% read, 90% write
+	WorkloadMixed      WorkloadType = "mixed"       // 50% read, 50% write
+	WorkloadBurst      WorkloadType = "burst"       // periodic high load
+	WorkloadLatency    WorkloadType = "latency"     // focus on p99
+	WorkloadThroughput WorkloadType = "throughput"  // focus on max QPS
 )
 
 var validWorkloads = map[WorkloadType]bool{

@@ -11,7 +11,7 @@ import (
 // EngineConfig configures the streaming SQL engine.
 type EngineConfig struct {
 	MaxQueries     int           `json:"max_queries"`
-	MaxStreams      int           `json:"max_streams"`
+	MaxStreams     int           `json:"max_streams"`
 	BufferSize     int           `json:"buffer_size"`
 	DefaultTimeout time.Duration `json:"default_timeout"`
 }
@@ -20,7 +20,7 @@ type EngineConfig struct {
 func DefaultEngineConfig() EngineConfig {
 	return EngineConfig{
 		MaxQueries:     100,
-		MaxStreams:      50,
+		MaxStreams:     50,
 		BufferSize:     10000,
 		DefaultTimeout: 30 * time.Second,
 	}
@@ -30,9 +30,9 @@ func DefaultEngineConfig() EngineConfig {
 type QueryStatus string
 
 const (
-	QueryStatusActive   QueryStatus = "active"
-	QueryStatusPaused   QueryStatus = "paused"
-	QueryStatusStopped  QueryStatus = "stopped"
+	QueryStatusActive  QueryStatus = "active"
+	QueryStatusPaused  QueryStatus = "paused"
+	QueryStatusStopped QueryStatus = "stopped"
 )
 
 // RegisteredQuery holds metadata about a registered continuous query.
@@ -76,11 +76,11 @@ type StreamInfo struct {
 
 // EngineStats provides runtime statistics about the engine.
 type EngineStats struct {
-	StreamCount    int   `json:"stream_count"`
-	QueryCount     int   `json:"query_count"`
-	ViewCount      int   `json:"view_count"`
-	TotalRecords   int64 `json:"total_records"`
-	TotalQueries   int64 `json:"total_queries"`
+	StreamCount  int   `json:"stream_count"`
+	QueryCount   int   `json:"query_count"`
+	ViewCount    int   `json:"view_count"`
+	TotalRecords int64 `json:"total_records"`
+	TotalQueries int64 `json:"total_queries"`
 }
 
 // Engine is the streaming SQL execution engine.

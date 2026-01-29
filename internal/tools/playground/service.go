@@ -11,30 +11,30 @@ import (
 )
 
 var (
-	ErrQueryNotFound    = errors.New("query not found")
-	ErrInvalidQuery     = errors.New("invalid query")
-	ErrDatasetNotFound  = errors.New("dataset not found")
-	ErrDatasetExists    = errors.New("dataset already exists")
+	ErrQueryNotFound   = errors.New("query not found")
+	ErrInvalidQuery    = errors.New("invalid query")
+	ErrDatasetNotFound = errors.New("dataset not found")
+	ErrDatasetExists   = errors.New("dataset already exists")
 )
 
 // FeatureSummary provides a statistical overview of a feature.
 type FeatureSummary struct {
-	Name        string             `json:"name"`
-	Group       string             `json:"group"`
-	DataType    string             `json:"data_type"`
-	Count       int64              `json:"count"`
-	NullCount   int64              `json:"null_count"`
-	NullRate    float64            `json:"null_rate"`
-	Mean        float64            `json:"mean,omitempty"`
-	StdDev      float64            `json:"std_dev,omitempty"`
-	Min         float64            `json:"min,omitempty"`
-	Max         float64            `json:"max,omitempty"`
-	P25         float64            `json:"p25,omitempty"`
-	P50         float64            `json:"p50,omitempty"`
-	P75         float64            `json:"p75,omitempty"`
-	TopValues   []ValueCount       `json:"top_values,omitempty"`
-	Histogram   []HistogramBucket  `json:"histogram,omitempty"`
-	LastUpdated time.Time          `json:"last_updated"`
+	Name        string            `json:"name"`
+	Group       string            `json:"group"`
+	DataType    string            `json:"data_type"`
+	Count       int64             `json:"count"`
+	NullCount   int64             `json:"null_count"`
+	NullRate    float64           `json:"null_rate"`
+	Mean        float64           `json:"mean,omitempty"`
+	StdDev      float64           `json:"std_dev,omitempty"`
+	Min         float64           `json:"min,omitempty"`
+	Max         float64           `json:"max,omitempty"`
+	P25         float64           `json:"p25,omitempty"`
+	P50         float64           `json:"p50,omitempty"`
+	P75         float64           `json:"p75,omitempty"`
+	TopValues   []ValueCount      `json:"top_values,omitempty"`
+	Histogram   []HistogramBucket `json:"histogram,omitempty"`
+	LastUpdated time.Time         `json:"last_updated"`
 }
 
 // ValueCount tracks a categorical value's frequency.
@@ -83,12 +83,12 @@ type DatasetConfig struct {
 
 // DatasetStatus tracks dataset generation progress.
 type DatasetStatus struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Status    string `json:"status"` // pending, generating, ready, failed
-	RowCount  int64  `json:"row_count"`
-	SizeBytes int64  `json:"size_bytes"`
-	Format    string `json:"format"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Status    string    `json:"status"` // pending, generating, ready, failed
+	RowCount  int64     `json:"row_count"`
+	SizeBytes int64     `json:"size_bytes"`
+	Format    string    `json:"format"`
 	CreatedAt time.Time `json:"created_at"`
 	ReadyAt   time.Time `json:"ready_at,omitempty"`
 	Error     string    `json:"error,omitempty"`

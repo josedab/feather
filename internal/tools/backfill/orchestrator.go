@@ -52,10 +52,10 @@ type CostEstimate struct {
 
 // OrchestratorConfig configures the DAG orchestrator.
 type OrchestratorConfig struct {
-	MaxParallelism      int  `json:"max_parallelism"`
-	RetryLimit          int  `json:"retry_limit"`
+	MaxParallelism       int  `json:"max_parallelism"`
+	RetryLimit           int  `json:"retry_limit"`
 	EnableCostEstimation bool `json:"enable_cost_estimation"`
-	PreferOffPeak       bool `json:"prefer_off_peak"`
+	PreferOffPeak        bool `json:"prefer_off_peak"`
 }
 
 // DefaultOrchestratorConfig returns sensible defaults.
@@ -97,13 +97,13 @@ func NewOrchestrator(cfg OrchestratorConfig) *Orchestrator {
 
 // Orchestrator errors.
 var (
-	ErrDAGNotFound      = errors.New("DAG not found")
-	ErrDuplicateNodeID  = errors.New("duplicate node ID")
-	ErrMissingDep       = errors.New("dependency references non-existent node")
-	ErrCycleDetected    = errors.New("cycle detected in DAG")
-	ErrNodeNotFound     = errors.New("node not found")
-	ErrDAGNotRunning    = errors.New("DAG is not running")
-	ErrNodeNotRunning   = errors.New("node is not in running state")
+	ErrDAGNotFound       = errors.New("DAG not found")
+	ErrDuplicateNodeID   = errors.New("duplicate node ID")
+	ErrMissingDep        = errors.New("dependency references non-existent node")
+	ErrCycleDetected     = errors.New("cycle detected in DAG")
+	ErrNodeNotFound      = errors.New("node not found")
+	ErrDAGNotRunning     = errors.New("DAG is not running")
+	ErrNodeNotRunning    = errors.New("node is not in running state")
 	ErrDAGAlreadyRunning = errors.New("DAG is already running")
 )
 
@@ -435,8 +435,8 @@ func (o *Orchestrator) EstimateCost(dagID string) (*CostEstimate, error) {
 
 	// Heuristic: ~30s per node at full parallelism
 	estimatedDuration := float64(depth) * 30.0
-	estimatedStorage := float64(totalNodes) * 50.0   // 50 MB per node
-	estimatedCPU := float64(totalNodes) * 0.25        // 0.25 CPU-hours per node
+	estimatedStorage := float64(totalNodes) * 50.0 // 50 MB per node
+	estimatedCPU := float64(totalNodes) * 0.25     // 0.25 CPU-hours per node
 
 	return &CostEstimate{
 		DAGID:                  dagID,

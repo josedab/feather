@@ -25,9 +25,9 @@ const (
 // QualityScore represents quality metrics for a catalog feature.
 type QualityScore struct {
 	Overall      float64 `json:"overall"`      // 0-1
-	Freshness    float64 `json:"freshness"`     // 0-1
-	Completeness float64 `json:"completeness"`  // 0-1
-	Consistency  float64 `json:"consistency"`   // 0-1
+	Freshness    float64 `json:"freshness"`    // 0-1
+	Completeness float64 `json:"completeness"` // 0-1
+	Consistency  float64 `json:"consistency"`  // 0-1
 }
 
 // CatalogEntry represents a feature registered in the catalog.
@@ -82,7 +82,7 @@ type UsageRecord struct {
 // LineageNode represents a node in the lineage graph.
 type LineageNode struct {
 	Name     string `json:"name"`
-	NodeType string `json:"type"`  // feature/source/model
+	NodeType string `json:"type"` // feature/source/model
 	Level    int    `json:"level"`
 }
 

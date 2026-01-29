@@ -632,12 +632,12 @@ func DefaultAutoBackfillConfig() AutoBackfillConfig {
 
 // BackfillRule defines when and how to auto-backfill a feature.
 type BackfillRule struct {
-	ID          string        `json:"id"`
-	Feature     string        `json:"feature"`
+	ID           string        `json:"id"`
+	Feature      string        `json:"feature"`
 	MaxStaleness time.Duration `json:"max_staleness"`
-	Source      DataSource    `json:"source"`
-	Enabled     bool          `json:"enabled"`
-	CreatedAt   time.Time     `json:"created_at"`
+	Source       DataSource    `json:"source"`
+	Enabled      bool          `json:"enabled"`
+	CreatedAt    time.Time     `json:"created_at"`
 }
 
 // AutoBackfillTrigger represents a triggered auto-backfill event.
@@ -654,12 +654,12 @@ type AutoBackfillTrigger struct {
 
 // AutoBackfiller monitors feature staleness and triggers backfill jobs.
 type AutoBackfiller struct {
-	config   AutoBackfillConfig
-	manager  *Manager
-	rules    map[string]*BackfillRule
-	triggers []*AutoBackfillTrigger
+	config    AutoBackfillConfig
+	manager   *Manager
+	rules     map[string]*BackfillRule
+	triggers  []*AutoBackfillTrigger
 	cooldowns map[string]time.Time // feature -> last trigger time
-	mu       sync.RWMutex
+	mu        sync.RWMutex
 }
 
 // NewAutoBackfiller creates a new auto-backfiller.
@@ -748,14 +748,14 @@ func (ab *AutoBackfiller) CheckAndTrigger(ctx context.Context, lastUpdated map[s
 		// Create backfill job
 		jobID := "auto-" + rule.Feature + "-" + now.Format("20060102T150405")
 		job := &Job{
-			ID:         jobID,
-			Name:       "Auto-backfill: " + rule.Feature,
-			Source:     rule.Source,
-			Features:   []string{rule.Feature},
-			Status:     StatusPending,
-			Config:     DefaultJobConfig(),
-			CreatedAt:  now,
-			CreatedBy:  "auto-backfiller",
+			ID:        jobID,
+			Name:      "Auto-backfill: " + rule.Feature,
+			Source:    rule.Source,
+			Features:  []string{rule.Feature},
+			Status:    StatusPending,
+			Config:    DefaultJobConfig(),
+			CreatedAt: now,
+			CreatedBy: "auto-backfiller",
 		}
 
 		trigger := &AutoBackfillTrigger{

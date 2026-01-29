@@ -961,7 +961,7 @@ func (c *Connector) importJSON(ctx context.Context, req *ImportRequest, result *
 		for {
 			var record map[string]interface{}
 			if err := decoder.Decode(&record); err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
 				result.Errors = append(result.Errors, err.Error())
