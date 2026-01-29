@@ -9,8 +9,8 @@ import (
 
 // FeaturePipeline represents a CRD for declarative feature pipelines.
 type FeaturePipeline struct {
-	TypeMeta   TypeMeta           `json:"typeMeta"`
-	ObjectMeta ObjectMeta         `json:"metadata"`
+	TypeMeta   TypeMeta              `json:"typeMeta"`
+	ObjectMeta ObjectMeta            `json:"metadata"`
 	Spec       FeaturePipelineSpec   `json:"spec"`
 	Status     FeaturePipelineStatus `json:"status"`
 }
@@ -73,49 +73,49 @@ type RetryPolicy struct {
 
 // FeaturePipelineStatus represents the observed state of a pipeline.
 type FeaturePipelineStatus struct {
-	Phase            string       `json:"phase"` // Pending, Running, Succeeded, Failed
-	LastRunTime      *time.Time   `json:"lastRunTime,omitempty"`
-	LastSuccessTime  *time.Time   `json:"lastSuccessTime,omitempty"`
-	RunCount         int64        `json:"runCount"`
-	SuccessCount     int64        `json:"successCount"`
-	FailureCount     int64        `json:"failureCount"`
-	ProcessedRecords int64        `json:"processedRecords"`
-	Conditions       []Condition  `json:"conditions,omitempty"`
-	Message          string       `json:"message,omitempty"`
+	Phase            string      `json:"phase"` // Pending, Running, Succeeded, Failed
+	LastRunTime      *time.Time  `json:"lastRunTime,omitempty"`
+	LastSuccessTime  *time.Time  `json:"lastSuccessTime,omitempty"`
+	RunCount         int64       `json:"runCount"`
+	SuccessCount     int64       `json:"successCount"`
+	FailureCount     int64       `json:"failureCount"`
+	ProcessedRecords int64       `json:"processedRecords"`
+	Conditions       []Condition `json:"conditions,omitempty"`
+	Message          string      `json:"message,omitempty"`
 }
 
 // AutoScalePolicy defines auto-scaling behavior for FeatureStore instances.
 type AutoScalePolicy struct {
-	Enabled              bool    `json:"enabled"`
-	MinReplicas          int     `json:"minReplicas"`
-	MaxReplicas          int     `json:"maxReplicas"`
-	TargetCPUPercent     int     `json:"targetCPUPercent,omitempty"`
-	TargetMemoryPercent  int     `json:"targetMemoryPercent,omitempty"`
-	TargetLatencyP99Ms   int     `json:"targetLatencyP99Ms,omitempty"`
-	ScaleUpCooldown      time.Duration `json:"scaleUpCooldown,omitempty"`
-	ScaleDownCooldown    time.Duration `json:"scaleDownCooldown,omitempty"`
-	CustomMetrics        []CustomMetric `json:"customMetrics,omitempty"`
+	Enabled             bool           `json:"enabled"`
+	MinReplicas         int            `json:"minReplicas"`
+	MaxReplicas         int            `json:"maxReplicas"`
+	TargetCPUPercent    int            `json:"targetCPUPercent,omitempty"`
+	TargetMemoryPercent int            `json:"targetMemoryPercent,omitempty"`
+	TargetLatencyP99Ms  int            `json:"targetLatencyP99Ms,omitempty"`
+	ScaleUpCooldown     time.Duration  `json:"scaleUpCooldown,omitempty"`
+	ScaleDownCooldown   time.Duration  `json:"scaleDownCooldown,omitempty"`
+	CustomMetrics       []CustomMetric `json:"customMetrics,omitempty"`
 }
 
 // CustomMetric defines a custom metric for auto-scaling decisions.
 type CustomMetric struct {
-	Name       string  `json:"name"`
-	Query      string  `json:"query"` // Prometheus query
-	Threshold  float64 `json:"threshold"`
-	ScaleUp    bool    `json:"scaleUp"`
+	Name      string  `json:"name"`
+	Query     string  `json:"query"` // Prometheus query
+	Threshold float64 `json:"threshold"`
+	ScaleUp   bool    `json:"scaleUp"`
 }
 
 // DefaultAutoScalePolicy returns sensible autoscaling defaults.
 func DefaultAutoScalePolicy() AutoScalePolicy {
 	return AutoScalePolicy{
-		Enabled:            true,
-		MinReplicas:        1,
-		MaxReplicas:        10,
-		TargetCPUPercent:   70,
+		Enabled:             true,
+		MinReplicas:         1,
+		MaxReplicas:         10,
+		TargetCPUPercent:    70,
 		TargetMemoryPercent: 80,
-		TargetLatencyP99Ms: 10,
-		ScaleUpCooldown:    60 * time.Second,
-		ScaleDownCooldown:  300 * time.Second,
+		TargetLatencyP99Ms:  10,
+		ScaleUpCooldown:     60 * time.Second,
+		ScaleDownCooldown:   300 * time.Second,
 	}
 }
 
@@ -132,10 +132,10 @@ type ScaleDecision struct {
 
 // AutoScaler evaluates metrics and recommends scaling actions.
 type AutoScaler struct {
-	mu       sync.RWMutex
-	policy   AutoScalePolicy
-	current  int
-	history  []ScaleDecision
+	mu      sync.RWMutex
+	policy  AutoScalePolicy
+	current int
+	history []ScaleDecision
 }
 
 // NewAutoScaler creates a new autoscaler with the given policy.

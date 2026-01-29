@@ -9,16 +9,16 @@ import (
 
 // ContractDefinition represents a YAML-compatible declarative contract definition.
 type ContractDefinition struct {
-	Version      string               `json:"version" yaml:"version"`
-	Name         string               `json:"name" yaml:"name"`
-	Description  string               `json:"description,omitempty" yaml:"description,omitempty"`
-	FeatureGroup string               `json:"feature_group" yaml:"feature_group"`
-	FeatureName  string               `json:"feature_name,omitempty" yaml:"feature_name,omitempty"`
-	Owner        string               `json:"owner,omitempty" yaml:"owner,omitempty"`
-	Mode         EnforcementMode      `json:"mode" yaml:"mode"`
-	Rules        []RuleDefinition     `json:"rules" yaml:"rules"`
-	Alerts       []AlertDefinition    `json:"alerts,omitempty" yaml:"alerts,omitempty"`
-	SchemaPolicy *SchemaPolicyDef     `json:"schema_policy,omitempty" yaml:"schema_policy,omitempty"`
+	Version      string            `json:"version" yaml:"version"`
+	Name         string            `json:"name" yaml:"name"`
+	Description  string            `json:"description,omitempty" yaml:"description,omitempty"`
+	FeatureGroup string            `json:"feature_group" yaml:"feature_group"`
+	FeatureName  string            `json:"feature_name,omitempty" yaml:"feature_name,omitempty"`
+	Owner        string            `json:"owner,omitempty" yaml:"owner,omitempty"`
+	Mode         EnforcementMode   `json:"mode" yaml:"mode"`
+	Rules        []RuleDefinition  `json:"rules" yaml:"rules"`
+	Alerts       []AlertDefinition `json:"alerts,omitempty" yaml:"alerts,omitempty"`
+	SchemaPolicy *SchemaPolicyDef  `json:"schema_policy,omitempty" yaml:"schema_policy,omitempty"`
 }
 
 // EnforcementMode determines how violations are handled.
@@ -51,8 +51,8 @@ type RuleDefinition struct {
 
 // AlertDefinition specifies how violations are reported.
 type AlertDefinition struct {
-	Channel  string `json:"channel" yaml:"channel"`
-	Endpoint string `json:"endpoint" yaml:"endpoint"`
+	Channel     string   `json:"channel" yaml:"channel"`
+	Endpoint    string   `json:"endpoint" yaml:"endpoint"`
 	MinSeverity Severity `json:"min_severity" yaml:"min_severity"`
 }
 
@@ -70,9 +70,9 @@ type SchemaPolicyDef struct {
 
 // ValidationResult captures the outcome of validating a contract definition.
 type ValidationResult struct {
-	Valid    bool               `json:"valid"`
-	Errors   []ValidationError  `json:"errors,omitempty"`
-	Warnings []string           `json:"warnings,omitempty"`
+	Valid    bool              `json:"valid"`
+	Errors   []ValidationError `json:"errors,omitempty"`
+	Warnings []string          `json:"warnings,omitempty"`
 }
 
 // ValidationError is a specific validation failure.
@@ -190,10 +190,10 @@ func (def *ContractDefinition) ToSpec() (*Spec, error) {
 
 // CompareContracts identifies differences between two contract specs.
 type ContractDiff struct {
-	Added   []Rule   `json:"added_rules,omitempty"`
-	Removed []Rule   `json:"removed_rules,omitempty"`
-	Changed []string `json:"changed_fields,omitempty"`
-	Breaking bool    `json:"breaking"`
+	Added    []Rule   `json:"added_rules,omitempty"`
+	Removed  []Rule   `json:"removed_rules,omitempty"`
+	Changed  []string `json:"changed_fields,omitempty"`
+	Breaking bool     `json:"breaking"`
 }
 
 // DiffContracts compares an old and new contract spec.

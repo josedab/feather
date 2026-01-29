@@ -174,9 +174,9 @@ func TestRoute(t *testing.T) {
 			wantReason: "residency:GDPR",
 		},
 		{
-			name:   "local region fallback",
-			entity: "user_456",
-			setup:  func(f *Federation) {},
+			name:       "local region fallback",
+			entity:     "user_456",
+			setup:      func(f *Federation) {},
 			wantRegion: "us-east-1",
 			wantReason: "local",
 		},
@@ -298,8 +298,8 @@ func TestResolveConflict_LWW(t *testing.T) {
 	f := NewFederation(cfg)
 
 	versions := map[string]int64{
-		"us-east-1": 5,
-		"eu-west-1": 8,
+		"us-east-1":  5,
+		"eu-west-1":  8,
 		"ap-south-1": 3,
 	}
 

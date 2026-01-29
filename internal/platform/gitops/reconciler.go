@@ -37,21 +37,21 @@ type MigrationStep struct {
 
 // SchemaChange describes a single schema modification.
 type SchemaChange struct {
-	Type        string `json:"type"` // add_feature, remove_feature, modify_type, add_group, remove_group
-	Group       string `json:"group,omitempty"`
-	Feature     string `json:"feature,omitempty"`
-	OldValue    string `json:"old_value,omitempty"`
-	NewValue    string `json:"new_value,omitempty"`
+	Type     string `json:"type"` // add_feature, remove_feature, modify_type, add_group, remove_group
+	Group    string `json:"group,omitempty"`
+	Feature  string `json:"feature,omitempty"`
+	OldValue string `json:"old_value,omitempty"`
+	NewValue string `json:"new_value,omitempty"`
 }
 
 // ReconcileEvent records a reconciliation cycle.
 type ReconcileEvent struct {
-	StartedAt  time.Time       `json:"started_at"`
-	EndedAt    time.Time       `json:"ended_at"`
-	Status     ReconcileStatus `json:"status"`
-	Changes    int             `json:"changes"`
-	Errors     int             `json:"errors"`
-	Message    string          `json:"message,omitempty"`
+	StartedAt time.Time       `json:"started_at"`
+	EndedAt   time.Time       `json:"ended_at"`
+	Status    ReconcileStatus `json:"status"`
+	Changes   int             `json:"changes"`
+	Errors    int             `json:"errors"`
+	Message   string          `json:"message,omitempty"`
 }
 
 // ReconcilerConfig configures the reconciliation controller.
@@ -235,11 +235,11 @@ func (r *Reconciler) Summary() map[string]interface{} {
 	}
 
 	summary := map[string]interface{}{
-		"status":          string(r.status),
-		"version":         r.version,
-		"interval":        r.config.Interval.String(),
-		"dry_run":         r.config.DryRun,
-		"total_syncs":     len(r.history),
+		"status":           string(r.status),
+		"version":          r.version,
+		"interval":         r.config.Interval.String(),
+		"dry_run":          r.config.DryRun,
+		"total_syncs":      len(r.history),
 		"total_migrations": len(r.migrations),
 	}
 

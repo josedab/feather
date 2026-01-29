@@ -8,21 +8,21 @@ import (
 )
 
 var (
-	ErrTeamNotFound   = errors.New("team not found")
-	ErrTeamExists     = errors.New("team already exists")
-	ErrNoUsageData    = errors.New("no usage data available")
+	ErrTeamNotFound = errors.New("team not found")
+	ErrTeamExists   = errors.New("team already exists")
+	ErrNoUsageData  = errors.New("no usage data available")
 )
 
 // CostCategory identifies the type of resource cost.
 type CostCategory string
 
 const (
-	CostStorage  CostCategory = "storage"
-	CostCompute  CostCategory = "compute"
-	CostNetwork  CostCategory = "network"
-	CostAPI      CostCategory = "api"
-	CostML       CostCategory = "ml"
-	CostVector   CostCategory = "vector"
+	CostStorage CostCategory = "storage"
+	CostCompute CostCategory = "compute"
+	CostNetwork CostCategory = "network"
+	CostAPI     CostCategory = "api"
+	CostML      CostCategory = "ml"
+	CostVector  CostCategory = "vector"
 )
 
 // UsageRecord tracks a single usage event.
@@ -46,21 +46,21 @@ type CostRate struct {
 
 // TeamCost aggregates cost for a team over a period.
 type TeamCost struct {
-	Team      string             `json:"team"`
-	Period    string             `json:"period"`
-	Total     float64            `json:"total"`
-	Currency  string             `json:"currency"`
+	Team       string                   `json:"team"`
+	Period     string                   `json:"period"`
+	Total      float64                  `json:"total"`
+	Currency   string                   `json:"currency"`
 	ByCategory map[CostCategory]float64 `json:"by_category"`
-	ByGroup   map[string]float64 `json:"by_group"`
+	ByGroup    map[string]float64       `json:"by_group"`
 }
 
 // FeatureGroupCost aggregates cost for a feature group.
 type FeatureGroupCost struct {
-	FeatureGroup string             `json:"feature_group"`
-	Total        float64            `json:"total"`
-	Currency     string             `json:"currency"`
+	FeatureGroup string                   `json:"feature_group"`
+	Total        float64                  `json:"total"`
+	Currency     string                   `json:"currency"`
 	ByCategory   map[CostCategory]float64 `json:"by_category"`
-	ByTeam       map[string]float64 `json:"by_team"`
+	ByTeam       map[string]float64       `json:"by_team"`
 }
 
 // CostPrediction forecasts a team's future cost.
@@ -402,11 +402,11 @@ func (m *Manager) Summary(since time.Time) map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_cost":  total,
-		"currency":    m.config.DefaultCurrency,
-		"by_category": byCategory,
-		"by_team":     byTeam,
-		"total_teams": len(m.teams),
+		"total_cost":    total,
+		"currency":      m.config.DefaultCurrency,
+		"by_category":   byCategory,
+		"by_team":       byTeam,
+		"total_teams":   len(m.teams),
 		"total_records": len(m.records),
 	}
 }

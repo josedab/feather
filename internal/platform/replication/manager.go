@@ -150,21 +150,21 @@ func DefaultManagerConfig() ManagerConfig {
 
 // Manager coordinates multi-region replication.
 type Manager struct {
-	mu       sync.RWMutex
-	regions  map[string]*Region
-	values   map[string]*ReplicatedValue // key -> replicated value
-	config   ManagerConfig
-	pending  []ReplicationEvent
-	stopCh   chan struct{}
+	mu      sync.RWMutex
+	regions map[string]*Region
+	values  map[string]*ReplicatedValue // key -> replicated value
+	config  ManagerConfig
+	pending []ReplicationEvent
+	stopCh  chan struct{}
 }
 
 // ReplicationEvent records a value change to be propagated.
 type ReplicationEvent struct {
-	Key       string          `json:"key"`
+	Key       string           `json:"key"`
 	Value     *ReplicatedValue `json:"value"`
-	TargetID  string          `json:"target_id"`
-	CreatedAt time.Time       `json:"created_at"`
-	Delivered bool            `json:"delivered"`
+	TargetID  string           `json:"target_id"`
+	CreatedAt time.Time        `json:"created_at"`
+	Delivered bool             `json:"delivered"`
 }
 
 // NewManager creates a new replication manager.

@@ -37,16 +37,16 @@ type ChainStep struct {
 
 // Chain is an ordered sequence of transforms that executes as a pipeline.
 type Chain struct {
-	ID             string      `json:"id"`
-	Name           string      `json:"name"`
-	Description    string      `json:"description,omitempty"`
+	ID             string       `json:"id"`
+	Name           string       `json:"name"`
+	Description    string       `json:"description,omitempty"`
 	Steps          []*ChainStep `json:"steps"`
-	Status         ChainStatus `json:"status"`
-	Version        int         `json:"version"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	ExecutionCount int64       `json:"execution_count"`
-	AvgLatencyMs   float64     `json:"avg_latency_ms"`
+	Status         ChainStatus  `json:"status"`
+	Version        int          `json:"version"`
+	CreatedAt      time.Time    `json:"created_at"`
+	UpdatedAt      time.Time    `json:"updated_at"`
+	ExecutionCount int64        `json:"execution_count"`
+	AvgLatencyMs   float64      `json:"avg_latency_ms"`
 }
 
 // ChainResult holds the output of executing a chain.

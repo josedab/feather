@@ -412,13 +412,13 @@ func (sm *ShardManager) ListShards(ctx context.Context) []*ShardInfo {
 
 // ShardManagerStats holds statistics about the shard manager.
 type ShardManagerStats struct {
-	TotalShards    int            `json:"total_shards"`
-	ActiveShards   int            `json:"active_shards"`
-	MigratingShards int           `json:"migrating_shards"`
-	InactiveShards int            `json:"inactive_shards"`
-	SplittingShards int           `json:"splitting_shards"`
-	NodeCount      int            `json:"node_count"`
-	ShardsPerNode  map[string]int `json:"shards_per_node"`
+	TotalShards     int            `json:"total_shards"`
+	ActiveShards    int            `json:"active_shards"`
+	MigratingShards int            `json:"migrating_shards"`
+	InactiveShards  int            `json:"inactive_shards"`
+	SplittingShards int            `json:"splitting_shards"`
+	NodeCount       int            `json:"node_count"`
+	ShardsPerNode   map[string]int `json:"shards_per_node"`
 }
 
 // Stats returns statistics about shard distribution and states.

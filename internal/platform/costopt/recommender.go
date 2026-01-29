@@ -52,10 +52,10 @@ func DefaultRecommenderConfig() RecommenderConfig {
 
 // RecommenderStats summarises recommendation outcomes.
 type RecommenderStats struct {
-	TotalRecommendations int     `json:"total_recommendations"`
-	Applied              int     `json:"applied"`
-	Dismissed            int     `json:"dismissed"`
-	Pending              int     `json:"pending"`
+	TotalRecommendations  int     `json:"total_recommendations"`
+	Applied               int     `json:"applied"`
+	Dismissed             int     `json:"dismissed"`
+	Pending               int     `json:"pending"`
 	EstimatedTotalSavings float64 `json:"estimated_total_savings"`
 }
 

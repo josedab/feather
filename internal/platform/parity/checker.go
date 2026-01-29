@@ -57,21 +57,20 @@ type FeatureParityStatus struct {
 
 // Alert represents a parity violation alert.
 type Alert struct {
-	ID          string    `json:"id"`
-	FeatureName string    `json:"feature_name"`
-	Severity    string    `json:"severity"` // "warning", "critical"
-	Message     string    `json:"message"`
-	MismatchRate float64  `json:"mismatch_rate"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	FeatureName  string    `json:"feature_name"`
+	Severity     string    `json:"severity"` // "warning", "critical"
+	Message      string    `json:"message"`
+	MismatchRate float64   `json:"mismatch_rate"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type featureState struct {
-	pairs       []ValuePair
-	totalPairs  int64
-	matchCount  int64
-	absDiffs    []float64
-	maxAbsDiff  float64
-	sumAbsDiff  float64
+	pairs      []ValuePair
+	totalPairs int64
+	matchCount int64
+	maxAbsDiff float64
+	sumAbsDiff float64
 }
 
 // Checker validates online/offline feature parity.

@@ -12,10 +12,10 @@ import (
 type StatisticalTest string
 
 const (
-	TestKS       StatisticalTest = "kolmogorov_smirnov"
-	TestChiSq    StatisticalTest = "chi_squared"
-	TestPSI      StatisticalTest = "psi"
-	TestAbsDiff  StatisticalTest = "absolute_diff"
+	TestKS      StatisticalTest = "kolmogorov_smirnov"
+	TestChiSq   StatisticalTest = "chi_squared"
+	TestPSI     StatisticalTest = "psi"
+	TestAbsDiff StatisticalTest = "absolute_diff"
 )
 
 // StatisticalTestResult captures the outcome of a statistical test.
@@ -77,9 +77,9 @@ type featureSamples struct {
 
 // WebhookConfig defines an alerting webhook.
 type WebhookConfig struct {
-	URL         string          `json:"url"`
-	MinSeverity string          `json:"min_severity"`
-	Events      []string        `json:"events"`
+	URL         string   `json:"url"`
+	MinSeverity string   `json:"min_severity"`
+	Events      []string `json:"events"`
 }
 
 // NewAdvancedChecker creates an advanced parity checker.

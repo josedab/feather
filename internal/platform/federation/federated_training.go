@@ -70,10 +70,10 @@ type TrainingStats struct {
 
 // FederatedTrainer coordinates federated training rounds.
 type FederatedTrainer struct {
-	mu      sync.RWMutex
-	config  TrainingConfig
-	rounds  map[int]*TrainingRound
-	clients []string
+	mu        sync.RWMutex
+	config    TrainingConfig
+	rounds    map[int]*TrainingRound
+	clients   []string
 	nextRound int
 }
 

@@ -42,14 +42,14 @@ func DefaultReconcileConfig() ReconcileConfig {
 
 // ReconcileResult records one reconciliation operation.
 type ReconcileResult struct {
-	EntityID    string      `json:"entity_id"`
-	Feature     string      `json:"feature"`
-	OldValue    interface{} `json:"old_value"`
-	NewValue    interface{} `json:"new_value"`
-	Action      string      `json:"action"`
-	Success     bool        `json:"success"`
-	Error       string      `json:"error,omitempty"`
-	Timestamp   time.Time   `json:"timestamp"`
+	EntityID  string      `json:"entity_id"`
+	Feature   string      `json:"feature"`
+	OldValue  interface{} `json:"old_value"`
+	NewValue  interface{} `json:"new_value"`
+	Action    string      `json:"action"`
+	Success   bool        `json:"success"`
+	Error     string      `json:"error,omitempty"`
+	Timestamp time.Time   `json:"timestamp"`
 }
 
 // SkewReport provides statistical analysis of online/offline skew.
@@ -67,12 +67,12 @@ type SkewReport struct {
 
 // Monitor periodically checks consistency and optionally reconciles.
 type Monitor struct {
-	checker   *Checker
-	config    ReconcileConfig
-	mu        sync.RWMutex
-	history   []ReconcileResult
-	reports   []*SkewReport
-	stopCh    chan struct{}
+	checker *Checker
+	config  ReconcileConfig
+	mu      sync.RWMutex
+	history []ReconcileResult
+	reports []*SkewReport
+	stopCh  chan struct{}
 }
 
 // NewMonitor creates a consistency monitor.

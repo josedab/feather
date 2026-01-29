@@ -31,47 +31,47 @@ const (
 
 // Instance represents a managed Feather deployment.
 type Instance struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	TenantID    string         `json:"tenant_id"`
-	Region      string         `json:"region"`
-	Tier        InstanceTier   `json:"tier"`
-	Status      InstanceStatus `json:"status"`
-	Version     string         `json:"version"`
-	Replicas    int            `json:"replicas"`
-	CPULimit    string         `json:"cpu_limit"`
-	MemoryLimit string         `json:"memory_limit"`
-	Endpoint    string         `json:"endpoint,omitempty"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	Autoscale   *AutoscalePolicy `json:"autoscale,omitempty"`
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	TenantID    string            `json:"tenant_id"`
+	Region      string            `json:"region"`
+	Tier        InstanceTier      `json:"tier"`
+	Status      InstanceStatus    `json:"status"`
+	Version     string            `json:"version"`
+	Replicas    int               `json:"replicas"`
+	CPULimit    string            `json:"cpu_limit"`
+	MemoryLimit string            `json:"memory_limit"`
+	Endpoint    string            `json:"endpoint,omitempty"`
+	CreatedAt   time.Time         `json:"created_at"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+	Autoscale   *AutoscalePolicy  `json:"autoscale,omitempty"`
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
 // AutoscalePolicy defines autoscaling rules for an instance.
 type AutoscalePolicy struct {
-	Enabled     bool    `json:"enabled"`
-	MinReplicas int     `json:"min_replicas"`
-	MaxReplicas int     `json:"max_replicas"`
-	TargetCPU   float64 `json:"target_cpu_percent"`
-	TargetQPS   int     `json:"target_qps,omitempty"`
+	Enabled           bool          `json:"enabled"`
+	MinReplicas       int           `json:"min_replicas"`
+	MaxReplicas       int           `json:"max_replicas"`
+	TargetCPU         float64       `json:"target_cpu_percent"`
+	TargetQPS         int           `json:"target_qps,omitempty"`
 	ScaleUpCooldown   time.Duration `json:"scale_up_cooldown_ns"`
 	ScaleDownCooldown time.Duration `json:"scale_down_cooldown_ns"`
 }
 
 // Tenant represents an isolated customer environment.
 type Tenant struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Plan          InstanceTier   `json:"plan"`
-	MaxInstances  int            `json:"max_instances"`
-	MaxReplicas   int            `json:"max_replicas_per_instance"`
-	MaxStorage    string         `json:"max_storage"`
-	Instances     []string       `json:"instance_ids"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	ContactEmail  string         `json:"contact_email,omitempty"`
-	Metadata      map[string]string `json:"metadata,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Plan         InstanceTier      `json:"plan"`
+	MaxInstances int               `json:"max_instances"`
+	MaxReplicas  int               `json:"max_replicas_per_instance"`
+	MaxStorage   string            `json:"max_storage"`
+	Instances    []string          `json:"instance_ids"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
+	ContactEmail string            `json:"contact_email,omitempty"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
 // ScaleRequest defines a scaling operation.
@@ -82,10 +82,10 @@ type ScaleRequest struct {
 
 // ControlPlaneConfig configures the control plane.
 type ControlPlaneConfig struct {
-	MaxTenantsTotal    int `json:"max_tenants"`
-	MaxInstancesTotal  int `json:"max_instances"`
-	DefaultReplicas    int `json:"default_replicas"`
-	DefaultTier        InstanceTier `json:"default_tier"`
+	MaxTenantsTotal   int          `json:"max_tenants"`
+	MaxInstancesTotal int          `json:"max_instances"`
+	DefaultReplicas   int          `json:"default_replicas"`
+	DefaultTier       InstanceTier `json:"default_tier"`
 }
 
 // DefaultControlPlaneConfig returns sensible defaults.

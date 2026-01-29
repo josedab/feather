@@ -77,9 +77,9 @@ func (c *GCounter) Merge(other *GCounter) *GCounter {
 
 // MerkleNode represents a node in a Merkle tree for anti-entropy.
 type MerkleNode struct {
-	Hash     string       `json:"hash"`
-	Level    int          `json:"level"`
-	KeyRange [2]string    `json:"key_range"`
+	Hash     string        `json:"hash"`
+	Level    int           `json:"level"`
+	KeyRange [2]string     `json:"key_range"`
 	Children []*MerkleNode `json:"children,omitempty"`
 }
 
@@ -164,12 +164,12 @@ func (t *MerkleTree) rebuildRoot() {
 
 // ConflictResolution holds the result of a conflict resolution.
 type ConflictResolution struct {
-	Key           string      `json:"key"`
-	WinnerRegion  string      `json:"winner_region"`
-	WinnerValue   interface{} `json:"winner_value"`
-	LoserRegions  []string    `json:"loser_regions,omitempty"`
-	Strategy      string      `json:"strategy"`
-	ResolvedAt    time.Time   `json:"resolved_at"`
+	Key          string      `json:"key"`
+	WinnerRegion string      `json:"winner_region"`
+	WinnerValue  interface{} `json:"winner_value"`
+	LoserRegions []string    `json:"loser_regions,omitempty"`
+	Strategy     string      `json:"strategy"`
+	ResolvedAt   time.Time   `json:"resolved_at"`
 }
 
 // ConflictResolver handles multi-region write conflicts.
@@ -290,7 +290,7 @@ func (r *ConflictResolver) resolveHighestVersion(key string, values []*Replicate
 
 // DataResidencyPolicy defines geo-compliance rules.
 type DataResidencyPolicy struct {
-	Name          string   `json:"name"`
+	Name           string   `json:"name"`
 	AllowedRegions []string `json:"allowed_regions"`
 	DeniedRegions  []string `json:"denied_regions,omitempty"`
 	EntityPattern  string   `json:"entity_pattern,omitempty"`

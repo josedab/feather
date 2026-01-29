@@ -14,10 +14,10 @@ type SMPCProtocol string
 
 // SMPCProtocol constants.
 const (
-	ProtocolSecretSharing    SMPCProtocol = "secret_sharing"
-	ProtocolGarbledCircuits  SMPCProtocol = "garbled_circuits"
+	ProtocolSecretSharing     SMPCProtocol = "secret_sharing"
+	ProtocolGarbledCircuits   SMPCProtocol = "garbled_circuits"
 	ProtocolObliviousTransfer SMPCProtocol = "oblivious_transfer"
-	ProtocolHomomorphic      SMPCProtocol = "homomorphic"
+	ProtocolHomomorphic       SMPCProtocol = "homomorphic"
 )
 
 // Party represents a participant in an SMPC computation.
@@ -41,12 +41,12 @@ type SecretShare struct {
 
 // ComputeRequest represents a request for secure computation.
 type ComputeRequest struct {
-	ID          string                   `json:"id"`
-	Protocol    SMPCProtocol             `json:"protocol"`
-	Operation   string                   `json:"operation"`
-	Parties     []string                 `json:"parties"`
-	InputShares map[string]*SecretShare  `json:"input_shares"`
-	CreatedAt   time.Time                `json:"created_at"`
+	ID          string                  `json:"id"`
+	Protocol    SMPCProtocol            `json:"protocol"`
+	Operation   string                  `json:"operation"`
+	Parties     []string                `json:"parties"`
+	InputShares map[string]*SecretShare `json:"input_shares"`
+	CreatedAt   time.Time               `json:"created_at"`
 }
 
 // ComputeResult represents the result of a secure computation.

@@ -74,11 +74,11 @@ type StateMachine interface {
 
 // PeerState tracks the replication state for a single peer.
 type PeerState struct {
-	ID         string    `json:"id"`
-	NextIndex  uint64    `json:"next_index"`
-	MatchIndex uint64    `json:"match_index"`
+	ID          string    `json:"id"`
+	NextIndex   uint64    `json:"next_index"`
+	MatchIndex  uint64    `json:"match_index"`
 	LastContact time.Time `json:"last_contact"`
-	VoteGranted bool     `json:"vote_granted"`
+	VoteGranted bool      `json:"vote_granted"`
 }
 
 // RaftMetrics holds operational metrics for the Raft node.
@@ -93,22 +93,22 @@ type RaftMetrics struct {
 // RaftNode implements a simplified Raft consensus protocol for
 // metadata replication across cluster nodes.
 type RaftNode struct {
-	config      RaftConfig
-	state       RaftState
-	currentTerm uint64
-	votedFor    string
-	log         []*LogEntry
-	commitIndex uint64
-	lastApplied uint64
-	leader      string
-	peers       map[string]*PeerState
+	config       RaftConfig
+	state        RaftState
+	currentTerm  uint64
+	votedFor     string
+	log          []*LogEntry
+	commitIndex  uint64
+	lastApplied  uint64
+	leader       string
+	peers        map[string]*PeerState
 	stateMachine StateMachine
-	mu          sync.RWMutex
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
-	metrics     *RaftMetrics
-	started     bool
+	mu           sync.RWMutex
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	metrics      *RaftMetrics
+	started      bool
 }
 
 // NewRaftNode creates a new Raft consensus node with the given configuration
@@ -244,14 +244,14 @@ func (rn *RaftNode) GetLog(ctx context.Context) []*LogEntry {
 
 // RaftNodeStats holds statistics about the Raft node.
 type RaftNodeStats struct {
-	NodeID      string     `json:"node_id"`
-	State       RaftState  `json:"state"`
-	CurrentTerm uint64     `json:"current_term"`
-	CommitIndex uint64     `json:"commit_index"`
-	LastApplied uint64     `json:"last_applied"`
-	LogLength   int        `json:"log_length"`
-	Leader      string     `json:"leader"`
-	PeerCount   int        `json:"peer_count"`
+	NodeID      string      `json:"node_id"`
+	State       RaftState   `json:"state"`
+	CurrentTerm uint64      `json:"current_term"`
+	CommitIndex uint64      `json:"commit_index"`
+	LastApplied uint64      `json:"last_applied"`
+	LogLength   int         `json:"log_length"`
+	Leader      string      `json:"leader"`
+	PeerCount   int         `json:"peer_count"`
 	Metrics     RaftMetrics `json:"metrics"`
 }
 
@@ -542,17 +542,17 @@ func (rn *RaftNode) ListPeers(ctx context.Context) []*PeerState {
 
 // ClusterHealth represents the health status of the Raft cluster.
 type ClusterHealth struct {
-	Healthy       bool               `json:"healthy"`
-	NodeID        string             `json:"node_id"`
-	State         RaftState          `json:"state"`
-	Term          uint64             `json:"term"`
-	Leader        string             `json:"leader"`
-	PeerCount     int                `json:"peer_count"`
-	CommitIndex   uint64             `json:"commit_index"`
-	LastApplied   uint64             `json:"last_applied"`
-	LogLength     int                `json:"log_length"`
-	HasQuorum     bool               `json:"has_quorum"`
-	PeerStatuses  []PeerHealthStatus `json:"peer_statuses"`
+	Healthy      bool               `json:"healthy"`
+	NodeID       string             `json:"node_id"`
+	State        RaftState          `json:"state"`
+	Term         uint64             `json:"term"`
+	Leader       string             `json:"leader"`
+	PeerCount    int                `json:"peer_count"`
+	CommitIndex  uint64             `json:"commit_index"`
+	LastApplied  uint64             `json:"last_applied"`
+	LogLength    int                `json:"log_length"`
+	HasQuorum    bool               `json:"has_quorum"`
+	PeerStatuses []PeerHealthStatus `json:"peer_statuses"`
 }
 
 // PeerHealthStatus represents the health of an individual peer.

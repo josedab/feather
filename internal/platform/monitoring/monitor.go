@@ -102,16 +102,16 @@ type AlertRule struct {
 
 // Alert represents a fired alert.
 type Alert struct {
-	ID           string   `json:"id"`
-	RuleID       string   `json:"rule_id"`
-	MonitorID    string   `json:"monitor_id"`
-	FeatureName  string   `json:"feature_name"`
-	Severity     Severity `json:"severity"`
-	Message      string   `json:"message"`
-	Value        float64  `json:"value"`
-	Threshold    float64  `json:"threshold"`
+	ID           string    `json:"id"`
+	RuleID       string    `json:"rule_id"`
+	MonitorID    string    `json:"monitor_id"`
+	FeatureName  string    `json:"feature_name"`
+	Severity     Severity  `json:"severity"`
+	Message      string    `json:"message"`
+	Value        float64   `json:"value"`
+	Threshold    float64   `json:"threshold"`
 	Timestamp    time.Time `json:"timestamp"`
-	Acknowledged bool     `json:"acknowledged"`
+	Acknowledged bool      `json:"acknowledged"`
 }
 
 // Notifier is an interface for alert delivery.

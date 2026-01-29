@@ -32,7 +32,6 @@ func DefaultDPConfig() DPConfig {
 
 // DPMechanism provides differential privacy noise addition and clipping.
 type DPMechanism struct {
-	mu     sync.Mutex
 	config DPConfig
 }
 
@@ -146,11 +145,11 @@ func (dp *DPMechanism) cryptoRandFloat64() float64 {
 
 // DPBudget tracks cumulative privacy spend.
 type DPBudget struct {
-	mu             sync.Mutex
-	totalEpsilon   float64
-	totalDelta     float64
-	maxEpsilon     float64
-	maxDelta       float64
+	mu           sync.Mutex
+	totalEpsilon float64
+	totalDelta   float64
+	maxEpsilon   float64
+	maxDelta     float64
 }
 
 // NewDPBudget creates a new privacy budget with the given limits.

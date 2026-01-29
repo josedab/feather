@@ -678,14 +678,14 @@ func TenantFromContext(ctx context.Context) string {
 
 // ShareGrant represents a cross-tenant feature sharing permission.
 type ShareGrant struct {
-	ID            string    `json:"id"`
-	FromTenantID  string    `json:"from_tenant_id"`
-	ToTenantID    string    `json:"to_tenant_id"`
-	Features      []string  `json:"features"` // empty means all features
-	Permission    string    `json:"permission"` // "read", "read_write"
-	GrantedBy     string    `json:"granted_by"`
-	GrantedAt     time.Time `json:"granted_at"`
-	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	ID           string     `json:"id"`
+	FromTenantID string     `json:"from_tenant_id"`
+	ToTenantID   string     `json:"to_tenant_id"`
+	Features     []string   `json:"features"`   // empty means all features
+	Permission   string     `json:"permission"` // "read", "read_write"
+	GrantedBy    string     `json:"granted_by"`
+	GrantedAt    time.Time  `json:"granted_at"`
+	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
 }
 
 // GrantShare creates a cross-tenant sharing permission.

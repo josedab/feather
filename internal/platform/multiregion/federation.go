@@ -11,12 +11,12 @@ import (
 
 // Sentinel errors.
 var (
-	ErrRegionNotFound    = errors.New("region not found")
-	ErrRegionExists      = errors.New("region already exists")
-	ErrRegionNameEmpty   = errors.New("region name is required")
-	ErrEndpointEmpty     = errors.New("region endpoint is required")
-	ErrCannotRemoveLocal = errors.New("cannot remove local region")
-	ErrNoActiveRegion    = errors.New("no active region available")
+	ErrRegionNotFound     = errors.New("region not found")
+	ErrRegionExists       = errors.New("region already exists")
+	ErrRegionNameEmpty    = errors.New("region name is required")
+	ErrEndpointEmpty      = errors.New("region endpoint is required")
+	ErrCannotRemoveLocal  = errors.New("cannot remove local region")
+	ErrNoActiveRegion     = errors.New("no active region available")
 	ErrResidencyViolation = errors.New("data residency violation")
 )
 
@@ -84,13 +84,13 @@ func DefaultFederationConfig() FederationConfig {
 // Federation manages a set of geo-distributed regions with routing,
 // residency enforcement, conflict resolution, and replication tracking.
 type Federation struct {
-	config         FederationConfig
-	mu             sync.RWMutex
-	regions        map[string]*Region
-	routingTable   map[string]string // entity prefix -> region
-	residencyRules map[string]ResidencyRule
-	replicationLog []ReplicationEvent
-	vectorClock    map[string]map[string]int64 // entity -> {region -> counter}
+	config            FederationConfig
+	mu                sync.RWMutex
+	regions           map[string]*Region
+	routingTable      map[string]string // entity prefix -> region
+	residencyRules    map[string]ResidencyRule
+	replicationLog    []ReplicationEvent
+	vectorClock       map[string]map[string]int64 // entity -> {region -> counter}
 	conflictsResolved int
 }
 
@@ -99,9 +99,9 @@ type Region struct {
 	Name     string       `json:"name"`
 	Endpoint string       `json:"endpoint"`
 	Status   RegionStatus `json:"status"`
-	Cloud    string       `json:"cloud"`     // aws, gcp, azure
-	Location string       `json:"location"`  // geographic location
-	Priority int          `json:"priority"`  // lower = higher priority
+	Cloud    string       `json:"cloud"`    // aws, gcp, azure
+	Location string       `json:"location"` // geographic location
+	Priority int          `json:"priority"` // lower = higher priority
 	Latency  float64      `json:"latency_ms"`
 	Features int64        `json:"feature_count"`
 	LastSync time.Time    `json:"last_sync"`

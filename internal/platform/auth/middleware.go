@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feather-store/feather/internal/platform/clientip"
 	"github.com/feather-store/feather/internal/core/logging"
+	"github.com/feather-store/feather/internal/platform/clientip"
 )
 
 // Middleware provides authentication and authorization middleware.

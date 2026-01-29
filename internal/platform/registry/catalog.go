@@ -85,7 +85,7 @@ type Catalog struct {
 	byCategory map[string][]string             // category -> feature names
 	byEntity   map[string][]string             // entity_type -> feature names
 	versions   map[string][]*FeatureDefinition // feature name -> version history
-	popularity map[string]*FeaturePopularity // feature name -> popularity
+	popularity map[string]*FeaturePopularity   // feature name -> popularity
 	mu         sync.RWMutex
 }
 
@@ -979,13 +979,13 @@ func (c *Catalog) GetRecentlyUpdated(limit int) []*FeatureDefinition {
 
 // DashboardSummary provides a consolidated view for the catalog web UI.
 type DashboardSummary struct {
-	Stats            *CatalogStats        `json:"stats"`
-	RecentlyUpdated  []*FeatureDefinition `json:"recently_updated"`
-	Popular          []*FeaturePopularity `json:"popular"`
-	DeprecatedCount  int                  `json:"deprecated_count"`
-	StaleCount       int                  `json:"stale_count"`
-	HealthScore      float64              `json:"health_score"`
-	TopOwners        []OwnerSummary       `json:"top_owners"`
+	Stats           *CatalogStats        `json:"stats"`
+	RecentlyUpdated []*FeatureDefinition `json:"recently_updated"`
+	Popular         []*FeaturePopularity `json:"popular"`
+	DeprecatedCount int                  `json:"deprecated_count"`
+	StaleCount      int                  `json:"stale_count"`
+	HealthScore     float64              `json:"health_score"`
+	TopOwners       []OwnerSummary       `json:"top_owners"`
 }
 
 // OwnerSummary summarises feature ownership.

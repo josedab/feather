@@ -41,11 +41,11 @@ type Forecast struct {
 
 // CostAnomaly describes an unusual cost data point.
 type CostAnomaly struct {
-	Timestamp    time.Time `json:"timestamp"`
-	Amount       float64   `json:"amount"`
-	ExpectedAmount float64 `json:"expected_amount"`
-	DeviationPct float64   `json:"deviation_pct"`
-	Severity     string    `json:"severity"`
+	Timestamp      time.Time `json:"timestamp"`
+	Amount         float64   `json:"amount"`
+	ExpectedAmount float64   `json:"expected_amount"`
+	DeviationPct   float64   `json:"deviation_pct"`
+	Severity       string    `json:"severity"`
 }
 
 // Forecaster performs cost forecasting using linear regression.

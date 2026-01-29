@@ -76,9 +76,9 @@ func TestComputeSchemaDiff(t *testing.T) {
 	}
 
 	new := []FeatureDefinition{
-		{Metadata: DefinitionMeta{Name: "user_clicks"}, Spec: FeatureSpec{EntityType: "user"}},     // unchanged
-		{Metadata: DefinitionMeta{Name: "user_spend"}, Spec: FeatureSpec{EntityType: "order"}},       // modified
-		{Metadata: DefinitionMeta{Name: "new_group"}, Spec: FeatureSpec{EntityType: "product"}},       // added
+		{Metadata: DefinitionMeta{Name: "user_clicks"}, Spec: FeatureSpec{EntityType: "user"}},  // unchanged
+		{Metadata: DefinitionMeta{Name: "user_spend"}, Spec: FeatureSpec{EntityType: "order"}},  // modified
+		{Metadata: DefinitionMeta{Name: "new_group"}, Spec: FeatureSpec{EntityType: "product"}}, // added
 	}
 
 	changes := ComputeSchemaDiff(old, new)

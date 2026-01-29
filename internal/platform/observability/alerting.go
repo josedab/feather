@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // AlertSeverity represents alert severity levels.
@@ -313,10 +315,6 @@ type ObservabilityStack struct { //nolint:revive
 func NewObservabilityStack(store interface{}) *ObservabilityStack {
 	metrics := NewMetricsCollector()
 
-	var qualityStore interface {
-		Get(string, []string) (map[string]interface{}, error)
-	}
-
 	stack := &ObservabilityStack{
 		Metrics:   metrics,
 		Freshness: NewFreshnessChecker(metrics, time.Hour),
@@ -326,11 +324,8 @@ func NewObservabilityStack(store interface{}) *ObservabilityStack {
 	}
 
 	// Only create quality monitor if we have a compatible store
-	if s, ok := store.(interface {
-		Get(string, []string) (map[string]interface{}, error)
-	}); ok {
-		qualityStore = s
-		_ = qualityStore // Use in quality monitor if needed
+	if s, ok := store.(*storage.Store); ok {
+		stack.Quality = NewQualityMonitor(s)
 	}
 
 	return stack

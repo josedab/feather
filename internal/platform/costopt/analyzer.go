@@ -26,14 +26,14 @@ func DefaultAnalyzerConfig() AnalyzerConfig {
 
 // AccessPattern describes observed access behaviour for a feature group.
 type AccessPattern struct {
-	FeatureGroup  string        `json:"feature_group"`
-	Entity        string        `json:"entity"`
-	AccessCount   int64         `json:"access_count"`
-	LastAccess    time.Time     `json:"last_access"`
-	AvgLatency    time.Duration `json:"avg_latency_ns"`
-	P99Latency    time.Duration `json:"p99_latency_ns"`
-	ReadWriteRatio float64      `json:"read_write_ratio"`
-	CurrentTier   string        `json:"current_tier"`
+	FeatureGroup   string        `json:"feature_group"`
+	Entity         string        `json:"entity"`
+	AccessCount    int64         `json:"access_count"`
+	LastAccess     time.Time     `json:"last_access"`
+	AvgLatency     time.Duration `json:"avg_latency_ns"`
+	P99Latency     time.Duration `json:"p99_latency_ns"`
+	ReadWriteRatio float64       `json:"read_write_ratio"`
+	CurrentTier    string        `json:"current_tier"`
 }
 
 // accessEvent is a single recorded access.

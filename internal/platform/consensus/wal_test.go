@@ -34,13 +34,13 @@ func TestDefaultSnapshotConfig(t *testing.T) {
 
 func TestWAL_AppendAndRead(t *testing.T) {
 	tests := []struct {
-		name       string
-		entries    []*WALEntry
-		readStart  uint64
-		readEnd    uint64
-		wantCount  int
-		wantErr    bool
-		appendErr  bool
+		name      string
+		entries   []*WALEntry
+		readStart uint64
+		readEnd   uint64
+		wantCount int
+		wantErr   bool
+		appendErr bool
 	}{
 		{
 			name: "single entry",
@@ -126,11 +126,11 @@ func TestWAL_AppendAndRead(t *testing.T) {
 
 func TestWAL_Truncate(t *testing.T) {
 	tests := []struct {
-		name        string
-		entries     []*WALEntry
-		truncateAt  uint64
-		wantRemain  int
-		wantFirst   uint64
+		name       string
+		entries    []*WALEntry
+		truncateAt uint64
+		wantRemain int
+		wantFirst  uint64
 	}{
 		{
 			name: "truncate first half",
@@ -281,11 +281,11 @@ func TestWAL_ImmediateSync(t *testing.T) {
 
 func TestSnapshotManager_TakeAndRestore(t *testing.T) {
 	tests := []struct {
-		name      string
-		index     uint64
-		term      uint64
-		data      []byte
-		wantErr   bool
+		name    string
+		index   uint64
+		term    uint64
+		data    []byte
+		wantErr bool
 	}{
 		{name: "valid snapshot", index: 100, term: 5, data: []byte(`{"state":"ok"}`)},
 		{name: "empty data", index: 1, term: 1, data: []byte{}},
@@ -467,10 +467,10 @@ func TestMultiRegionCoordinator_UpdateHealth(t *testing.T) {
 
 func TestMultiRegionCoordinator_Failover(t *testing.T) {
 	tests := []struct {
-		name       string
-		setup      func(c *MultiRegionCoordinator)
-		wantID     string
-		wantErr    bool
+		name    string
+		setup   func(c *MultiRegionCoordinator)
+		wantID  string
+		wantErr bool
 	}{
 		{
 			name: "failover to healthy replica",

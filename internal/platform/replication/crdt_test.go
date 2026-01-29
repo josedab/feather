@@ -74,9 +74,9 @@ func TestMerkleTree_Diff(t *testing.T) {
 	tree.Insert("key3", "hash3")
 
 	otherData := map[string]string{
-		"key1": "hash1",       // same
+		"key1": "hash1",        // same
 		"key2": "hash_changed", // different
-		"key4": "hash4",       // new in other
+		"key4": "hash4",        // new in other
 	}
 
 	diffs := tree.Diff(otherData)

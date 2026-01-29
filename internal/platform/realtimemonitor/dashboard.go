@@ -36,12 +36,12 @@ const (
 
 // FreshnessMetric tracks how fresh a feature's data is.
 type FreshnessMetric struct {
-	Feature      string        `json:"feature"`
-	Group        string        `json:"group,omitempty"`
-	LastUpdated  time.Time     `json:"last_updated"`
-	Staleness    time.Duration `json:"staleness_ns"`
-	Threshold    time.Duration `json:"threshold_ns"`
-	IsStale      bool          `json:"is_stale"`
+	Feature     string        `json:"feature"`
+	Group       string        `json:"group,omitempty"`
+	LastUpdated time.Time     `json:"last_updated"`
+	Staleness   time.Duration `json:"staleness_ns"`
+	Threshold   time.Duration `json:"threshold_ns"`
+	IsStale     bool          `json:"is_stale"`
 }
 
 // LatencyMetric tracks serving latency percentiles.
@@ -59,46 +59,46 @@ type LatencyMetric struct {
 
 // Alert represents a monitoring alert.
 type Alert struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	Severity  AlertSeverity `json:"severity"`
-	Status    AlertStatus   `json:"status"`
-	Message   string        `json:"message"`
-	Source    string        `json:"source"`
-	FiredAt   time.Time     `json:"fired_at"`
-	ResolvedAt *time.Time   `json:"resolved_at,omitempty"`
-	Labels    map[string]string `json:"labels,omitempty"`
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Severity   AlertSeverity     `json:"severity"`
+	Status     AlertStatus       `json:"status"`
+	Message    string            `json:"message"`
+	Source     string            `json:"source"`
+	FiredAt    time.Time         `json:"fired_at"`
+	ResolvedAt *time.Time        `json:"resolved_at,omitempty"`
+	Labels     map[string]string `json:"labels,omitempty"`
 }
 
 // PipelineHealth tracks the health of a streaming pipeline.
 type PipelineHealth struct {
-	PipelineID    string       `json:"pipeline_id"`
-	Status        HealthStatus `json:"status"`
-	EventsPerSec  float64      `json:"events_per_sec"`
-	Lag           int64        `json:"lag"`
-	ErrorRate     float64      `json:"error_rate"`
-	LastCheckAt   time.Time    `json:"last_check_at"`
+	PipelineID   string       `json:"pipeline_id"`
+	Status       HealthStatus `json:"status"`
+	EventsPerSec float64      `json:"events_per_sec"`
+	Lag          int64        `json:"lag"`
+	ErrorRate    float64      `json:"error_rate"`
+	LastCheckAt  time.Time    `json:"last_check_at"`
 }
 
 // DashboardSnapshot is a point-in-time view of all monitoring data.
 type DashboardSnapshot struct {
-	Timestamp      time.Time          `json:"timestamp"`
-	OverallHealth  HealthStatus       `json:"overall_health"`
-	Freshness      []FreshnessMetric  `json:"freshness"`
-	Latency        []LatencyMetric    `json:"latency"`
-	ActiveAlerts   []Alert            `json:"active_alerts"`
-	PipelineHealth []PipelineHealth   `json:"pipeline_health"`
-	Summary        DashboardSummary   `json:"summary"`
+	Timestamp      time.Time         `json:"timestamp"`
+	OverallHealth  HealthStatus      `json:"overall_health"`
+	Freshness      []FreshnessMetric `json:"freshness"`
+	Latency        []LatencyMetric   `json:"latency"`
+	ActiveAlerts   []Alert           `json:"active_alerts"`
+	PipelineHealth []PipelineHealth  `json:"pipeline_health"`
+	Summary        DashboardSummary  `json:"summary"`
 }
 
 // DashboardSummary provides aggregate counts.
 type DashboardSummary struct {
-	TotalFeatures     int `json:"total_features"`
-	StaleFeatures     int `json:"stale_features"`
-	TotalAlerts       int `json:"total_alerts"`
-	CriticalAlerts    int `json:"critical_alerts"`
-	HealthyPipelines  int `json:"healthy_pipelines"`
-	TotalPipelines    int `json:"total_pipelines"`
+	TotalFeatures    int `json:"total_features"`
+	StaleFeatures    int `json:"stale_features"`
+	TotalAlerts      int `json:"total_alerts"`
+	CriticalAlerts   int `json:"critical_alerts"`
+	HealthyPipelines int `json:"healthy_pipelines"`
+	TotalPipelines   int `json:"total_pipelines"`
 }
 
 // DashboardConfig configures the monitoring dashboard.
@@ -123,12 +123,12 @@ func DefaultDashboardConfig() DashboardConfig {
 type Dashboard struct {
 	mu             sync.RWMutex
 	config         DashboardConfig
-	freshness      map[string]*FreshnessMetric  // feature -> metric
-	latencySamples map[string][]time.Duration   // endpoint -> samples
-	latencyCounts  map[string]int64             // endpoint -> request count
-	latencyErrors  map[string]int64             // endpoint -> error count
-	alerts         map[string]*Alert            // alert ID -> alert
-	pipelines      map[string]*PipelineHealth   // pipeline ID -> health
+	freshness      map[string]*FreshnessMetric // feature -> metric
+	latencySamples map[string][]time.Duration  // endpoint -> samples
+	latencyCounts  map[string]int64            // endpoint -> request count
+	latencyErrors  map[string]int64            // endpoint -> error count
+	alerts         map[string]*Alert           // alert ID -> alert
+	pipelines      map[string]*PipelineHealth  // pipeline ID -> health
 	alertSeq       int64
 }
 

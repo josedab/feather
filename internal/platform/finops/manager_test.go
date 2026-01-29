@@ -122,9 +122,9 @@ func TestManager_PredictCost(t *testing.T) {
 	// Need usage data
 	for i := 0; i < 10; i++ {
 		m.RecordUsage(UsageRecord{
-			Team:     "team-a",
-			Category: CostAPI,
-			Quantity: 100,
+			Team:      "team-a",
+			Category:  CostAPI,
+			Quantity:  100,
 			Timestamp: time.Now().Add(-time.Duration(i) * 24 * time.Hour),
 		})
 	}

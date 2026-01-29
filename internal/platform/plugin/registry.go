@@ -16,7 +16,7 @@ type RegistryConfig struct {
 	MaxPlugins    int           `json:"max_plugins"`
 	PluginTimeout time.Duration `json:"plugin_timeout"`
 	EnableSandbox bool          `json:"enable_sandbox"`
-	AllowedHooks  []HookPoint  `json:"allowed_hooks"`
+	AllowedHooks  []HookPoint   `json:"allowed_hooks"`
 }
 
 // DefaultRegistryConfig returns a RegistryConfig with sensible defaults.

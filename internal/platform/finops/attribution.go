@@ -9,18 +9,18 @@ import (
 
 // FeatureCost tracks cost attribution for an individual feature.
 type FeatureCost struct {
-	FeatureName  string  `json:"feature_name"`
-	GroupName    string  `json:"group_name"`
-	Team         string  `json:"team"`
-	StorageCost  float64 `json:"storage_cost"`
-	ComputeCost  float64 `json:"compute_cost"`
-	ServingCost  float64 `json:"serving_cost"`
-	TotalCost    float64 `json:"total_cost"`
-	ReadCount    int64   `json:"read_count"`
-	WriteCount   int64   `json:"write_count"`
+	FeatureName  string    `json:"feature_name"`
+	GroupName    string    `json:"group_name"`
+	Team         string    `json:"team"`
+	StorageCost  float64   `json:"storage_cost"`
+	ComputeCost  float64   `json:"compute_cost"`
+	ServingCost  float64   `json:"serving_cost"`
+	TotalCost    float64   `json:"total_cost"`
+	ReadCount    int64     `json:"read_count"`
+	WriteCount   int64     `json:"write_count"`
 	LastAccessed time.Time `json:"last_accessed"`
-	CostPerRead  float64 `json:"cost_per_read"`
-	Period       string  `json:"period"`
+	CostPerRead  float64   `json:"cost_per_read"`
+	Period       string    `json:"period"`
 }
 
 // PredictionCost links cost to model predictions.

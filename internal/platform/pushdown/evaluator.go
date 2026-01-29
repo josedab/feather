@@ -32,13 +32,13 @@ const (
 type FuncType string
 
 const (
-	FuncAbs   FuncType = "abs"
-	FuncLog   FuncType = "log"
-	FuncSqrt  FuncType = "sqrt"
-	FuncRound FuncType = "round"
-	FuncMin   FuncType = "min"
-	FuncMax   FuncType = "max"
-	FuncIf    FuncType = "if"
+	FuncAbs      FuncType = "abs"
+	FuncLog      FuncType = "log"
+	FuncSqrt     FuncType = "sqrt"
+	FuncRound    FuncType = "round"
+	FuncMin      FuncType = "min"
+	FuncMax      FuncType = "max"
+	FuncIf       FuncType = "if"
 	FuncCoalesce FuncType = "coalesce"
 )
 
@@ -79,7 +79,7 @@ type DerivedFeature struct {
 
 // CachedResult stores a computed result with expiry.
 type CachedResult struct {
-	Value     float64
+	Value      float64
 	ComputedAt time.Time
 	ExpiresAt  time.Time
 }

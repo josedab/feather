@@ -62,11 +62,11 @@ type WALStats struct {
 // Entries are appended before being applied to the state machine,
 // guaranteeing durability across restarts.
 type WAL struct {
-	config   WALConfig
-	entries  []*WALEntry
-	stats    WALStats
-	closed   bool
-	mu       sync.RWMutex
+	config  WALConfig
+	entries []*WALEntry
+	stats   WALStats
+	closed  bool
+	mu      sync.RWMutex
 }
 
 // NewWAL creates a new Write-Ahead Log with the given configuration.
@@ -343,20 +343,20 @@ const (
 
 // RegionStatus tracks the replication state of a single region.
 type RegionStatus struct {
-	ID            string       `json:"id"`
-	Health        RegionHealth `json:"health"`
-	LastHeartbeat time.Time    `json:"last_heartbeat"`
-	LagEntries    uint64       `json:"lag_entries"`
+	ID            string        `json:"id"`
+	Health        RegionHealth  `json:"health"`
+	LastHeartbeat time.Time     `json:"last_heartbeat"`
+	LagEntries    uint64        `json:"lag_entries"`
 	LagDuration   time.Duration `json:"lag_duration"`
-	IsPrimary     bool         `json:"is_primary"`
+	IsPrimary     bool          `json:"is_primary"`
 }
 
 // MultiRegionCoordinator tracks cross-region replication lag,
 // region health, and coordinates failover.
 type MultiRegionCoordinator struct {
-	regions    map[string]*RegionStatus
-	primaryID  string
-	mu         sync.RWMutex
+	regions   map[string]*RegionStatus
+	primaryID string
+	mu        sync.RWMutex
 }
 
 // NewMultiRegionCoordinator creates a new coordinator.

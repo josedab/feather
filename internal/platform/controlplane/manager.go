@@ -97,13 +97,13 @@ type Policy struct {
 
 // FleetStatus provides a summary of all instances across the control plane.
 type FleetStatus struct {
-	TotalInstances   int            `json:"total_instances"`
-	HealthyInstances int            `json:"healthy_instances"`
-	DegradedInstances int           `json:"degraded_instances"`
-	UnhealthyInstances int          `json:"unhealthy_instances"`
-	TotalRegions     int            `json:"total_regions"`
-	TotalPolicies    int            `json:"total_policies"`
-	ReplicationMode  ReplicationMode `json:"replication_mode"`
+	TotalInstances     int             `json:"total_instances"`
+	HealthyInstances   int             `json:"healthy_instances"`
+	DegradedInstances  int             `json:"degraded_instances"`
+	UnhealthyInstances int             `json:"unhealthy_instances"`
+	TotalRegions       int             `json:"total_regions"`
+	TotalPolicies      int             `json:"total_policies"`
+	ReplicationMode    ReplicationMode `json:"replication_mode"`
 }
 
 // Manager is the central coordinator for managing Feather instances across

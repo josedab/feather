@@ -44,11 +44,11 @@ const (
 )
 
 var (
-	ErrContractNotFound  = errors.New("contract not found")
-	ErrContractExists    = errors.New("contract already exists")
-	ErrInvalidContract   = errors.New("invalid contract specification")
-	ErrNoRules           = errors.New("contract must have at least one rule")
-	ErrInvalidRuleType   = errors.New("unknown rule type")
+	ErrContractNotFound = errors.New("contract not found")
+	ErrContractExists   = errors.New("contract already exists")
+	ErrInvalidContract  = errors.New("invalid contract specification")
+	ErrNoRules          = errors.New("contract must have at least one rule")
+	ErrInvalidRuleType  = errors.New("unknown rule type")
 )
 
 // Rule defines a single constraint within a contract.
