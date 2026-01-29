@@ -1,6 +1,7 @@
 package playground
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,27 +13,27 @@ import (
 
 // REPLSession represents an interactive playground session.
 type REPLSession struct {
-	ID        string        `json:"id"`
-	CreatedAt time.Time     `json:"created_at"`
-	LastUsed  time.Time     `json:"last_used"`
-	History   []REPLCommand `json:"history"`
+	ID        string                 `json:"id"`
+	CreatedAt time.Time              `json:"created_at"`
+	LastUsed  time.Time              `json:"last_used"`
+	History   []REPLCommand          `json:"history"`
 	Variables map[string]interface{} `json:"variables,omitempty"`
 }
 
 // REPLCommand represents a single command in a REPL session.
 type REPLCommand struct {
-	Input     string      `json:"input"`
-	Output    interface{} `json:"output,omitempty"`
-	Error     string      `json:"error,omitempty"`
-	Duration  time.Duration `json:"duration"`
-	ExecutedAt time.Time  `json:"executed_at"`
+	Input      string        `json:"input"`
+	Output     interface{}   `json:"output,omitempty"`
+	Error      string        `json:"error,omitempty"`
+	Duration   time.Duration `json:"duration"`
+	ExecutedAt time.Time     `json:"executed_at"`
 }
 
 // REPLEngine manages interactive playground sessions.
 type REPLEngine struct {
-	mu       sync.RWMutex
-	sessions map[string]*REPLSession
-	provider FeatureProvider
+	mu         sync.RWMutex
+	sessions   map[string]*REPLSession
+	provider   FeatureProvider
 	maxHistory int
 }
 
@@ -167,14 +168,14 @@ func (e *REPLEngine) executeCommand(session *REPLSession, input string) (interfa
 
 func (e *REPLEngine) cmdHelp() interface{} {
 	return map[string]string{
-		"get <entity> [feature...]":   "Retrieve features for an entity",
-		"set <var> <value>":           "Set a session variable",
+		"get <entity> [feature...]":    "Retrieve features for an entity",
+		"set <var> <value>":            "Set a session variable",
 		"list groups|queries|datasets": "List available resources",
-		"describe <group>":            "Describe a feature group",
-		"history":                     "Show command history",
-		"vars":                        "Show session variables",
-		"clear":                       "Clear session state",
-		"help":                        "Show this help message",
+		"describe <group>":             "Describe a feature group",
+		"history":                      "Show command history",
+		"vars":                         "Show session variables",
+		"clear":                        "Clear session state",
+		"help":                         "Show this help message",
 	}
 }
 
@@ -190,20 +191,20 @@ func (e *REPLEngine) cmdGet(args []string) (interface{}, error) {
 	features := args[1:]
 	if len(features) == 0 {
 		// List available features and return them.
-		allFeatures, err := e.provider.ListFeatures(nil)
+		allFeatures, err := e.provider.ListFeatures(context.Background())
 		if err != nil {
 			return nil, fmt.Errorf("listing features: %w", err)
 		}
 		return map[string]interface{}{
-			"entity":            entity,
+			"entity":             entity,
 			"available_features": allFeatures,
-			"hint":              "specify feature names: get <entity> <feature1> <feature2>",
+			"hint":               "specify feature names: get <entity> <feature1> <feature2>",
 		}, nil
 	}
 
 	result := make(map[string]interface{})
 	for _, f := range features {
-		val, ts, err := e.provider.GetFeature(nil, entity, f)
+		val, ts, err := e.provider.GetFeature(context.Background(), entity, f)
 		if err != nil {
 			result[f] = map[string]interface{}{"error": err.Error()}
 		} else {
@@ -247,7 +248,7 @@ func (e *REPLEngine) cmdDescribe(args []string) (interface{}, error) {
 	if e.provider == nil {
 		return nil, fmt.Errorf("no feature provider configured")
 	}
-	values, err := e.provider.GetFeatureValues(nil, args[0], 10)
+	values, err := e.provider.GetFeatureValues(context.Background(), args[0], 10)
 	if err != nil {
 		return nil, fmt.Errorf("describing %q: %w", args[0], err)
 	}
