@@ -82,31 +82,7 @@ func (h *ShardingHandler) handleRecompute(w http.ResponseWriter, r *http.Request
 }
 
 // MarketplaceHandler provides HTTP endpoints for the feature marketplace.
-type MarketplaceHandler struct {
-	catalog marketplaceCatalog
-}
-
-type marketplaceCatalog interface {
-	Publish(feat interface{}) error
-	Get(id string) (interface{}, error)
-	List() interface{}
-	Search(filter interface{}) interface{}
-	Subscribe(featureID, subscriberID, team string) (interface{}, error)
-	Unsubscribe(featureID, subscriberID string) error
-	GetSubscribers(featureID string) interface{}
-	Deprecate(id string) error
-	Stats() map[string]interface{}
-}
-
-// MarketplaceCatalogAdapter wraps the marketplace.Catalog to implement the interface.
-type MarketplaceCatalogAdapter struct {
-	catalog interface {
-		Get(string) (interface{}, error)
-		List() interface{}
-		Deprecate(string) error
-		Stats() map[string]interface{}
-	}
-}
+type MarketplaceHandler struct{}
 
 // NewMarketplaceHandler creates a new marketplace handler.
 func NewMarketplaceHandler() *MarketplaceHandler {

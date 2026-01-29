@@ -6,7 +6,6 @@ package sharding
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -132,7 +131,6 @@ type Router struct {
 	partitionMap *cluster.PartitionMap
 	client       ReplicaClient
 	stats        RouterStats
-	mu           sync.RWMutex
 }
 
 // NewRouter creates a new shard router.

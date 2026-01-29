@@ -52,16 +52,6 @@ func (ts *testAPIGatewayServer) request(method, path string, body string) *httpt
 	return rr
 }
 
-func (ts *testAPIGatewayServer) postJSON(path string, body interface{}) *httptest.ResponseRecorder {
-	ts.t.Helper()
-
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		ts.t.Fatalf("failed to marshal body: %v", err)
-	}
-	return ts.request(http.MethodPost, path, string(jsonBody))
-}
-
 func (ts *testAPIGatewayServer) get(path string) *httptest.ResponseRecorder {
 	return ts.request(http.MethodGet, path, "")
 }

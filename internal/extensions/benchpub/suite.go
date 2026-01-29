@@ -2,7 +2,6 @@ package benchpub
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -261,10 +260,4 @@ func baseLatencyForType(bt BenchmarkType) float64 {
 	default:
 		return 1.0
 	}
-}
-
-// round is a helper to avoid importing additional packages.
-func round(val float64, places int) float64 {
-	p := math.Pow(10, float64(places))
-	return math.Round(val*p) / p
 }
