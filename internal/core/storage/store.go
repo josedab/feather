@@ -304,6 +304,17 @@ type StoreStats struct {
 	StoreMetrics   StoreMetrics
 }
 
+// CheckWarmHealth probes the warm tier with a dummy read to verify functionality.
+// Returns the probe latency and any error encountered.
+func (s *Store) CheckWarmHealth() (time.Duration, error) {
+	if s.warm == nil {
+		return 0, fmt.Errorf("warm tier not initialized")
+	}
+	start := time.Now()
+	_, _ = s.warm.Get("__health_check__", []string{"test"})
+	return time.Since(start), nil
+}
+
 // Stats returns aggregated statistics across all storage tiers.
 //
 // This method provides a unified view of store health without exposing
