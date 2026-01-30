@@ -329,6 +329,7 @@ type MeshManager struct {
 	registry *ServiceRegistry
 	router   *Router
 	circuits map[string]*Circuit
+	protocol *MeshProtocol
 	mu       sync.RWMutex
 }
 

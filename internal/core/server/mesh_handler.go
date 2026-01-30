@@ -28,6 +28,15 @@ func (h *MeshHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/mesh/circuits/{id}/reset", h.handleResetCircuit)
 	mux.HandleFunc("GET /v1/mesh/health", h.handleHealth)
 	mux.HandleFunc("GET /v1/mesh/stats", h.handleStats)
+
+	// Mesh protocol (cross-org feature sharing)
+	mux.HandleFunc("GET /v1/mesh/orgs", h.handleListOrgs)
+	mux.HandleFunc("POST /v1/mesh/orgs", h.handleRegisterOrg)
+	mux.HandleFunc("GET /v1/mesh/grants", h.handleListGrants)
+	mux.HandleFunc("POST /v1/mesh/grants", h.handleGrantAccess)
+	mux.HandleFunc("DELETE /v1/mesh/grants/{id}", h.handleRevokeAccess)
+	mux.HandleFunc("POST /v1/mesh/transfer", h.handleTransferFeatures)
+	mux.HandleFunc("GET /v1/mesh/protocol/stats", h.handleProtocolStats)
 }
 
 func (h *MeshHandler) handleListNodes(w http.ResponseWriter, r *http.Request) {
@@ -122,5 +131,92 @@ func (h *MeshHandler) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func (h *MeshHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.manager.Stats()
+	writeJSONResponse(r.Context(), w, http.StatusOK, stats)
+}
+
+func (h *MeshHandler) ensureProtocol() *mesh.MeshProtocol {
+	proto := h.manager.GetProtocol()
+	if proto == nil {
+		proto = mesh.NewMeshProtocol("local")
+		h.manager.AddProtocol(proto)
+	}
+	return proto
+}
+
+func (h *MeshHandler) handleListOrgs(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	orgs := proto.ListOrganizations()
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"organizations": orgs,
+		"count":         len(orgs),
+	})
+}
+
+func (h *MeshHandler) handleRegisterOrg(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	var org mesh.Organization
+	if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := proto.RegisterOrganization(org); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusCreated, SuccessResponse{Success: true, Message: "organization registered"})
+}
+
+func (h *MeshHandler) handleListGrants(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	orgID := r.URL.Query().Get("org_id")
+	grants := proto.ListGrants(orgID)
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"grants": grants,
+		"count":  len(grants),
+	})
+}
+
+func (h *MeshHandler) handleGrantAccess(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	var grant mesh.AccessGrant
+	if err := json.NewDecoder(r.Body).Decode(&grant); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := proto.GrantAccess(grant); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusCreated, SuccessResponse{Success: true, Message: "access granted"})
+}
+
+func (h *MeshHandler) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	id := r.PathValue("id")
+	if err := proto.RevokeAccess(id); err != nil {
+		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "access revoked"})
+}
+
+func (h *MeshHandler) handleTransferFeatures(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	var req mesh.FeatureTransferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	resp, err := proto.RequestFeatures(req)
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusForbidden, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusOK, resp)
+}
+
+func (h *MeshHandler) handleProtocolStats(w http.ResponseWriter, r *http.Request) {
+	proto := h.ensureProtocol()
+	stats := proto.Stats()
 	writeJSONResponse(r.Context(), w, http.StatusOK, stats)
 }
