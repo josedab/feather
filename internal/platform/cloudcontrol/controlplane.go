@@ -113,6 +113,7 @@ type ControlPlane struct {
 	config    ControlPlaneConfig
 	instances map[string]*Instance
 	tenants   map[string]*Tenant
+	billing   *BillingManager
 }
 
 // NewControlPlane creates a new control plane.

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/feather-store/feather/internal/platform/cloudcontrol"
 )
@@ -33,6 +34,13 @@ func (h *CloudControlHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /v1/cloud/instances/{id}", h.handleTerminateInstance)
 	mux.HandleFunc("POST /v1/cloud/instances/{id}/scale", h.handleScaleInstance)
 	mux.HandleFunc("POST /v1/cloud/instances/{id}/autoscale", h.handleSetAutoscale)
+
+	// Billing
+	mux.HandleFunc("GET /v1/cloud/billing/plans", h.handleListPlans)
+	mux.HandleFunc("POST /v1/cloud/billing/usage", h.handleRecordUsage)
+	mux.HandleFunc("GET /v1/cloud/billing/usage/{tenant_id}", h.handleGetUsage)
+	mux.HandleFunc("POST /v1/cloud/billing/invoices", h.handleGenerateInvoice)
+	mux.HandleFunc("GET /v1/cloud/billing/invoices/{tenant_id}", h.handleGetInvoices)
 
 	// Stats
 	mux.HandleFunc("GET /v1/cloud/control/stats", h.handleStats)
@@ -189,6 +197,132 @@ func (h *CloudControlHandler) handleSetAutoscale(w http.ResponseWriter, r *http.
 func (h *CloudControlHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.cp.Stats()
 	h.writeJSON(r.Context(), w, http.StatusOK, stats)
+}
+
+func (h *CloudControlHandler) handleListPlans(w http.ResponseWriter, r *http.Request) {
+	bm := h.cp.GetBilling()
+	if bm == nil {
+		bm = cloudcontrol.NewBillingManager()
+		h.cp.AddBilling(bm)
+	}
+	plans := bm.ListPlans()
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"plans": plans,
+		"count": len(plans),
+	})
+}
+
+func (h *CloudControlHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) {
+	bm := h.cp.GetBilling()
+	if bm == nil {
+		bm = cloudcontrol.NewBillingManager()
+		h.cp.AddBilling(bm)
+	}
+
+	var record cloudcontrol.UsageRecord
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if record.TenantID == "" {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant_id is required")
+		return
+	}
+
+	bm.RecordUsage(record)
+	h.writeJSON(r.Context(), w, http.StatusCreated, SuccessResponse{Success: true, Message: "usage recorded"})
+}
+
+func (h *CloudControlHandler) handleGetUsage(w http.ResponseWriter, r *http.Request) {
+	bm := h.cp.GetBilling()
+	if bm == nil {
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"records": []interface{}{}, "count": 0})
+		return
+	}
+
+	tenantID := r.PathValue("tenant_id")
+	start := time.Now().AddDate(0, -1, 0) // default: last month
+	end := time.Now()
+
+	if s := r.URL.Query().Get("start"); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			start = t
+		}
+	}
+	if e := r.URL.Query().Get("end"); e != "" {
+		if t, err := time.Parse(time.RFC3339, e); err == nil {
+			end = t
+		}
+	}
+
+	records := bm.GetUsage(tenantID, start, end)
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"records": records,
+		"count":   len(records),
+	})
+}
+
+func (h *CloudControlHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Request) {
+	bm := h.cp.GetBilling()
+	if bm == nil {
+		bm = cloudcontrol.NewBillingManager()
+		h.cp.AddBilling(bm)
+	}
+
+	var req struct {
+		TenantID    string `json:"tenant_id"`
+		Tier        string `json:"tier"`
+		PeriodStart string `json:"period_start"`
+		PeriodEnd   string `json:"period_end"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.TenantID == "" {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant_id is required")
+		return
+	}
+
+	tier := cloudcontrol.InstanceTier(req.Tier)
+	if tier == "" {
+		tier = cloudcontrol.TierStarter
+	}
+
+	start := time.Now().AddDate(0, -1, 0)
+	end := time.Now()
+	if req.PeriodStart != "" {
+		if t, err := time.Parse(time.RFC3339, req.PeriodStart); err == nil {
+			start = t
+		}
+	}
+	if req.PeriodEnd != "" {
+		if t, err := time.Parse(time.RFC3339, req.PeriodEnd); err == nil {
+			end = t
+		}
+	}
+
+	invoice, err := bm.GenerateInvoice(req.TenantID, tier, start, end)
+	if err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusCreated, invoice)
+}
+
+func (h *CloudControlHandler) handleGetInvoices(w http.ResponseWriter, r *http.Request) {
+	bm := h.cp.GetBilling()
+	if bm == nil {
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"invoices": []interface{}{}, "count": 0})
+		return
+	}
+
+	tenantID := r.PathValue("tenant_id")
+	invoices := bm.GetInvoices(tenantID)
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"invoices": invoices,
+		"count":    len(invoices),
+	})
 }
 
 func (h *CloudControlHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
