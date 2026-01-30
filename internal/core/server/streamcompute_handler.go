@@ -29,6 +29,9 @@ func (h *StreamComputeHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /v1/stream/pipelines/{id}", h.handleDeletePipeline)
 	mux.HandleFunc("POST /v1/stream/pipelines/{id}/start", h.handleStartPipeline)
 	mux.HandleFunc("POST /v1/stream/pipelines/{id}/stop", h.handleStopPipeline)
+	mux.HandleFunc("POST /v1/stream/pipelines/{id}/checkpoint", h.handleCreateCheckpoint)
+	mux.HandleFunc("GET /v1/stream/pipelines/{id}/checkpoints", h.handleListCheckpoints)
+	mux.HandleFunc("POST /v1/stream/pipelines/{id}/recover", h.handleRecover)
 	mux.HandleFunc("POST /v1/stream/ingest", h.handleIngest)
 	mux.HandleFunc("GET /v1/stream/results", h.handleGetResults)
 	mux.HandleFunc("GET /v1/stream/stats", h.handleGetStats)
@@ -270,4 +273,47 @@ func (h *StreamComputeHandler) writeJSON(ctx context.Context, w http.ResponseWri
 
 func (h *StreamComputeHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	writeJSONError(ctx, w, status, message)
+}
+
+func (h *StreamComputeHandler) handleCreateCheckpoint(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	cp, err := h.engine.CreateCheckpoint(id)
+	if err != nil {
+		if errors.Is(err, streamcompute.ErrPipelineNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "pipeline not found")
+			return
+		}
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
+		"success":    true,
+		"checkpoint": cp,
+	})
+}
+
+func (h *StreamComputeHandler) handleListCheckpoints(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	cps := h.engine.GetCheckpoints(id)
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"checkpoints": cps,
+		"count":       len(cps),
+	})
+}
+
+func (h *StreamComputeHandler) handleRecover(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := h.engine.RestoreFromCheckpoint(id); err != nil {
+		if errors.Is(err, streamcompute.ErrPipelineNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "pipeline not found")
+			return
+		}
+		if errors.Is(err, streamcompute.ErrCheckpointNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "no checkpoint available")
+			return
+		}
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "pipeline recovered from checkpoint"})
 }

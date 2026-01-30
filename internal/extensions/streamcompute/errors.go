@@ -17,4 +17,7 @@ var (
 
 	// ErrPipelineStopped is returned when attempting to operate on a stopped pipeline.
 	ErrPipelineStopped = errors.New("pipeline is stopped")
+
+	// ErrCheckpointNotFound is returned when no checkpoint exists for recovery.
+	ErrCheckpointNotFound = errors.New("checkpoint not found")
 )

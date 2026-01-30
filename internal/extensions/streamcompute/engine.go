@@ -168,8 +168,9 @@ type pipeline struct {
 	startedAt    time.Time
 
 	// Per-key window state
-	windows map[string]*windowState
-	cancel  context.CancelFunc
+	windows   map[string]*windowState
+	watermark *Watermark
+	cancel    context.CancelFunc
 }
 
 // EngineConfig configures the stream compute engine.
@@ -178,6 +179,7 @@ type EngineConfig struct {
 	CheckpointInterval time.Duration `json:"checkpoint_interval"`
 	MaxLateAllowed     time.Duration `json:"max_late_allowed"`
 	ResultBufferSize   int           `json:"result_buffer_size"`
+	MaxCheckpoints     int           `json:"max_checkpoints"`
 }
 
 // DefaultEngineConfig returns sensible defaults.
@@ -187,15 +189,17 @@ func DefaultEngineConfig() EngineConfig {
 		CheckpointInterval: 30 * time.Second,
 		MaxLateAllowed:     1 * time.Minute,
 		ResultBufferSize:   10000,
+		MaxCheckpoints:     10,
 	}
 }
 
 // Engine orchestrates stream processing pipelines.
 type Engine struct {
-	mu        sync.RWMutex
-	pipelines map[string]*pipeline
-	config    EngineConfig
-	results   []WindowResult
+	mu          sync.RWMutex
+	pipelines   map[string]*pipeline
+	config      EngineConfig
+	results     []WindowResult
+	checkpoints *CheckpointStore
 }
 
 // NewEngine creates a new stream processing engine.
@@ -204,9 +208,10 @@ func NewEngine(config EngineConfig) *Engine {
 		config = DefaultEngineConfig()
 	}
 	return &Engine{
-		pipelines: make(map[string]*pipeline),
-		config:    config,
-		results:   make([]WindowResult, 0, config.ResultBufferSize),
+		pipelines:   make(map[string]*pipeline),
+		config:      config,
+		results:     make([]WindowResult, 0, config.ResultBufferSize),
+		checkpoints: NewCheckpointStore(config.MaxCheckpoints),
 	}
 }
 
@@ -227,10 +232,16 @@ func (e *Engine) CreatePipeline(cfg PipelineConfig) error {
 		return fmt.Errorf("max pipelines reached (%d)", e.config.MaxPipelines)
 	}
 
+	maxLate := cfg.Window.MaxLate
+	if maxLate == 0 {
+		maxLate = e.config.MaxLateAllowed
+	}
+
 	e.pipelines[cfg.ID] = &pipeline{
-		config:  cfg,
-		status:  StatusCreated,
-		windows: make(map[string]*windowState),
+		config:    cfg,
+		status:    StatusCreated,
+		windows:   make(map[string]*windowState),
+		watermark: NewWatermark(maxLate),
 	}
 	return nil
 }
@@ -309,6 +320,11 @@ func (e *Engine) Ingest(event Event) []WindowResult {
 		p.eventsIn++
 		p.lastEvent = event.Timestamp
 
+		// Advance watermark with observed event time
+		if p.watermark != nil {
+			p.watermark.Advance(event.Timestamp)
+		}
+
 		key := event.Key
 		if !p.config.GroupByKey {
 			key = "__global__"
@@ -320,9 +336,17 @@ func (e *Engine) Ingest(event Event) []WindowResult {
 			p.windows[key] = ws
 		}
 
-		// Check if event falls within current window
-		if event.Timestamp.Before(ws.start) {
-			// Late event
+		// Use watermark for late event detection
+		if p.watermark != nil && p.watermark.IsLate(event.Timestamp) {
+			maxLate := p.config.Window.MaxLate
+			if maxLate == 0 {
+				maxLate = e.config.MaxLateAllowed
+			}
+			if p.watermark.Current().Sub(event.Timestamp) > maxLate {
+				p.lateEvents++
+				continue
+			}
+		} else if event.Timestamp.Before(ws.start) {
 			maxLate := p.config.Window.MaxLate
 			if maxLate == 0 {
 				maxLate = e.config.MaxLateAllowed
