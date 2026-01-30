@@ -80,13 +80,14 @@ type CDCStats struct {
 
 // CDCManager manages CDC sources and feeds change events to the Engine.
 type CDCManager struct {
-	mu        sync.RWMutex
-	engine    *Engine
-	sources   map[string]*CDCSourceConfig
-	statuses  map[string]*CDCSourceStatus
-	events    []CDCEvent
-	maxEvents int
-	stats     CDCStats
+	mu         sync.RWMutex
+	engine     *Engine
+	sources    map[string]*CDCSourceConfig
+	statuses   map[string]*CDCSourceStatus
+	events     []CDCEvent
+	maxEvents  int
+	stats      CDCStats
+	lsnTracker *LSNTracker
 }
 
 // NewCDCManager creates a new CDC manager linked to an Engine.

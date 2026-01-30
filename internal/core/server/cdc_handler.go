@@ -33,6 +33,7 @@ func (h *CDCHandler) RegisterRoutes(mux *http.ServeMux) {
 	// CDC Events
 	mux.HandleFunc("POST /v1/cdc/events", h.handleProcessEvent)
 	mux.HandleFunc("POST /v1/cdc/events/batch", h.handleProcessBatch)
+	mux.HandleFunc("POST /v1/cdc/events/debezium", h.handleDebeziumEvent)
 	mux.HandleFunc("GET /v1/cdc/events/recent", h.handleRecentEvents)
 
 	// Materialization trigger
@@ -40,6 +41,7 @@ func (h *CDCHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Stats
 	mux.HandleFunc("GET /v1/cdc/stats", h.handleStats)
+	mux.HandleFunc("GET /v1/cdc/positions", h.handlePositions)
 }
 
 func (h *CDCHandler) handleListSources(w http.ResponseWriter, r *http.Request) {
@@ -145,4 +147,44 @@ func (h *CDCHandler) writeJSON(ctx context.Context, w http.ResponseWriter, statu
 
 func (h *CDCHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	writeJSONError(ctx, w, status, message)
+}
+
+func (h *CDCHandler) handleDebeziumEvent(w http.ResponseWriter, r *http.Request) {
+	sourceID := r.URL.Query().Get("source_id")
+	if sourceID == "" {
+		sourceID = r.Header.Get("X-CDC-Source-ID")
+	}
+	if sourceID == "" {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "source_id query param or X-CDC-Source-ID header required")
+		return
+	}
+
+	body := make([]byte, 0, 4096)
+	buf := make([]byte, 1024)
+	for {
+		n, err := r.Body.Read(buf)
+		if n > 0 {
+			body = append(body, buf[:n]...)
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	event, err := h.manager.ProcessDebeziumEvent(body, sourceID)
+	if err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"event":   event,
+	})
+}
+
+func (h *CDCHandler) handlePositions(w http.ResponseWriter, r *http.Request) {
+	positions := h.manager.GetLSNPositions()
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"positions": positions,
+	})
 }
