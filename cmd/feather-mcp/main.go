@@ -21,9 +21,9 @@ import (
 
 	"github.com/feather-store/feather/internal/core/aggregation"
 	"github.com/feather-store/feather/internal/core/config"
-	"github.com/feather-store/feather/internal/tools/mcp"
 	"github.com/feather-store/feather/internal/core/storage"
 	"github.com/feather-store/feather/internal/core/vector"
+	"github.com/feather-store/feather/internal/tools/mcp"
 )
 
 func main() {
