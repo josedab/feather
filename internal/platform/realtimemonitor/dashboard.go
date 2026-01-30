@@ -130,6 +130,7 @@ type Dashboard struct {
 	alerts         map[string]*Alert           // alert ID -> alert
 	pipelines      map[string]*PipelineHealth  // pipeline ID -> health
 	alertSeq       int64
+	notifier       *AlertNotifier
 }
 
 // NewDashboard creates a new monitoring dashboard.

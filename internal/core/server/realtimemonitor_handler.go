@@ -31,6 +31,13 @@ func (h *RealtimeMonitorHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/monitor/alerts/{id}/resolve", h.handleResolveAlert)
 	mux.HandleFunc("GET /v1/monitor/pipelines", h.handlePipelineHealth)
 	mux.HandleFunc("POST /v1/monitor/pipelines", h.handleUpdatePipelineHealth)
+
+	// Alerting integrations
+	mux.HandleFunc("GET /v1/monitor/notifiers", h.handleListNotifiers)
+	mux.HandleFunc("POST /v1/monitor/notifiers", h.handleAddNotifier)
+	mux.HandleFunc("DELETE /v1/monitor/notifiers/{id}", h.handleRemoveNotifier)
+	mux.HandleFunc("POST /v1/monitor/notifiers/test", h.handleTestNotifier)
+	mux.HandleFunc("GET /v1/monitor/notifiers/history", h.handleNotificationHistory)
 }
 
 func (h *RealtimeMonitorHandler) handleSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -173,4 +180,83 @@ func (h *RealtimeMonitorHandler) writeJSON(ctx context.Context, w http.ResponseW
 
 func (h *RealtimeMonitorHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	writeJSONError(ctx, w, status, message)
+}
+
+func (h *RealtimeMonitorHandler) handleListNotifiers(w http.ResponseWriter, r *http.Request) {
+	notifier := h.dashboard.GetNotifier()
+	if notifier == nil {
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"notifiers": []interface{}{}, "count": 0})
+		return
+	}
+	notifiers := notifier.ListNotifiers()
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"notifiers": notifiers,
+		"count":     len(notifiers),
+	})
+}
+
+func (h *RealtimeMonitorHandler) handleAddNotifier(w http.ResponseWriter, r *http.Request) {
+	var config realtimemonitor.NotifierConfig
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.dashboard.AddNotifier(config); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusCreated, SuccessResponse{Success: true, Message: "notifier added"})
+}
+
+func (h *RealtimeMonitorHandler) handleRemoveNotifier(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	notifier := h.dashboard.GetNotifier()
+	if notifier == nil {
+		h.writeError(r.Context(), w, http.StatusNotFound, "no notifiers configured")
+		return
+	}
+	if err := notifier.RemoveNotifier(id); err != nil {
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "notifier removed"})
+}
+
+func (h *RealtimeMonitorHandler) handleTestNotifier(w http.ResponseWriter, r *http.Request) {
+	notifier := h.dashboard.GetNotifier()
+	if notifier == nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "no notifiers configured")
+		return
+	}
+
+	testAlert := realtimemonitor.Alert{
+		ID:       "test-alert",
+		Name:     "Test Alert",
+		Severity: realtimemonitor.SeverityInfo,
+		Status:   realtimemonitor.AlertActive,
+		Message:  "This is a test alert from Feather monitoring",
+		Source:   "test",
+		FiredAt:  time.Now(),
+	}
+
+	results := notifier.Notify(testAlert)
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"results": results,
+		"count":   len(results),
+	})
+}
+
+func (h *RealtimeMonitorHandler) handleNotificationHistory(w http.ResponseWriter, r *http.Request) {
+	notifier := h.dashboard.GetNotifier()
+	if notifier == nil {
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"history": []interface{}{}, "count": 0})
+		return
+	}
+
+	history := notifier.GetHistory(100)
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"history": history,
+		"count":   len(history),
+	})
 }
