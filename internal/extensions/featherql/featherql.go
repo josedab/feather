@@ -46,6 +46,7 @@ var keywords = map[string]bool{
 	"FILTER": true, "JOIN": true, "ON": true, "CREATE": true, "FEATURE": true,
 	"MATERIALIZED": true, "VIEW": true, "ENTITY": true, "EVERY": true,
 	"INTO": true, "EMIT": true, "TUMBLING": true, "SLIDING": true, "OVER": true,
+	"TUMBLE": true, "HOP": true, "SESSION": true, "STREAMING": true, "WATERMARK": true,
 }
 
 // Lexer tokenizes FeatherQL input.
@@ -251,9 +252,11 @@ type FilterExpr struct {
 
 // WindowSpec defines a time window for aggregation.
 type WindowSpec struct {
-	Type     string        `json:"type"` // tumbling, sliding
-	Duration time.Duration `json:"duration"`
-	SlideBy  time.Duration `json:"slide_by,omitempty"`
+	Type      string        `json:"type"` // tumbling, sliding, session, tumble, hop
+	Duration  time.Duration `json:"duration"`
+	SlideBy   time.Duration `json:"slide_by,omitempty"`
+	Gap       time.Duration `json:"gap,omitempty"`       // session window gap
+	MaxLate   time.Duration `json:"max_late,omitempty"`  // watermark lateness
 }
 
 // Parser parses FeatherQL tokens into an AST.
@@ -447,25 +450,67 @@ func (p *Parser) parseFilterExpr() (*ASTNode, error) {
 func (p *Parser) parseWindowSpec() (*ASTNode, error) {
 	node := &ASTNode{Type: NodeWindow}
 
-	// Window type
-	if p.peek().Type == TokenKeyword && (p.peek().Value == "TUMBLING" || p.peek().Value == "SLIDING") {
-		node.Value = p.peek().Value
-		p.pos++
+	// Window type: TUMBLING, SLIDING, TUMBLE, HOP, SESSION
+	tok := p.peek()
+	if tok.Type == TokenKeyword {
+		switch tok.Value {
+		case "TUMBLING", "TUMBLE":
+			node.Value = "TUMBLE"
+			p.pos++
+		case "SLIDING":
+			node.Value = "SLIDING"
+			p.pos++
+		case "HOP":
+			node.Value = "HOP"
+			p.pos++
+		case "SESSION":
+			node.Value = "SESSION"
+			p.pos++
+		default:
+			node.Value = "TUMBLE"
+		}
 	} else {
-		node.Value = "TUMBLING"
+		node.Value = "TUMBLE"
 	}
 
-	// Duration
+	// Check for function-call syntax: TUMBLE(source, duration) or HOP(source, size, slide)
+	if p.peek().Type == TokenPunctuation && p.peek().Value == "(" {
+		p.pos++ // consume (
+
+		// First arg (source or duration)
+		arg1, err := p.parseExpression()
+		if err != nil {
+			return nil, fmt.Errorf("parsing window argument: %w", err)
+		}
+		node.Children = append(node.Children, arg1)
+
+		// Additional args separated by commas
+		for p.peek().Type == TokenPunctuation && p.peek().Value == "," {
+			p.pos++ // consume ,
+			arg, err := p.parseExpression()
+			if err != nil {
+				return nil, fmt.Errorf("parsing window argument: %w", err)
+			}
+			node.Children = append(node.Children, arg)
+		}
+
+		if p.peek().Type != TokenPunctuation || p.peek().Value != ")" {
+			return nil, fmt.Errorf("expected ')' in window specification")
+		}
+		p.pos++ // consume )
+		return node, nil
+	}
+
+	// Legacy syntax: WINDOW TUMBLING 1h SLIDE BY 5m
 	if p.peek().Type == TokenDuration {
 		node.Children = append(node.Children, &ASTNode{Type: NodeLiteral, Value: p.peek().Value})
 		p.pos++
 	} else if p.peek().Type == TokenNumber {
-		// Expect a unit suffix
 		node.Children = append(node.Children, &ASTNode{Type: NodeLiteral, Value: p.peek().Value})
 		p.pos++
 	}
 
-	// SLIDE BY
+	// SLIDE BY (for HOP/SLIDING windows)
 	if p.peek().Type == TokenKeyword && p.peek().Value == "SLIDE" {
 		p.pos++
 		if p.peek().Type == TokenKeyword && p.peek().Value == "BY" {
@@ -473,6 +518,15 @@ func (p *Parser) parseWindowSpec() (*ASTNode, error) {
 		}
 		if p.peek().Type == TokenDuration || p.peek().Type == TokenNumber {
 			node.Children = append(node.Children, &ASTNode{Type: NodeLiteral, Value: p.peek().Value})
+			p.pos++
+		}
+	}
+
+	// WATERMARK clause
+	if p.peek().Type == TokenKeyword && p.peek().Value == "WATERMARK" {
+		p.pos++
+		if p.peek().Type == TokenDuration || p.peek().Type == TokenNumber {
+			node.Children = append(node.Children, &ASTNode{Type: NodeLiteral, Value: "watermark:" + p.peek().Value})
 			p.pos++
 		}
 	}
@@ -593,13 +647,24 @@ func (c *Compiler) compileSelect(ast *ASTNode) (*Pipeline, error) {
 			}
 		case NodeWindow:
 			ws := &WindowSpec{Type: strings.ToLower(child.Value)}
-			if len(child.Children) > 0 {
-				d, _ := parseDuration(child.Children[0].Value)
-				ws.Duration = d
+			for _, wChild := range child.Children {
+				val := wChild.Value
+				if strings.HasPrefix(val, "watermark:") {
+					d, _ := parseDuration(strings.TrimPrefix(val, "watermark:"))
+					ws.MaxLate = d
+				} else if ws.Duration == 0 {
+					d, _ := parseDuration(val)
+					ws.Duration = d
+				} else if ws.Type == "hop" || ws.Type == "sliding" {
+					d, _ := parseDuration(val)
+					ws.SlideBy = d
+				} else if ws.Type == "session" {
+					d, _ := parseDuration(val)
+					ws.Gap = d
+				}
 			}
-			if len(child.Children) > 1 {
-				d, _ := parseDuration(child.Children[1].Value)
-				ws.SlideBy = d
+			if ws.Type == "session" && ws.Gap == 0 && ws.Duration > 0 {
+				ws.Gap = ws.Duration
 			}
 			pipeline.Window = ws
 		}
