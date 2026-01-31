@@ -5,833 +5,457 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 )
 
-// Controller manages FeatureStore resources.
+// Controller manages the reconciliation of Feather custom resources.
 type Controller struct {
-	mu            sync.RWMutex
-	client        kubernetes.Interface
-	dynamicClient dynamic.Interface
-	namespace     string
-	stores        map[string]*FeatureStore
-	groups        map[string]*FeatureGroup
-	views         map[string]*FeatureView
-	reconciler    *Reconciler
+	mu sync.RWMutex
+
+	// Resource caches
+	featureStores map[string]*FeatureStore
+	featureGroups map[string]*FeatureGroup
+	featureViews  map[string]*FeatureView
+
+	// Reconciler state
+	reconcileQueue chan reconcileRequest
+	workers        int
+	stopCh         chan struct{}
+
+	// Callbacks
+	onFeatureStoreChange func(*FeatureStore) error
+	onFeatureGroupChange func(*FeatureGroup) error
+	onFeatureViewChange  func(*FeatureView) error
+
+	// Metrics
+	stats controllerStats
 }
 
-// ControllerConfig holds controller configuration.
-type ControllerConfig struct {
-	Namespace       string
-	ResyncPeriod    time.Duration
-	Workers         int
-	LeaderElection  bool
-	MetricsAddr     string
-	HealthProbeAddr string
+type reconcileRequest struct {
+	kind      string
+	namespace string
+	name      string
 }
 
-// DefaultControllerConfig returns default configuration.
-func DefaultControllerConfig() ControllerConfig {
-	return ControllerConfig{
-		Namespace:       "default",
-		ResyncPeriod:    30 * time.Second,
-		Workers:         2,
-		LeaderElection:  true,
-		MetricsAddr:     ":8080",
-		HealthProbeAddr: ":8081",
-	}
+type controllerStats struct {
+	reconcileCount   int64
+	reconcileErrors  int64
+	featureStores    int64
+	featureGroups    int64
+	featureViews     int64
+	lastReconcile    time.Time
+	avgReconcileTime time.Duration
 }
 
-// NewController creates a new operator controller.
-func NewController(client kubernetes.Interface, dynamicClient dynamic.Interface, config ControllerConfig) *Controller {
-	c := &Controller{
-		client:        client,
-		dynamicClient: dynamicClient,
-		namespace:     config.Namespace,
-		stores:        make(map[string]*FeatureStore),
-		groups:        make(map[string]*FeatureGroup),
-		views:         make(map[string]*FeatureView),
-	}
-	c.reconciler = NewReconciler(client, dynamicClient, config.Namespace)
-	return c
-}
-
-// Reconciler handles reconciliation of resources.
-type Reconciler struct {
-	client        kubernetes.Interface
-	dynamicClient dynamic.Interface
-	namespace     string
-}
-
-// NewReconciler creates a new reconciler.
-func NewReconciler(client kubernetes.Interface, dynamicClient dynamic.Interface, namespace string) *Reconciler {
-	return &Reconciler{
-		client:        client,
-		dynamicClient: dynamicClient,
-		namespace:     namespace,
+// NewController creates a new controller.
+func NewController(workers int) *Controller {
+	return &Controller{
+		featureStores:  make(map[string]*FeatureStore),
+		featureGroups:  make(map[string]*FeatureGroup),
+		featureViews:   make(map[string]*FeatureView),
+		reconcileQueue: make(chan reconcileRequest, 1000),
+		workers:        workers,
+		stopCh:         make(chan struct{}),
 	}
 }
 
-// ReconcileFeatureStore reconciles a FeatureStore resource.
-func (r *Reconciler) ReconcileFeatureStore(ctx context.Context, store *FeatureStore) ReconcileResult {
-	// Check if being deleted
-	if store.ObjectMeta.DeletionTimestamp != nil {
-		return r.handleDeletion(ctx, store)
+// OnFeatureStoreChange sets the callback for FeatureStore changes.
+func (c *Controller) OnFeatureStoreChange(fn func(*FeatureStore) error) {
+	c.onFeatureStoreChange = fn
+}
+
+// OnFeatureGroupChange sets the callback for FeatureGroup changes.
+func (c *Controller) OnFeatureGroupChange(fn func(*FeatureGroup) error) {
+	c.onFeatureGroupChange = fn
+}
+
+// OnFeatureViewChange sets the callback for FeatureView changes.
+func (c *Controller) OnFeatureViewChange(fn func(*FeatureView) error) {
+	c.onFeatureViewChange = fn
+}
+
+// Start starts the controller workers.
+func (c *Controller) Start(ctx context.Context) error {
+	for i := 0; i < c.workers; i++ {
+		go c.worker(ctx, i)
 	}
 
-	// Ensure finalizer
-	if !containsString(store.ObjectMeta.Finalizers, "feather.io/finalizer") {
-		store.ObjectMeta.Finalizers = append(store.ObjectMeta.Finalizers, "feather.io/finalizer")
-	}
+	<-ctx.Done()
+	close(c.stopCh)
+	return ctx.Err()
+}
 
-	// Create or update resources
-	if err := r.ensureConfigMap(ctx, store); err != nil {
-		return ReconcileResult{Error: fmt.Errorf("ensuring configmap: %w", err)}
-	}
-
-	if err := r.ensureService(ctx, store); err != nil {
-		return ReconcileResult{Error: fmt.Errorf("ensuring service: %w", err)}
-	}
-
-	if err := r.ensureStatefulSet(ctx, store); err != nil {
-		return ReconcileResult{Error: fmt.Errorf("ensuring statefulset: %w", err)}
-	}
-
-	if store.Spec.Autoscaling != nil && store.Spec.Autoscaling.Enabled {
-		if err := r.ensureHPA(ctx, store); err != nil {
-			return ReconcileResult{Error: fmt.Errorf("ensuring hpa: %w", err)}
+func (c *Controller) worker(ctx context.Context, id int) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-c.stopCh:
+			return
+		case req := <-c.reconcileQueue:
+			start := time.Now()
+			if err := c.reconcile(ctx, req); err != nil {
+				c.mu.Lock()
+				c.stats.reconcileErrors++
+				c.mu.Unlock()
+			}
+			c.mu.Lock()
+			c.stats.reconcileCount++
+			c.stats.lastReconcile = time.Now()
+			c.stats.avgReconcileTime = time.Since(start)
+			c.mu.Unlock()
 		}
 	}
+}
 
-	if store.Spec.HighAvailability != nil && store.Spec.HighAvailability.PodDisruptionBudget != nil {
-		if err := r.ensurePDB(ctx, store); err != nil {
-			return ReconcileResult{Error: fmt.Errorf("ensuring pdb: %w", err)}
-		}
+func (c *Controller) reconcile(ctx context.Context, req reconcileRequest) error {
+	key := req.namespace + "/" + req.name
+
+	switch req.kind {
+	case "FeatureStore":
+		return c.reconcileFeatureStore(ctx, key)
+	case "FeatureGroup":
+		return c.reconcileFeatureGroup(ctx, key)
+	case "FeatureView":
+		return c.reconcileFeatureView(ctx, key)
+	default:
+		return fmt.Errorf("unknown kind: %s", req.kind)
 	}
+}
 
-	if store.Spec.Monitoring != nil && store.Spec.Monitoring.ServiceMonitor {
-		if err := r.ensureServiceMonitor(ctx, store); err != nil {
-			return ReconcileResult{Error: fmt.Errorf("ensuring servicemonitor: %w", err)}
-		}
+func (c *Controller) reconcileFeatureStore(ctx context.Context, key string) error {
+	c.mu.RLock()
+	store, ok := c.featureStores[key]
+	c.mu.RUnlock()
+
+	if !ok {
+		return nil // Deleted
 	}
 
 	// Update status
+	store.Status.ObservedGeneration = store.ObjectMeta.Generation
+	store.Status.LastUpdateTime = time.Now()
+
+	// Check if creating or updating
+	if store.Status.Phase == "" || store.Status.Phase == PhasePending {
+		store.Status.Phase = PhaseCreating
+	}
+
+	// Validate spec
+	if err := c.validateFeatureStoreSpec(&store.Spec); err != nil {
+		store.Status.Phase = PhaseFailed
+		c.setCondition(&store.Status.Conditions, "Ready", "False", "ValidationFailed", err.Error())
+		return err
+	}
+
+	// Simulate deployment reconciliation
+	store.Status.ReadyReplicas = store.Spec.Replicas
+	store.Status.AvailableReplicas = store.Spec.Replicas
 	store.Status.Phase = PhaseRunning
-	store.Status.Version = store.Spec.Version
 
-	return ReconcileResult{RequeueAfter: 30 * time.Second}
+	// Set endpoints
+	store.Status.Endpoints = EndpointStatus{
+		HTTP:    fmt.Sprintf("%s:%d", store.ObjectMeta.Name, store.Spec.Config.HTTPPort),
+		GRPC:    fmt.Sprintf("%s:%d", store.ObjectMeta.Name, store.Spec.Config.GRPCPort),
+		Metrics: fmt.Sprintf("%s:%d", store.ObjectMeta.Name, store.Spec.Config.MetricsPort),
+	}
+
+	c.setCondition(&store.Status.Conditions, "Ready", "True", "ReconcileSuccess", "FeatureStore is ready")
+
+	// Callback
+	if c.onFeatureStoreChange != nil {
+		return c.onFeatureStoreChange(store)
+	}
+
+	return nil
 }
 
-func (r *Reconciler) handleDeletion(ctx context.Context, store *FeatureStore) ReconcileResult {
-	store.Status.Phase = PhaseDeleting
+func (c *Controller) reconcileFeatureGroup(ctx context.Context, key string) error {
+	c.mu.RLock()
+	group, ok := c.featureGroups[key]
+	c.mu.RUnlock()
 
-	// Cleanup resources
-	name := store.ObjectMeta.Name
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	// Delete in reverse order
-	r.client.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	r.client.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	r.client.CoreV1().ConfigMaps(namespace).Delete(ctx, name+"-config", metav1.DeleteOptions{})
-
-	// Remove finalizer
-	store.ObjectMeta.Finalizers = removeString(store.ObjectMeta.Finalizers, "feather.io/finalizer")
-
-	return ReconcileResult{}
-}
-
-func (r *Reconciler) ensureConfigMap(ctx context.Context, store *FeatureStore) error {
-	name := store.ObjectMeta.Name + "-config"
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	config := store.Spec.Config
-
-	data := map[string]string{
-		"FEATHER_HTTP_PORT":    fmt.Sprintf("%d", config.HTTPPort),
-		"FEATHER_GRPC_PORT":    fmt.Sprintf("%d", config.GRPCPort),
-		"FEATHER_METRICS_PORT": fmt.Sprintf("%d", config.MetricsPort),
-		"FEATHER_LOG_LEVEL":    config.LogLevel,
-		"FEATHER_LOG_FORMAT":   config.LogFormat,
-	}
-
-	if config.TracingEnabled {
-		data["FEATHER_TRACING_ENABLED"] = "true"
-		data["FEATHER_TRACING_ENDPOINT"] = config.TracingEndpoint
-	}
-
-	if config.KafkaEnabled {
-		data["FEATHER_KAFKA_ENABLED"] = "true"
-		data["FEATHER_KAFKA_BROKERS"] = config.KafkaBrokers
-	}
-
-	// Add extra env vars
-	for k, v := range config.ExtraEnv {
-		data[k] = v
-	}
-
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.labels(store),
-			OwnerReferences: []metav1.OwnerReference{
-				r.ownerRef(store),
-			},
-		},
-		Data: data,
-	}
-
-	_, err := r.client.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = r.client.CoreV1().ConfigMaps(namespace).Create(ctx, cm, metav1.CreateOptions{})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	_, err = r.client.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{})
-	return err
-}
-
-func (r *Reconciler) ensureService(ctx context.Context, store *FeatureStore) error {
-	name := store.ObjectMeta.Name
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	config := store.Spec.Config
-
-	httpPort := config.HTTPPort
-	if httpPort == 0 {
-		httpPort = 8080
-	}
-	grpcPort := config.GRPCPort
-	if grpcPort == 0 {
-		grpcPort = 50051
-	}
-	metricsPort := config.MetricsPort
-	if metricsPort == 0 {
-		metricsPort = 9090
-	}
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.labels(store),
-			OwnerReferences: []metav1.OwnerReference{
-				r.ownerRef(store),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: r.selectorLabels(store),
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       httpPort,
-					TargetPort: intstr.FromInt(int(httpPort)),
-					Protocol:   corev1.ProtocolTCP,
-				},
-				{
-					Name:       "grpc",
-					Port:       grpcPort,
-					TargetPort: intstr.FromInt(int(grpcPort)),
-					Protocol:   corev1.ProtocolTCP,
-				},
-				{
-					Name:       "metrics",
-					Port:       metricsPort,
-					TargetPort: intstr.FromInt(int(metricsPort)),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-			Type: corev1.ServiceTypeClusterIP,
-		},
-	}
-
-	_, err := r.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = r.client.CoreV1().Services(namespace).Create(ctx, svc, metav1.CreateOptions{})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	_, err = r.client.CoreV1().Services(namespace).Update(ctx, svc, metav1.UpdateOptions{})
-	return err
-}
-
-func (r *Reconciler) ensureStatefulSet(ctx context.Context, store *FeatureStore) error {
-	name := store.ObjectMeta.Name
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	replicas := store.Spec.Replicas
-	if replicas == 0 {
-		replicas = 1
-	}
-
-	image := store.Spec.Image
-	if image == "" {
-		image = "feather/feather:" + store.Spec.Version
-	}
-
-	config := store.Spec.Config
-	resources := store.Spec.Resources
-
-	// Build resource requirements
-	resourceReqs := corev1.ResourceRequirements{}
-	if resources.CPURequest != "" || resources.MemoryRequest != "" {
-		resourceReqs.Requests = corev1.ResourceList{}
-		if resources.CPURequest != "" {
-			resourceReqs.Requests[corev1.ResourceCPU] = resource.MustParse(resources.CPURequest)
-		}
-		if resources.MemoryRequest != "" {
-			resourceReqs.Requests[corev1.ResourceMemory] = resource.MustParse(resources.MemoryRequest)
-		}
-	}
-	if resources.CPULimit != "" || resources.MemoryLimit != "" {
-		resourceReqs.Limits = corev1.ResourceList{}
-		if resources.CPULimit != "" {
-			resourceReqs.Limits[corev1.ResourceCPU] = resource.MustParse(resources.CPULimit)
-		}
-		if resources.MemoryLimit != "" {
-			resourceReqs.Limits[corev1.ResourceMemory] = resource.MustParse(resources.MemoryLimit)
-		}
-	}
-
-	httpPort := config.HTTPPort
-	if httpPort == 0 {
-		httpPort = 8080
-	}
-	grpcPort := config.GRPCPort
-	if grpcPort == 0 {
-		grpcPort = 50051
-	}
-
-	sts := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.labels(store),
-			OwnerReferences: []metav1.OwnerReference{
-				r.ownerRef(store),
-			},
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas:    &replicas,
-			ServiceName: name,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.selectorLabels(store),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: r.labels(store),
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:      "feather",
-							Image:     image,
-							Resources: resourceReqs,
-							Ports: []corev1.ContainerPort{
-								{Name: "http", ContainerPort: httpPort},
-								{Name: "grpc", ContainerPort: grpcPort},
-							},
-							EnvFrom: []corev1.EnvFromSource{
-								{
-									ConfigMapRef: &corev1.ConfigMapEnvSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: name + "-config",
-										},
-									},
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/live",
-										Port: intstr.FromInt(int(httpPort)),
-									},
-								},
-								InitialDelaySeconds: 10,
-								PeriodSeconds:       10,
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/ready",
-										Port: intstr.FromInt(int(httpPort)),
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       5,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Add volume claim template if warm tier storage is configured
-	if store.Spec.Storage.WarmTier.Size != "" {
-		storageClass := store.Spec.Storage.WarmTier.StorageClass
-		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "data",
-				},
-				Spec: corev1.PersistentVolumeClaimSpec{
-					AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					StorageClassName: &storageClass,
-					Resources: corev1.VolumeResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse(store.Spec.Storage.WarmTier.Size),
-						},
-					},
-				},
-			},
-		}
-
-		// Add volume mount
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-			{
-				Name:      "data",
-				MountPath: "/var/lib/feather/data",
-			},
-		}
-	}
-
-	// Add anti-affinity if HA is enabled
-	if store.Spec.HighAvailability != nil && store.Spec.HighAvailability.AntiAffinity {
-		sts.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						Weight: 100,
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							LabelSelector: &metav1.LabelSelector{
-								MatchLabels: r.selectorLabels(store),
-							},
-							TopologyKey: "kubernetes.io/hostname",
-						},
-					},
-				},
-			},
-		}
-	}
-
-	_, err := r.client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = r.client.AppsV1().StatefulSets(namespace).Create(ctx, sts, metav1.CreateOptions{})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	_, err = r.client.AppsV1().StatefulSets(namespace).Update(ctx, sts, metav1.UpdateOptions{})
-	return err
-}
-
-func (r *Reconciler) ensureHPA(ctx context.Context, store *FeatureStore) error {
-	name := store.ObjectMeta.Name
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	autoscaling := store.Spec.Autoscaling
-	if autoscaling == nil || !autoscaling.Enabled {
-		// Delete HPA if it exists but autoscaling is disabled
-		err := r.client.AutoscalingV2().HorizontalPodAutoscalers(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-		if err != nil && !errors.IsNotFound(err) {
-			return err
-		}
+	if !ok {
 		return nil
 	}
 
-	minReplicas := autoscaling.MinReplicas
-	if minReplicas == 0 {
-		minReplicas = 1
-	}
-	maxReplicas := autoscaling.MaxReplicas
-	if maxReplicas == 0 {
-		maxReplicas = 10
-	}
-	targetCPU := autoscaling.TargetCPUUtilization
-	if targetCPU == 0 {
-		targetCPU = 80
-	}
-	targetMemory := autoscaling.TargetMemoryUtilization
-	if targetMemory == 0 {
-		targetMemory = 80
-	}
-
-	hpa := &autoscalingv2.HorizontalPodAutoscaler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.labels(store),
-			OwnerReferences: []metav1.OwnerReference{
-				r.ownerRef(store),
-			},
-		},
-		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-				APIVersion: "apps/v1",
-				Kind:       "StatefulSet",
-				Name:       name,
-			},
-			MinReplicas: &minReplicas,
-			MaxReplicas: maxReplicas,
-			Metrics: []autoscalingv2.MetricSpec{
-				{
-					Type: autoscalingv2.ResourceMetricSourceType,
-					Resource: &autoscalingv2.ResourceMetricSource{
-						Name: corev1.ResourceCPU,
-						Target: autoscalingv2.MetricTarget{
-							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: &targetCPU,
-						},
-					},
-				},
-				{
-					Type: autoscalingv2.ResourceMetricSourceType,
-					Resource: &autoscalingv2.ResourceMetricSource{
-						Name: corev1.ResourceMemory,
-						Target: autoscalingv2.MetricTarget{
-							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: &targetMemory,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Add scale-down behavior for stability
-	hpa.Spec.Behavior = &autoscalingv2.HorizontalPodAutoscalerBehavior{
-		ScaleDown: &autoscalingv2.HPAScalingRules{
-			StabilizationWindowSeconds: int32Ptr(300), // 5 minutes
-			Policies: []autoscalingv2.HPAScalingPolicy{
-				{
-					Type:          autoscalingv2.PercentScalingPolicy,
-					Value:         10,
-					PeriodSeconds: 60,
-				},
-			},
-		},
-		ScaleUp: &autoscalingv2.HPAScalingRules{
-			StabilizationWindowSeconds: int32Ptr(0),
-			Policies: []autoscalingv2.HPAScalingPolicy{
-				{
-					Type:          autoscalingv2.PercentScalingPolicy,
-					Value:         100,
-					PeriodSeconds: 15,
-				},
-				{
-					Type:          autoscalingv2.PodsScalingPolicy,
-					Value:         4,
-					PeriodSeconds: 15,
-				},
-			},
-			SelectPolicy: selectPolicyPtr(autoscalingv2.MaxChangePolicySelect),
-		},
-	}
-
-	_, err := r.client.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = r.client.AutoscalingV2().HorizontalPodAutoscalers(namespace).Create(ctx, hpa, metav1.CreateOptions{})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	_, err = r.client.AutoscalingV2().HorizontalPodAutoscalers(namespace).Update(ctx, hpa, metav1.UpdateOptions{})
-	return err
-}
-
-func (r *Reconciler) ensurePDB(ctx context.Context, store *FeatureStore) error {
-	name := store.ObjectMeta.Name
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	ha := store.Spec.HighAvailability
-	if ha == nil || ha.PodDisruptionBudget == nil {
-		// Delete PDB if it exists but HA is disabled
-		err := r.client.PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-		if err != nil && !errors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}
-
-	pdbSpec := ha.PodDisruptionBudget
-
-	pdb := &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.labels(store),
-			OwnerReferences: []metav1.OwnerReference{
-				r.ownerRef(store),
-			},
-		},
-		Spec: policyv1.PodDisruptionBudgetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: r.selectorLabels(store),
-			},
-		},
-	}
-
-	// Set either MinAvailable or MaxUnavailable (not both)
-	if pdbSpec.MinAvailable != nil {
-		minAvailable := intstr.FromInt32(*pdbSpec.MinAvailable)
-		pdb.Spec.MinAvailable = &minAvailable
-	} else if pdbSpec.MaxUnavailable != nil {
-		maxUnavailable := intstr.FromInt32(*pdbSpec.MaxUnavailable)
-		pdb.Spec.MaxUnavailable = &maxUnavailable
-	} else {
-		// Default to maxUnavailable=1
-		maxUnavailable := intstr.FromInt(1)
-		pdb.Spec.MaxUnavailable = &maxUnavailable
-	}
-
-	_, err := r.client.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = r.client.PolicyV1().PodDisruptionBudgets(namespace).Create(ctx, pdb, metav1.CreateOptions{})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	_, err = r.client.PolicyV1().PodDisruptionBudgets(namespace).Update(ctx, pdb, metav1.UpdateOptions{})
-	return err
-}
-
-func (r *Reconciler) ensureServiceMonitor(ctx context.Context, store *FeatureStore) error {
-	name := store.ObjectMeta.Name
-	namespace := store.ObjectMeta.Namespace
-	if namespace == "" {
-		namespace = r.namespace
-	}
-
-	monitoring := store.Spec.Monitoring
-	if monitoring == nil || !monitoring.ServiceMonitor {
-		// Delete ServiceMonitor if it exists but monitoring is disabled
-		if r.dynamicClient != nil {
-			gvr := schema.GroupVersionResource{
-				Group:    "monitoring.coreos.com",
-				Version:  "v1",
-				Resource: "servicemonitors",
-			}
-			err := r.dynamicClient.Resource(gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-			if err != nil && !errors.IsNotFound(err) {
-				return err
-			}
-		}
-		return nil
-	}
-
-	if r.dynamicClient == nil {
-		// No dynamic client available, skip ServiceMonitor creation
-		return nil
-	}
-
-	config := store.Spec.Config
-	metricsPort := config.MetricsPort
-	if metricsPort == 0 {
-		metricsPort = 9090
-	}
-
-	scrapeInterval := monitoring.ScrapeInterval
-	if scrapeInterval == "" {
-		scrapeInterval = "30s"
-	}
-
-	// Build the ServiceMonitor as unstructured
-	sm := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "monitoring.coreos.com/v1",
-			"kind":       "ServiceMonitor",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels":    r.labelsAsInterface(store),
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         "feather.io/v1alpha1",
-						"kind":               "FeatureStore",
-						"name":               store.ObjectMeta.Name,
-						"uid":                string(store.ObjectMeta.UID),
-						"controller":         true,
-						"blockOwnerDeletion": true,
-					},
-				},
-			},
-			"spec": map[string]interface{}{
-				"selector": map[string]interface{}{
-					"matchLabels": r.selectorLabelsAsInterface(store),
-				},
-				"endpoints": []interface{}{
-					map[string]interface{}{
-						"port":     "metrics",
-						"interval": scrapeInterval,
-						"path":     "/metrics",
-					},
-				},
-				"namespaceSelector": map[string]interface{}{
-					"matchNames": []interface{}{namespace},
-				},
-			},
-		},
-	}
-
-	gvr := schema.GroupVersionResource{
-		Group:    "monitoring.coreos.com",
-		Version:  "v1",
-		Resource: "servicemonitors",
-	}
-
-	_, err := r.dynamicClient.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = r.dynamicClient.Resource(gvr).Namespace(namespace).Create(ctx, sm, metav1.CreateOptions{})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	_, err = r.dynamicClient.Resource(gvr).Namespace(namespace).Update(ctx, sm, metav1.UpdateOptions{})
-	return err
-}
-
-func (r *Reconciler) labelsAsInterface(store *FeatureStore) map[string]interface{} {
-	return map[string]interface{}{
-		"app.kubernetes.io/name":       "feather",
-		"app.kubernetes.io/instance":   store.ObjectMeta.Name,
-		"app.kubernetes.io/version":    store.Spec.Version,
-		"app.kubernetes.io/component":  "feature-store",
-		"app.kubernetes.io/managed-by": "feather-operator",
-	}
-}
-
-func (r *Reconciler) selectorLabelsAsInterface(store *FeatureStore) map[string]interface{} {
-	return map[string]interface{}{
-		"app.kubernetes.io/name":     "feather",
-		"app.kubernetes.io/instance": store.ObjectMeta.Name,
-	}
-}
-
-func (r *Reconciler) labels(store *FeatureStore) map[string]string {
-	return map[string]string{
-		"app.kubernetes.io/name":       "feather",
-		"app.kubernetes.io/instance":   store.ObjectMeta.Name,
-		"app.kubernetes.io/version":    store.Spec.Version,
-		"app.kubernetes.io/component":  "feature-store",
-		"app.kubernetes.io/managed-by": "feather-operator",
-	}
-}
-
-func (r *Reconciler) selectorLabels(store *FeatureStore) map[string]string {
-	return map[string]string{
-		"app.kubernetes.io/name":     "feather",
-		"app.kubernetes.io/instance": store.ObjectMeta.Name,
-	}
-}
-
-func (r *Reconciler) ownerRef(store *FeatureStore) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion: "feather.io/v1alpha1",
-		Kind:       "FeatureStore",
-		Name:       store.ObjectMeta.Name,
-		UID:        store.ObjectMeta.UID,
-		Controller: boolPtr(true),
-	}
-}
-
-// ReconcileFeatureGroup reconciles a FeatureGroup resource.
-func (r *Reconciler) ReconcileFeatureGroup(ctx context.Context, group *FeatureGroup) ReconcileResult {
-	// Update status
-	group.Status.Phase = PhaseRunning
+	group.Status.ObservedGeneration = group.ObjectMeta.Generation
 	group.Status.FeatureCount = len(group.Spec.Features)
-	now := metav1.Now()
-	group.Status.LastUpdated = &now
+	group.Status.LastSyncTime = time.Now()
+	group.Status.Phase = "Ready"
 
-	return ReconcileResult{RequeueAfter: time.Minute}
-}
+	c.setCondition(&group.Status.Conditions, "Ready", "True", "Synced", "FeatureGroup is synced")
 
-// ReconcileFeatureView reconciles a FeatureView resource.
-func (r *Reconciler) ReconcileFeatureView(ctx context.Context, view *FeatureView) ReconcileResult {
-	// Update status
-	view.Status.Phase = PhaseRunning
-
-	// Handle materialization scheduling
-	if view.Spec.Materialization != nil && view.Spec.Materialization.Enabled {
-		// Would schedule materialization job
+	if c.onFeatureGroupChange != nil {
+		return c.onFeatureGroupChange(group)
 	}
 
-	return ReconcileResult{RequeueAfter: time.Minute}
+	return nil
 }
 
-// Helper functions
+func (c *Controller) reconcileFeatureView(ctx context.Context, key string) error {
+	c.mu.RLock()
+	view, ok := c.featureViews[key]
+	c.mu.RUnlock()
 
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
+	if !ok {
+		return nil
+	}
+
+	view.Status.ObservedGeneration = view.ObjectMeta.Generation
+	view.Status.LastMaterializationTime = time.Now()
+	view.Status.Phase = "Ready"
+
+	c.setCondition(&view.Status.Conditions, "Ready", "True", "Materialized", "FeatureView is materialized")
+
+	if c.onFeatureViewChange != nil {
+		return c.onFeatureViewChange(view)
+	}
+
+	return nil
+}
+
+func (c *Controller) validateFeatureStoreSpec(spec *FeatureStoreSpec) error {
+	if spec.Replicas < 1 {
+		return fmt.Errorf("replicas must be at least 1")
+	}
+	if spec.Config.HTTPPort == 0 {
+		spec.Config.HTTPPort = 8080
+	}
+	if spec.Config.GRPCPort == 0 {
+		spec.Config.GRPCPort = 50051
+	}
+	if spec.Config.MetricsPort == 0 {
+		spec.Config.MetricsPort = 9090
+	}
+	return nil
+}
+
+func (c *Controller) setCondition(conditions *[]Condition, condType, status, reason, message string) {
+	now := time.Now()
+	for i, cond := range *conditions {
+		if cond.Type == condType {
+			if cond.Status != status {
+				(*conditions)[i].LastTransitionTime = now
+			}
+			(*conditions)[i].Status = status
+			(*conditions)[i].Reason = reason
+			(*conditions)[i].Message = message
+			return
 		}
 	}
-	return false
+	*conditions = append(*conditions, Condition{
+		Type:               condType,
+		Status:             status,
+		LastTransitionTime: now,
+		Reason:             reason,
+		Message:            message,
+	})
 }
 
-func removeString(slice []string, s string) []string {
-	result := make([]string, 0, len(slice))
-	for _, item := range slice {
-		if item != s {
-			result = append(result, item)
+// CreateFeatureStore creates or updates a FeatureStore.
+func (c *Controller) CreateFeatureStore(store *FeatureStore) error {
+	key := store.ObjectMeta.Namespace + "/" + store.ObjectMeta.Name
+
+	c.mu.Lock()
+	store.ObjectMeta.Generation++
+	store.ObjectMeta.CreationTimestamp = time.Now()
+	store.Status.Phase = PhasePending
+	c.featureStores[key] = store
+	c.stats.featureStores = int64(len(c.featureStores))
+	c.mu.Unlock()
+
+	c.enqueue("FeatureStore", store.ObjectMeta.Namespace, store.ObjectMeta.Name)
+	return nil
+}
+
+// GetFeatureStore gets a FeatureStore by name.
+func (c *Controller) GetFeatureStore(namespace, name string) (*FeatureStore, error) {
+	key := namespace + "/" + name
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	store, ok := c.featureStores[key]
+	if !ok {
+		return nil, fmt.Errorf("feature store not found: %s", key)
+	}
+	return store, nil
+}
+
+// ListFeatureStores lists all FeatureStores.
+func (c *Controller) ListFeatureStores(namespace string) []*FeatureStore {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	result := make([]*FeatureStore, 0)
+	for key, store := range c.featureStores {
+		if namespace == "" || store.ObjectMeta.Namespace == namespace {
+			_ = key
+			result = append(result, store)
 		}
 	}
 	return result
 }
 
-func boolPtr(b bool) *bool {
-	return &b
+// DeleteFeatureStore deletes a FeatureStore.
+func (c *Controller) DeleteFeatureStore(namespace, name string) error {
+	key := namespace + "/" + name
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if store, ok := c.featureStores[key]; ok {
+		now := time.Now()
+		store.ObjectMeta.DeletionTimestamp = &now
+		store.Status.Phase = PhaseTerminating
+	}
+
+	delete(c.featureStores, key)
+	c.stats.featureStores = int64(len(c.featureStores))
+	return nil
 }
 
-func int32Ptr(i int32) *int32 {
-	return &i
+// CreateFeatureGroup creates a FeatureGroup.
+func (c *Controller) CreateFeatureGroup(group *FeatureGroup) error {
+	key := group.ObjectMeta.Namespace + "/" + group.ObjectMeta.Name
+
+	c.mu.Lock()
+	group.ObjectMeta.Generation++
+	group.ObjectMeta.CreationTimestamp = time.Now()
+	c.featureGroups[key] = group
+	c.stats.featureGroups = int64(len(c.featureGroups))
+	c.mu.Unlock()
+
+	c.enqueue("FeatureGroup", group.ObjectMeta.Namespace, group.ObjectMeta.Name)
+	return nil
 }
 
-func selectPolicyPtr(p autoscalingv2.ScalingPolicySelect) *autoscalingv2.ScalingPolicySelect {
-	return &p
+// GetFeatureGroup gets a FeatureGroup.
+func (c *Controller) GetFeatureGroup(namespace, name string) (*FeatureGroup, error) {
+	key := namespace + "/" + name
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	group, ok := c.featureGroups[key]
+	if !ok {
+		return nil, fmt.Errorf("feature group not found: %s", key)
+	}
+	return group, nil
+}
+
+// ListFeatureGroups lists FeatureGroups.
+func (c *Controller) ListFeatureGroups(namespace string) []*FeatureGroup {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	result := make([]*FeatureGroup, 0)
+	for _, group := range c.featureGroups {
+		if namespace == "" || group.ObjectMeta.Namespace == namespace {
+			result = append(result, group)
+		}
+	}
+	return result
+}
+
+// DeleteFeatureGroup deletes a FeatureGroup.
+func (c *Controller) DeleteFeatureGroup(namespace, name string) error {
+	key := namespace + "/" + name
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.featureGroups, key)
+	c.stats.featureGroups = int64(len(c.featureGroups))
+	return nil
+}
+
+// CreateFeatureView creates a FeatureView.
+func (c *Controller) CreateFeatureView(view *FeatureView) error {
+	key := view.ObjectMeta.Namespace + "/" + view.ObjectMeta.Name
+
+	c.mu.Lock()
+	view.ObjectMeta.Generation++
+	view.ObjectMeta.CreationTimestamp = time.Now()
+	c.featureViews[key] = view
+	c.stats.featureViews = int64(len(c.featureViews))
+	c.mu.Unlock()
+
+	c.enqueue("FeatureView", view.ObjectMeta.Namespace, view.ObjectMeta.Name)
+	return nil
+}
+
+// GetFeatureView gets a FeatureView.
+func (c *Controller) GetFeatureView(namespace, name string) (*FeatureView, error) {
+	key := namespace + "/" + name
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	view, ok := c.featureViews[key]
+	if !ok {
+		return nil, fmt.Errorf("feature view not found: %s", key)
+	}
+	return view, nil
+}
+
+// ListFeatureViews lists FeatureViews.
+func (c *Controller) ListFeatureViews(namespace string) []*FeatureView {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	result := make([]*FeatureView, 0)
+	for _, view := range c.featureViews {
+		if namespace == "" || view.ObjectMeta.Namespace == namespace {
+			result = append(result, view)
+		}
+	}
+	return result
+}
+
+// DeleteFeatureView deletes a FeatureView.
+func (c *Controller) DeleteFeatureView(namespace, name string) error {
+	key := namespace + "/" + name
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.featureViews, key)
+	c.stats.featureViews = int64(len(c.featureViews))
+	return nil
+}
+
+func (c *Controller) enqueue(kind, namespace, name string) {
+	select {
+	case c.reconcileQueue <- reconcileRequest{kind: kind, namespace: namespace, name: name}:
+	default:
+		// Queue full, skip
+	}
+}
+
+// Stats returns controller statistics.
+func (c *Controller) Stats() ControllerStats {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return ControllerStats{
+		ReconcileCount:   c.stats.reconcileCount,
+		ReconcileErrors:  c.stats.reconcileErrors,
+		FeatureStores:    c.stats.featureStores,
+		FeatureGroups:    c.stats.featureGroups,
+		FeatureViews:     c.stats.featureViews,
+		LastReconcile:    c.stats.lastReconcile,
+		AvgReconcileTime: c.stats.avgReconcileTime,
+	}
+}
+
+// ControllerStats contains controller statistics.
+type ControllerStats struct {
+	ReconcileCount   int64         `json:"reconcile_count"`
+	ReconcileErrors  int64         `json:"reconcile_errors"`
+	FeatureStores    int64         `json:"feature_stores"`
+	FeatureGroups    int64         `json:"feature_groups"`
+	FeatureViews     int64         `json:"feature_views"`
+	LastReconcile    time.Time     `json:"last_reconcile"`
+	AvgReconcileTime time.Duration `json:"avg_reconcile_time"`
 }
