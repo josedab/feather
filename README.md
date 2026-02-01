@@ -444,7 +444,13 @@ For complete deployment instructions, see [Deployment Guide](./docs/deployment.m
 |----------|-------------|
 | [Architecture Overview](./docs/architecture.md) | System design, data flow, components |
 | [API Reference](./docs/api-reference.md) | Complete HTTP and gRPC API documentation |
+| [Client SDK Guide](./docs/sdk-guide.md) | Go, Python, Rust, TypeScript, and Java SDKs |
 | [Deployment Guide](./docs/deployment.md) | Docker, Kubernetes, Helm installation |
+| [Kubernetes Operator](./docs/operator.md) | Custom resources and operator deployment |
+| [Real-Time Streaming](./docs/streaming.md) | Streaming pipelines, windowing, CEP |
+| [Cloud Storage Backends](./docs/cloud-storage.md) | DynamoDB, S3, GCS, Bigtable integration |
+| [LLM Embeddings](./docs/llm-embeddings.md) | OpenAI, Ollama, HuggingFace embedding generation |
+| [Dashboard & Web UI](./docs/dashboard.md) | Web interface for monitoring and exploration |
 | [Observability Guide](./docs/observability.md) | Prometheus metrics, Grafana dashboards, alerting |
 | [Feature Freshness](./docs/freshness.md) | Adaptive TTL, SLA management, alerting, remediation |
 | [AI-Powered Discovery](./docs/discovery.md) | Semantic search, NL queries, recommendations |
@@ -498,18 +504,24 @@ feather/
 ├── cmd/feather/          # Application entrypoint
 ├── internal/
 │   ├── aggregation/      # Real-time aggregation engine
+│   ├── cluster/          # Distributed cluster membership and gossip
 │   ├── config/           # Configuration loading
+│   ├── dashboard/        # Web UI backend for monitoring
 │   ├── domain/           # Core domain types
 │   ├── drift/            # Drift detection and monitoring
 │   ├── freshness/        # Feature freshness SLAs and TTL management
 │   ├── ingestion/        # Kafka and HTTP ingestion
+│   ├── llm/              # LLM-powered embeddings (OpenAI, Ollama, HuggingFace)
+│   ├── metrics/          # Prometheus metrics
 │   ├── offline/          # Spark and Flink connectors
+│   ├── operator/         # Kubernetes operator and CRDs
 │   ├── semantic/         # AI-powered discovery and search
 │   ├── server/           # HTTP and gRPC servers
 │   ├── storage/          # Hot/warm tiered storage
-│   ├── metrics/          # Prometheus metrics
+│   │   └── cloud/        # Cloud backends (DynamoDB, S3, GCS, Bigtable)
+│   ├── streaming/        # Real-time streaming pipelines and CEP
 │   ├── tracing/          # OpenTelemetry tracing
-│   └── vector/           # Vector similarity search
+│   └── vector/           # Vector similarity search (HNSW)
 ├── sdk/
 │   ├── go/               # Go client SDK
 │   ├── python/           # Python client SDK
@@ -529,6 +541,11 @@ feather/
 - [x] Drift detection and monitoring
 - [x] Feature freshness SLAs with auto-remediation
 - [x] AI-powered feature discovery and recommendations
+- [x] Kubernetes operator with custom resources
+- [x] LLM-powered embeddings (OpenAI, Ollama, HuggingFace)
+- [x] Real-time streaming with CEP
+- [x] Cloud storage backends (DynamoDB, S3, GCS, Bigtable)
+- [x] Web dashboard for monitoring and exploration
 - [ ] Feature lineage tracking
 - [ ] A/B testing support for feature experimentation
 - [ ] Multi-tenant isolation
