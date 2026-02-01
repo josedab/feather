@@ -42,7 +42,10 @@ package storage
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/feather-store/feather/internal/domain"
@@ -60,8 +63,14 @@ type Store struct {
 	schema  SchemaRegistry
 	metrics *StoreMetrics
 
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
+	warmWrites      chan warmWriteRequest
+	warmWriteErrors int64
+	warmWriteDrops  int64
+	wg              sync.WaitGroup
+	ctx             context.Context
+	cancel          context.CancelFunc
+	closed          int32
+	logger          *slog.Logger
 }
 
 // SchemaRegistry provides access to feature group schemas for validation.
@@ -90,6 +99,10 @@ type StoreMetrics struct {
 	WarmMisses int64
 	// Writes is the total number of write operations.
 	Writes int64
+	// WarmWriteErrors is the number of warm tier write errors.
+	WarmWriteErrors int64
+	// WarmWriteDrops is the number of warm tier writes dropped due to shutdown.
+	WarmWriteDrops int64
 }
 
 // StoreOptions configures the store's behavior and resource limits.
@@ -106,10 +119,22 @@ type StoreOptions struct {
 	// TTLCheckInterval is how often to scan for and remove expired features.
 	// Defaults to 1 minute if not specified.
 	TTLCheckInterval time.Duration
+
+	// WarmWriteWorkers is the number of background workers for warm tier writes.
+	// Defaults to 4 if not specified.
+	WarmWriteWorkers int
+	// WarmWriteBuffer is the size of the warm tier write queue.
+	// Defaults to 1024 if not specified.
+	WarmWriteBuffer int
+}
+
+type warmWriteRequest struct {
+	entityKey string
+	features  map[string]*domain.FeatureValue
 }
 
 // NewStore creates a new feature store.
-func NewStore(opts StoreOptions, schema SchemaRegistry) (*Store, error) {
+func NewStore(ctx context.Context, opts StoreOptions, schema SchemaRegistry) (*Store, error) { //nolint:contextcheck
 	hot := NewHotTier(opts.HotMaxSize)
 
 	warm, err := NewWarmTier(WarmTierOptions{
@@ -121,13 +146,18 @@ func NewStore(opts StoreOptions, schema SchemaRegistry) (*Store, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithCancel(ctx)
 	s := &Store{
 		hot:     hot,
 		warm:    warm,
 		schema:  schema,
 		metrics: &StoreMetrics{},
+		ctx:     ctx,
 		cancel:  cancel,
+		logger:  slog.Default(),
 	}
 
 	// Start background tasks
@@ -138,6 +168,20 @@ func NewStore(opts StoreOptions, schema SchemaRegistry) (*Store, error) {
 	s.wg.Add(1)
 	go s.ttlLoop(ctx, ttlInterval)
 
+	workerCount := opts.WarmWriteWorkers
+	if workerCount <= 0 {
+		workerCount = 4
+	}
+	bufferSize := opts.WarmWriteBuffer
+	if bufferSize <= 0 {
+		bufferSize = 1024
+	}
+	s.warmWrites = make(chan warmWriteRequest, bufferSize)
+	for i := 0; i < workerCount; i++ {
+		s.wg.Add(1)
+		go s.warmWriteLoop(ctx)
+	}
+
 	return s, nil
 }
 
@@ -145,12 +189,16 @@ func NewStore(opts StoreOptions, schema SchemaRegistry) (*Store, error) {
 func (s *Store) Get(entityKey string, features []string) (map[string]*domain.FeatureValue, error) {
 	// Try hot tier first
 	result, err := s.hot.Get(entityKey, features)
-	if err != nil && err != domain.ErrEntityNotFound {
+	if err != nil && !errors.Is(err, domain.ErrEntityNotFound) {
 		return nil, err
 	}
 
 	// Get missing slice from pool to reduce allocations
-	missingPtr := featureNameSlicePool.Get().(*[]string)
+	missingPtr, ok := featureNameSlicePool.Get().(*[]string)
+	if !ok {
+		missing := make([]string, 0, len(features))
+		missingPtr = &missing
+	}
 	missing := (*missingPtr)[:0]
 	defer func() {
 		*missingPtr = missing[:0]
@@ -177,6 +225,9 @@ func (s *Store) Get(entityKey string, features []string) (map[string]*domain.Fea
 		for k, v := range warmResult {
 			result[k] = v
 		}
+		if len(warmResult) > 0 {
+			_ = s.hot.Put(entityKey, warmResult)
+		}
 	}
 
 	return result, nil
@@ -195,11 +246,7 @@ func (s *Store) Put(entityKey string, features map[string]*domain.FeatureValue) 
 	}
 
 	// Write to warm tier asynchronously with tracking
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		_ = s.warm.Put(entityKey, features)
-	}()
+	s.enqueueWarmWrite(entityKey, features)
 
 	return nil
 }
@@ -227,8 +274,10 @@ func (s *Store) Warm() *WarmTier {
 func (s *Store) Metrics() StoreMetrics {
 	hotMetrics := s.hot.Metrics()
 	return StoreMetrics{
-		HotHits:   hotMetrics.Hits,
-		HotMisses: hotMetrics.Misses,
+		HotHits:         hotMetrics.Hits,
+		HotMisses:       hotMetrics.Misses,
+		WarmWriteErrors: atomic.LoadInt64(&s.warmWriteErrors),
+		WarmWriteDrops:  atomic.LoadInt64(&s.warmWriteDrops),
 	}
 }
 
@@ -257,7 +306,41 @@ func (s *Store) ttlLoop(ctx context.Context, interval time.Duration) {
 
 // Close shuts down the store.
 func (s *Store) Close() error {
-	s.cancel()
+	if atomic.CompareAndSwapInt32(&s.closed, 0, 1) {
+		s.cancel()
+	}
 	s.wg.Wait()
+	s.hot.Close()
 	return s.warm.Close()
+}
+
+func (s *Store) enqueueWarmWrite(entityKey string, features map[string]*domain.FeatureValue) {
+	if atomic.LoadInt32(&s.closed) == 1 {
+		atomic.AddInt64(&s.warmWriteDrops, 1)
+		return
+	}
+	select {
+	case s.warmWrites <- warmWriteRequest{entityKey: entityKey, features: features}:
+	case <-s.ctx.Done():
+		atomic.AddInt64(&s.warmWriteDrops, 1)
+	default:
+		atomic.AddInt64(&s.warmWriteDrops, 1)
+	}
+}
+
+func (s *Store) warmWriteLoop(ctx context.Context) {
+	defer s.wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case req := <-s.warmWrites:
+			if err := s.warm.Put(req.entityKey, req.features); err != nil {
+				atomic.AddInt64(&s.warmWriteErrors, 1)
+				if s.logger != nil {
+					s.logger.Error("warm tier write failed", "entity_key", req.entityKey, "error", err)
+				}
+			}
+		}
+	}
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -54,7 +55,7 @@ func TestHotTier_EntityNotFound(t *testing.T) {
 	hot := NewHotTier(1024 * 1024)
 
 	_, err := hot.Get("nonexistent", []string{"feature"})
-	if err != domain.ErrEntityNotFound {
+	if !errors.Is(err, domain.ErrEntityNotFound) {
 		t.Errorf("Expected ErrEntityNotFound, got %v", err)
 	}
 }
@@ -134,7 +135,7 @@ func TestHotTier_Delete(t *testing.T) {
 
 	// Verify it's gone
 	_, err = hot.Get(entityKey, []string{"feature"})
-	if err != domain.ErrEntityNotFound {
+	if !errors.Is(err, domain.ErrEntityNotFound) {
 		t.Errorf("Expected ErrEntityNotFound after delete, got %v", err)
 	}
 }

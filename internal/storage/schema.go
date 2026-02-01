@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/feather-store/feather/internal/domain"
 )
@@ -11,6 +12,7 @@ import (
 type Registry struct {
 	groups       map[string]*domain.FeatureGroup
 	featureIndex map[string]*featureRef
+	featureNames map[string]string
 	mu           sync.RWMutex
 }
 
@@ -24,6 +26,7 @@ func NewRegistry() *Registry {
 	return &Registry{
 		groups:       make(map[string]*domain.FeatureGroup),
 		featureIndex: make(map[string]*featureRef),
+		featureNames: make(map[string]string),
 	}
 }
 
@@ -36,6 +39,10 @@ func (r *Registry) RegisterGroup(group *domain.FeatureGroup) error {
 		return fmt.Errorf("%w: group %s", domain.ErrAlreadyExists, group.Name)
 	}
 
+	if err := r.validateFeatureNames(group, ""); err != nil {
+		return err
+	}
+
 	r.groups[group.Name] = group
 
 	// Index features
@@ -45,6 +52,7 @@ func (r *Registry) RegisterGroup(group *domain.FeatureGroup) error {
 			group:   group,
 			feature: &group.Features[i],
 		}
+		r.featureNames[featureName] = group.Name
 	}
 
 	return nil
@@ -60,9 +68,14 @@ func (r *Registry) UpdateGroup(group *domain.FeatureGroup) error {
 		return fmt.Errorf("%w: group %s", domain.ErrGroupNotFound, group.Name)
 	}
 
+	if err := r.validateFeatureNames(group, group.Name); err != nil {
+		return err
+	}
+
 	// Remove old feature indexes
 	for _, feature := range existing.Features {
 		delete(r.featureIndex, feature.Name)
+		delete(r.featureNames, feature.Name)
 	}
 
 	// Update group and re-index
@@ -73,6 +86,7 @@ func (r *Registry) UpdateGroup(group *domain.FeatureGroup) error {
 			group:   group,
 			feature: &group.Features[i],
 		}
+		r.featureNames[featureName] = group.Name
 	}
 
 	return nil
@@ -91,6 +105,7 @@ func (r *Registry) RemoveGroup(name string) error {
 	// Remove feature indexes
 	for _, feature := range group.Features {
 		delete(r.featureIndex, feature.Name)
+		delete(r.featureNames, feature.Name)
 	}
 
 	delete(r.groups, name)
@@ -245,7 +260,48 @@ func validateValue(spec *domain.FeatureSpec, value interface{}) error {
 				}
 			}
 		}
+	case domain.DataTypeBool:
+		if _, ok := value.(bool); !ok {
+			return &domain.ValidationError{
+				Field:   spec.Name,
+				Message: "expected boolean value",
+			}
+		}
+	case domain.DataTypeBytes:
+		if _, ok := value.([]byte); !ok {
+			return &domain.ValidationError{
+				Field:   spec.Name,
+				Message: "expected bytes value",
+			}
+		}
+	case domain.DataTypeVector:
+		if _, ok := value.([]float32); !ok {
+			return &domain.ValidationError{
+				Field:   spec.Name,
+				Message: "expected vector value",
+			}
+		}
+	case domain.DataTypeTimestamp:
+		switch value.(type) {
+		case time.Time, int64, string:
+			return nil
+		default:
+			return &domain.ValidationError{
+				Field:   spec.Name,
+				Message: "expected timestamp value",
+			}
+		}
 	}
 
+	return nil
+}
+
+func (r *Registry) validateFeatureNames(group *domain.FeatureGroup, allowGroup string) error {
+	for i := range group.Features {
+		featureName := group.Features[i].Name
+		if existingGroup, exists := r.featureNames[featureName]; exists && existingGroup != allowGroup {
+			return fmt.Errorf("%w: feature %s already defined in group %s", domain.ErrAlreadyExists, featureName, existingGroup)
+		}
+	}
 	return nil
 }

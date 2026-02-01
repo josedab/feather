@@ -2,11 +2,13 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
+
 	"github.com/feather-store/feather/internal/domain"
 )
 
@@ -16,14 +18,6 @@ var (
 	keyBytesPool = sync.Pool{
 		New: func() interface{} {
 			b := make([]byte, 0, 128)
-			return &b
-		},
-	}
-
-	// Pool for JSON encoding buffers
-	jsonBufferPool = sync.Pool{
-		New: func() interface{} {
-			b := make([]byte, 0, 512)
 			return &b
 		},
 	}
@@ -75,7 +69,11 @@ func featureKey(entityKey, featureName string) []byte {
 // featureKeyPooled generates the key for a feature using a pooled buffer.
 // Returns a buffer that must be returned to pool after use.
 func featureKeyPooled(entityKey, featureName string) ([]byte, func()) {
-	bufPtr := keyBytesPool.Get().(*[]byte)
+	bufPtr, ok := keyBytesPool.Get().(*[]byte)
+	if !ok {
+		b := make([]byte, 0, 128)
+		bufPtr = &b
+	}
 	buf := (*bufPtr)[:0]
 	buf = append(buf, "f:"...)
 	buf = append(buf, entityKey...)
@@ -102,7 +100,7 @@ func (w *WarmTier) Get(entityKey string, features []string) (map[string]*domain.
 			key, release := featureKeyPooled(entityKey, feature)
 			item, err := txn.Get(key)
 			release() // Return key buffer to pool
-			if err == badger.ErrKeyNotFound {
+			if errors.Is(err, badger.ErrKeyNotFound) {
 				continue
 			}
 			if err != nil {
@@ -154,7 +152,7 @@ func (w *WarmTier) Delete(entityKey string, features []string) error {
 	return w.db.Update(func(txn *badger.Txn) error {
 		for _, feature := range features {
 			key := featureKey(entityKey, feature)
-			if err := txn.Delete(key); err != nil && err != badger.ErrKeyNotFound {
+			if err := txn.Delete(key); err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 				return err
 			}
 		}

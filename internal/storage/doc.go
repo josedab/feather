@@ -13,7 +13,7 @@
 //
 // Example usage:
 //
-//	store, err := storage.NewStore(storage.StoreOptions{
+//	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 //	    HotMaxSize: 1 << 30, // 1GB
 //	    WarmPath:   "/var/lib/feather/data",
 //	}, schema)

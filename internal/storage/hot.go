@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"container/list"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,14 +19,6 @@ var (
 			return &s
 		},
 	}
-
-	// entityKeySlicePool provides reusable slices for entity key lists.
-	entityKeySlicePool = sync.Pool{
-		New: func() interface{} {
-			s := make([]string, 0, 64)
-			return &s
-		},
-	}
 )
 
 // entityData holds all features for a single entity with its own mutex.
@@ -33,6 +26,7 @@ var (
 type entityData struct {
 	features map[string]*domain.FeatureValue
 	mu       sync.RWMutex
+	size     int64
 }
 
 // HotTier provides in-memory feature storage optimized for sub-millisecond access.
@@ -81,6 +75,14 @@ type HotTier struct {
 
 	// metrics contains atomic counters for observability.
 	metrics *HotTierMetrics
+
+	lruMu      sync.Mutex
+	lruList    *list.List
+	lruEntries map[string]*list.Element
+
+	stopEvict chan struct{}
+	evictWg   sync.WaitGroup
+	stopOnce  sync.Once
 }
 
 // shard represents one of 256 hash buckets in the hot tier.
@@ -105,13 +107,18 @@ type HotTierMetrics struct {
 	DroppedEvictionSignals int64
 }
 
+const estimatedFeatureSize = int64(100)
+
 // NewHotTier creates a new hot tier with the given max memory size.
 func NewHotTier(maxSize int64) *HotTier {
 	h := &HotTier{
-		arena:     NewArena(1024 * 1024), // 1MB chunks
-		maxSize:   maxSize,
-		evictChan: make(chan string, 1000),
-		metrics:   &HotTierMetrics{},
+		arena:      NewArena(1024 * 1024), // 1MB chunks
+		maxSize:    maxSize,
+		evictChan:  make(chan string, 1000),
+		metrics:    &HotTierMetrics{},
+		lruList:    list.New(),
+		lruEntries: make(map[string]*list.Element),
+		stopEvict:  make(chan struct{}),
 	}
 
 	// Initialize shards
@@ -120,6 +127,9 @@ func NewHotTier(maxSize int64) *HotTier {
 			data: make(map[string]*entityData),
 		}
 	}
+
+	h.evictWg.Add(1)
+	go h.evictLoop()
 
 	return h
 }
@@ -140,6 +150,112 @@ func fnvHash(s string) uint32 {
 	return hash
 }
 
+// Close stops background eviction.
+func (h *HotTier) Close() {
+	h.stopOnce.Do(func() {
+		close(h.stopEvict)
+	})
+	h.evictWg.Wait()
+}
+
+func (h *HotTier) touchLRU(entityKey string) {
+	h.lruMu.Lock()
+	defer h.lruMu.Unlock()
+
+	if elem, ok := h.lruEntries[entityKey]; ok {
+		h.lruList.MoveToFront(elem)
+		return
+	}
+
+	h.lruEntries[entityKey] = h.lruList.PushFront(entityKey)
+}
+
+func (h *HotTier) removeFromLRU(entityKey string) {
+	h.lruMu.Lock()
+	defer h.lruMu.Unlock()
+
+	if elem, ok := h.lruEntries[entityKey]; ok {
+		h.lruList.Remove(elem)
+		delete(h.lruEntries, entityKey)
+	}
+}
+
+func (h *HotTier) popOldest() (string, bool) {
+	h.lruMu.Lock()
+	defer h.lruMu.Unlock()
+
+	elem := h.lruList.Back()
+	if elem == nil {
+		return "", false
+	}
+	key, ok := elem.Value.(string)
+	if !ok {
+		return "", false
+	}
+	h.lruList.Remove(elem)
+	delete(h.lruEntries, key)
+	return key, true
+}
+
+func (h *HotTier) evictLoop() {
+	defer h.evictWg.Done()
+
+	for {
+		select {
+		case <-h.stopEvict:
+			return
+		case <-h.evictChan:
+			h.evictIfNeeded()
+		}
+	}
+}
+
+func (h *HotTier) evictIfNeeded() {
+	if h.maxSize <= 0 {
+		return
+	}
+
+	for atomic.LoadInt64(&h.curSize) > h.maxSize {
+		entityKey, ok := h.popOldest()
+		if !ok {
+			return
+		}
+		if h.removeEntity(entityKey) {
+			atomic.AddInt64(&h.metrics.Evictions, 1)
+		}
+	}
+}
+
+func (h *HotTier) removeEntity(entityKey string) bool {
+	shard := h.getShard(entityKey)
+	shard.mu.Lock()
+	entity, ok := shard.data[entityKey]
+	if ok {
+		delete(shard.data, entityKey)
+	}
+	shard.mu.Unlock()
+
+	if !ok {
+		return false
+	}
+
+	entity.mu.Lock()
+	size := entity.size
+	if size == 0 {
+		size = int64(len(entity.features)) * estimatedFeatureSize
+	}
+	entity.size = 0
+	entity.mu.Unlock()
+
+	if size > 0 {
+		atomic.AddInt64(&h.curSize, -size)
+	}
+
+	h.removeFromLRU(entityKey)
+
+	return true
+}
+
 // Get retrieves features for an entity.
 func (h *HotTier) Get(entityKey string, features []string) (map[string]*domain.FeatureValue, error) {
 	atomic.AddInt64(&h.metrics.TotalReads, 1)
@@ -153,6 +269,8 @@ func (h *HotTier) Get(entityKey string, features []string) (map[string]*domain.F
 		atomic.AddInt64(&h.metrics.Misses, 1)
 		return nil, domain.ErrEntityNotFound
 	}
+
+	h.touchLRU(entityKey)
 
 	entity.mu.RLock()
 	defer entity.mu.RUnlock()
@@ -180,6 +298,8 @@ func (h *HotTier) GetAll(entityKey string) (map[string]*domain.FeatureValue, err
 	if !ok {
 		return nil, domain.ErrEntityNotFound
 	}
+
+	h.touchLRU(entityKey)
 
 	entity.mu.RLock()
 	defer entity.mu.RUnlock()
@@ -209,23 +329,33 @@ func (h *HotTier) Put(entityKey string, features map[string]*domain.FeatureValue
 	entity.mu.Lock()
 	defer entity.mu.Unlock()
 
+	var sizeDelta int64
 	for name, val := range features {
 		existing, exists := entity.features[name]
 		if !exists || val.Version > existing.Version {
 			entity.features[name] = val
-			// Track size growth (approximate)
-			atomic.AddInt64(&h.curSize, 100)
+			if !exists {
+				entity.size += estimatedFeatureSize
+				sizeDelta += estimatedFeatureSize
+			}
 		}
 	}
 
+	if sizeDelta > 0 {
+		atomic.AddInt64(&h.curSize, sizeDelta)
+	}
+
+	h.touchLRU(entityKey)
+
 	// Check if we need to trigger eviction
-	if atomic.LoadInt64(&h.curSize) > h.maxSize {
+	if h.maxSize > 0 && atomic.LoadInt64(&h.curSize) > h.maxSize {
 		// Signal eviction needed
 		select {
 		case h.evictChan <- entityKey:
 		default:
 			// Channel full, track dropped signal
 			atomic.AddInt64(&h.metrics.DroppedEvictionSignals, 1)
+			h.evictIfNeeded()
 		}
 	}
 
@@ -234,14 +364,7 @@ func (h *HotTier) Put(entityKey string, features map[string]*domain.FeatureValue
 
 // Delete removes an entity from the hot tier.
 func (h *HotTier) Delete(entityKey string) error {
-	shard := h.getShard(entityKey)
-	shard.mu.Lock()
-	defer shard.mu.Unlock()
-
-	if entity, ok := shard.data[entityKey]; ok {
-		// Approximate size reduction
-		atomic.AddInt64(&h.curSize, -int64(len(entity.features)*100))
-		delete(shard.data, entityKey)
+	if h.removeEntity(entityKey) {
 		atomic.AddInt64(&h.metrics.Evictions, 1)
 	}
 
@@ -257,17 +380,28 @@ func (h *HotTier) ExpireOlderThan(maxAge time.Duration) int {
 		shard.mu.Lock()
 		for entityKey, entity := range shard.data {
 			entity.mu.Lock()
+			var removed int
 			for featureName, val := range entity.features {
 				if val.Timestamp < cutoff {
 					delete(entity.features, featureName)
-					expired++
+					removed++
 				}
 			}
-			// Remove entity if no features left
-			if len(entity.features) == 0 {
-				delete(shard.data, entityKey)
+			if removed > 0 {
+				sizeDelta := int64(removed) * estimatedFeatureSize
+				entity.size -= sizeDelta
+				if entity.size < 0 {
+					entity.size = 0
+				}
+				atomic.AddInt64(&h.curSize, -sizeDelta)
+				expired += removed
 			}
+			removeEntity := len(entity.features) == 0
 			entity.mu.Unlock()
+			if removeEntity {
+				delete(shard.data, entityKey)
+				h.removeFromLRU(entityKey)
+			}
 		}
 		shard.mu.Unlock()
 	}
@@ -294,9 +428,10 @@ func (h *HotTier) EntityCount() int {
 // Metrics returns current metrics.
 func (h *HotTier) Metrics() HotTierMetrics {
 	return HotTierMetrics{
-		Hits:       atomic.LoadInt64(&h.metrics.Hits),
-		Misses:     atomic.LoadInt64(&h.metrics.Misses),
-		Evictions:  atomic.LoadInt64(&h.metrics.Evictions),
-		TotalReads: atomic.LoadInt64(&h.metrics.TotalReads),
+		Hits:                   atomic.LoadInt64(&h.metrics.Hits),
+		Misses:                 atomic.LoadInt64(&h.metrics.Misses),
+		Evictions:              atomic.LoadInt64(&h.metrics.Evictions),
+		TotalReads:             atomic.LoadInt64(&h.metrics.TotalReads),
+		DroppedEvictionSignals: atomic.LoadInt64(&h.metrics.DroppedEvictionSignals),
 	}
 }
