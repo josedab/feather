@@ -99,9 +99,13 @@ type Pipeline struct {
 type PipelineState int
 
 const (
+	// StateStopped indicates the pipeline is stopped.
 	StateStopped PipelineState = iota
+	// StateRunning indicates the pipeline is running.
 	StateRunning
+	// StatePaused indicates the pipeline is paused.
 	StatePaused
+	// StateError indicates the pipeline is in an error state.
 	StateError
 )
 
@@ -132,12 +136,18 @@ type Stage struct {
 type StageType string
 
 const (
-	StageTypeFilter    StageType = "filter"
+	// StageTypeFilter applies filtering conditions.
+	StageTypeFilter StageType = "filter"
+	// StageTypeTransform applies transformations.
 	StageTypeTransform StageType = "transform"
+	// StageTypeAggregate applies aggregations.
 	StageTypeAggregate StageType = "aggregate"
-	StageTypeJoin      StageType = "join"
-	StageTypeWindow    StageType = "window"
-	StageTypeEnrich    StageType = "enrich"
+	// StageTypeJoin joins streams.
+	StageTypeJoin StageType = "join"
+	// StageTypeWindow applies windowing.
+	StageTypeWindow StageType = "window"
+	// StageTypeEnrich enriches events with external data.
+	StageTypeEnrich StageType = "enrich"
 )
 
 // Processor processes events in a stage.
@@ -162,10 +172,14 @@ type WindowConfig struct {
 type WindowType string
 
 const (
+	// WindowTypeTumbling represents fixed, non-overlapping windows.
 	WindowTypeTumbling WindowType = "tumbling"
-	WindowTypeSliding  WindowType = "sliding"
-	WindowTypeSession  WindowType = "session"
-	WindowTypeGlobal   WindowType = "global"
+	// WindowTypeSliding represents sliding windows.
+	WindowTypeSliding WindowType = "sliding"
+	// WindowTypeSession represents session windows.
+	WindowTypeSession WindowType = "session"
+	// WindowTypeGlobal represents a global window.
+	WindowTypeGlobal WindowType = "global"
 )
 
 // AggregationConfig configures an aggregation function.
@@ -180,17 +194,28 @@ type AggregationConfig struct {
 type AggFunction string
 
 const (
-	AggCount      AggFunction = "count"
-	AggSum        AggFunction = "sum"
-	AggAvg        AggFunction = "avg"
-	AggMin        AggFunction = "min"
-	AggMax        AggFunction = "max"
-	AggFirst      AggFunction = "first"
-	AggLast       AggFunction = "last"
-	AggDistinct   AggFunction = "distinct"
+	// AggCount counts values.
+	AggCount AggFunction = "count"
+	// AggSum sums values.
+	AggSum AggFunction = "sum"
+	// AggAvg averages values.
+	AggAvg AggFunction = "avg"
+	// AggMin finds the minimum value.
+	AggMin AggFunction = "min"
+	// AggMax finds the maximum value.
+	AggMax AggFunction = "max"
+	// AggFirst takes the first value.
+	AggFirst AggFunction = "first"
+	// AggLast takes the last value.
+	AggLast AggFunction = "last"
+	// AggDistinct counts distinct values.
+	AggDistinct AggFunction = "distinct"
+	// AggPercentile computes percentiles.
 	AggPercentile AggFunction = "percentile"
-	AggStdDev     AggFunction = "stddev"
-	AggVariance   AggFunction = "variance"
+	// AggStdDev computes standard deviation.
+	AggStdDev AggFunction = "stddev"
+	// AggVariance computes variance.
+	AggVariance AggFunction = "variance"
 )
 
 // PipelineMetrics tracks pipeline performance.

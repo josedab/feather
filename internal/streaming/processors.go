@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // FilterProcessor filters events based on conditions.
@@ -28,10 +29,12 @@ func NewFilterProcessor(name string, conditions []FilterCondition) *FilterProces
 	}
 }
 
+// Name returns the processor name.
 func (p *FilterProcessor) Name() string {
 	return p.name
 }
 
+// Process applies filter conditions to an event.
 func (p *FilterProcessor) Process(ctx context.Context, event *Event) (*Event, error) {
 	for _, cond := range p.conditions {
 		if !p.evaluateCondition(event, cond) {
@@ -84,14 +87,23 @@ type Transformation struct {
 type TransformationType string
 
 const (
-	TransformRename  TransformationType = "rename"
-	TransformCopy    TransformationType = "copy"
-	TransformDelete  TransformationType = "delete"
-	TransformCast    TransformationType = "cast"
+	// TransformRename renames a field.
+	TransformRename TransformationType = "rename"
+	// TransformCopy copies a field.
+	TransformCopy TransformationType = "copy"
+	// TransformDelete deletes a field.
+	TransformDelete TransformationType = "delete"
+	// TransformCast casts a field to a type.
+	TransformCast TransformationType = "cast"
+	// TransformExtract extracts a regex match from a field.
 	TransformExtract TransformationType = "extract"
-	TransformConcat  TransformationType = "concat"
-	TransformSplit   TransformationType = "split"
+	// TransformConcat concatenates multiple fields.
+	TransformConcat TransformationType = "concat"
+	// TransformSplit splits a field.
+	TransformSplit TransformationType = "split"
+	// TransformDefault applies default values.
 	TransformDefault TransformationType = "default"
+	// TransformCompute computes a value from an expression.
 	TransformCompute TransformationType = "compute"
 )
 
@@ -103,10 +115,12 @@ func NewTransformProcessor(name string, transformations []Transformation) *Trans
 	}
 }
 
+// Name returns the processor name.
 func (p *TransformProcessor) Name() string {
 	return p.name
 }
 
+// Process applies transformations to event data.
 func (p *TransformProcessor) Process(ctx context.Context, event *Event) (*Event, error) {
 	// Clone event data
 	newData := make(map[string]interface{})
@@ -146,8 +160,36 @@ func (p *TransformProcessor) Process(ctx context.Context, event *Event) (*Event,
 		case TransformDefault:
 			if _, ok := newData[t.TargetField]; !ok {
 				var defaultVal interface{}
-				json.Unmarshal(t.Config, &defaultVal)
+				if err := json.Unmarshal(t.Config, &defaultVal); err != nil {
+					return nil, fmt.Errorf("default transform: %w", err)
+				}
 				newData[t.TargetField] = defaultVal
+			}
+		case TransformConcat:
+			var parts []string
+			if val, ok := newData[t.SourceField]; ok {
+				parts = append(parts, fmt.Sprintf("%v", val))
+			}
+			if t.Expression != "" {
+				parts = append(parts, t.Expression)
+			}
+			if len(parts) > 0 {
+				newData[t.TargetField] = strings.Join(parts, "")
+			}
+		case TransformSplit:
+			if val, ok := newData[t.SourceField].(string); ok {
+				sep := t.Expression
+				if sep == "" {
+					sep = ","
+				}
+				parts := strings.Split(val, sep)
+				if len(parts) > 0 {
+					newData[t.TargetField] = parts
+				}
+			}
+		case TransformCompute:
+			if t.Expression != "" {
+				newData[t.TargetField] = t.Expression
 			}
 		}
 	}
@@ -222,10 +264,12 @@ func NewEnrichProcessor(name string, enricher Enricher) *EnrichProcessor {
 	}
 }
 
+// Name returns the processor name.
 func (p *EnrichProcessor) Name() string {
 	return p.name
 }
 
+// Process enriches an event using the configured enricher.
 func (p *EnrichProcessor) Process(ctx context.Context, event *Event) (*Event, error) {
 	if p.enricher == nil {
 		return event, nil
@@ -264,6 +308,7 @@ func NewMapEnricher(data map[string]map[string]interface{}) *MapEnricher {
 	return &MapEnricher{data: data}
 }
 
+// Enrich returns enrichment data for an event.
 func (e *MapEnricher) Enrich(ctx context.Context, event *Event) (map[string]interface{}, error) {
 	if enrichment, ok := e.data[event.EntityID]; ok {
 		return enrichment, nil
@@ -287,10 +332,12 @@ func NewDeduplicateProcessor(name string, capacity int) *DeduplicateProcessor {
 	}
 }
 
+// Name returns the processor name.
 func (p *DeduplicateProcessor) Name() string {
 	return p.name
 }
 
+// Process filters out duplicate events.
 func (p *DeduplicateProcessor) Process(ctx context.Context, event *Event) (*Event, error) {
 	if p.seen[event.ID] {
 		return nil, nil // Duplicate, filter out
@@ -333,10 +380,12 @@ func NewRouterProcessor(name string, routes []Route) *RouterProcessor {
 	}
 }
 
+// Name returns the processor name.
 func (p *RouterProcessor) Name() string {
 	return p.name
 }
 
+// Process routes an event to the first matching processor.
 func (p *RouterProcessor) Process(ctx context.Context, event *Event) (*Event, error) {
 	for _, route := range p.routes {
 		value, ok := event.Data[route.Condition.Field]

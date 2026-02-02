@@ -3,6 +3,7 @@ package streaming
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,12 +25,18 @@ type StreamEvent struct {
 type StreamEventType string
 
 const (
+	// StreamEventFeatureUpdate indicates a feature update event.
 	StreamEventFeatureUpdate StreamEventType = "feature_update"
+	// StreamEventFeatureDelete indicates a feature deletion event.
 	StreamEventFeatureDelete StreamEventType = "feature_delete"
-	StreamEventSchemaChange  StreamEventType = "schema_change"
-	StreamEventAlert         StreamEventType = "alert"
+	// StreamEventSchemaChange indicates a schema change event.
+	StreamEventSchemaChange StreamEventType = "schema_change"
+	// StreamEventAlert indicates an alert event.
+	StreamEventAlert StreamEventType = "alert"
+	// StreamEventDriftDetected indicates drift detection.
 	StreamEventDriftDetected StreamEventType = "drift_detected"
-	StreamEventHeartbeat     StreamEventType = "heartbeat"
+	// StreamEventHeartbeat indicates a heartbeat event.
+	StreamEventHeartbeat StreamEventType = "heartbeat"
 )
 
 // Subscription represents a client subscription.
@@ -53,6 +60,7 @@ type Hub struct {
 	mu            sync.RWMutex
 	stopCh        chan struct{}
 	wg            sync.WaitGroup
+	ctx           context.Context
 
 	// Metrics for monitoring
 	droppedHubEvents        int64 // Events dropped because hub channel full
@@ -66,7 +74,10 @@ type subscriberInfo struct {
 }
 
 // NewHub creates a new streaming hub.
-func NewHub() *Hub {
+func NewHub(ctx context.Context) *Hub { //nolint:contextcheck
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	h := &Hub{
 		subscriptions: make(map[string]*subscriberInfo),
 		byFeature:     make(map[string]map[string]bool),
@@ -74,6 +85,7 @@ func NewHub() *Hub {
 		byEventType:   make(map[StreamEventType]map[string]bool),
 		eventCh:       make(chan StreamEvent, 10000),
 		stopCh:        make(chan struct{}),
+		ctx:           ctx,
 	}
 
 	h.wg.Add(1)
@@ -188,26 +200,28 @@ func (h *Hub) Unsubscribe(id string) {
 }
 
 // Publish publishes an event to matching subscribers.
-func (h *Hub) Publish(event StreamEvent) {
+func (h *Hub) Publish(ctx context.Context, event StreamEvent) error {
 	event.Timestamp = time.Now()
 
 	select {
 	case h.eventCh <- event:
+		return nil
 	default:
 		// Channel full, drop event and track metric
 		dropped := atomic.AddInt64(&h.droppedHubEvents, 1)
 		if dropped%1000 == 1 { // Log every 1000th drop to avoid log spam
-			logging.FromContext(context.Background(), nil).Warn("streaming hub channel full, dropping events",
+			logging.FromContext(ctx, nil).Warn("streaming hub channel full, dropping events",
 				"total_dropped", dropped,
 				"event_type", event.Type,
 			)
 		}
+		return fmt.Errorf("streaming hub channel full")
 	}
 }
 
 // PublishFeatureUpdate publishes a feature update event.
 func (h *Hub) PublishFeatureUpdate(entityID, feature string, value interface{}) {
-	h.Publish(StreamEvent{
+	_ = h.Publish(context.Background(), StreamEvent{
 		Type:     StreamEventFeatureUpdate,
 		EntityID: entityID,
 		Feature:  feature,
@@ -220,6 +234,8 @@ func (h *Hub) distribute() {
 
 	for {
 		select {
+		case <-h.ctx.Done():
+			return
 		case <-h.stopCh:
 			return
 		case event := <-h.eventCh:
@@ -285,7 +301,7 @@ func (h *Hub) distributeEvent(event StreamEvent) {
 				// Subscriber channel full, track metric
 				dropped := atomic.AddInt64(&h.droppedSubscriberEvents, 1)
 				if dropped%1000 == 1 { // Log every 1000th drop to avoid log spam
-					logging.FromContext(context.Background(), nil).Warn("subscriber channel full, dropping event",
+					logging.FromContext(h.ctx, nil).Warn("subscriber channel full, dropping event",
 						"total_dropped", dropped,
 						"subscription_id", id,
 						"event_type", event.Type,
