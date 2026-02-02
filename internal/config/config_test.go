@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -317,7 +318,8 @@ func TestConfig_Validate_PortConflict(t *testing.T) {
 	}
 
 	// Check that the error mentions the conflict
-	if verrs, ok := err.(ValidationErrors); ok {
+	var verrs ValidationErrors
+	if errors.As(err, &verrs) {
 		found := false
 		for _, verr := range verrs {
 			if verr.Field == "serving.grpc.port" {

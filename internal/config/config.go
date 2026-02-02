@@ -450,8 +450,11 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if c.Storage.Warm.Path == "" && !c.Storage.Historical.Enabled {
-		// Warm path can be empty if using in-memory for testing
+	if c.Storage.Warm.Path == "" && c.Storage.Historical.Enabled {
+		errs = append(errs, ValidationError{
+			Field:   "storage.warm.path",
+			Message: "path required when historical storage is enabled",
+		})
 	}
 
 	// Validate serving ports
@@ -552,6 +555,7 @@ func (c *Config) Validate() error {
 			validTypes := map[string]bool{
 				"int64": true, "float64": true, "string": true,
 				"bool": true, "bytes": true, "vector": true,
+				"timestamp": true,
 			}
 			if feature.DataType != "" && !validTypes[feature.DataType] {
 				errs = append(errs, ValidationError{
