@@ -128,6 +128,9 @@ type WindowManager struct {
 func NewWindowManager(spec *domain.AggregationSpec) *WindowManager {
 	// Calculate bucket size (1 minute buckets for windows < 1 hour, etc.)
 	bucketSize := calculateBucketSize(spec.Window)
+	if spec.SlideBy > 0 && spec.SlideBy < bucketSize {
+		bucketSize = spec.SlideBy
+	}
 	numBuckets := int(spec.Window/bucketSize) + 1
 
 	return &WindowManager{
@@ -189,16 +192,12 @@ func (w *WindowManager) maybeRotate(now time.Time) {
 	windowStart := now.Add(-w.spec.Window).UnixNano()
 
 	// Remove buckets older than window
-	for i := 0; i < w.buckets.Size(); i++ {
+	for w.buckets.Size() > 0 {
 		bucket := w.buckets.Get(0) // Always check oldest
 		if bucket == nil || bucket.StartTime >= windowStart {
 			break
 		}
-		// Pop oldest by advancing the logical start
-		w.buckets.head = (w.buckets.head - w.buckets.size + 1 + w.buckets.capacity) % w.buckets.capacity
-		if w.buckets.size > 0 {
-			w.buckets.size--
-		}
+		w.buckets.PopOldest()
 	}
 }
 
@@ -207,8 +206,12 @@ func (w *WindowManager) Compute(function domain.AggFunction) (float64, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	now := time.Now()
-	windowStart := now.Add(-w.spec.Window).UnixNano()
+	slideBy := w.spec.SlideBy
+	if slideBy <= 0 {
+		slideBy = w.spec.Window
+	}
+	windowEnd := time.Now().Truncate(slideBy)
+	windowStart := windowEnd.Add(-w.spec.Window).UnixNano()
 
 	var count int64
 	var sum float64
