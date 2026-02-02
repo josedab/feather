@@ -20,25 +20,33 @@ var (
 	ErrMissingDependency = errors.New("missing dependency")
 )
 
-// TransformType represents the type of transformation.
-type TransformType string
+// Type represents the type of transformation.
+type Type string
 
 const (
-	TransformTypeArithmetic  TransformType = "arithmetic"
-	TransformTypeAggregation TransformType = "aggregation"
-	TransformTypeWindow      TransformType = "window"
-	TransformTypeConditional TransformType = "conditional"
-	TransformTypeString      TransformType = "string"
-	TransformTypeTimestamp   TransformType = "timestamp"
-	TransformTypeLookup      TransformType = "lookup"
-	TransformTypeCustom      TransformType = "custom"
+	// TypeArithmetic performs arithmetic transforms.
+	TypeArithmetic Type = "arithmetic"
+	// TypeAggregation performs aggregation transforms.
+	TypeAggregation Type = "aggregation"
+	// TypeWindow performs window transforms.
+	TypeWindow Type = "window"
+	// TypeConditional performs conditional transforms.
+	TypeConditional Type = "conditional"
+	// TypeString performs string transforms.
+	TypeString Type = "string"
+	// TypeTimestamp performs timestamp transforms.
+	TypeTimestamp Type = "timestamp"
+	// TypeLookup performs lookup transforms.
+	TypeLookup Type = "lookup"
+	// TypeCustom performs custom transforms.
+	TypeCustom Type = "custom"
 )
 
 // Transform defines a feature transformation.
 type Transform struct {
 	Name         string                 `json:"name"`
 	Description  string                 `json:"description,omitempty"`
-	Type         TransformType          `json:"type"`
+	Type         Type                   `json:"type"`
 	Expression   string                 `json:"expression"`
 	Inputs       []string               `json:"inputs"`
 	Output       string                 `json:"output"`
@@ -55,10 +63,14 @@ type Transform struct {
 type ExecutionMode string
 
 const (
-	ModeOnRead   ExecutionMode = "on_read"  // Computed when feature is read
-	ModeOnWrite  ExecutionMode = "on_write" // Computed when input features are written
-	ModeSchedule ExecutionMode = "schedule" // Computed on a schedule
-	ModeBatch    ExecutionMode = "batch"    // Computed in batch jobs
+	// ModeOnRead computes when a feature is read.
+	ModeOnRead ExecutionMode = "on_read"
+	// ModeOnWrite computes when input features are written.
+	ModeOnWrite ExecutionMode = "on_write"
+	// ModeSchedule computes on a schedule.
+	ModeSchedule ExecutionMode = "schedule"
+	// ModeBatch computes in batch jobs.
+	ModeBatch ExecutionMode = "batch"
 )
 
 // Pipeline manages feature transformations.
@@ -66,7 +78,7 @@ type Pipeline struct {
 	store        *storage.Store
 	transforms   map[string]*Transform
 	dependencies map[string][]string // output -> inputs
-	executors    map[TransformType]Executor
+	executors    map[Type]Executor
 	mu           sync.RWMutex
 }
 
@@ -82,17 +94,17 @@ func NewPipeline(store *storage.Store) *Pipeline {
 		store:        store,
 		transforms:   make(map[string]*Transform),
 		dependencies: make(map[string][]string),
-		executors:    make(map[TransformType]Executor),
+		executors:    make(map[Type]Executor),
 	}
 
 	// Register built-in executors
-	p.executors[TransformTypeArithmetic] = &ArithmeticExecutor{}
-	p.executors[TransformTypeAggregation] = &AggregationExecutor{store: store}
-	p.executors[TransformTypeWindow] = &WindowExecutor{store: store}
-	p.executors[TransformTypeConditional] = &ConditionalExecutor{}
-	p.executors[TransformTypeString] = &StringExecutor{}
-	p.executors[TransformTypeTimestamp] = &TimestampExecutor{}
-	p.executors[TransformTypeLookup] = &LookupExecutor{store: store}
+	p.executors[TypeArithmetic] = &ArithmeticExecutor{}
+	p.executors[TypeAggregation] = &AggregationExecutor{store: store}
+	p.executors[TypeWindow] = &WindowExecutor{store: store}
+	p.executors[TypeConditional] = &ConditionalExecutor{}
+	p.executors[TypeString] = &StringExecutor{}
+	p.executors[TypeTimestamp] = &TimestampExecutor{}
+	p.executors[TypeLookup] = &LookupExecutor{store: store}
 
 	return p
 }

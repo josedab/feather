@@ -14,10 +14,12 @@ import (
 // ArithmeticExecutor handles arithmetic transformations.
 type ArithmeticExecutor struct{}
 
+// Execute runs an arithmetic transform.
 func (e *ArithmeticExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
 	return evaluateArithmetic(t.Expression, inputs)
 }
 
+// Validate ensures the arithmetic transform is configured correctly.
 func (e *ArithmeticExecutor) Validate(t *Transform) error {
 	if t.Expression == "" {
 		return fmt.Errorf("expression is required")
@@ -144,8 +146,12 @@ type AggregationExecutor struct {
 	store *storage.Store
 }
 
+// Execute runs an aggregation transform.
 func (e *AggregationExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
-	aggType := t.Config["type"].(string)
+	aggType, ok := t.Config["type"].(string)
+	if !ok {
+		return nil, fmt.Errorf("aggregation type must be a string")
+	}
 
 	values := make([]float64, 0)
 	for _, v := range inputs {
@@ -174,24 +180,24 @@ func (e *AggregationExecutor) Execute(ctx context.Context, t *Transform, inputs 
 		if len(values) == 0 {
 			return nil, nil
 		}
-		min := values[0]
+		minValue := values[0]
 		for _, v := range values[1:] {
-			if v < min {
-				min = v
+			if v < minValue {
+				minValue = v
 			}
 		}
-		return min, nil
+		return minValue, nil
 	case "max":
 		if len(values) == 0 {
 			return nil, nil
 		}
-		max := values[0]
+		maxValue := values[0]
 		for _, v := range values[1:] {
-			if v > max {
-				max = v
+			if v > maxValue {
+				maxValue = v
 			}
 		}
-		return max, nil
+		return maxValue, nil
 	case "count":
 		return float64(len(values)), nil
 	default:
@@ -199,6 +205,7 @@ func (e *AggregationExecutor) Execute(ctx context.Context, t *Transform, inputs 
 	}
 }
 
+// Validate ensures the aggregation transform is configured correctly.
 func (e *AggregationExecutor) Validate(t *Transform) error {
 	if t.Config == nil || t.Config["type"] == nil {
 		return fmt.Errorf("aggregation type is required in config")
@@ -211,9 +218,16 @@ type WindowExecutor struct {
 	store *storage.Store
 }
 
+// Execute runs a windowed aggregation transform.
 func (e *WindowExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
-	windowStr := t.Config["window"].(string)
-	aggType := t.Config["type"].(string)
+	windowStr, ok := t.Config["window"].(string)
+	if !ok {
+		return nil, fmt.Errorf("window must be a string")
+	}
+	aggType, ok := t.Config["type"].(string)
+	if !ok {
+		return nil, fmt.Errorf("aggregation type must be a string")
+	}
 
 	window, err := time.ParseDuration(windowStr)
 	if err != nil {
@@ -221,7 +235,13 @@ func (e *WindowExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 	}
 
 	// Get historical values from store
-	entityID := t.Config["entity_id"].(string)
+	entityID, ok := t.Config["entity_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("entity_id must be a string")
+	}
+	if len(t.Inputs) == 0 {
+		return nil, fmt.Errorf("input feature is required")
+	}
 	featureName := t.Inputs[0]
 
 	asOf := time.Now()
@@ -262,6 +282,7 @@ func (e *WindowExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 	}
 }
 
+// Validate ensures the window transform is configured correctly.
 func (e *WindowExecutor) Validate(t *Transform) error {
 	if t.Config == nil {
 		return fmt.Errorf("config is required for window transform")
@@ -278,6 +299,7 @@ func (e *WindowExecutor) Validate(t *Transform) error {
 // ConditionalExecutor handles conditional transformations.
 type ConditionalExecutor struct{}
 
+// Execute runs a conditional transform.
 func (e *ConditionalExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
 	// Expression format: "condition ? true_value : false_value"
 	expr := t.Expression
@@ -309,6 +331,7 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, t *Transform, inputs 
 	return resolveValue(falseValue, inputs)
 }
 
+// Validate ensures the conditional transform is configured correctly.
 func (e *ConditionalExecutor) Validate(t *Transform) error {
 	if t.Expression == "" {
 		return fmt.Errorf("expression is required")
@@ -401,8 +424,12 @@ func resolveValue(s string, inputs map[string]interface{}) (interface{}, error) 
 // StringExecutor handles string transformations.
 type StringExecutor struct{}
 
+// Execute runs a string transform.
 func (e *StringExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
-	op := t.Config["operation"].(string)
+	op, ok := t.Config["operation"].(string)
+	if !ok {
+		return nil, fmt.Errorf("operation must be a string")
+	}
 
 	// Get the input string
 	var inputStr string
@@ -433,7 +460,11 @@ func (e *StringExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 		}
 		return strings.Join(parts, separator), nil
 	case "substring":
-		start := int(t.Config["start"].(float64))
+		startValue, ok := t.Config["start"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("start must be a number")
+		}
+		start := int(startValue)
 		end := len(inputStr)
 		if e, ok := t.Config["end"].(float64); ok {
 			end = int(e)
@@ -443,11 +474,20 @@ func (e *StringExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 		}
 		return inputStr[start:end], nil
 	case "replace":
-		old := t.Config["old"].(string)
-		new := t.Config["new"].(string)
-		return strings.ReplaceAll(inputStr, old, new), nil
+		old, ok := t.Config["old"].(string)
+		if !ok {
+			return nil, fmt.Errorf("old must be a string")
+		}
+		newValue, ok := t.Config["new"].(string)
+		if !ok {
+			return nil, fmt.Errorf("new must be a string")
+		}
+		return strings.ReplaceAll(inputStr, old, newValue), nil
 	case "regex_extract":
-		pattern := t.Config["pattern"].(string)
+		pattern, ok := t.Config["pattern"].(string)
+		if !ok {
+			return nil, fmt.Errorf("pattern must be a string")
+		}
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return nil, fmt.Errorf("invalid regex: %w", err)
@@ -462,6 +502,7 @@ func (e *StringExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 	}
 }
 
+// Validate checks required config for the string executor.
 func (e *StringExecutor) Validate(t *Transform) error {
 	if t.Config == nil || t.Config["operation"] == nil {
 		return fmt.Errorf("operation is required in config")
@@ -472,8 +513,12 @@ func (e *StringExecutor) Validate(t *Transform) error {
 // TimestampExecutor handles timestamp transformations.
 type TimestampExecutor struct{}
 
+// Execute runs the timestamp transform.
 func (e *TimestampExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
-	op := t.Config["operation"].(string)
+	op, ok := t.Config["operation"].(string)
+	if !ok {
+		return nil, fmt.Errorf("operation must be a string")
+	}
 
 	var ts time.Time
 	for _, v := range inputs {
@@ -518,13 +563,17 @@ func (e *TimestampExecutor) Execute(ctx context.Context, t *Transform, inputs ma
 	case "age_days":
 		return time.Since(ts).Hours() / 24, nil
 	case "format":
-		format := t.Config["format"].(string)
+		format, ok := t.Config["format"].(string)
+		if !ok {
+			return nil, fmt.Errorf("format must be a string")
+		}
 		return ts.Format(format), nil
 	default:
 		return nil, fmt.Errorf("unknown timestamp operation: %s", op)
 	}
 }
 
+// Validate checks required config for the timestamp executor.
 func (e *TimestampExecutor) Validate(t *Transform) error {
 	if t.Config == nil || t.Config["operation"] == nil {
 		return fmt.Errorf("operation is required in config")
@@ -537,9 +586,16 @@ type LookupExecutor struct {
 	store *storage.Store
 }
 
+// Execute runs a lookup transform against the store.
 func (e *LookupExecutor) Execute(ctx context.Context, t *Transform, inputs map[string]interface{}) (interface{}, error) {
-	lookupEntity := t.Config["lookup_entity"].(string)
-	lookupFeature := t.Config["lookup_feature"].(string)
+	lookupEntity, ok := t.Config["lookup_entity"].(string)
+	if !ok {
+		return nil, fmt.Errorf("lookup_entity must be a string")
+	}
+	lookupFeature, ok := t.Config["lookup_feature"].(string)
+	if !ok {
+		return nil, fmt.Errorf("lookup_feature must be a string")
+	}
 
 	// Build the lookup key
 	var keyValue string
@@ -570,6 +626,7 @@ func (e *LookupExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 	return nil, nil
 }
 
+// Validate checks required config for lookup transforms.
 func (e *LookupExecutor) Validate(t *Transform) error {
 	if t.Config == nil {
 		return fmt.Errorf("config is required")
