@@ -17,10 +17,15 @@ import (
 type NodeStatus string
 
 const (
-	NodeStatusAlive    NodeStatus = "alive"
-	NodeStatusSuspect  NodeStatus = "suspect"
-	NodeStatusDead     NodeStatus = "dead"
-	NodeStatusLeft     NodeStatus = "left"
+	// NodeStatusAlive indicates the node is healthy.
+	NodeStatusAlive NodeStatus = "alive"
+	// NodeStatusSuspect indicates the node missed heartbeats.
+	NodeStatusSuspect NodeStatus = "suspect"
+	// NodeStatusDead indicates the node is considered dead.
+	NodeStatusDead NodeStatus = "dead"
+	// NodeStatusLeft indicates the node left the cluster.
+	NodeStatusLeft NodeStatus = "left"
+	// NodeStatusStarting indicates the node is bootstrapping.
 	NodeStatusStarting NodeStatus = "starting"
 )
 
@@ -28,8 +33,11 @@ const (
 type NodeRole string
 
 const (
-	NodeRoleLeader   NodeRole = "leader"
+	// NodeRoleLeader indicates a leader node.
+	NodeRoleLeader NodeRole = "leader"
+	// NodeRoleFollower indicates a follower node.
 	NodeRoleFollower NodeRole = "follower"
+	// NodeRoleObserver indicates a read-only observer.
 	NodeRoleObserver NodeRole = "observer"
 )
 
@@ -54,22 +62,22 @@ type Node struct {
 
 // MembershipConfig configures the membership manager.
 type MembershipConfig struct {
-	NodeID           string
-	NodeName         string
-	BindAddress      string
-	GossipPort       int
-	DataPort         int
-	Zone             string
-	Region           string
-	Weight           int
-	VirtualNodes     int
-	GossipInterval   time.Duration
-	ProbeInterval    time.Duration
-	ProbeTimeout     time.Duration
-	SuspicionMult    int
-	RetransmitMult   int
-	Seeds            []string
-	DeadNodeTimeout  time.Duration
+	NodeID          string
+	NodeName        string
+	BindAddress     string
+	GossipPort      int
+	DataPort        int
+	Zone            string
+	Region          string
+	Weight          int
+	VirtualNodes    int
+	GossipInterval  time.Duration
+	ProbeInterval   time.Duration
+	ProbeTimeout    time.Duration
+	SuspicionMult   int
+	RetransmitMult  int
+	Seeds           []string
+	DeadNodeTimeout time.Duration
 }
 
 // DefaultMembershipConfig returns sensible defaults.
@@ -105,12 +113,18 @@ type MembershipEvent struct {
 type MembershipEventType string
 
 const (
-	EventNodeJoin    MembershipEventType = "join"
-	EventNodeLeave   MembershipEventType = "leave"
-	EventNodeUpdate  MembershipEventType = "update"
+	// EventNodeJoin indicates a node joined.
+	EventNodeJoin MembershipEventType = "join"
+	// EventNodeLeave indicates a node left.
+	EventNodeLeave MembershipEventType = "leave"
+	// EventNodeUpdate indicates a node updated metadata.
+	EventNodeUpdate MembershipEventType = "update"
+	// EventNodeSuspect indicates a node is suspected unhealthy.
 	EventNodeSuspect MembershipEventType = "suspect"
-	EventNodeDead    MembershipEventType = "dead"
-	EventNodeAlive   MembershipEventType = "alive"
+	// EventNodeDead indicates a node is dead.
+	EventNodeDead MembershipEventType = "dead"
+	// EventNodeAlive indicates a node recovered.
+	EventNodeAlive MembershipEventType = "alive"
 )
 
 // MembershipListener is notified of membership changes.
@@ -126,15 +140,14 @@ type MembershipManager struct {
 	listeners []MembershipListener
 	mu        sync.RWMutex
 
-	gossipConn  *net.UDPConn
-	gossipAddr  *net.UDPAddr
-	incarnation uint64
+	gossipConn *net.UDPConn
+	gossipAddr *net.UDPAddr
 
-	ctx        context.Context
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
-	started    bool
-	eventsCh   chan MembershipEvent
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
+	started  bool
+	eventsCh chan MembershipEvent
 }
 
 // NewMembershipManager creates a new membership manager.
@@ -207,10 +220,11 @@ func (m *MembershipManager) Start() error {
 	m.mu.Unlock()
 
 	// Start background goroutines
-	m.wg.Add(3)
+	m.wg.Add(4)
 	go m.gossipLoop()
 	go m.probeLoop()
 	go m.eventLoop()
+	go m.listenLoop()
 
 	// Join seeds if provided
 	for _, seed := range m.config.Seeds {
@@ -238,7 +252,9 @@ func (m *MembershipManager) Stop() error {
 
 	m.cancel()
 	if m.gossipConn != nil {
-		m.gossipConn.Close()
+		if err := m.gossipConn.Close(); err != nil {
+			return err
+		}
 	}
 
 	m.wg.Wait()
@@ -271,7 +287,7 @@ func (m *MembershipManager) AliveMembers() []*Node {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var nodes []*Node
+	nodes := make([]*Node, 0, len(m.members))
 	for _, node := range m.members {
 		if node.Status == NodeStatusAlive {
 			nodes = append(nodes, m.cloneNode(node))
@@ -356,6 +372,37 @@ func (m *MembershipManager) gossipLoop() {
 		case <-ticker.C:
 			m.gossipRound()
 		}
+	}
+}
+
+// listenLoop processes incoming gossip messages.
+func (m *MembershipManager) listenLoop() {
+	defer m.wg.Done()
+
+	buf := make([]byte, 64*1024)
+	for {
+		if m.gossipConn == nil {
+			return
+		}
+		_ = m.gossipConn.SetReadDeadline(time.Now().Add(m.config.GossipInterval))
+		n, addr, err := m.gossipConn.ReadFromUDP(buf)
+		if err != nil {
+			if ne, ok := err.(net.Error); ok && ne.Timeout() { //nolint:errorlint
+				select {
+				case <-m.ctx.Done():
+					return
+				default:
+					continue
+				}
+			}
+			select {
+			case <-m.ctx.Done():
+				return
+			default:
+			}
+			continue
+		}
+		m.handleIncomingGossip(buf[:n], addr)
 	}
 }
 
@@ -445,6 +492,8 @@ func (m *MembershipManager) probeRound() {
 			if age > m.config.DeadNodeTimeout {
 				m.markDead(target.ID)
 			}
+		case NodeStatusDead, NodeStatusLeft, NodeStatusStarting:
+			continue
 		}
 	}
 }
@@ -522,7 +571,7 @@ func (m *MembershipManager) sendGossip(target, local *Node) {
 	}
 
 	if m.gossipConn != nil {
-		m.gossipConn.WriteToUDP(data, addr)
+		_, _ = m.gossipConn.WriteToUDP(data, addr)
 	}
 }
 
@@ -530,7 +579,7 @@ func (m *MembershipManager) sampleMembers(count int) []*Node {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var nodes []*Node
+	nodes := make([]*Node, 0, count)
 	for _, node := range m.members {
 		nodes = append(nodes, m.cloneNode(node))
 		if len(nodes) >= count {
@@ -590,7 +639,7 @@ func (m *MembershipManager) broadcastLeave() {
 			continue
 		}
 		if m.gossipConn != nil {
-			m.gossipConn.WriteToUDP(data, addr)
+			_, _ = m.gossipConn.WriteToUDP(data, addr)
 		}
 	}
 }
@@ -610,6 +659,10 @@ func (m *MembershipManager) handleIncomingGossip(data []byte, addr *net.UDPAddr)
 		m.handleJoin(msg, addr)
 	case gossipTypeLeave:
 		m.handleLeave(msg)
+	case gossipTypeUnknown:
+		return
+	default:
+		return
 	}
 }
 
@@ -635,7 +688,7 @@ func (m *MembershipManager) handlePing(msg gossipMessage, addr *net.UDPAddr) {
 	}
 
 	if m.gossipConn != nil {
-		m.gossipConn.WriteToUDP(data, addr)
+		_, _ = m.gossipConn.WriteToUDP(data, addr)
 	}
 }
 
@@ -682,7 +735,7 @@ func (m *MembershipManager) handleJoin(msg gossipMessage, addr *net.UDPAddr) {
 	}
 
 	if m.gossipConn != nil {
-		m.gossipConn.WriteToUDP(data, addr)
+		_, _ = m.gossipConn.WriteToUDP(data, addr)
 	}
 }
 
@@ -762,10 +815,11 @@ type gossipMessage struct {
 type gossipType string
 
 const (
-	gossipTypePing  gossipType = "ping"
-	gossipTypeAck   gossipType = "ack"
-	gossipTypeJoin  gossipType = "join"
-	gossipTypeLeave gossipType = "leave"
+	gossipTypePing    gossipType = "ping"
+	gossipTypeAck     gossipType = "ack"
+	gossipTypeJoin    gossipType = "join"
+	gossipTypeLeave   gossipType = "leave"
+	gossipTypeUnknown gossipType = "unknown"
 )
 
 // MembershipStats returns statistics about the membership.
@@ -797,6 +851,8 @@ func (m *MembershipManager) Stats() MembershipStats {
 			stats.SuspectMembers++
 		case NodeStatusDead:
 			stats.DeadMembers++
+		case NodeStatusLeft, NodeStatusStarting:
+			// Counted in totals only.
 		}
 		stats.ByZone[node.Zone]++
 		stats.ByRegion[node.Region]++

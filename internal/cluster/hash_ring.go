@@ -11,7 +11,7 @@ import (
 // HashRing implements consistent hashing with virtual nodes.
 type HashRing struct {
 	nodes        map[string]*Node
-	virtualNodes map[uint64]string  // hash -> nodeID
+	virtualNodes map[uint64]string // hash -> nodeID
 	sortedHashes []uint64
 	replicas     int
 	mu           sync.RWMutex
@@ -205,7 +205,10 @@ func (r *HashRing) GetNodesInZones(key string, count int) ([]*Node, error) {
 // GetPartition returns the partition ID for a key.
 func (r *HashRing) GetPartition(key string, totalPartitions int) int {
 	hash := r.hash(key)
-	return int(hash % uint64(totalPartitions))
+	if totalPartitions <= 0 {
+		return 0
+	}
+	return int(hash % uint64(totalPartitions)) //nolint:gosec // totalPartitions validated > 0
 }
 
 // GetPartitionOwners returns the nodes responsible for a partition.
