@@ -21,6 +21,7 @@ import (
 	"github.com/feather-store/feather/internal/platform/multiregion"
 	"github.com/feather-store/feather/internal/platform/parity"
 	"github.com/feather-store/feather/internal/platform/realtimemonitor"
+	"github.com/feather-store/feather/internal/platform/registry"
 	"github.com/feather-store/feather/internal/tools/benchsuite"
 	"github.com/feather-store/feather/internal/tools/dashboard"
 )
@@ -115,5 +116,10 @@ func init() {
 	// LLM Feature Store (Prompt/Embedding/RAG)
 	registerHandler("llm_store", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewLLMStoreHandler(llmstore.NewStore(llmstore.DefaultStoreConfig()))
+	})
+
+	// Multi-model feature registry
+	registerHandler("model_registry", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+		return NewModelRegistryHandler(registry.NewModelRegistry())
 	})
 }
