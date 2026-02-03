@@ -35,6 +35,9 @@ func (h *FeastGatewayHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/feast/datasets", h.handleSaveDataset)
 	mux.HandleFunc("GET /v1/feast/datasets/{name}", h.handleGetDataset)
 
+	// Migration tooling
+	mux.HandleFunc("POST /v1/feast/migrate", h.handleMigrate)
+
 	// Gateway stats
 	mux.HandleFunc("GET /v1/feast/gateway/stats", h.handleGatewayStats)
 }
@@ -123,6 +126,27 @@ func (h *FeastGatewayHandler) handleGetDataset(w http.ResponseWriter, r *http.Re
 func (h *FeastGatewayHandler) handleGatewayStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.gateway.GatewayStats()
 	h.writeJSON(r.Context(), w, http.StatusOK, stats)
+}
+
+func (h *FeastGatewayHandler) handleMigrate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		FeastYAML string `json:"feast_yaml"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body; provide feast_yaml field")
+		return
+	}
+	if body.FeastYAML == "" {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feast_yaml field is required")
+		return
+	}
+
+	result, err := feastcompat.MigrateFromFeastConfig([]byte(body.FeastYAML))
+	if err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 func (h *FeastGatewayHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
