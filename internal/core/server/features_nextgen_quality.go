@@ -10,6 +10,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/gitopsdefs"
 	"github.com/feather-store/feather/internal/extensions/lineagegraph"
 	"github.com/feather-store/feather/internal/extensions/offlinestore"
+	"github.com/feather-store/feather/internal/extensions/semantic"
 	"github.com/feather-store/feather/internal/extensions/wasmudf"
 )
 
@@ -45,5 +46,10 @@ func init() {
 	})
 	registerHandler("wasm_udf", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewWasmUDFHandler(wasmudf.NewRuntime(wasmudf.DefaultRuntimeConfig()))
+	})
+
+	// Natural language feature discovery
+	registerHandler("nl_discovery", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+		return NewNLDiscoveryHandler(semantic.NewNLDiscoveryEngine(nil))
 	})
 }
