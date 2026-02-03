@@ -398,6 +398,8 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 					"lineage_analysis":     true,
 					"wasm_runtime":         true,
 					"llm_store":            true,
+					"model_registry":       true,
+					"nl_discovery":         true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
