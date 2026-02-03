@@ -14,10 +14,15 @@ import (
 type Permission string
 
 const (
-	PermRead       Permission = "read"
-	PermWrite      Permission = "write"
-	PermDelete     Permission = "delete"
-	PermAdmin      Permission = "admin"
+	// PermRead allows read access.
+	PermRead Permission = "read"
+	// PermWrite allows write access.
+	PermWrite Permission = "write"
+	// PermDelete allows delete access.
+	PermDelete Permission = "delete"
+	// PermAdmin allows administrative access.
+	PermAdmin Permission = "admin"
+	// PermManageKeys allows API key management.
 	PermManageKeys Permission = "manage_keys"
 )
 
@@ -487,7 +492,9 @@ func (ac *AccessController) GetAuditLogs(tenant string, since time.Time, limit i
 type contextKey string
 
 const (
+	// ContextKeyAPIKey stores API key info in the request context.
 	ContextKeyAPIKey contextKey = "api_key"
+	// ContextKeyTenant stores tenant info in the request context.
 	ContextKeyTenant contextKey = "tenant"
 )
 
@@ -516,13 +523,13 @@ func TenantFromContext(ctx context.Context) string {
 // Helper functions
 func generateAPIKey() string {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	_, _ = rand.Read(bytes)
 	return "fk_" + hex.EncodeToString(bytes)
 }
 
 func generateID() string {
 	bytes := make([]byte, 16)
-	rand.Read(bytes)
+	_, _ = rand.Read(bytes)
 	return hex.EncodeToString(bytes)
 }
 

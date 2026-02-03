@@ -53,7 +53,7 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 		}
 
 		if authHeader == "" {
-			writeAuthError(w, http.StatusUnauthorized, "API key required")
+			writeAuthError(r.Context(), w, http.StatusUnauthorized, "API key required")
 			return
 		}
 
@@ -63,14 +63,14 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 		// Validate API key
 		key, err := m.controller.ValidateAPIKey(apiKey)
 		if err != nil {
-			writeAuthError(w, http.StatusUnauthorized, err.Error())
+			writeAuthError(r.Context(), w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
 		// Check rate limit
 		if key.RateLimit > 0 {
 			if !m.rateLimiter.Allow(key.ID, key.RateLimit) {
-				writeAuthError(w, http.StatusTooManyRequests, "rate limit exceeded")
+				writeAuthError(r.Context(), w, http.StatusTooManyRequests, "rate limit exceeded")
 				return
 			}
 		}
@@ -100,7 +100,7 @@ func (m *Middleware) RequirePermission(perm Permission) func(http.Handler) http.
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := APIKeyFromContext(r.Context())
 			if key == nil {
-				writeAuthError(w, http.StatusUnauthorized, "authentication required")
+				writeAuthError(r.Context(), w, http.StatusUnauthorized, "authentication required")
 				return
 			}
 
@@ -114,7 +114,7 @@ func (m *Middleware) RequirePermission(perm Permission) func(http.Handler) http.
 					Success:  false,
 					Error:    "permission denied: " + string(perm),
 				})
-				writeAuthError(w, http.StatusForbidden, "permission denied")
+				writeAuthError(r.Context(), w, http.StatusForbidden, "permission denied")
 				return
 			}
 
@@ -129,13 +129,13 @@ func (m *Middleware) RequireNamespace(getNamespace func(*http.Request) string) f
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := APIKeyFromContext(r.Context())
 			if key == nil {
-				writeAuthError(w, http.StatusUnauthorized, "authentication required")
+				writeAuthError(r.Context(), w, http.StatusUnauthorized, "authentication required")
 				return
 			}
 
 			namespace := getNamespace(r)
 			if namespace != "" && !m.controller.CanAccessNamespace(key, namespace) {
-				writeAuthError(w, http.StatusForbidden, "access to namespace denied")
+				writeAuthError(r.Context(), w, http.StatusForbidden, "access to namespace denied")
 				return
 			}
 
@@ -150,13 +150,13 @@ func (m *Middleware) RequireFeature(getFeature func(*http.Request) string) func(
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := APIKeyFromContext(r.Context())
 			if key == nil {
-				writeAuthError(w, http.StatusUnauthorized, "authentication required")
+				writeAuthError(r.Context(), w, http.StatusUnauthorized, "authentication required")
 				return
 			}
 
 			feature := getFeature(r)
 			if feature != "" && !m.controller.CanAccessFeature(key, feature) {
-				writeAuthError(w, http.StatusForbidden, "access to feature denied")
+				writeAuthError(r.Context(), w, http.StatusForbidden, "access to feature denied")
 				return
 			}
 
@@ -186,11 +186,11 @@ func (m *Middleware) Optional(next http.Handler) http.Handler {
 	})
 }
 
-func writeAuthError(w http.ResponseWriter, status int, message string) {
+func writeAuthError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(map[string]string{"error": message}); err != nil {
-		logging.FromContext(context.Background(), nil).Error("failed to encode auth error response", "error", err)
+		logging.FromContext(ctx, nil).Error("failed to encode auth error response", "error", err)
 	}
 }
 
