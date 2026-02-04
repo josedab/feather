@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/feather-store/feather/internal/domain"
 	"github.com/feather-store/feather/internal/metrics"
 	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/tracing"
 )
 
 // GRPCServer provides gRPC feature serving.
@@ -41,6 +43,7 @@ type GRPCServerConfig struct {
 	MaxConcurrent int
 	HealthChecker *HealthChecker
 	TLS           *config.TLSConfig
+	Tracer        *tracing.Tracer
 }
 
 // NewGRPCServer creates a new gRPC server.
@@ -51,8 +54,14 @@ func NewGRPCServer(
 	m *metrics.Metrics,
 	cfg GRPCServerConfig,
 ) *GRPCServer {
-	opts := []grpc.ServerOption{
-		grpc.MaxConcurrentStreams(uint32(cfg.MaxConcurrent)),
+	opts := []grpc.ServerOption{}
+	if cfg.MaxConcurrent > 0 {
+		maxConcurrent := cfg.MaxConcurrent
+		if maxConcurrent > math.MaxUint32 {
+			maxConcurrent = math.MaxUint32
+		}
+		//nolint:gosec // MaxConcurrent is clamped to uint32 range.
+		opts = append(opts, grpc.MaxConcurrentStreams(uint32(maxConcurrent)))
 	}
 
 	// Configure TLS if enabled
@@ -68,11 +77,22 @@ func NewGRPCServer(
 		}
 	}
 
+	var unaryInterceptors []grpc.UnaryServerInterceptor
+	var streamInterceptors []grpc.StreamServerInterceptor
+
 	if m != nil {
-		opts = append(opts,
-			grpc.UnaryInterceptor(m.UnaryServerInterceptor()),
-			grpc.StreamInterceptor(m.StreamServerInterceptor()),
-		)
+		unaryInterceptors = append(unaryInterceptors, m.UnaryServerInterceptor())
+		streamInterceptors = append(streamInterceptors, m.StreamServerInterceptor())
+	}
+	if cfg.Tracer != nil {
+		unaryInterceptors = append(unaryInterceptors, cfg.Tracer.GRPCUnaryInterceptor())
+		streamInterceptors = append(streamInterceptors, cfg.Tracer.GRPCStreamInterceptor())
+	}
+	if len(unaryInterceptors) > 0 {
+		opts = append(opts, grpc.ChainUnaryInterceptor(unaryInterceptors...))
+	}
+	if len(streamInterceptors) > 0 {
+		opts = append(opts, grpc.ChainStreamInterceptor(streamInterceptors...))
 	}
 
 	return &GRPCServer{
@@ -240,8 +260,13 @@ func (s *GRPCServer) PutFeatures(ctx context.Context, req *pb.PutFeaturesRequest
 
 		// Update aggregations if applicable
 		if s.aggregation.GetSpec(name) != nil {
-			if floatVal, ok := features[name].Value.(float64); ok {
-				s.aggregation.Update(req.GetEntityKey(), name, floatVal, time.Now())
+			if floatVal, ok := domain.ToFloat64(features[name].Value); ok {
+				if err := s.aggregation.Update(req.GetEntityKey(), name, floatVal, time.Unix(0, timestamp)); err != nil {
+					return &pb.PutFeaturesResponse{
+						Success: false,
+						Error:   err.Error(),
+					}, nil
+				}
 			}
 		}
 	}

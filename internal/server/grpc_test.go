@@ -24,7 +24,7 @@ func newTestGRPCServer(t *testing.T) *testGRPCServer {
 	t.Helper()
 
 	schema := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1 << 20, // 1MB
 		WarmInMemory: true,
 	}, schema)

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -26,7 +27,7 @@ func newTestServer(t *testing.T) *testServer {
 	t.Helper()
 
 	schema := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1 << 20, // 1MB
 		WarmInMemory: true,
 	}, schema)
@@ -37,11 +38,13 @@ func newTestServer(t *testing.T) *testServer {
 	agg := aggregation.NewEngine()
 	healthChecker := NewHealthChecker(store, agg, schema)
 
-	srv := NewHTTPServer(store, agg, schema, nil, HTTPServerConfig{
-		Port:          0,
-		ReadTimeout:   5 * time.Second,
-		WriteTimeout:  10 * time.Second,
-		HealthChecker: healthChecker,
+	srv := NewHTTPServer(context.Background(), store, agg, schema, nil, HTTPServerConfig{
+		Core: HTTPServerCoreConfig{
+			Port:          0,
+			ReadTimeout:   5 * time.Second,
+			WriteTimeout:  10 * time.Second,
+			HealthChecker: healthChecker,
+		},
 	})
 
 	t.Cleanup(func() {

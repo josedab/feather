@@ -14,8 +14,11 @@ import (
 type HealthStatus string
 
 const (
-	HealthStatusHealthy   HealthStatus = "healthy"
-	HealthStatusDegraded  HealthStatus = "degraded"
+	// HealthStatusHealthy indicates the component is operating normally.
+	HealthStatusHealthy HealthStatus = "healthy"
+	// HealthStatusDegraded indicates the component is degraded but usable.
+	HealthStatusDegraded HealthStatus = "degraded"
+	// HealthStatusUnhealthy indicates the component is unhealthy.
 	HealthStatusUnhealthy HealthStatus = "unhealthy"
 )
 

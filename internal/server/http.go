@@ -32,6 +32,7 @@ import (
 	"github.com/feather-store/feather/internal/semantic"
 	"github.com/feather-store/feather/internal/sla"
 	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/tracing"
 	"github.com/feather-store/feather/internal/ui"
 	"github.com/feather-store/feather/internal/vector"
 	"github.com/feather-store/feather/internal/warehouse"
@@ -48,10 +49,18 @@ type HTTPServer struct {
 	server        *http.Server
 	mux           *http.ServeMux
 	tlsConfig     *config.TLSConfig
+	tracer        *tracing.Tracer
 }
 
 // HTTPServerConfig configures the HTTP server.
 type HTTPServerConfig struct {
+	Core         HTTPServerCoreConfig
+	Features     HTTPServerFeatureConfig
+	Dependencies HTTPServerDependencies
+}
+
+// HTTPServerCoreConfig defines core server settings.
+type HTTPServerCoreConfig struct {
 	Port          int
 	ReadTimeout   time.Duration
 	WriteTimeout  time.Duration
@@ -59,10 +68,16 @@ type HTTPServerConfig struct {
 	VectorStore   *vector.Store
 	TLS           *config.TLSConfig
 	CORS          *CORSConfig
+	Tracer        *tracing.Tracer
 	// MaxRequestSize is the maximum allowed request body size in bytes.
 	// If 0, defaults to DefaultMaxRequestSize (1MB).
 	MaxRequestSize int64
-	// Optional handlers for extended functionality
+	// TenantMaxBytes caps tenant storage usage when tenant APIs are enabled.
+	TenantMaxBytes int64
+}
+
+// HTTPServerFeatureConfig toggles optional handler groups.
+type HTTPServerFeatureConfig struct {
 	EnableGroups        bool
 	EnableBackfill      bool
 	EnableStreaming     bool
@@ -101,7 +116,10 @@ type HTTPServerConfig struct {
 	EnableSLA           bool
 	EnableUI            bool
 	EnableDBT           bool
+}
 
+// HTTPServerDependencies supplies optional handler dependencies.
+type HTTPServerDependencies struct {
 	// Optional dbt configuration
 	DBTOptions *dbt.SyncOptions
 
@@ -145,12 +163,14 @@ const DefaultMaxRequestSize = 1 << 20 // 1MB
 
 // NewHTTPServer creates a new HTTP server.
 func NewHTTPServer(
+	ctx context.Context,
 	store *storage.Store,
 	agg *aggregation.Engine,
 	schema *storage.Registry,
 	m *metrics.Metrics,
 	cfg HTTPServerConfig,
 ) *HTTPServer {
+	_ = ctx
 	mux := http.NewServeMux()
 
 	s := &HTTPServer{
@@ -158,86 +178,91 @@ func NewHTTPServer(
 		aggregation:   agg,
 		schema:        schema,
 		metrics:       m,
-		healthChecker: cfg.HealthChecker,
+		healthChecker: cfg.Core.HealthChecker,
 		mux:           mux,
+		tracer:        cfg.Core.Tracer,
 	}
 
 	s.registerRoutes()
 
 	// Register vector routes if vector store is provided
-	if cfg.VectorStore != nil {
-		vectorHandler := NewVectorHandler(cfg.VectorStore, m)
+	if cfg.Core.VectorStore != nil {
+		vectorHandler := NewVectorHandler(cfg.Core.VectorStore, m)
 		vectorHandler.RegisterRoutes(mux)
 	}
 
 	// Register optional handlers
-	if cfg.EnableGroups {
+	if cfg.Features.EnableGroups {
 		groupsHandler := NewGroupsHandler()
 		groupsHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableBackfill {
+	if cfg.Features.EnableBackfill {
 		backfillHandler := NewBackfillHandler(store)
 		backfillHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableStreaming {
-		streamingHandler := NewStreamingHandler()
+	if cfg.Features.EnableStreaming {
+		streamingHandler := NewStreamingHandler(ctx)
 		streamingHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableCatalog {
+	if cfg.Features.EnableCatalog {
 		catalogHandler := NewCatalogHandler()
 		catalogHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableAuth {
+	if cfg.Features.EnableAuth {
 		authHandler := NewAuthHandler()
 		authHandler.RegisterRoutes(mux)
 	}
 
 	// Handlers that require only the store
-	if cfg.EnableML {
+	if cfg.Features.EnableML {
 		mlHandler := NewMLHandler(store)
 		mlHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableTransform {
+	if cfg.Features.EnableTransform {
 		transformHandler := NewTransformHandler(store)
 		transformHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableCache {
+	if cfg.Features.EnableCache {
 		cacheHandler := NewCacheHandler(store)
 		cacheHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableConsistency {
+	if cfg.Features.EnableConsistency {
 		consistencyHandler := NewConsistencyHandler(store)
 		consistencyHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableObservability {
+	if cfg.Features.EnableObservability {
 		observabilityHandler := NewObservabilityHandler(store)
 		observabilityHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableBenchmark {
+	if cfg.Features.EnableBenchmark {
 		benchmarkHandler := NewBenchmarkHandler(store)
 		benchmarkHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableTenant {
-		tenantHandler := NewTenantHandler(4 * 1024 * 1024 * 1024) // 4GB default
+	if cfg.Features.EnableTenant {
+		maxBytes := cfg.Core.TenantMaxBytes
+		if maxBytes == 0 {
+			maxBytes = 4 * 1024 * 1024 * 1024
+		}
+		tenantHandler := NewTenantHandler(maxBytes)
 		tenantHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableModelServing {
+	if cfg.Features.EnableModelServing {
 		modelServingHandler := NewModelServingHandler(store)
 		modelServingHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableWarehouse {
+	if cfg.Features.EnableWarehouse {
 		warehouseHandler := NewWarehouseHandler(WarehouseHandlerConfig{
 			Store:  store,
 			Schema: schema,
@@ -245,17 +270,17 @@ func NewHTTPServer(
 		warehouseHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableGovernance {
+	if cfg.Features.EnableGovernance {
 		governanceHandler := NewGovernanceHandler(GovernanceHandlerConfig{})
 		governanceHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableEmbedding {
+	if cfg.Features.EnableEmbedding {
 		embeddingHandler := NewEmbeddingHandler(EmbeddingHandlerConfig{})
 		embeddingHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableComposition {
+	if cfg.Features.EnableComposition {
 		compositionEngine := composition.NewEngine(composition.EngineConfig{
 			Store:          store,
 			ExecutorConfig: composition.DefaultExecutorConfig(),
@@ -264,19 +289,19 @@ func NewHTTPServer(
 		compositionHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableFreshness {
+	if cfg.Features.EnableFreshness {
 		freshnessManager := freshness.NewManager(freshness.DefaultManagerConfig())
 		freshnessHandler := NewFreshnessHandler(freshnessManager)
 		freshnessHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableMigration {
+	if cfg.Features.EnableMigration {
 		migrationManager := migration.NewManager(migration.DefaultManagerConfig())
 		migrationHandler := NewMigrationHandler(migrationManager)
 		migrationHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableSaaS {
+	if cfg.Features.EnableSaaS {
 		planRegistry := saas.NewPlanRegistry()
 		billingManager := saas.NewBillingManager(planRegistry)
 		provisioningManager := saas.NewProvisioningManager(planRegistry, billingManager)
@@ -284,7 +309,7 @@ func NewHTTPServer(
 		saasHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableGitOps {
+	if cfg.Features.EnableGitOps {
 		schemaLoader := gitops.NewSchemaLoader(".")
 		policyEngine := gitops.NewPolicyEngine()
 		syncManager := gitops.NewSyncManager(schemaLoader, policyEngine, nil, ".gitops-state.json")
@@ -292,7 +317,7 @@ func NewHTTPServer(
 		gitopsHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableCost {
+	if cfg.Features.EnableCost {
 		costTracker := cost.NewTracker("USD")
 		budgetManager := cost.NewBudgetManager(costTracker)
 		chargebackManager := cost.NewChargebackManager(costTracker)
@@ -300,7 +325,7 @@ func NewHTTPServer(
 		costHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableCluster {
+	if cfg.Features.EnableCluster {
 		// Create cluster handler with provided or default components
 		var membership *cluster.MembershipManager
 		var ring *cluster.HashRing
@@ -312,38 +337,38 @@ func NewHTTPServer(
 		clusterHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableScheduler {
+	if cfg.Features.EnableScheduler {
 		scheduler := warehouse.NewCronScheduler(nil, slog.Default())
 		schedulerHandler := NewSchedulerHandler(scheduler)
 		schedulerHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableSLA {
+	if cfg.Features.EnableSLA {
 		slaManager := sla.NewManager(nil, sla.DefaultManagerConfig())
 		slaHandler := NewSLAHandler(slaManager)
 		slaHandler.RegisterRoutes(mux)
 	}
 
 	// Handlers that don't require dependencies
-	if cfg.EnableImpact {
+	if cfg.Features.EnableImpact {
 		impactHandler := NewImpactHandler()
 		impactHandler.RegisterRoutes(mux)
 	}
 
 	// Handlers that can work with default instances if enabled
-	if cfg.EnableDrift {
+	if cfg.Features.EnableDrift {
 		driftDetector := drift.NewDetector(drift.DefaultConfig())
 		driftHandler := NewDriftHandler(driftDetector)
 		driftHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableLineage {
+	if cfg.Features.EnableLineage {
 		lineageTracker := lineage.NewTracker()
 		lineageHandler := NewLineageHandler(lineageTracker)
 		lineageHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableSemantic {
+	if cfg.Features.EnableSemantic {
 		// Use local embedder for semantic search (no external API needed)
 		embedder := semantic.NewLocalEmbedder(128)
 		semanticSearch := semantic.NewSearch(embedder, slog.Default())
@@ -351,25 +376,25 @@ func NewHTTPServer(
 		semanticHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableWASM {
+	if cfg.Features.EnableWASM {
 		wasmRuntime := wasm.NewRuntime(wasm.DefaultConfig(), slog.Default())
 		wasmHandler := NewWASMHandler(wasmRuntime)
 		wasmHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableFederation {
+	if cfg.Features.EnableFederation {
 		fed := federation.NewFederation(federation.DefaultConfig())
 		federationHandler := NewFederationHandler(fed)
 		federationHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableQuality {
+	if cfg.Features.EnableQuality {
 		qualityValidator := quality.NewValidator()
 		qualityHandler := NewQualityHandler(qualityValidator)
 		qualityHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableGraphQL && store != nil && schema != nil {
+	if cfg.Features.EnableGraphQL && store != nil && schema != nil {
 		graphqlSchema, err := graphql.NewFeatureStoreSchema(store, schema)
 		if err == nil {
 			graphqlHandler := NewGraphQLHandler(graphqlSchema)
@@ -377,20 +402,20 @@ func NewHTTPServer(
 		}
 	}
 
-	if cfg.EnableAutogen {
+	if cfg.Features.EnableAutogen {
 		autogenGen := autogen.NewGenerator(autogen.DefaultConfig())
 		autogenHandler := NewAutogenHandler(autogenGen)
 		autogenHandler.RegisterRoutes(mux)
 	}
 
-	if cfg.EnableExperiment {
+	if cfg.Features.EnableExperiment {
 		experimentEngine := experiment.NewEngine()
 		experimentHandler := NewExperimentHandler(experimentEngine)
 		experimentHandler.RegisterRoutes(mux)
 	}
 
 	// Register UI handler for feature catalog
-	if cfg.EnableUI {
+	if cfg.Features.EnableUI {
 		uiHandler, err := ui.NewHandler()
 		if err == nil {
 			uiHandler.RegisterRoutes(mux)
@@ -398,46 +423,49 @@ func NewHTTPServer(
 	}
 
 	// Register dbt integration handler
-	if cfg.EnableDBT {
-		dbtHandler := NewDBTHandler(cfg.DBTOptions)
+	if cfg.Features.EnableDBT {
+		dbtHandler := NewDBTHandler(cfg.Dependencies.DBTOptions)
 		dbtHandler.RegisterRoutes(mux)
 	}
 
 	// Wrap handler with middleware chain
 	var handler http.Handler = mux
+	if s.tracer != nil {
+		handler = s.tracer.HTTPMiddleware(handler)
+	}
 	handler = requestIDMiddleware(handler)
 	handler = compressionMiddleware(handler)
 
 	// Add request size limit middleware
-	maxSize := cfg.MaxRequestSize
+	maxSize := cfg.Core.MaxRequestSize
 	if maxSize == 0 {
 		maxSize = DefaultMaxRequestSize
 	}
 	handler = maxRequestSizeMiddleware(maxSize)(handler)
 
 	// Add CORS middleware if enabled
-	if cfg.EnableCORS {
-		handler = corsMiddleware(cfg.CORS)(handler)
+	if cfg.Features.EnableCORS {
+		handler = corsMiddleware(cfg.Core.CORS)(handler)
 	}
 
 	// Add security headers middleware
-	tlsEnabled := cfg.TLS != nil && cfg.TLS.Enabled
+	tlsEnabled := cfg.Core.TLS != nil && cfg.Core.TLS.Enabled
 	handler = securityHeadersMiddleware(tlsEnabled)(handler)
 
 	// Add panic recovery middleware (outermost to catch all panics)
 	handler = panicRecoveryMiddleware(handler)
 
 	s.server = &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Core.Port),
 		Handler:      handler,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
+		ReadTimeout:  cfg.Core.ReadTimeout,
+		WriteTimeout: cfg.Core.WriteTimeout,
 	}
 
 	// Configure TLS if enabled
-	s.tlsConfig = cfg.TLS
-	if cfg.TLS != nil && cfg.TLS.Enabled {
-		tlsConfig, err := cfg.TLS.BuildTLSConfig()
+	s.tlsConfig = cfg.Core.TLS
+	if cfg.Core.TLS != nil && cfg.Core.TLS.Enabled {
+		tlsConfig, err := cfg.Core.TLS.BuildTLSConfig()
 		if err == nil && tlsConfig != nil {
 			s.server.TLSConfig = tlsConfig
 		}
@@ -499,19 +527,19 @@ func (s *HTTPServer) handleGetFeatures(w http.ResponseWriter, r *http.Request) {
 
 	entityKey := r.URL.Query().Get("entity")
 	if entityKey == "" {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity query parameter required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity query parameter required")
 		return
 	}
 
 	featureNames := r.URL.Query()["feature"]
 	if len(featureNames) == 0 {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "at least one feature query parameter required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "at least one feature query parameter required")
 		return
 	}
 
 	features, err := s.getEntityFeatures(entityKey, featureNames)
 	if err != nil {
-		s.writeErrorFromErr(w, err)
+		s.writeErrorFromErr(r.Context(), w, err)
 		return
 	}
 
@@ -533,16 +561,16 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 
 	var req domain.GetFeaturesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Entities) == 0 {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entities required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entities required")
 		return
 	}
 	if len(req.Features) == 0 {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "features required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "features required")
 		return
 	}
 
@@ -556,7 +584,7 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 			if domain.IsNotFound(err) {
 				continue
 			}
-			s.writeErrorFromErr(w, err)
+			s.writeErrorFromErr(r.Context(), w, err)
 			return
 		}
 		result.Entities[entityKey] = features
@@ -576,31 +604,31 @@ func (s *HTTPServer) handleGetFeaturesAsOf(w http.ResponseWriter, r *http.Reques
 
 	entityKey := r.URL.Query().Get("entity")
 	if entityKey == "" {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity query parameter required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity query parameter required")
 		return
 	}
 
 	asOfStr := r.URL.Query().Get("as_of")
 	if asOfStr == "" {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "as_of query parameter required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "as_of query parameter required")
 		return
 	}
 
 	asOf, err := time.Parse(time.RFC3339, asOfStr)
 	if err != nil {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "as_of must be in RFC3339 format")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "as_of must be in RFC3339 format")
 		return
 	}
 
 	featureNames := r.URL.Query()["feature"]
 	if len(featureNames) == 0 {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "at least one feature query parameter required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "at least one feature query parameter required")
 		return
 	}
 
 	features, err := s.store.GetAsOf(entityKey, featureNames, asOf)
 	if err != nil {
-		s.writeErrorFromErr(w, err)
+		s.writeErrorFromErr(r.Context(), w, err)
 		return
 	}
 
@@ -632,12 +660,12 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 
 	var req domain.FeatureUpdate
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityKey == "" {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity_key required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity_key required")
 		return
 	}
 
@@ -656,14 +684,17 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 
 		// Update aggregations
 		if s.aggregation.GetSpec(name) != nil {
-			if floatVal, ok := val.(float64); ok {
-				s.aggregation.Update(req.EntityKey, name, floatVal, time.Now())
+			if floatVal, ok := domain.ToFloat64(val); ok {
+				if err := s.aggregation.Update(req.EntityKey, name, floatVal, time.Unix(0, timestamp)); err != nil {
+					s.writeErrorWithCode(r.Context(), w, http.StatusInternalServerError, domain.ErrCodeInternal, err.Error())
+					return
+				}
 			}
 		}
 	}
 
 	if err := s.store.Put(req.EntityKey, features); err != nil {
-		s.writeErrorFromErr(w, err)
+		s.writeErrorFromErr(r.Context(), w, err)
 		return
 	}
 
@@ -680,13 +711,13 @@ func (s *HTTPServer) handleListGroups(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) handleGetGroup(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "group name required")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "group name required")
 		return
 	}
 
 	group, err := s.schema.GetGroup(name)
 	if err != nil {
-		s.writeErrorFromErr(w, err)
+		s.writeErrorFromErr(r.Context(), w, err)
 		return
 	}
 
@@ -697,12 +728,12 @@ func (s *HTTPServer) handleGetGroup(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 	var group domain.FeatureGroup
 	if err := json.NewDecoder(r.Body).Decode(&group); err != nil {
-		s.writeErrorWithCode(w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
 		return
 	}
 
 	if err := s.schema.RegisterGroup(&group); err != nil {
-		s.writeErrorFromErr(w, err)
+		s.writeErrorFromErr(r.Context(), w, err)
 		return
 	}
 
@@ -726,37 +757,37 @@ func (s *HTTPServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		} else if result.Status == HealthStatusUnhealthy {
 			status = http.StatusServiceUnavailable
 		}
-		s.writeJSON(w, status, result)
+		s.writeJSON(r.Context(), w, status, result)
 		return
 	}
 	// Fallback to simple health check
-	s.writeJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
+	s.writeJSON(r.Context(), w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
 // handleReady handles GET /ready - readiness check for k8s
 func (s *HTTPServer) handleReady(w http.ResponseWriter, r *http.Request) {
 	if s.healthChecker != nil {
 		if !s.healthChecker.ReadinessCheck() {
-			s.writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			s.writeJSON(r.Context(), w, http.StatusServiceUnavailable, map[string]string{
 				"status": "not_ready",
 			})
 			return
 		}
 	}
-	s.writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+	s.writeJSON(r.Context(), w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 // handleLive handles GET /live - liveness check for k8s
 func (s *HTTPServer) handleLive(w http.ResponseWriter, r *http.Request) {
 	if s.healthChecker != nil {
 		if !s.healthChecker.LivenessCheck() {
-			s.writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			s.writeJSON(r.Context(), w, http.StatusServiceUnavailable, map[string]string{
 				"status": "unhealthy",
 			})
 			return
 		}
 	}
-	s.writeJSON(w, http.StatusOK, map[string]string{"status": "alive"})
+	s.writeJSON(r.Context(), w, http.StatusOK, map[string]string{"status": "alive"})
 }
 
 // getEntityFeatures retrieves features for an entity.
@@ -805,11 +836,11 @@ func (s *HTTPServer) getEntityFeatures(entityKey string, featureNames []string) 
 	return result, nil
 }
 
-func (s *HTTPServer) writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func (s *HTTPServer) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		logging.FromContext(context.Background(), nil).Error("failed to encode JSON response", "error", err)
+		logging.FromContext(ctx, nil).Error("failed to encode JSON response", "error", err)
 	}
 }
 
@@ -829,12 +860,8 @@ func (s *HTTPServer) writeAPIResponse(w http.ResponseWriter, r *http.Request, st
 	}
 }
 
-func (s *HTTPServer) writeError(w http.ResponseWriter, status int, message string) {
-	s.writeErrorWithCode(w, status, statusToErrorCode(status), message)
-}
-
 // writeErrorWithCode writes a standardized error response with error code and request ID.
-func (s *HTTPServer) writeErrorWithCode(w http.ResponseWriter, status int, code, message string) {
+func (s *HTTPServer) writeErrorWithCode(ctx context.Context, w http.ResponseWriter, status int, code, message string) {
 	resp := domain.NewErrorResponse(code, message)
 
 	// Add request ID from response header (set by middleware)
@@ -845,41 +872,15 @@ func (s *HTTPServer) writeErrorWithCode(w http.ResponseWriter, status int, code,
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		logging.FromContext(context.Background(), nil).Error("failed to encode JSON error response", "error", err)
+		logging.FromContext(ctx, nil).Error("failed to encode JSON error response", "error", err)
 	}
 }
 
 // writeErrorFromErr writes an error response, deriving the error code from the error type.
-func (s *HTTPServer) writeErrorFromErr(w http.ResponseWriter, err error) {
+func (s *HTTPServer) writeErrorFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	code := domain.ErrorToCode(err)
 	status := errorCodeToStatus(code)
-	s.writeErrorWithCode(w, status, code, err.Error())
-}
-
-// statusToErrorCode maps HTTP status codes to error codes.
-func statusToErrorCode(status int) string {
-	switch status {
-	case http.StatusBadRequest:
-		return domain.ErrCodeBadRequest
-	case http.StatusUnauthorized:
-		return domain.ErrCodeUnauthorized
-	case http.StatusForbidden:
-		return domain.ErrCodeForbidden
-	case http.StatusNotFound:
-		return domain.ErrCodeNotFound
-	case http.StatusConflict:
-		return domain.ErrCodeConflict
-	case http.StatusTooManyRequests:
-		return domain.ErrCodeRateLimited
-	case http.StatusRequestEntityTooLarge:
-		return domain.ErrCodeRequestTooLarge
-	case http.StatusServiceUnavailable:
-		return domain.ErrCodeServiceUnavailable
-	case http.StatusGatewayTimeout:
-		return domain.ErrCodeTimeout
-	default:
-		return domain.ErrCodeInternal
-	}
+	s.writeErrorWithCode(ctx, w, status, code, err.Error())
 }
 
 // errorCodeToStatus maps error codes to HTTP status codes.

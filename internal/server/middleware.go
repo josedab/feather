@@ -66,8 +66,13 @@ func compressionMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("Content-Encoding", "gzip")
+		ctx := r.Context()
 		gz := gzip.NewWriter(w)
-		defer gz.Close()
+		defer func() {
+			if err := gz.Close(); err != nil {
+				logging.FromContext(ctx, nil).Warn("failed to close gzip writer", "error", err)
+			}
+		}()
 
 		gzw := &gzipResponseWriter{ResponseWriter: w, Writer: gz}
 		next.ServeHTTP(gzw, r)
@@ -91,10 +96,11 @@ func maxRequestSizeMiddleware(maxSize int64) func(http.Handler) http.Handler {
 // This prevents a single panic from crashing the entire server.
 func panicRecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		defer func() {
 			if rec := recover(); rec != nil {
 				// Log the panic with request context
-				logger := logging.FromContext(r.Context(), nil)
+				logger := logging.FromContext(ctx, nil)
 				logger.Error("panic recovered in HTTP handler",
 					"panic", rec,
 					"path", r.URL.Path,
@@ -104,9 +110,11 @@ func panicRecoveryMiddleware(next http.Handler) http.Handler {
 				// Return 500 error
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(map[string]string{
+				if err := json.NewEncoder(w).Encode(map[string]string{
 					"error": "internal server error",
-				})
+				}); err != nil {
+					logger.Error("failed to encode panic response", "error", err)
+				}
 			}
 		}()
 		next.ServeHTTP(w, r)
