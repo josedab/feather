@@ -1,0 +1,33 @@
+# Air — live reload for Go apps (https://github.com/air-verse/air)
+# Used by: make watch
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./bin/feather"
+  cmd = "CGO_ENABLED=0 go build -o ./bin/feather ./cmd/feather"
+  delay = 1000
+  exclude_dir = ["bin", "tmp", "vendor", "node_modules", "website", "data", "deploy", "docs", "sdk", "examples", ".git"]
+  exclude_regex = ["_test\\.go$"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = "./bin/feather -config configs/feather-dev.yaml"
+  include_ext = ["go", "yaml"]
+  include_dir = ["cmd", "internal", "configs"]
+  kill_delay = "2s"
+  send_interrupt = true
+  stop_on_error = true
+
+[color]
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"
+
+[log]
+  main_only = false
+  time = false
+
+[misc]
+  clean_on_exit = true

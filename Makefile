@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core lint run run-config run-dev run-cli run-tui clean generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions
+.PHONY: build test test-quick test-short test-core test-one lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -96,10 +96,21 @@ test-coverage:
 test-integration:
 	$(GO) test -v -tags=integration -count=1 ./test/...
 
+## test-one: Run a single test (usage: make test-one RUN=TestFoo [PKG=./internal/core/storage/...])
+test-one:
+	$(GO) test -v -count=1 -run $(RUN) -timeout 120s $(PKG)
+RUN ?= .
+PKG ?= ./...
+
 ## lint: Run golangci-lint (auto-installs if missing)
 lint:
 	@command -v $(shell go env GOPATH)/bin/golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
 	$(shell go env GOPATH)/bin/golangci-lint run ./...
+
+## lint-fix: Run golangci-lint with auto-fix
+lint-fix:
+	@command -v $(shell go env GOPATH)/bin/golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
+	$(shell go env GOPATH)/bin/golangci-lint run --fix ./...
 
 ## run: Run the server with default configuration
 run:
@@ -125,6 +136,14 @@ run-tui:
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -f coverage.out coverage.html
+
+## clean-all: Full reset — remove build artifacts, data, logs, and caches
+clean-all: clean
+	rm -rf data/
+	rm -rf tmp/
+	rm -f .feather.pid
+	rm -f .feather-quickstart.log
+	rm -rf website/node_modules website/build website/.docusaurus
 
 ## tidy: Tidy go module dependencies
 tidy:
@@ -164,6 +183,11 @@ proto:
 ## docs: Start the documentation site locally (requires Node.js)
 docs:
 	cd website && npm install --silent && npm start
+## watch: Auto-rebuild and restart on code changes (requires air)
+watch:
+	@command -v air >/dev/null 2>&1 || { echo "Installing air..."; go install github.com/air-verse/air@latest; }
+	air
+
 ## dev: Format, vet, test, and build
 dev: fmt vet test build
 
