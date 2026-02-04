@@ -55,6 +55,38 @@ make help
 
 ## Development Guidelines
 
+### Makefile Cheatsheet
+
+#### Test Pyramid (fastest → most thorough)
+
+| Target | Scope | Speed |
+|--------|-------|-------|
+| `make test-core` | Core packages only (`internal/core/...`) | ~10s |
+| `make test-quick` | All packages, short mode, no race detector | ~60s |
+| `make check-quick` | `fmt-check` + `vet` + `lint` + `test-core` | ~20s |
+| `make check` | `fmt-check` + `vet` + `lint` + full tests with race detector | ~5min |
+
+#### Common Workflows
+
+| Task | Command |
+|------|---------|
+| First-time setup | `make setup` |
+| Check prerequisites | `make doctor` |
+| Build binary | `make build` |
+| Run with dev config | `make run-dev` |
+| Auto-rebuild on changes | `make watch` |
+| Run a single test | `make test-one RUN=TestFoo PKG=./internal/core/storage/...` |
+| Pre-commit check | `make check-quick` |
+| Fix formatting | `make fmt` |
+| Auto-fix lint issues | `make lint-fix` |
+| Generate coverage report | `make test-coverage` |
+| Start server in background | `make dev-start` |
+| Stop background server | `make dev-stop` |
+| Full environment reset | `make clean-all` |
+| List all targets | `make help` |
+| List API handlers | `make api-routes` |
+| Show enabled features | `make list-extensions` |
+
 ### How to Add a New API Endpoint
 
 See the [full contributing guide](./docs/contributing.md) for detailed instructions on adding endpoints,
