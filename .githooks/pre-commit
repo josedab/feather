@@ -21,13 +21,6 @@ if [ -n "$UNFORMATTED" ]; then
 	exit 1
 fi
 
-# Quick go vet on staged packages
-STAGED_PACKAGES=$(echo "$STAGED_GO_FILES" | xargs -I{} dirname {} | sort -u | sed 's|^|./|')
-go vet $STAGED_PACKAGES 2>&1 || {
-	echo "❌ go vet failed. Fix issues before committing."
-	exit 1
-}
-
 # Full check: format, vet, lint, core tests
 make check-quick
 
