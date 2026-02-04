@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/feather-store/feather/actions/workflows/ci.yml"><img src="https://github.com/feather-store/feather/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/go-%3E%3D1.24-blue.svg" alt="Go Version">
   <img src="https://img.shields.io/badge/license-Apache%202.0-green.svg" alt="License">
   <img src="https://img.shields.io/codecov/c/github/feather-store/feather.svg" alt="Coverage">
