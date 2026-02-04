@@ -28,6 +28,21 @@ jobs:
         with:
           version: v1.62.2
 
+  openapi-lint:
+    name: OpenAPI Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install vacuum
+        run: |
+          curl -fsSL https://quobix.com/scripts/install_vacuum.sh | sh
+
+      - name: Validate OpenAPI spec
+        run: |
+          vacuum lint -d api/openapi/feather.yaml
+
   test:
     name: Test
     runs-on: ubuntu-latest
