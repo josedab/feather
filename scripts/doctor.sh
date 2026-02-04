@@ -108,6 +108,60 @@ check_port 50051 "gRPC API"
 check_port 8081  "HTTP ingestion"
 check_port 9090  "Prometheus metrics"
 
+echo ""
+echo "System resources"
+
+# Memory check: warn if less than 2GB available
+check_memory() {
+  local available_mb=0
+  if [ "$(uname)" = "Darwin" ]; then
+    # macOS: use vm_stat to estimate free memory
+    local page_size
+    page_size=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+    local free_pages
+    free_pages=$(vm_stat 2>/dev/null | awk '/Pages free/ {gsub(/\./,"",$3); print $3}')
+    local inactive_pages
+    inactive_pages=$(vm_stat 2>/dev/null | awk '/Pages inactive/ {gsub(/\./,"",$3); print $3}')
+    if [ -n "${free_pages}" ] && [ -n "${inactive_pages}" ]; then
+      available_mb=$(( (free_pages + inactive_pages) * page_size / 1024 / 1024 ))
+    fi
+  elif [ -f /proc/meminfo ]; then
+    # Linux: read MemAvailable
+    available_mb=$(awk '/MemAvailable/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null)
+  fi
+
+  if [ "${available_mb}" -gt 0 ] 2>/dev/null; then
+    if [ "${available_mb}" -lt 2048 ]; then
+      echo "⚠️  Available memory: ${available_mb}MB — less than 2GB (hot tier defaults to 4GB)" >&2
+    else
+      echo "✅ Available memory: ${available_mb}MB"
+    fi
+  else
+    echo "ℹ️  Could not determine available memory"
+  fi
+}
+check_memory
+
+# Disk space check: warn if less than 1GB free in current directory's filesystem
+check_disk() {
+  local free_mb=0
+  if command -v df >/dev/null 2>&1; then
+    # Use POSIX-compatible df output (1K blocks)
+    free_mb=$(df -Pk . 2>/dev/null | awk 'NR==2 {printf "%d", $4/1024}')
+  fi
+
+  if [ "${free_mb}" -gt 0 ] 2>/dev/null; then
+    if [ "${free_mb}" -lt 1024 ]; then
+      echo "⚠️  Free disk space: ${free_mb}MB — less than 1GB (BadgerDB warm tier needs disk)" >&2
+    else
+      echo "✅ Free disk space: ${free_mb}MB"
+    fi
+  else
+    echo "ℹ️  Could not determine free disk space"
+  fi
+}
+check_disk
+
 if [ "${fail}" -ne 0 ]; then
   echo ""
   echo "Some required checks failed." >&2
