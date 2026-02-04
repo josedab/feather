@@ -400,6 +400,17 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 					"llm_store":            true,
 					"model_registry":       true,
 					"nl_discovery":         true,
+					// Next-gen v4 features
+					"arrow_flight":   true,
+					"diff_privacy":   true,
+					"prefetch":       true,
+					"notebook_sdk":   true,
+					"quality_gates":  true,
+					"compression":    true,
+					"audit_trail":    true,
+					"query_planner":  true,
+					"fed_learning":   true,
+					"playground_v2":  true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
