@@ -87,6 +87,8 @@ if command -v docker >/dev/null 2>&1; then
     echo "⚠️  Docker is installed but not running" >&2
   fi
 fi
+check_cmd node optional
+check_cmd npm optional
 
 echo ""
 echo "CGO / Kafka support"
