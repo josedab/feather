@@ -90,6 +90,16 @@ Enable or disable via the feature flag map in `HTTPServerFeatureConfig.EnabledFe
 | `streamdsl` | Stream processing DSL with pipeline compiler |
 | `timetravel` | Time-travel debugging for feature values |
 | `wasm` | WebAssembly runtime for custom transformations |
+| `arrowflight` | Zero-copy columnar data transport via Arrow Flight protocol |
+| `diffprivacy` | Differential privacy engine with Laplace/Gaussian noise and budget tracking |
+| `prefetch` | Predictive feature pre-fetching using ML-based access patterns |
+| `notebooksdk` | Server-side Jupyter/Colab integration with magic commands |
+| `qualitygates` | CI/CD quality gates with schema validation and merge-blocking rules |
+| `compression` | Intelligent tiered compression with ML-based strategy selection |
+| `audittrail` | Event-sourced audit trail with Merkle tree hash chaining |
+| `queryplanner` | Self-optimizing cost-based query planner with adaptive replanning |
+| `fedlearning` | Federated learning adapter with secure aggregation protocol |
+| `playgroundv2` | Enhanced browser-based feature playground with simulation and deploy |
 
 ---
 
