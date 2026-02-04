@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   feather:
-    image: ghcr.io/feather-store/feather:latest
+    build: .
     ports:
       - "8080:8080"   # HTTP serving
       - "50051:50051" # gRPC serving
