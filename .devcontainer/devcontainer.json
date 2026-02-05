@@ -14,7 +14,11 @@
         "go.lintOnSave": "workspace"
       },
       "extensions": [
-        "golang.go"
+        "golang.go",
+        "redhat.vscode-yaml",
+        "zxh404.vscode-proto3",
+        "editorconfig.editorconfig",
+        "ms-azuretools.vscode-docker"
       ]
     }
   }
