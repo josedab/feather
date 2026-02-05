@@ -12,11 +12,13 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.gitCommit=$(GIT_COMMIT) -X main.buildDate=$(BUILD_DATE)
 
+### Setup
+
 ## help: Show this help message
 help:
 	@echo "Usage: make [target]"
 	@echo ""
-	@sed -n 's/^## //p' $(MAKEFILE_LIST) | column -t -s ':' | sed 's/^/  /'
+	@sed -n -e 's/^### \(.*\)/\n\1:/p' -e 's/^## //p' $(MAKEFILE_LIST) | column -t -s ':' | sed 's/^/  /'
 
 ## install-tools: Install development tools (golangci-lint, goimports)
 install-tools:
@@ -34,6 +36,8 @@ setup: doctor install-tools
 	@echo "✅ Setup complete! You're ready to contribute."
 	@echo "   Run 'make run-dev' to start the server."
 	@echo "   Run 'make check-quick' before committing."
+
+### Building
 
 ## build: Build the feather server binary (CGO disabled; use build-cgo for Kafka)
 build:
@@ -60,6 +64,8 @@ build-all: build build-tui build-mcp build-cli
 
 build-race:
 	$(GO) build $(GOFLAGS) -race -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
+
+### Testing
 
 ## test: Run all tests with race detector and coverage
 test:
@@ -102,6 +108,8 @@ test-one:
 RUN ?= .
 PKG ?= ./...
 
+### Code Quality
+
 ## lint: Run golangci-lint (auto-installs if missing)
 lint:
 	@command -v $(shell go env GOPATH)/bin/golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
@@ -111,6 +119,8 @@ lint:
 lint-fix:
 	@command -v $(shell go env GOPATH)/bin/golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2; }
 	$(shell go env GOPATH)/bin/golangci-lint run --fix ./...
+
+### Development
 
 ## run: Run the server with default configuration
 run:
@@ -311,7 +321,8 @@ list-extensions:
 	ENABLED=$$(grep -cE '"[a-z_]+":[[:space:]]*true' cmd/feather/main.go); \
 	echo "Total available: $$TOTAL | Enabled by default: $$ENABLED"
 
-# Docker
+### Docker
+
 ## docker-build: Build the Docker image
 docker-build:
 	docker build -t $(APP_NAME):latest .
@@ -320,7 +331,8 @@ docker-build:
 docker-run:
 	docker run -p 8080:8080 -p 50051:50051 -p 9090:9090 $(APP_NAME):latest
 
-# Benchmarks
+### Utilities
+
 ## bench: Run all benchmarks
 bench:
 	$(GO) test -bench=. -benchmem ./...
