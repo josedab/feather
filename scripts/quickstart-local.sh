@@ -12,6 +12,18 @@ LOG_FILE="${ROOT_DIR}/.feather-quickstart.log"
 BASE_URL="http://localhost:8080"
 START_TIME=$(date +%s)
 
+# Remove stale PID file from a previous run whose process is no longer alive
+if [ -f "${PID_FILE}" ]; then
+  old_pid=$(<"${PID_FILE}")
+  if ! kill -0 "${old_pid}" 2>/dev/null; then
+    echo "▸ Removing stale PID file (process ${old_pid} no longer running)"
+    rm -f "${PID_FILE}"
+  else
+    echo "Feather is already running (PID ${old_pid}). Stop it first: make stop-dev" >&2
+    exit 1
+  fi
+fi
+
 cleanup() {
   if [ -f "${PID_FILE}" ]; then
     local pid
@@ -114,6 +126,9 @@ echo "    -d '{\"entity_key\":\"user:456\",\"features\":{\"click_count\":7}}'"
 echo ""
 echo "  # Walk through all API features interactively"
 echo "  make explore"
+echo ""
+echo "  # Verify everything works end-to-end"
+echo "  make smoke-test   # or: make verify"
 echo ""
 echo "  # Stop the server"
 echo "  make stop-dev   # or: kill ${SERVER_PID}"

@@ -253,9 +253,14 @@ verify: smoke-test
 
 ## dev-start: Start server in background (use dev-stop to stop)
 dev-start: build
-	@if [ -f .feather.pid ] && kill -0 $$(cat .feather.pid) 2>/dev/null; then \
-		echo "Feather is already running (PID $$(cat .feather.pid))"; \
-		exit 0; \
+	@if [ -f .feather.pid ]; then \
+		if kill -0 $$(cat .feather.pid) 2>/dev/null; then \
+			echo "Feather is already running (PID $$(cat .feather.pid))"; \
+			exit 0; \
+		else \
+			echo "Removing stale PID file (process $$(cat .feather.pid) no longer running)"; \
+			rm -f .feather.pid; \
+		fi; \
 	fi
 	@./bin/feather -config configs/feather-dev.yaml > /dev/null 2>&1 & echo $$! > .feather.pid
 	@printf "Waiting for server..."
@@ -266,7 +271,8 @@ dev-start: build
 	@echo ""
 	@if curl -sf http://localhost:8080/health >/dev/null 2>&1; then \
 		echo "✅ Feather running in background (PID $$(cat .feather.pid))"; \
-		echo "   Stop: make dev-stop"; \
+		echo "   Verify: make smoke-test"; \
+		echo "   Stop:   make dev-stop"; \
 	else \
 		echo "❌ Server failed to start. Check logs."; \
 		rm -f .feather.pid; \
