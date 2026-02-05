@@ -76,6 +76,7 @@ make help
 | Run with dev config | `make run-dev` |
 | Auto-rebuild on changes | `make watch` |
 | Run a single test | `make test-one RUN=TestFoo PKG=./internal/core/storage/...` |
+| Run all tests in a package | `make test-pkg PKG=./internal/core/storage/...` |
 | Pre-commit check | `make check-quick` |
 | Fix formatting | `make fmt` |
 | Auto-fix lint issues | `make lint-fix` |

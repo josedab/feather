@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core test-one lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch
+.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -30,6 +30,10 @@ install-tools:
 setup: doctor install-tools
 	@git config core.hooksPath .githooks
 	@echo "Git hooks configured (.githooks/pre-commit)."
+	@if [ ! -f .env ] && [ -f .env.example ]; then \
+		cp .env.example .env; \
+		echo "Copied .env.example → .env (edit as needed; YAML config is preferred)."; \
+	fi
 	@$(MAKE) build
 	@$(MAKE) test-core
 	@echo ""
@@ -108,6 +112,11 @@ test-one:
 RUN ?= .
 PKG ?= ./...
 
+## test-pkg: Run all tests in a package with verbose output and coverage (usage: make test-pkg PKG=./internal/core/storage/...)
+test-pkg:
+	$(GO) test -v -count=1 -cover -timeout 120s $(TEST_PKG)
+TEST_PKG ?= ./internal/core/...
+
 ### Code Quality
 
 ## lint: Run golangci-lint (auto-installs if missing)
@@ -130,7 +139,7 @@ run:
 run-config:
 	$(GO) run $(MAIN_PATH) -config configs/feather.yaml
 
-## run-dev: Run the server with the minimal dev config
+## run-dev: Run the server with the minimal dev config (then: make smoke-test to verify)
 run-dev:
 	$(GO) run $(MAIN_PATH) -config configs/feather-dev.yaml
 
@@ -192,6 +201,8 @@ proto:
 
 ## docs: Start the documentation site locally (requires Node.js)
 docs:
+	@command -v node >/dev/null 2>&1 || { echo "❌ Node.js not found. Install it from https://nodejs.org/"; exit 1; }
+	@command -v npm >/dev/null 2>&1 || { echo "❌ npm not found. Install Node.js from https://nodejs.org/"; exit 1; }
 	cd website && npm install --silent && npm start
 ## watch: Auto-rebuild and restart on code changes (requires air)
 watch:
@@ -236,6 +247,9 @@ doctor:
 ## smoke-test: Run end-to-end smoke tests against a running server
 smoke-test:
 	./scripts/smoke-test.sh
+
+## verify: Alias for smoke-test — verify a running server works end-to-end
+verify: smoke-test
 
 ## dev-start: Start server in background (use dev-stop to stop)
 dev-start: build
