@@ -59,16 +59,6 @@ func (ts *testGovernanceServer) postJSON(path string, body interface{}) *httptes
 	return ts.request(http.MethodPost, path, string(jsonBody))
 }
 
-func (ts *testGovernanceServer) putJSON(path string, body interface{}) *httptest.ResponseRecorder {
-	ts.t.Helper()
-
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		ts.t.Fatalf("failed to marshal body: %v", err)
-	}
-	return ts.request(http.MethodPut, path, string(jsonBody))
-}
-
 func (ts *testGovernanceServer) get(path string) *httptest.ResponseRecorder {
 	return ts.request(http.MethodGet, path, "")
 }

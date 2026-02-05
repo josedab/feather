@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,7 +23,7 @@ type testConsistencyServer struct {
 func newTestConsistencyServer(t *testing.T) *testConsistencyServer {
 	t.Helper()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024, // 1MB
 		WarmInMemory: true,
 	}, storage.NewRegistry())
@@ -74,7 +75,7 @@ func (ts *testConsistencyServer) get(path string) *httptest.ResponseRecorder {
 }
 
 func TestConsistencyHandler_NewConsistencyHandler(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, storage.NewRegistry())
@@ -90,7 +91,7 @@ func TestConsistencyHandler_NewConsistencyHandler(t *testing.T) {
 }
 
 func TestConsistencyHandler_GetChecker(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, storage.NewRegistry())

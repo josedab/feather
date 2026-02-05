@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -69,13 +70,13 @@ func (h *WarehouseHandler) RegisterRoutes(mux *http.ServeMux) {
 
 // Validation constants for connector credentials.
 const (
-	maxConnectorIDLength   = 64
-	maxCredentialLength    = 1024
-	maxAccountLength       = 256
-	maxProjectIDLength     = 128
-	maxDatabaseLength      = 128
-	maxSchemaLength        = 128
-	maxDescriptionLength   = 512
+	maxConnectorIDLength = 64
+	maxCredentialLength  = 1024
+	maxAccountLength     = 256
+	maxProjectIDLength   = 128
+	maxDatabaseLength    = 128
+	maxSchemaLength      = 128
+	maxDescriptionLength = 512
 )
 
 // Request/Response types
@@ -215,7 +216,7 @@ type SyncRequest struct {
 // handleListConnectors handles GET /v1/warehouse/connectors
 func (h *WarehouseHandler) handleListConnectors(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
@@ -229,7 +230,7 @@ func (h *WarehouseHandler) handleListConnectors(w http.ResponseWriter, r *http.R
 		})
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"connectors": response,
 		"count":      len(response),
 	})
@@ -238,19 +239,19 @@ func (h *WarehouseHandler) handleListConnectors(w http.ResponseWriter, r *http.R
 // handleRegisterConnector handles POST /v1/warehouse/connectors
 func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	var req WarehouseConnectorRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Validate base request
 	if err := validateConnectorRequest(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -263,7 +264,7 @@ func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *htt
 		configErr = validateBigQueryConfig(req.Config)
 	}
 	if configErr != nil {
-		h.writeError(w, http.StatusBadRequest, configErr.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, configErr.Error())
 		return
 	}
 
@@ -278,16 +279,16 @@ func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *htt
 	}
 
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := h.engine.RegisterConnector(req.ID, connector); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":      true,
 		"connector_id": req.ID,
 	})
@@ -296,23 +297,23 @@ func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *htt
 // handleGetConnector handles GET /v1/warehouse/connectors/{id}
 func (h *WarehouseHandler) handleGetConnector(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	connectorID := r.PathValue("id")
 	if connectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector ID required")
 		return
 	}
 
 	connector, err := h.engine.GetConnector(connectorID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"id":    connectorID,
 		"type":  connector.Type(),
 		"state": connector.State(),
@@ -322,22 +323,22 @@ func (h *WarehouseHandler) handleGetConnector(w http.ResponseWriter, r *http.Req
 // handleRemoveConnector handles DELETE /v1/warehouse/connectors/{id}
 func (h *WarehouseHandler) handleRemoveConnector(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	connectorID := r.PathValue("id")
 	if connectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector ID required")
 		return
 	}
 
 	if err := h.engine.UnregisterConnector(connectorID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -345,32 +346,38 @@ func (h *WarehouseHandler) handleRemoveConnector(w http.ResponseWriter, r *http.
 // handleTestConnection handles POST /v1/warehouse/connectors/{id}/test
 func (h *WarehouseHandler) handleTestConnection(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	connectorID := r.PathValue("id")
 	if connectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector ID required")
 		return
 	}
 
 	connector, err := h.engine.GetConnector(connectorID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	if err := connector.Connect(r.Context()); err != nil {
-		h.writeJSON(w, http.StatusOK, map[string]interface{}{
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 			"success": false,
 			"error":   err.Error(),
 		})
 		return
 	}
-	connector.Close()
+	if err := connector.Close(); err != nil {
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -378,7 +385,7 @@ func (h *WarehouseHandler) handleTestConnection(w http.ResponseWriter, r *http.R
 // handleListJobs handles GET /v1/warehouse/jobs
 func (h *WarehouseHandler) handleListJobs(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
@@ -403,7 +410,7 @@ func (h *WarehouseHandler) handleListJobs(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"jobs":  jobs,
 		"count": len(jobs),
 	})
@@ -412,18 +419,18 @@ func (h *WarehouseHandler) handleListJobs(w http.ResponseWriter, r *http.Request
 // handleCreateJob handles POST /v1/warehouse/jobs
 func (h *WarehouseHandler) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	var req SyncJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ConnectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector_id is required")
 		return
 	}
 
@@ -457,11 +464,11 @@ func (h *WarehouseHandler) handleCreateJob(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.engine.CreateJob(job); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"job":     job,
 	})
@@ -470,45 +477,45 @@ func (h *WarehouseHandler) handleCreateJob(w http.ResponseWriter, r *http.Reques
 // handleGetJob handles GET /v1/warehouse/jobs/{id}
 func (h *WarehouseHandler) handleGetJob(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
 	job, err := h.engine.GetJob(jobID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, job)
+	h.writeJSON(r.Context(), w, http.StatusOK, job)
 }
 
 // handleCancelJob handles POST /v1/warehouse/jobs/{id}/cancel
 func (h *WarehouseHandler) handleCancelJob(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
 	// Cancel is implemented by deleting the job
 	if err := h.engine.DeleteJob(jobID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -516,22 +523,22 @@ func (h *WarehouseHandler) handleCancelJob(w http.ResponseWriter, r *http.Reques
 // handleSync handles POST /v1/warehouse/sync
 func (h *WarehouseHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	var req SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ConnectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector_id is required")
 		return
 	}
 	if req.Table == "" {
-		h.writeError(w, http.StatusBadRequest, "table is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "table is required")
 		return
 	}
 
@@ -546,38 +553,38 @@ func (h *WarehouseHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.engine.CreateJob(job); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	result, err := h.engine.ExecuteJob(r.Context(), job.ID, req.ConnectorID)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // handleFullSync handles POST /v1/warehouse/sync/full
 func (h *WarehouseHandler) handleFullSync(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	var req SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ConnectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector_id is required")
 		return
 	}
 	if req.Table == "" {
-		h.writeError(w, http.StatusBadRequest, "table is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "table is required")
 		return
 	}
 
@@ -592,38 +599,38 @@ func (h *WarehouseHandler) handleFullSync(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := h.engine.CreateJob(job); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	result, err := h.engine.ExecuteJob(r.Context(), job.ID, req.ConnectorID)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // handleIncrementalSync handles POST /v1/warehouse/sync/incremental
 func (h *WarehouseHandler) handleIncrementalSync(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	var req SyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ConnectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "connector_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector_id is required")
 		return
 	}
 	if req.Table == "" {
-		h.writeError(w, http.StatusBadRequest, "table is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "table is required")
 		return
 	}
 
@@ -638,40 +645,40 @@ func (h *WarehouseHandler) handleIncrementalSync(w http.ResponseWriter, r *http.
 	}
 
 	if err := h.engine.CreateJob(job); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	result, err := h.engine.ExecuteJob(r.Context(), job.ID, req.ConnectorID)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // handleSyncStatus handles GET /v1/warehouse/sync/status
 func (h *WarehouseHandler) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	// Return stats as status information
 	stats := h.engine.Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleGetStats handles GET /v1/warehouse/stats
 func (h *WarehouseHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "warehouse engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "warehouse engine not configured")
 		return
 	}
 
 	stats := h.engine.Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // Helper methods
@@ -726,10 +733,10 @@ func (h *WarehouseHandler) createBigQueryConnector(req WarehouseConnectorRequest
 	return warehouse.NewBigQueryConnector(config, h.store, h.schema, h.logger)
 }
 
-func (h *WarehouseHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *WarehouseHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *WarehouseHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *WarehouseHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"strconv"
 
@@ -120,7 +120,7 @@ type RebalanceTaskJSON struct {
 // handleListNodes handles GET /v1/cluster/nodes
 func (h *ClusterHandler) handleListNodes(w http.ResponseWriter, r *http.Request) {
 	if h.membership == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *ClusterHandler) handleListNodes(w http.ResponseWriter, r *http.Request)
 		response[i] = h.nodeToJSON(node)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"nodes": response,
 		"count": len(response),
 	})
@@ -148,51 +148,51 @@ func (h *ClusterHandler) handleListNodes(w http.ResponseWriter, r *http.Request)
 // handleGetNode handles GET /v1/cluster/nodes/{id}
 func (h *ClusterHandler) handleGetNode(w http.ResponseWriter, r *http.Request) {
 	if h.membership == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	nodeID := r.PathValue("id")
 	if nodeID == "" {
-		h.writeError(w, http.StatusBadRequest, "node ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "node ID required")
 		return
 	}
 
 	node, ok := h.membership.GetMember(nodeID)
 	if !ok {
-		h.writeError(w, http.StatusNotFound, "node not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "node not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.nodeToJSON(node))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.nodeToJSON(node))
 }
 
 // handleGetLocalNode handles GET /v1/cluster/local
 func (h *ClusterHandler) handleGetLocalNode(w http.ResponseWriter, r *http.Request) {
 	if h.membership == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	node := h.membership.LocalNode()
-	h.writeJSON(w, http.StatusOK, h.nodeToJSON(node))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.nodeToJSON(node))
 }
 
 // handleGetStats handles GET /v1/cluster/stats
 func (h *ClusterHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	if h.membership == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	stats := h.membership.Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleGetRing handles GET /v1/cluster/ring
 func (h *ClusterHandler) handleGetRing(w http.ResponseWriter, r *http.Request) {
 	if h.ring == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
@@ -212,19 +212,19 @@ func (h *ClusterHandler) handleGetRing(w http.ResponseWriter, r *http.Request) {
 		response.Distribution = h.ring.GetKeyDistribution(sampleKeys)
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // handleRingLookup handles GET /v1/cluster/ring/lookup
 func (h *ClusterHandler) handleRingLookup(w http.ResponseWriter, r *http.Request) {
 	if h.ring == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	key := r.URL.Query().Get("key")
 	if key == "" {
-		h.writeError(w, http.StatusBadRequest, "key parameter required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "key parameter required")
 		return
 	}
 
@@ -234,14 +234,14 @@ func (h *ClusterHandler) handleRingLookup(w http.ResponseWriter, r *http.Request
 		var err error
 		count, err = strconv.Atoi(countStr)
 		if err != nil || count < 1 {
-			h.writeError(w, http.StatusBadRequest, "invalid count parameter")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid count parameter")
 			return
 		}
 	}
 
 	nodes, err := h.ring.GetNodes(key, count)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -250,7 +250,7 @@ func (h *ClusterHandler) handleRingLookup(w http.ResponseWriter, r *http.Request
 		response[i] = h.nodeToJSON(node)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"key":   key,
 		"nodes": response,
 	})
@@ -259,7 +259,7 @@ func (h *ClusterHandler) handleRingLookup(w http.ResponseWriter, r *http.Request
 // handleListPartitions handles GET /v1/cluster/partitions
 func (h *ClusterHandler) handleListPartitions(w http.ResponseWriter, r *http.Request) {
 	if h.partitionMap == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
@@ -288,7 +288,7 @@ func (h *ClusterHandler) handleListPartitions(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"partitions":         partitions,
 		"total":              totalPartitions,
 		"replication_factor": replicationFactor,
@@ -299,51 +299,51 @@ func (h *ClusterHandler) handleListPartitions(w http.ResponseWriter, r *http.Req
 // handleGetPartition handles GET /v1/cluster/partitions/{id}
 func (h *ClusterHandler) handleGetPartition(w http.ResponseWriter, r *http.Request) {
 	if h.partitionMap == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	idStr := r.PathValue("id")
 	if idStr == "" {
-		h.writeError(w, http.StatusBadRequest, "partition ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "partition ID required")
 		return
 	}
 
 	partitionID, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid partition ID")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid partition ID")
 		return
 	}
 
 	totalPartitions := h.partitionMap.TotalPartitions()
 	if partitionID < 0 || partitionID >= totalPartitions {
-		h.writeError(w, http.StatusNotFound, "partition not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "partition not found")
 		return
 	}
 
 	owners := h.partitionMap.GetOwners(partitionID)
 	response := h.partitionToJSON(partitionID, owners, h.partitionMap.ReplicationFactor())
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // handleGetPartitionForKey handles GET /v1/cluster/partitions/key/{key}
 func (h *ClusterHandler) handleGetPartitionForKey(w http.ResponseWriter, r *http.Request) {
 	if h.partitionMap == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	key := r.PathValue("key")
 	if key == "" {
-		h.writeError(w, http.StatusBadRequest, "key required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "key required")
 		return
 	}
 
 	partitionID := h.partitionMap.GetPartitionForKey(key)
 	owners := h.partitionMap.GetOwnersForKey(key)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"key":       key,
 		"partition": h.partitionToJSON(partitionID, owners, h.partitionMap.ReplicationFactor()),
 	})
@@ -352,7 +352,7 @@ func (h *ClusterHandler) handleGetPartitionForKey(w http.ResponseWriter, r *http
 // handleGetRebalanceStatus handles GET /v1/cluster/rebalance
 func (h *ClusterHandler) handleGetRebalanceStatus(w http.ResponseWriter, r *http.Request) {
 	if h.rebalancer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
@@ -372,23 +372,23 @@ func (h *ClusterHandler) handleGetRebalanceStatus(w http.ResponseWriter, r *http
 		response["current_plan"] = h.planToJSON(stats.CurrentPlan)
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // handleTriggerRebalance handles POST /v1/cluster/rebalance
 func (h *ClusterHandler) handleTriggerRebalance(w http.ResponseWriter, r *http.Request) {
 	if h.rebalancer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	plan, err := h.rebalancer.TriggerRebalance()
 	if err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusAccepted, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusAccepted, map[string]interface{}{
 		"success": true,
 		"plan":    h.planToJSON(plan),
 	})
@@ -397,17 +397,17 @@ func (h *ClusterHandler) handleTriggerRebalance(w http.ResponseWriter, r *http.R
 // handleCancelRebalance handles DELETE /v1/cluster/rebalance
 func (h *ClusterHandler) handleCancelRebalance(w http.ResponseWriter, r *http.Request) {
 	if h.rebalancer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
 	err := h.rebalancer.CancelRebalance()
 	if err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -415,7 +415,7 @@ func (h *ClusterHandler) handleCancelRebalance(w http.ResponseWriter, r *http.Re
 // handleGetRebalanceHistory handles GET /v1/cluster/rebalance/history
 func (h *ClusterHandler) handleGetRebalanceHistory(w http.ResponseWriter, r *http.Request) {
 	if h.rebalancer == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "cluster not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "cluster not configured")
 		return
 	}
 
@@ -425,7 +425,7 @@ func (h *ClusterHandler) handleGetRebalanceHistory(w http.ResponseWriter, r *htt
 		var err error
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil || limit < 1 {
-			h.writeError(w, http.StatusBadRequest, "invalid limit parameter")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid limit parameter")
 			return
 		}
 	}
@@ -443,7 +443,7 @@ func (h *ClusterHandler) handleGetRebalanceHistory(w http.ResponseWriter, r *htt
 		response = append(response, h.planToJSON(history[i]))
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"history": response,
 		"count":   len(response),
 	})
@@ -530,14 +530,12 @@ func (h *ClusterHandler) taskToJSON(task *cluster.RebalanceTask) RebalanceTaskJS
 	return result
 }
 
-func (h *ClusterHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+func (h *ClusterHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *ClusterHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]interface{}{
+func (h *ClusterHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	h.writeJSON(ctx, w, status, map[string]interface{}{
 		"error": message,
 	})
 }

@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/gitops"
+	"github.com/feather-store/feather/internal/logging"
 )
 
 // GitOpsHandler handles GitOps API requests.
@@ -48,7 +50,7 @@ func (h *GitOpsHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleListPolicies returns all registered policies.
 func (h *GitOpsHandler) handleListPolicies(w http.ResponseWriter, r *http.Request) {
 	policies := h.policyEngine.ListPolicies()
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"policies": policies,
 		"count":    len(policies),
 	})
@@ -58,16 +60,16 @@ func (h *GitOpsHandler) handleListPolicies(w http.ResponseWriter, r *http.Reques
 func (h *GitOpsHandler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 	var policy gitops.Policy
 	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if err := h.policyEngine.RegisterPolicy(&policy); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, policy)
+	h.writeJSON(r.Context(), w, http.StatusCreated, policy)
 }
 
 // handleGetPolicy returns a specific policy.
@@ -76,11 +78,11 @@ func (h *GitOpsHandler) handleGetPolicy(w http.ResponseWriter, r *http.Request) 
 
 	policy, exists := h.policyEngine.GetPolicy(name)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "policy not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "policy not found"})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, policy)
+	h.writeJSON(r.Context(), w, http.StatusOK, policy)
 }
 
 // handleDeletePolicy removes a policy.
@@ -89,7 +91,7 @@ func (h *GitOpsHandler) handleDeletePolicy(w http.ResponseWriter, r *http.Reques
 
 	_, exists := h.policyEngine.GetPolicy(name)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "policy not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "policy not found"})
 		return
 	}
 
@@ -134,12 +136,12 @@ func (r *GitOpsSyncRequest) toConfig() *gitops.SyncConfig {
 func (h *GitOpsHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req GitOpsSyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.FilePattern == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "filePattern is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "filePattern is required"})
 		return
 	}
 
@@ -147,7 +149,7 @@ func (h *GitOpsHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	result, err := h.syncManager.Sync(r.Context(), config)
 	if err != nil {
 		// Still return the result even on error
-		h.writeJSON(w, http.StatusOK, result)
+		h.writeJSON(r.Context(), w, http.StatusOK, result)
 		return
 	}
 
@@ -156,53 +158,53 @@ func (h *GitOpsHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusConflict
 	}
 
-	h.writeJSON(w, status, result)
+	h.writeJSON(r.Context(), w, status, result)
 }
 
 // handleDiff computes differences without applying.
 func (h *GitOpsHandler) handleDiff(w http.ResponseWriter, r *http.Request) {
 	var req GitOpsSyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.FilePattern == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "filePattern is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "filePattern is required"})
 		return
 	}
 
 	config := req.toConfig()
 	report, err := h.syncManager.Diff(r.Context(), config)
 	if err != nil {
-		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, report)
+	h.writeJSON(r.Context(), w, http.StatusOK, report)
 }
 
 // handleValidate validates definitions against policies.
 func (h *GitOpsHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var req GitOpsSyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.FilePattern == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "filePattern is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "filePattern is required"})
 		return
 	}
 
 	config := req.toConfig()
 	violations, err := h.syncManager.Validate(config)
 	if err != nil {
-		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"valid":      len(violations) == 0,
 		"violations": violations,
 		"count":      len(violations),
@@ -212,7 +214,7 @@ func (h *GitOpsHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 // handleGetHistory returns sync history.
 func (h *GitOpsHandler) handleGetHistory(w http.ResponseWriter, r *http.Request) {
 	history := h.syncManager.GetHistory()
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"history": history,
 		"count":   len(history),
 	})
@@ -222,10 +224,10 @@ func (h *GitOpsHandler) handleGetHistory(w http.ResponseWriter, r *http.Request)
 func (h *GitOpsHandler) handleGetLatestResult(w http.ResponseWriter, r *http.Request) {
 	result := h.syncManager.GetLastResult()
 	if result == nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "no sync history"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "no sync history"})
 		return
 	}
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // handleGetDefinition returns a feature definition.
@@ -234,11 +236,11 @@ func (h *GitOpsHandler) handleGetDefinition(w http.ResponseWriter, r *http.Reque
 
 	def, err := h.loader.LoadDefinition(path)
 	if err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, def)
+	h.writeJSON(r.Context(), w, http.StatusOK, def)
 }
 
 // CreateDefinitionRequest is the request to create a definition.
@@ -251,32 +253,34 @@ type CreateDefinitionRequest struct {
 func (h *GitOpsHandler) handleCreateDefinition(w http.ResponseWriter, r *http.Request) {
 	var req CreateDefinitionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Path == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "path is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "path is required"})
 		return
 	}
 	if req.Definition == nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "definition is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "definition is required"})
 		return
 	}
 
 	if err := h.loader.SaveDefinition(req.Definition, req.Path); err != nil {
-		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, req.Definition)
+	h.writeJSON(r.Context(), w, http.StatusCreated, req.Definition)
 }
 
 // writeJSON writes a JSON response.
-func (h *GitOpsHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func (h *GitOpsHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if data != nil {
-		json.NewEncoder(w).Encode(data)
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			logging.FromContext(ctx, nil).Error("failed to encode gitops response", "error", err)
+		}
 	}
 }

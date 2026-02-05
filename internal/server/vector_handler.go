@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,6 +42,7 @@ func (h *VectorHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/vectors/{index}/search", h.handleSearch)
 	mux.HandleFunc("GET /v1/vectors/{index}/{id}", h.handleGetVector)
 	mux.HandleFunc("DELETE /v1/vectors/{index}/{id}", h.handleDeleteVector)
+	mux.HandleFunc("GET /v1/vectors/{index}/query/{id}", h.handleQueryByID)
 }
 
 // CreateIndexRequest represents a request to create a new vector index.
@@ -88,7 +91,7 @@ func (h *VectorHandler) handleListIndexes(w http.ResponseWriter, r *http.Request
 	}()
 
 	indexes := h.store.ListIndexes()
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"indexes": indexes,
 	})
 }
@@ -104,26 +107,26 @@ func (h *VectorHandler) handleCreateIndex(w http.ResponseWriter, r *http.Request
 
 	var req CreateIndexRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 	if req.Dimension <= 0 {
-		h.writeError(w, http.StatusBadRequest, "dimension must be positive")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "dimension must be positive")
 		return
 	}
 
 	idx, err := h.store.CreateIndex(req.Name, req.Dimension, req.DistanceType)
 	if err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, IndexInfo{
+	h.writeJSON(r.Context(), w, http.StatusCreated, IndexInfo{
 		Name:         idx.Name,
 		Dimension:    idx.Dimension,
 		DistanceType: idx.DistanceType,
@@ -142,21 +145,21 @@ func (h *VectorHandler) handleGetIndex(w http.ResponseWriter, r *http.Request) {
 
 	indexName := r.PathValue("index")
 	if indexName == "" {
-		h.writeError(w, http.StatusBadRequest, "index name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name required")
 		return
 	}
 
 	idx, err := h.store.GetIndex(indexName)
 	if err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, IndexInfo{
+	h.writeJSON(r.Context(), w, http.StatusOK, IndexInfo{
 		Name:         idx.Name,
 		Dimension:    idx.Dimension,
 		DistanceType: idx.DistanceType,
@@ -175,20 +178,20 @@ func (h *VectorHandler) handleDeleteIndex(w http.ResponseWriter, r *http.Request
 
 	indexName := r.PathValue("index")
 	if indexName == "" {
-		h.writeError(w, http.StatusBadRequest, "index name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name required")
 		return
 	}
 
 	if err := h.store.DeleteIndex(indexName); err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]bool{"success": true})
 }
 
 // handleUpsert handles POST /v1/vectors/{index}/upsert
@@ -202,35 +205,35 @@ func (h *VectorHandler) handleUpsert(w http.ResponseWriter, r *http.Request) {
 
 	indexName := r.PathValue("index")
 	if indexName == "" {
-		h.writeError(w, http.StatusBadRequest, "index name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name required")
 		return
 	}
 
 	var req UpsertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Vectors) == 0 {
-		h.writeError(w, http.StatusBadRequest, "vectors required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "vectors required")
 		return
 	}
 
 	idx, err := h.store.GetIndex(indexName)
 	if err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Convert to VectorRecords
-	records := make([]vector.VectorRecord, len(req.Vectors))
+	// Convert to records
+	records := make([]vector.Record, len(req.Vectors))
 	for i, v := range req.Vectors {
-		records[i] = vector.VectorRecord{
+		records[i] = vector.Record{
 			ID:       v.ID,
 			Vector:   v.Vector,
 			Metadata: v.Metadata,
@@ -238,11 +241,11 @@ func (h *VectorHandler) handleUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := idx.UpsertBatch(records); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"upserted": len(req.Vectors),
 	})
 }
@@ -258,18 +261,18 @@ func (h *VectorHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	indexName := r.PathValue("index")
 	if indexName == "" {
-		h.writeError(w, http.StatusBadRequest, "index name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name required")
 		return
 	}
 
 	var req VectorSearchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Vector) == 0 {
-		h.writeError(w, http.StatusBadRequest, "vector required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "vector required")
 		return
 	}
 	if req.TopK <= 0 {
@@ -278,11 +281,11 @@ func (h *VectorHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	idx, err := h.store.GetIndex(indexName)
 	if err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -292,11 +295,11 @@ func (h *VectorHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 		IncludeVectors:  req.IncludeVectors,
 	})
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 	})
 }
@@ -313,27 +316,27 @@ func (h *VectorHandler) handleGetVector(w http.ResponseWriter, r *http.Request) 
 	indexName := r.PathValue("index")
 	vectorID := r.PathValue("id")
 	if indexName == "" || vectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "index name and vector id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name and vector id required")
 		return
 	}
 
 	idx, err := h.store.GetIndex(indexName)
 	if err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	record, err := idx.Get(vectorID)
 	if err != nil {
-		if err == vector.ErrVectorNotFound {
-			h.writeError(w, http.StatusNotFound, "vector not found")
+		if errors.Is(err, vector.ErrVectorNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "vector not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -343,7 +346,7 @@ func (h *VectorHandler) handleGetVector(w http.ResponseWriter, r *http.Request) 
 		record.Vector = nil
 	}
 
-	h.writeJSON(w, http.StatusOK, record)
+	h.writeJSON(r.Context(), w, http.StatusOK, record)
 }
 
 // handleDeleteVector handles DELETE /v1/vectors/{index}/{id}
@@ -358,26 +361,26 @@ func (h *VectorHandler) handleDeleteVector(w http.ResponseWriter, r *http.Reques
 	indexName := r.PathValue("index")
 	vectorID := r.PathValue("id")
 	if indexName == "" || vectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "index name and vector id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name and vector id required")
 		return
 	}
 
 	idx, err := h.store.GetIndex(indexName)
 	if err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if err := idx.Delete(vectorID); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]bool{"success": true})
 }
 
 // handleQueryByID handles finding similar vectors to an existing vector
@@ -392,7 +395,7 @@ func (h *VectorHandler) handleQueryByID(w http.ResponseWriter, r *http.Request) 
 	indexName := r.PathValue("index")
 	vectorID := r.PathValue("id")
 	if indexName == "" || vectorID == "" {
-		h.writeError(w, http.StatusBadRequest, "index name and vector id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "index name and vector id required")
 		return
 	}
 
@@ -405,22 +408,22 @@ func (h *VectorHandler) handleQueryByID(w http.ResponseWriter, r *http.Request) 
 
 	idx, err := h.store.GetIndex(indexName)
 	if err != nil {
-		if err == vector.ErrIndexNotFound {
-			h.writeError(w, http.StatusNotFound, "index not found")
+		if errors.Is(err, vector.ErrIndexNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "index not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Get the source vector
 	record, err := idx.Get(vectorID)
 	if err != nil {
-		if err == vector.ErrVectorNotFound {
-			h.writeError(w, http.StatusNotFound, "vector not found")
+		if errors.Is(err, vector.ErrVectorNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "vector not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -430,7 +433,7 @@ func (h *VectorHandler) handleQueryByID(w http.ResponseWriter, r *http.Request) 
 		IncludeVectors:  r.URL.Query().Get("include_vectors") == "true",
 	})
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -447,15 +450,15 @@ func (h *VectorHandler) handleQueryByID(w http.ResponseWriter, r *http.Request) 
 		filtered = filtered[:topK]
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": filtered,
 	})
 }
 
-func (h *VectorHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *VectorHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *VectorHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *VectorHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -58,7 +59,7 @@ func (h *ObservabilityHandler) GetStack() *observability.ObservabilityStack {
 func (h *ObservabilityHandler) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := h.stack.Metrics.GetAllMetrics()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"metrics": metrics,
 		"count":   len(metrics),
 	})
@@ -68,17 +69,17 @@ func (h *ObservabilityHandler) handleGetMetrics(w http.ResponseWriter, r *http.R
 func (h *ObservabilityHandler) handleGetFeatureMetrics(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	metrics := h.stack.Metrics.GetMetrics(feature)
 	if metrics == nil {
-		h.writeError(w, http.StatusNotFound, "no metrics for feature")
+		h.writeError(r.Context(), w, http.StatusNotFound, "no metrics for feature")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, metrics)
+	h.writeJSON(r.Context(), w, http.StatusOK, metrics)
 }
 
 // handleGetTopFeatures handles GET /v1/observability/metrics/top
@@ -92,7 +93,7 @@ func (h *ObservabilityHandler) handleGetTopFeatures(w http.ResponseWriter, r *ht
 
 	metrics := h.stack.Metrics.GetTopFeatures(n)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": metrics,
 		"count":    len(metrics),
 	})
@@ -102,7 +103,7 @@ func (h *ObservabilityHandler) handleGetTopFeatures(w http.ResponseWriter, r *ht
 func (h *ObservabilityHandler) handleCheckFreshness(w http.ResponseWriter, r *http.Request) {
 	alerts := h.stack.Freshness.Check(r.Context())
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"alerts": alerts,
 		"count":  len(alerts),
 	})
@@ -118,24 +119,24 @@ type FreshnessThresholdRequest struct {
 func (h *ObservabilityHandler) handleSetFreshnessThreshold(w http.ResponseWriter, r *http.Request) {
 	var req FreshnessThresholdRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
 	threshold, err := time.ParseDuration(req.Threshold)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid threshold duration")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid threshold duration")
 		return
 	}
 
 	h.stack.Freshness.SetThreshold(req.Feature, threshold)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":   true,
 		"feature":   req.Feature,
 		"threshold": threshold.String(),
@@ -146,34 +147,34 @@ func (h *ObservabilityHandler) handleSetFreshnessThreshold(w http.ResponseWriter
 func (h *ObservabilityHandler) handleGetUsagePattern(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	pattern := h.stack.Usage.GetPattern(feature)
 	if pattern == nil {
-		h.writeError(w, http.StatusNotFound, "no usage data for feature")
+		h.writeError(r.Context(), w, http.StatusNotFound, "no usage data for feature")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, pattern)
+	h.writeJSON(r.Context(), w, http.StatusOK, pattern)
 }
 
 // handleGetQualityScore handles GET /v1/observability/quality/{feature}
 func (h *ObservabilityHandler) handleGetQualityScore(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	score := h.stack.Quality.GetScore(feature)
 	if score == nil {
-		h.writeError(w, http.StatusNotFound, "no quality score for feature")
+		h.writeError(r.Context(), w, http.StatusNotFound, "no quality score for feature")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, score)
+	h.writeJSON(r.Context(), w, http.StatusOK, score)
 }
 
 // QualityRuleRequest represents a quality rule request.
@@ -189,12 +190,12 @@ type QualityRuleRequest struct {
 func (h *ObservabilityHandler) handleAddQualityRule(w http.ResponseWriter, r *http.Request) {
 	var req QualityRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" || req.Feature == "" || req.RuleType == "" {
-		h.writeError(w, http.StatusBadRequest, "name, feature, and rule_type are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name, feature, and rule_type are required")
 		return
 	}
 
@@ -213,7 +214,7 @@ func (h *ObservabilityHandler) handleAddQualityRule(w http.ResponseWriter, r *ht
 
 	h.stack.Quality.AddRule(rule)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"rule":    rule,
 	})
@@ -232,7 +233,7 @@ func (h *ObservabilityHandler) handleGetViolations(w http.ResponseWriter, r *htt
 
 	violations := h.stack.Quality.GetViolations(feature, since)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"violations": violations,
 		"count":      len(violations),
 	})
@@ -252,7 +253,7 @@ func (h *ObservabilityHandler) handleGetAlerts(w http.ResponseWriter, r *http.Re
 
 	alerts := h.stack.Alerts.GetAlerts(alertType, feature, since)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"alerts": alerts,
 		"count":  len(alerts),
 	})
@@ -275,12 +276,12 @@ type AlertRuleRequest struct {
 func (h *ObservabilityHandler) handleAddAlertRule(w http.ResponseWriter, r *http.Request) {
 	var req AlertRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" || req.Type == "" || req.Feature == "" || req.Condition == "" {
-		h.writeError(w, http.StatusBadRequest, "name, type, feature, and condition are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name, type, feature, and condition are required")
 		return
 	}
 
@@ -289,7 +290,7 @@ func (h *ObservabilityHandler) handleAddAlertRule(w http.ResponseWriter, r *http
 		var err error
 		duration, err = time.ParseDuration(req.Duration)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid duration")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid duration")
 			return
 		}
 	}
@@ -298,7 +299,7 @@ func (h *ObservabilityHandler) handleAddAlertRule(w http.ResponseWriter, r *http
 		var err error
 		cooldown, err = time.ParseDuration(req.Cooldown)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid cooldown")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid cooldown")
 			return
 		}
 	} else {
@@ -324,7 +325,7 @@ func (h *ObservabilityHandler) handleAddAlertRule(w http.ResponseWriter, r *http
 
 	h.stack.Alerts.AddRule(rule)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"rule":    rule,
 	})
@@ -334,7 +335,7 @@ func (h *ObservabilityHandler) handleAddAlertRule(w http.ResponseWriter, r *http
 func (h *ObservabilityHandler) handleAckAlert(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "alert id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "alert id required")
 		return
 	}
 
@@ -346,12 +347,12 @@ func (h *ObservabilityHandler) handleAckAlert(w http.ResponseWriter, r *http.Req
 	}
 
 	if h.stack.Alerts.Acknowledge(id, req.By) {
-		h.writeJSON(w, http.StatusOK, map[string]interface{}{
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 			"success": true,
 			"id":      id,
 		})
 	} else {
-		h.writeError(w, http.StatusNotFound, "alert not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "alert not found")
 	}
 }
 
@@ -359,24 +360,24 @@ func (h *ObservabilityHandler) handleAckAlert(w http.ResponseWriter, r *http.Req
 func (h *ObservabilityHandler) handleResolveAlert(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "alert id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "alert id required")
 		return
 	}
 
 	if h.stack.Alerts.Resolve(id) {
-		h.writeJSON(w, http.StatusOK, map[string]interface{}{
+		h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 			"success": true,
 			"id":      id,
 		})
 	} else {
-		h.writeError(w, http.StatusNotFound, "alert not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "alert not found")
 	}
 }
 
-func (h *ObservabilityHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *ObservabilityHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *ObservabilityHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *ObservabilityHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -70,7 +71,7 @@ type ParamSpecJSON struct {
 // handleListPlugins handles GET /v1/plugins
 func (h *WASMHandler) handleListPlugins(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
@@ -81,7 +82,7 @@ func (h *WASMHandler) handleListPlugins(w http.ResponseWriter, r *http.Request) 
 		response[i] = h.pluginToJSON(p)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"plugins": response,
 		"count":   len(response),
 	})
@@ -90,23 +91,23 @@ func (h *WASMHandler) handleListPlugins(w http.ResponseWriter, r *http.Request) 
 // handleGetPlugin handles GET /v1/plugins/{id}
 func (h *WASMHandler) handleGetPlugin(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
 	pluginID := r.PathValue("id")
 	if pluginID == "" {
-		h.writeError(w, http.StatusBadRequest, "plugin ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "plugin ID required")
 		return
 	}
 
 	plugin, err := h.runtime.GetPlugin(pluginID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.pluginToJSON(plugin))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.pluginToJSON(plugin))
 }
 
 // LoadPluginRequest represents a request to load a plugin.
@@ -125,23 +126,23 @@ type LoadPluginRequest struct {
 // handleLoadPlugin handles POST /v1/plugins
 func (h *WASMHandler) handleLoadPlugin(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
 	var req LoadPluginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
@@ -152,7 +153,7 @@ func (h *WASMHandler) handleLoadPlugin(w http.ResponseWriter, r *http.Request) {
 	if req.WASMBase64 != "" {
 		wasmBytes, err = base64.StdEncoding.DecodeString(req.WASMBase64)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid base64 WASM data")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid base64 WASM data")
 			return
 		}
 	} else {
@@ -196,11 +197,11 @@ func (h *WASMHandler) handleLoadPlugin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.runtime.LoadPlugin(req.ID, wasmBytes, manifest); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":   true,
 		"plugin_id": req.ID,
 	})
@@ -209,22 +210,22 @@ func (h *WASMHandler) handleLoadPlugin(w http.ResponseWriter, r *http.Request) {
 // handleUnloadPlugin handles DELETE /v1/plugins/{id}
 func (h *WASMHandler) handleUnloadPlugin(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
 	pluginID := r.PathValue("id")
 	if pluginID == "" {
-		h.writeError(w, http.StatusBadRequest, "plugin ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "plugin ID required")
 		return
 	}
 
 	if err := h.runtime.UnloadPlugin(pluginID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -232,22 +233,22 @@ func (h *WASMHandler) handleUnloadPlugin(w http.ResponseWriter, r *http.Request)
 // handleEnablePlugin handles POST /v1/plugins/{id}/enable
 func (h *WASMHandler) handleEnablePlugin(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
 	pluginID := r.PathValue("id")
 	if pluginID == "" {
-		h.writeError(w, http.StatusBadRequest, "plugin ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "plugin ID required")
 		return
 	}
 
 	if err := h.runtime.EnablePlugin(pluginID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"state":   "active",
 	})
@@ -256,22 +257,22 @@ func (h *WASMHandler) handleEnablePlugin(w http.ResponseWriter, r *http.Request)
 // handleDisablePlugin handles POST /v1/plugins/{id}/disable
 func (h *WASMHandler) handleDisablePlugin(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
 	pluginID := r.PathValue("id")
 	if pluginID == "" {
-		h.writeError(w, http.StatusBadRequest, "plugin ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "plugin ID required")
 		return
 	}
 
 	if err := h.runtime.DisablePlugin(pluginID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"state":   "disabled",
 	})
@@ -285,7 +286,7 @@ type CallFunctionRequest struct {
 // handleCallFunction handles POST /v1/plugins/{id}/call/{function}
 func (h *WASMHandler) handleCallFunction(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
@@ -293,24 +294,24 @@ func (h *WASMHandler) handleCallFunction(w http.ResponseWriter, r *http.Request)
 	functionName := r.PathValue("function")
 
 	if pluginID == "" {
-		h.writeError(w, http.StatusBadRequest, "plugin ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "plugin ID required")
 		return
 	}
 	if functionName == "" {
-		h.writeError(w, http.StatusBadRequest, "function name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "function name required")
 		return
 	}
 
 	var req CallFunctionRequest
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "failed to read request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
 
 	if len(body) > 0 {
-		if err := json.Unmarshal(body, &req); err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid request body")
+		if unmarshalErr := json.Unmarshal(body, &req); unmarshalErr != nil {
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 	}
@@ -321,11 +322,11 @@ func (h *WASMHandler) handleCallFunction(w http.ResponseWriter, r *http.Request)
 
 	result, err := h.runtime.Call(r.Context(), pluginID, functionName, req.Args)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"result":  result,
 	})
@@ -334,13 +335,13 @@ func (h *WASMHandler) handleCallFunction(w http.ResponseWriter, r *http.Request)
 // handleGetMetrics handles GET /v1/plugins/metrics
 func (h *WASMHandler) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	if h.runtime == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "WASM runtime not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "WASM runtime not configured")
 		return
 	}
 
 	metrics := h.runtime.GetMetrics()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"total_calls":      metrics.TotalCalls,
 		"total_errors":     metrics.TotalErrors,
 		"plugins_loaded":   metrics.PluginsLoaded,
@@ -386,10 +387,10 @@ func (h *WASMHandler) pluginToJSON(p *wasm.Plugin) PluginJSON {
 	}
 }
 
-func (h *WASMHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *WASMHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *WASMHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *WASMHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -130,7 +131,7 @@ func (h *ModelServingHandler) handleListModels(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"models": result,
 		"count":  len(result),
 	})
@@ -140,16 +141,16 @@ func (h *ModelServingHandler) handleListModels(w http.ResponseWriter, r *http.Re
 func (h *ModelServingHandler) handleRegisterModel(w http.ResponseWriter, r *http.Request) {
 	var req MLRegisterModelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
@@ -164,11 +165,11 @@ func (h *ModelServingHandler) handleRegisterModel(w http.ResponseWriter, r *http
 	}
 
 	if err := h.orchestrator.Registry().RegisterModel(model); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"model":   model,
 	})
@@ -178,33 +179,33 @@ func (h *ModelServingHandler) handleRegisterModel(w http.ResponseWriter, r *http
 func (h *ModelServingHandler) handleGetModel(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	model, err := h.orchestrator.Registry().GetModel(modelID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, model)
+	h.writeJSON(r.Context(), w, http.StatusOK, model)
 }
 
 // handleDeleteModel handles DELETE /v1/models/{id}
 func (h *ModelServingHandler) handleDeleteModel(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	if err := h.orchestrator.Registry().DeleteModel(modelID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -213,13 +214,13 @@ func (h *ModelServingHandler) handleDeleteModel(w http.ResponseWriter, r *http.R
 func (h *ModelServingHandler) handleListVersions(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	model, err := h.orchestrator.Registry().GetModel(modelID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -234,7 +235,7 @@ func (h *ModelServingHandler) handleListVersions(w http.ResponseWriter, r *http.
 		})
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"versions":       versions,
 		"active_version": model.ActiveVersion,
 		"count":          len(versions),
@@ -245,22 +246,22 @@ func (h *ModelServingHandler) handleListVersions(w http.ResponseWriter, r *http.
 func (h *ModelServingHandler) handleRegisterVersion(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	var req RegisterVersionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Version == "" {
-		h.writeError(w, http.StatusBadRequest, "version is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "version is required")
 		return
 	}
 	if len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "features are required")
 		return
 	}
 
@@ -273,11 +274,11 @@ func (h *ModelServingHandler) handleRegisterVersion(w http.ResponseWriter, r *ht
 	}
 
 	if err := h.orchestrator.Registry().RegisterVersion(modelID, version); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"version": version,
 	})
@@ -289,21 +290,21 @@ func (h *ModelServingHandler) handleGetVersion(w http.ResponseWriter, r *http.Re
 	versionStr := r.PathValue("version")
 
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 	if versionStr == "" {
-		h.writeError(w, http.StatusBadRequest, "version required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "version required")
 		return
 	}
 
 	version, err := h.orchestrator.Registry().GetVersion(modelID, versionStr)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, version)
+	h.writeJSON(r.Context(), w, http.StatusOK, version)
 }
 
 // handleActivateVersion handles POST /v1/models/{id}/versions/{version}/activate
@@ -312,20 +313,20 @@ func (h *ModelServingHandler) handleActivateVersion(w http.ResponseWriter, r *ht
 	versionStr := r.PathValue("version")
 
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 	if versionStr == "" {
-		h.writeError(w, http.StatusBadRequest, "version required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "version required")
 		return
 	}
 
 	if err := h.orchestrator.Registry().ActivateVersion(modelID, versionStr); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":        true,
 		"active_version": versionStr,
 	})
@@ -335,7 +336,7 @@ func (h *ModelServingHandler) handleActivateVersion(w http.ResponseWriter, r *ht
 func (h *ModelServingHandler) handleListSnapshots(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
@@ -352,7 +353,7 @@ func (h *ModelServingHandler) handleListSnapshots(w http.ResponseWriter, r *http
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"snapshots": result,
 		"count":     len(result),
 	})
@@ -362,22 +363,22 @@ func (h *ModelServingHandler) handleListSnapshots(w http.ResponseWriter, r *http
 func (h *ModelServingHandler) handleCreateSnapshot(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	var req CreateSnapshotRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Version == "" {
-		h.writeError(w, http.StatusBadRequest, "version is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "version is required")
 		return
 	}
 	if len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "features are required")
 		return
 	}
 
@@ -392,7 +393,7 @@ func (h *ModelServingHandler) handleCreateSnapshot(w http.ResponseWriter, r *htt
 	snapshot := builder.Build()
 
 	if err := h.orchestrator.SnapshotStore().CreateSnapshot(snapshot); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
@@ -402,7 +403,7 @@ func (h *ModelServingHandler) handleCreateSnapshot(w http.ResponseWriter, r *htt
 		version.TrainingSnapshotID = snapshot.ID
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":  true,
 		"snapshot": snapshot,
 	})
@@ -412,58 +413,58 @@ func (h *ModelServingHandler) handleCreateSnapshot(w http.ResponseWriter, r *htt
 func (h *ModelServingHandler) handleGetSnapshot(w http.ResponseWriter, r *http.Request) {
 	snapshotID := r.PathValue("snapshotId")
 	if snapshotID == "" {
-		h.writeError(w, http.StatusBadRequest, "snapshot id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "snapshot id required")
 		return
 	}
 
 	snapshot, err := h.orchestrator.SnapshotStore().GetSnapshot(snapshotID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, snapshot)
+	h.writeJSON(r.Context(), w, http.StatusOK, snapshot)
 }
 
 // handleValidateFeatures handles POST /v1/models/{id}/validate
 func (h *ModelServingHandler) handleValidateFeatures(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	var req ValidateFeaturesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "features are required")
 		return
 	}
 
 	result, err := h.orchestrator.Validator().Validate(r.Context(), modelID, req.Features)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, result)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
 }
 
 // handleValidationStats handles GET /v1/models/{id}/validation/stats
 func (h *ModelServingHandler) handleValidationStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.orchestrator.Validator().Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleGetModelAlerts handles GET /v1/models/{id}/drift/alerts
 func (h *ModelServingHandler) handleGetModelAlerts(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
@@ -478,7 +479,7 @@ func (h *ModelServingHandler) handleGetModelAlerts(w http.ResponseWriter, r *htt
 
 	alerts := h.orchestrator.DriftMonitor().GetAlertsForModel(modelID, version)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"alerts": alerts,
 		"count":  len(alerts),
 	})
@@ -497,7 +498,7 @@ func (h *ModelServingHandler) handleGetAllAlerts(w http.ResponseWriter, r *http.
 
 	alerts := h.orchestrator.DriftMonitor().GetRecentAlerts(since)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"alerts": alerts,
 		"count":  len(alerts),
 		"since":  since,
@@ -508,21 +509,24 @@ func (h *ModelServingHandler) handleGetAllAlerts(w http.ResponseWriter, r *http.
 func (h *ModelServingHandler) handleAcknowledgeAlert(w http.ResponseWriter, r *http.Request) {
 	alertID := r.PathValue("alertId")
 	if alertID == "" {
-		h.writeError(w, http.StatusBadRequest, "alert id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "alert id required")
 		return
 	}
 
 	var req struct {
 		AcknowledgedBy string `json:"acknowledged_by"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
-
-	if err := h.orchestrator.DriftMonitor().AcknowledgeAlert(alertID, req.AcknowledgedBy); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	if err := h.orchestrator.DriftMonitor().AcknowledgeAlert(alertID, req.AcknowledgedBy); err != nil {
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -531,18 +535,18 @@ func (h *ModelServingHandler) handleAcknowledgeAlert(w http.ResponseWriter, r *h
 func (h *ModelServingHandler) handleServeFeatures(w http.ResponseWriter, r *http.Request) {
 	modelID := r.PathValue("id")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model id required")
 		return
 	}
 
 	var req ServeFeaturesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityID == "" {
-		h.writeError(w, http.StatusBadRequest, "entity_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_id is required")
 		return
 	}
 
@@ -551,7 +555,7 @@ func (h *ModelServingHandler) handleServeFeatures(w http.ResponseWriter, r *http
 	if len(featureNames) == 0 {
 		modelFeatures, err := h.orchestrator.Registry().GetFeaturesForModel(modelID)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, err.Error())
+			h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 			return
 		}
 		featureNames = modelFeatures
@@ -560,7 +564,7 @@ func (h *ModelServingHandler) handleServeFeatures(w http.ResponseWriter, r *http
 	// Fetch features from store
 	featureValues, err := h.store.Get(req.EntityID, featureNames)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, "failed to get features: "+err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, "failed to get features: "+err.Error())
 		return
 	}
 
@@ -584,19 +588,19 @@ func (h *ModelServingHandler) handleServeFeatures(w http.ResponseWriter, r *http
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // handleStats handles GET /v1/models/stats
 func (h *ModelServingHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.orchestrator.Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
-func (h *ModelServingHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *ModelServingHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *ModelServingHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *ModelServingHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

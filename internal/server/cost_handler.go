@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -81,20 +82,20 @@ type UsageRequest struct {
 func (h *CostHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) {
 	var req UsageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Category == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "category is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "category is required"})
 		return
 	}
 	if req.Unit == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unit is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "unit is required"})
 		return
 	}
 	if req.Quantity <= 0 {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "quantity must be positive"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "quantity must be positive"})
 		return
 	}
 
@@ -113,11 +114,11 @@ func (h *CostHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) 
 
 	entry, err := h.tracker.RecordUsage(record)
 	if err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, entry)
+	h.writeJSON(r.Context(), w, http.StatusCreated, entry)
 }
 
 func (h *CostHandler) handleGetUsage(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +126,7 @@ func (h *CostHandler) handleGetUsage(w http.ResponseWriter, r *http.Request) {
 	start, end := h.parseTimeRange(r)
 
 	records := h.tracker.GetUsage(tenantID, start, end)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"records": records,
 		"count":   len(records),
 	})
@@ -136,12 +137,12 @@ func (h *CostHandler) handleGetCostSummary(w http.ResponseWriter, r *http.Reques
 	start, end := h.parseTimeRange(r)
 
 	summary := h.tracker.GetCostSummary(tenantID, start, end)
-	h.writeJSON(w, http.StatusOK, summary)
+	h.writeJSON(r.Context(), w, http.StatusOK, summary)
 }
 
 func (h *CostHandler) handleListRates(w http.ResponseWriter, r *http.Request) {
 	rates := h.tracker.ListRates()
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"rates": rates,
 		"count": len(rates),
 	})
@@ -160,20 +161,20 @@ type SetRateRequest struct {
 func (h *CostHandler) handleSetRate(w http.ResponseWriter, r *http.Request) {
 	var req SetRateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Category == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "category is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "category is required"})
 		return
 	}
 	if req.Unit == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unit is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "unit is required"})
 		return
 	}
 	if req.PricePerUnit < 0 {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "pricePerUnit must be non-negative"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "pricePerUnit must be non-negative"})
 		return
 	}
 
@@ -187,7 +188,7 @@ func (h *CostHandler) handleSetRate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.tracker.SetRate(rate)
-	h.writeJSON(w, http.StatusOK, rate)
+	h.writeJSON(r.Context(), w, http.StatusOK, rate)
 }
 
 // Budget endpoints
@@ -195,7 +196,7 @@ func (h *CostHandler) handleSetRate(w http.ResponseWriter, r *http.Request) {
 func (h *CostHandler) handleListBudgets(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.URL.Query().Get("tenant_id")
 	budgets := h.budgetManager.ListBudgets(tenantID)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"budgets": budgets,
 		"count":   len(budgets),
 	})
@@ -216,7 +217,7 @@ type BudgetRequest struct {
 func (h *CostHandler) handleCreateBudget(w http.ResponseWriter, r *http.Request) {
 	var req BudgetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
@@ -236,11 +237,11 @@ func (h *CostHandler) handleCreateBudget(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.budgetManager.CreateBudget(budget); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, budget)
+	h.writeJSON(r.Context(), w, http.StatusCreated, budget)
 }
 
 func (h *CostHandler) handleGetBudget(w http.ResponseWriter, r *http.Request) {
@@ -248,11 +249,11 @@ func (h *CostHandler) handleGetBudget(w http.ResponseWriter, r *http.Request) {
 
 	budget, exists := h.budgetManager.GetBudget(id)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "budget not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "budget not found"})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, budget)
+	h.writeJSON(r.Context(), w, http.StatusOK, budget)
 }
 
 func (h *CostHandler) handleUpdateBudget(w http.ResponseWriter, r *http.Request) {
@@ -260,13 +261,13 @@ func (h *CostHandler) handleUpdateBudget(w http.ResponseWriter, r *http.Request)
 
 	var req BudgetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	budget, exists := h.budgetManager.GetBudget(id)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "budget not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "budget not found"})
 		return
 	}
 
@@ -297,18 +298,18 @@ func (h *CostHandler) handleUpdateBudget(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.budgetManager.UpdateBudget(budget); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, budget)
+	h.writeJSON(r.Context(), w, http.StatusOK, budget)
 }
 
 func (h *CostHandler) handleDeleteBudget(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	if err := h.budgetManager.DeleteBudget(id); err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -320,11 +321,11 @@ func (h *CostHandler) handleGetBudgetStatus(w http.ResponseWriter, r *http.Reque
 
 	status, err := h.budgetManager.GetBudgetStatus(id)
 	if err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, status)
+	h.writeJSON(r.Context(), w, http.StatusOK, status)
 }
 
 // Alert endpoints
@@ -339,7 +340,7 @@ func (h *CostHandler) handleGetAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	alerts := h.budgetManager.GetAlerts(tenantID, since)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"alerts": alerts,
 		"count":  len(alerts),
 	})
@@ -349,7 +350,7 @@ func (h *CostHandler) handleAcknowledgeAlert(w http.ResponseWriter, r *http.Requ
 	id := r.PathValue("id")
 
 	if err := h.budgetManager.AcknowledgeAlert(id); err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -361,7 +362,7 @@ func (h *CostHandler) handleAcknowledgeAlert(w http.ResponseWriter, r *http.Requ
 func (h *CostHandler) handleListRules(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.URL.Query().Get("tenant_id")
 	rules := h.chargebackManager.ListRules(tenantID)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"rules": rules,
 		"count": len(rules),
 	})
@@ -381,7 +382,7 @@ type AllocationRuleRequest struct {
 func (h *CostHandler) handleCreateRule(w http.ResponseWriter, r *http.Request) {
 	var req AllocationRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
@@ -396,11 +397,11 @@ func (h *CostHandler) handleCreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.chargebackManager.CreateRule(rule); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, rule)
+	h.writeJSON(r.Context(), w, http.StatusCreated, rule)
 }
 
 func (h *CostHandler) handleGetRule(w http.ResponseWriter, r *http.Request) {
@@ -408,11 +409,11 @@ func (h *CostHandler) handleGetRule(w http.ResponseWriter, r *http.Request) {
 
 	rule, exists := h.chargebackManager.GetRule(id)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "rule not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "rule not found"})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, rule)
+	h.writeJSON(r.Context(), w, http.StatusOK, rule)
 }
 
 func (h *CostHandler) handleUpdateRule(w http.ResponseWriter, r *http.Request) {
@@ -420,13 +421,13 @@ func (h *CostHandler) handleUpdateRule(w http.ResponseWriter, r *http.Request) {
 
 	var req AllocationRuleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	rule, exists := h.chargebackManager.GetRule(id)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "rule not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "rule not found"})
 		return
 	}
 
@@ -451,18 +452,18 @@ func (h *CostHandler) handleUpdateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.chargebackManager.UpdateRule(rule); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, rule)
+	h.writeJSON(r.Context(), w, http.StatusOK, rule)
 }
 
 func (h *CostHandler) handleDeleteRule(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	if err := h.chargebackManager.DeleteRule(id); err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -474,7 +475,7 @@ func (h *CostHandler) handleDeleteRule(w http.ResponseWriter, r *http.Request) {
 func (h *CostHandler) handleListInvoices(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.URL.Query().Get("tenant_id")
 	invoices := h.chargebackManager.ListInvoices(tenantID)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"invoices": invoices,
 		"count":    len(invoices),
 	})
@@ -490,26 +491,26 @@ type GenerateInvoiceRequest struct {
 func (h *CostHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Request) {
 	var req GenerateInvoiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.TenantID == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "tenantId is required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "tenantId is required"})
 		return
 	}
 	if req.Start.IsZero() || req.End.IsZero() {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "start and end times are required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "start and end times are required"})
 		return
 	}
 
 	invoice, err := h.chargebackManager.GenerateInvoice(req.TenantID, req.Start, req.End)
 	if err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, invoice)
+	h.writeJSON(r.Context(), w, http.StatusCreated, invoice)
 }
 
 func (h *CostHandler) handleGetInvoice(w http.ResponseWriter, r *http.Request) {
@@ -517,11 +518,11 @@ func (h *CostHandler) handleGetInvoice(w http.ResponseWriter, r *http.Request) {
 
 	invoice, exists := h.chargebackManager.GetInvoice(id)
 	if !exists {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "invoice not found"})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": "invoice not found"})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, invoice)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoice)
 }
 
 // UpdateInvoiceStatusRequest is the request body for updating invoice status.
@@ -534,17 +535,17 @@ func (h *CostHandler) handleUpdateInvoiceStatus(w http.ResponseWriter, r *http.R
 
 	var req UpdateInvoiceStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if err := h.chargebackManager.UpdateInvoiceStatus(id, cost.InvoiceStatus(req.Status)); err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
 	invoice, _ := h.chargebackManager.GetInvoice(id)
-	h.writeJSON(w, http.StatusOK, invoice)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoice)
 }
 
 // ApplyCreditRequest is the request body for applying a credit.
@@ -559,12 +560,12 @@ func (h *CostHandler) handleApplyCredit(w http.ResponseWriter, r *http.Request) 
 
 	var req ApplyCreditRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Amount <= 0 {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "amount must be positive"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "amount must be positive"})
 		return
 	}
 
@@ -575,12 +576,12 @@ func (h *CostHandler) handleApplyCredit(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.chargebackManager.ApplyCredit(id, credit); err != nil {
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
 	invoice, _ := h.chargebackManager.GetInvoice(id)
-	h.writeJSON(w, http.StatusOK, invoice)
+	h.writeJSON(r.Context(), w, http.StatusOK, invoice)
 }
 
 // Report endpoints
@@ -601,12 +602,12 @@ type ReportRequest struct {
 func (h *CostHandler) handleGenerateReport(w http.ResponseWriter, r *http.Request) {
 	var req ReportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if req.Start.IsZero() || req.End.IsZero() {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "start and end times are required"})
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "start and end times are required"})
 		return
 	}
 
@@ -626,11 +627,11 @@ func (h *CostHandler) handleGenerateReport(w http.ResponseWriter, r *http.Reques
 
 	report, err := h.chargebackManager.GenerateReport(config, req.Start, req.End)
 	if err != nil {
-		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, report)
+	h.writeJSON(r.Context(), w, http.StatusOK, report)
 }
 
 // ChargebacksRequest is the request body for getting chargebacks.
@@ -645,7 +646,7 @@ func (h *CostHandler) handleGetChargebacks(w http.ResponseWriter, r *http.Reques
 	start, end := h.parseTimeRange(r)
 
 	chargebacks := h.chargebackManager.AllocateCosts(tenantID, start, end)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"chargebacks": chargebacks,
 		"count":       len(chargebacks),
 	})
@@ -671,10 +672,10 @@ func (h *CostHandler) parseTimeRange(r *http.Request) (time.Time, time.Time) {
 	return start, end
 }
 
-func (h *CostHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if data != nil {
-		json.NewEncoder(w).Encode(data)
+func (h *CostHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	if data == nil {
+		w.WriteHeader(status)
+		return
 	}
+	writeJSONResponse(ctx, w, status, data)
 }

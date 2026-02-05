@@ -46,18 +46,18 @@ func (h *LLMHandler) handleEmbed(w http.ResponseWriter, r *http.Request) {
 
 	var req EmbedRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.Text == "" {
-		writeJSONError(w, http.StatusBadRequest, "Text is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "Text is required")
 		return
 	}
 
 	embedding, err := h.pipeline.Embed(ctx, req.Text)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h *LLMHandler) handleEmbed(w http.ResponseWriter, r *http.Request) {
 		ContentHash: llm.ContentHash(req.Text),
 	}
 
-	writeJSONResponse(w, http.StatusOK, resp)
+	writeJSONResponse(r.Context(), w, http.StatusOK, resp)
 }
 
 // EmbedChunksRequest is the request for embedding text with chunk info.
@@ -96,18 +96,18 @@ func (h *LLMHandler) handleEmbedChunks(w http.ResponseWriter, r *http.Request) {
 
 	var req EmbedChunksRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.Text == "" {
-		writeJSONError(w, http.StatusBadRequest, "Text is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "Text is required")
 		return
 	}
 
 	chunks, err := h.pipeline.EmbedChunks(ctx, req.Text)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -127,7 +127,7 @@ func (h *LLMHandler) handleEmbedChunks(w http.ResponseWriter, r *http.Request) {
 		ModelID: h.pipeline.Stats().ProviderModelID,
 	}
 
-	writeJSONResponse(w, http.StatusOK, resp)
+	writeJSONResponse(r.Context(), w, http.StatusOK, resp)
 }
 
 // CreateFeatureRequest is the request for creating an embedding feature.
@@ -152,26 +152,26 @@ func (h *LLMHandler) handleCreateFeature(w http.ResponseWriter, r *http.Request)
 
 	var req CreateFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.EntityKey == "" {
-		writeJSONError(w, http.StatusBadRequest, "entity_key is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "entity_key is required")
 		return
 	}
 	if req.FeatureName == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature_name is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature_name is required")
 		return
 	}
 	if req.Text == "" {
-		writeJSONError(w, http.StatusBadRequest, "text is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "text is required")
 		return
 	}
 
 	result, err := h.pipeline.Process(ctx, req.EntityKey, req.FeatureName, req.Text)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *LLMHandler) handleCreateFeature(w http.ResponseWriter, r *http.Request)
 		Timestamp:   result.Timestamp,
 	}
 
-	writeJSONResponse(w, http.StatusOK, resp)
+	writeJSONResponse(r.Context(), w, http.StatusOK, resp)
 }
 
 // CreateFeaturesBatchRequest is the request for batch feature creation.
@@ -195,8 +195,8 @@ type CreateFeaturesBatchRequest struct {
 
 // CreateFeaturesBatchResponse is the response for batch feature creation.
 type CreateFeaturesBatchResponse struct {
-	EntityKey string                   `json:"entity_key"`
-	Features  []CreateFeatureResponse  `json:"features"`
+	EntityKey string                  `json:"entity_key"`
+	Features  []CreateFeatureResponse `json:"features"`
 }
 
 func (h *LLMHandler) handleCreateFeaturesBatch(w http.ResponseWriter, r *http.Request) {
@@ -204,22 +204,22 @@ func (h *LLMHandler) handleCreateFeaturesBatch(w http.ResponseWriter, r *http.Re
 
 	var req CreateFeaturesBatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.EntityKey == "" {
-		writeJSONError(w, http.StatusBadRequest, "entity_key is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "entity_key is required")
 		return
 	}
 	if len(req.Features) == 0 {
-		writeJSONError(w, http.StatusBadRequest, "features is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "features is required")
 		return
 	}
 
 	results, err := h.pipeline.ProcessBatch(ctx, req.EntityKey, req.Features)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -240,17 +240,17 @@ func (h *LLMHandler) handleCreateFeaturesBatch(w http.ResponseWriter, r *http.Re
 		Features:  features,
 	}
 
-	writeJSONResponse(w, http.StatusOK, resp)
+	writeJSONResponse(r.Context(), w, http.StatusOK, resp)
 }
 
 func (h *LLMHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.pipeline.Stats()
-	writeJSONResponse(w, http.StatusOK, stats)
+	writeJSONResponse(r.Context(), w, http.StatusOK, stats)
 }
 
 func (h *LLMHandler) handleClearCache(w http.ResponseWriter, r *http.Request) {
 	h.pipeline.ClearCache()
-	writeJSONResponse(w, http.StatusOK, map[string]string{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]string{
 		"status": "cache_cleared",
 	})
 }

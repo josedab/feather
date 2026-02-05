@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,7 +23,7 @@ type testObservabilityServer struct {
 func newTestObservabilityServer(t *testing.T) *testObservabilityServer {
 	t.Helper()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024, // 1MB
 		WarmInMemory: true,
 	}, storage.NewRegistry())
@@ -74,7 +75,7 @@ func (ts *testObservabilityServer) get(path string) *httptest.ResponseRecorder {
 }
 
 func TestObservabilityHandler_NewObservabilityHandler(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, storage.NewRegistry())
@@ -93,7 +94,7 @@ func TestObservabilityHandler_NewObservabilityHandler(t *testing.T) {
 }
 
 func TestObservabilityHandler_GetStack(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, storage.NewRegistry())

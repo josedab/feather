@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -23,7 +24,7 @@ func newTestModelServingServer(t *testing.T) *testModelServingServer {
 	t.Helper()
 
 	// Create a minimal store for testing
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, nil)
@@ -79,7 +80,7 @@ func (ts *testModelServingServer) delete(path string) *httptest.ResponseRecorder
 }
 
 func TestModelServingHandler_NewModelServingHandler(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, nil)

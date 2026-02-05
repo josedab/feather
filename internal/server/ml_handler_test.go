@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,7 +23,7 @@ type testMLServer struct {
 func newTestMLServer(t *testing.T) *testMLServer {
 	t.Helper()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024, // 1MB
 		WarmInMemory: true,
 	}, storage.NewRegistry())
@@ -90,7 +91,7 @@ func (ts *testMLServer) registerConnector(name, connType string) *httptest.Respo
 }
 
 func TestMLHandler_NewMLHandler(t *testing.T) {
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, storage.NewRegistry())

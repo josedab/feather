@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,7 +15,7 @@ import (
 type TenantHandler struct {
 	registry      *tenant.TenantRegistry
 	hotTier       *tenant.PartitionedHotTier
-	middleware    *tenant.TenantMiddleware
+	middleware    *tenant.Middleware
 	priorityQueue *tenant.PriorityQueue
 }
 
@@ -83,7 +85,7 @@ func (h *TenantHandler) Registry() *tenant.TenantRegistry {
 }
 
 // Middleware returns the tenant middleware.
-func (h *TenantHandler) Middleware() *tenant.TenantMiddleware {
+func (h *TenantHandler) Middleware() *tenant.Middleware {
 	return h.middleware
 }
 
@@ -167,7 +169,7 @@ func (h *TenantHandler) handleListTenants(w http.ResponseWriter, r *http.Request
 		})
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"tenants": result,
 		"count":   len(result),
 	})
@@ -177,16 +179,16 @@ func (h *TenantHandler) handleListTenants(w http.ResponseWriter, r *http.Request
 func (h *TenantHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	var req TenantCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
@@ -203,7 +205,7 @@ func (h *TenantHandler) handleCreateTenant(w http.ResponseWriter, r *http.Reques
 		case "enterprise":
 			tier = tenant.TierEnterprise
 		default:
-			h.writeError(w, http.StatusBadRequest, "invalid tier")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid tier")
 			return
 		}
 	}
@@ -227,11 +229,11 @@ func (h *TenantHandler) handleCreateTenant(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.registry.CreateTenant(t); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"tenant":  t,
 	})
@@ -241,36 +243,36 @@ func (h *TenantHandler) handleCreateTenant(w http.ResponseWriter, r *http.Reques
 func (h *TenantHandler) handleGetTenant(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	t, err := h.registry.GetTenant(tenantID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, t)
+	h.writeJSON(r.Context(), w, http.StatusOK, t)
 }
 
 // handleUpdateTenant handles PUT /v1/tenants/{id}
 func (h *TenantHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	var req UpdateTenantRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	t, err := h.registry.GetTenant(tenantID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -292,7 +294,7 @@ func (h *TenantHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Reques
 		case "enterprise":
 			t.Tier = tenant.TierEnterprise
 		default:
-			h.writeError(w, http.StatusBadRequest, "invalid tier")
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid tier")
 			return
 		}
 	}
@@ -304,7 +306,7 @@ func (h *TenantHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Reques
 	}
 	t.UpdatedAt = time.Now()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"tenant":  t,
 	})
@@ -314,19 +316,22 @@ func (h *TenantHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Reques
 func (h *TenantHandler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	if err := h.registry.DeleteTenant(tenantID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	// Also delete the partition
-	h.hotTier.DeletePartition(tenantID)
+	// Also delete the partition if it exists
+	if err := h.hotTier.DeletePartition(tenantID); err != nil && !errors.Is(err, tenant.ErrPartitionNotFound) {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -335,16 +340,16 @@ func (h *TenantHandler) handleDeleteTenant(w http.ResponseWriter, r *http.Reques
 func (h *TenantHandler) handleEnableTenant(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	if err := h.registry.EnableTenant(tenantID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"enabled": true,
 	})
@@ -354,16 +359,16 @@ func (h *TenantHandler) handleEnableTenant(w http.ResponseWriter, r *http.Reques
 func (h *TenantHandler) handleDisableTenant(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	if err := h.registry.DisableTenant(tenantID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"enabled": false,
 	})
@@ -373,17 +378,17 @@ func (h *TenantHandler) handleDisableTenant(w http.ResponseWriter, r *http.Reque
 func (h *TenantHandler) handleGetQuotas(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	t, err := h.registry.GetTenant(tenantID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"tenant_id": tenantID,
 		"quotas":    t.Quotas,
 	})
@@ -393,19 +398,19 @@ func (h *TenantHandler) handleGetQuotas(w http.ResponseWriter, r *http.Request) 
 func (h *TenantHandler) handleUpdateQuotas(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	var req UpdateQuotasRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	t, err := h.registry.GetTenant(tenantID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -422,7 +427,10 @@ func (h *TenantHandler) handleUpdateQuotas(w http.ResponseWriter, r *http.Reques
 	if req.MaxHotTierBytes > 0 {
 		t.Quotas.MaxHotTierBytes = req.MaxHotTierBytes
 		// Also resize the partition
-		h.hotTier.ResizePartition(tenantID, req.MaxHotTierBytes)
+		if err := h.hotTier.ResizePartition(tenantID, req.MaxHotTierBytes); err != nil {
+			h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 	if req.MaxConcurrentRequests > 0 {
 		t.Quotas.MaxConcurrentRequests = req.MaxConcurrentRequests
@@ -435,7 +443,7 @@ func (h *TenantHandler) handleUpdateQuotas(w http.ResponseWriter, r *http.Reques
 	}
 	t.UpdatedAt = time.Now()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":   true,
 		"tenant_id": tenantID,
 		"quotas":    t.Quotas,
@@ -446,13 +454,13 @@ func (h *TenantHandler) handleUpdateQuotas(w http.ResponseWriter, r *http.Reques
 func (h *TenantHandler) handleGetUsage(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	usage, err := h.registry.GetUsage(tenantID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -473,20 +481,20 @@ func (h *TenantHandler) handleGetUsage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // handleGetMetrics handles GET /v1/tenants/{id}/metrics
 func (h *TenantHandler) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	metrics, err := h.registry.GetMetrics(tenantID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -496,7 +504,7 @@ func (h *TenantHandler) handleGetMetrics(w http.ResponseWriter, r *http.Request)
 		avgLatency = float64(metrics.TotalLatencyNs) / float64(metrics.RequestCount) / 1e6 // ms
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"tenant_id":      tenantID,
 		"total_requests": metrics.RequestCount,
 		"total_errors":   metrics.ErrorCount,
@@ -514,19 +522,19 @@ func (h *TenantHandler) handleGetMetrics(w http.ResponseWriter, r *http.Request)
 func (h *TenantHandler) handleResetMetrics(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	// Verify tenant exists
 	if _, err := h.registry.GetTenant(tenantID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	// Note: Metric reset is not currently supported in the registry
 	// This endpoint exists for future implementation
-	h.writeJSON(w, http.StatusNotImplemented, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusNotImplemented, map[string]interface{}{
 		"success": false,
 		"message": "metrics reset not yet implemented",
 	})
@@ -536,7 +544,7 @@ func (h *TenantHandler) handleResetMetrics(w http.ResponseWriter, r *http.Reques
 func (h *TenantHandler) handleGetPartition(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
@@ -562,30 +570,30 @@ func (h *TenantHandler) handleGetPartition(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, partitionStats)
+	h.writeJSON(r.Context(), w, http.StatusOK, partitionStats)
 }
 
 // handleResizePartition handles PUT /v1/tenants/{id}/partition/resize
 func (h *TenantHandler) handleResizePartition(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	if tenantID == "" {
-		h.writeError(w, http.StatusBadRequest, "tenant id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tenant id required")
 		return
 	}
 
 	var req ResizePartitionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.MaxSize <= 0 {
-		h.writeError(w, http.StatusBadRequest, "max_size must be positive")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "max_size must be positive")
 		return
 	}
 
 	if err := h.hotTier.ResizePartition(tenantID, req.MaxSize); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -596,7 +604,7 @@ func (h *TenantHandler) handleResizePartition(w http.ResponseWriter, r *http.Req
 		t.UpdatedAt = time.Now()
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":  true,
 		"max_size": req.MaxSize,
 	})
@@ -621,7 +629,7 @@ func (h *TenantHandler) handleGlobalStats(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"total_tenants":    len(tenants),
 		"enabled_tenants":  enabledCount,
 		"disabled_tenants": disabledCount,
@@ -634,7 +642,7 @@ func (h *TenantHandler) handleGlobalStats(w http.ResponseWriter, r *http.Request
 func (h *TenantHandler) handleListPartitions(w http.ResponseWriter, r *http.Request) {
 	stats := h.hotTier.PartitionStats()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"partitions":     stats,
 		"count":          len(stats),
 		"total_size":     h.hotTier.Size(),
@@ -642,10 +650,10 @@ func (h *TenantHandler) handleListPartitions(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-func (h *TenantHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *TenantHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *TenantHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *TenantHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

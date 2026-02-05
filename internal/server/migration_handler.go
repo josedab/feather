@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -50,90 +51,90 @@ type AnalyzeRequest struct {
 func (h *MigrationHandler) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
 
 	if req.Project == nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
 		return
 	}
 
 	report, err := h.manager.AnalyzeProject(req.Project)
 	if err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("ANALYSIS_FAILED", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("ANALYSIS_FAILED", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(report))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(report))
 }
 
 func (h *MigrationHandler) handleConvertSchema(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
 
 	if req.Project == nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
 		return
 	}
 
 	result, err := h.manager.ConvertSchema(req.Project)
 	if err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("CONVERSION_FAILED", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("CONVERSION_FAILED", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(result))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(result))
 }
 
 func (h *MigrationHandler) handleConvertConfig(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
 
 	if req.Project == nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
 		return
 	}
 
 	result, err := h.manager.ConvertConfig(req.Project)
 	if err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("CONVERSION_FAILED", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("CONVERSION_FAILED", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(result))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(result))
 }
 
 func (h *MigrationHandler) handleFullMigration(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
 
 	if req.Project == nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "project is required"))
 		return
 	}
 
 	result, err := h.manager.RunFullMigration(req.Project)
 	if err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("MIGRATION_FAILED", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("MIGRATION_FAILED", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(result))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(result))
 }
 
 func (h *MigrationHandler) handleListPlans(w http.ResponseWriter, r *http.Request) {
 	plans := h.manager.ListPlans()
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(plans))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(plans))
 }
 
 // CreatePlanRequest represents a request to create a migration plan.
@@ -148,12 +149,12 @@ type CreatePlanRequest struct {
 func (h *MigrationHandler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	var req CreatePlanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
 
 	if req.ID == "" {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "id is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "id is required"))
 		return
 	}
 
@@ -171,71 +172,71 @@ func (h *MigrationHandler) handleCreatePlan(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.manager.CreatePlan(plan); err != nil {
-		h.writeJSON(w, http.StatusConflict, domain.NewErrorResponse("PLAN_EXISTS", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusConflict, domain.NewErrorResponse("PLAN_EXISTS", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, domain.NewSuccessResponse(plan))
+	h.writeJSON(r.Context(), w, http.StatusCreated, domain.NewSuccessResponse(plan))
 }
 
 func (h *MigrationHandler) handleGetPlan(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "plan id is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "plan id is required"))
 		return
 	}
 
 	plan, err := h.manager.GetPlan(id)
 	if err != nil {
-		h.writeJSON(w, http.StatusNotFound, domain.NewErrorResponse("NOT_FOUND", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusNotFound, domain.NewErrorResponse("NOT_FOUND", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(plan))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(plan))
 }
 
 func (h *MigrationHandler) handleDeletePlan(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "plan id is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "plan id is required"))
 		return
 	}
 
 	if err := h.manager.DeletePlan(id); err != nil {
-		h.writeJSON(w, http.StatusNotFound, domain.NewErrorResponse("NOT_FOUND", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusNotFound, domain.NewErrorResponse("NOT_FOUND", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(map[string]string{"status": "deleted"}))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(map[string]string{"status": "deleted"}))
 }
 
 func (h *MigrationHandler) handleListJobs(w http.ResponseWriter, r *http.Request) {
 	jobs := h.manager.ListJobs()
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(jobs))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(jobs))
 }
 
 func (h *MigrationHandler) handleGetJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeJSON(w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "job id is required"))
+		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", "job id is required"))
 		return
 	}
 
 	job, err := h.manager.GetJob(id)
 	if err != nil {
-		h.writeJSON(w, http.StatusNotFound, domain.NewErrorResponse("NOT_FOUND", err.Error()))
+		h.writeJSON(r.Context(), w, http.StatusNotFound, domain.NewErrorResponse("NOT_FOUND", err.Error()))
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(job))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(job))
 }
 
 func (h *MigrationHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.manager.Stats()
-	h.writeJSON(w, http.StatusOK, domain.NewSuccessResponse(stats))
+	h.writeJSON(r.Context(), w, http.StatusOK, domain.NewSuccessResponse(stats))
 }
 
-func (h *MigrationHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func (h *MigrationHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {

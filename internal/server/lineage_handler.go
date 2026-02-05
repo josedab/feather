@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -54,12 +55,12 @@ func (h *LineageHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleListFeatures handles GET /v1/lineage/features
 func (h *LineageHandler) handleListFeatures(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	features := h.tracker.GetAllFeatures()
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 	})
@@ -68,23 +69,23 @@ func (h *LineageHandler) handleListFeatures(w http.ResponseWriter, r *http.Reque
 // handleGetFeature handles GET /v1/lineage/features/{id}
 func (h *LineageHandler) handleGetFeature(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	feature, err := h.tracker.GetFeatureLineage(featureID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, feature)
+	h.writeJSON(r.Context(), w, http.StatusOK, feature)
 }
 
 // RegisterLineageRequest represents a request to register a feature for lineage.
@@ -100,18 +101,18 @@ type RegisterLineageRequest struct {
 // handleRegisterFeature handles POST /v1/lineage/features
 func (h *LineageHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	var req RegisterLineageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_id is required")
 		return
 	}
 
@@ -126,11 +127,11 @@ func (h *LineageHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.tracker.RegisterFeature(lineageData); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":    true,
 		"feature_id": req.FeatureID,
 	})
@@ -139,7 +140,7 @@ func (h *LineageHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Re
 // handleListSources handles GET /v1/lineage/sources
 func (h *LineageHandler) handleListSources(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
@@ -154,7 +155,7 @@ func (h *LineageHandler) handleListSources(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"sources": sources,
 		"count":   len(sources),
 	})
@@ -173,18 +174,18 @@ type RegisterSourceRequest struct {
 // handleRegisterSource handles POST /v1/lineage/sources
 func (h *LineageHandler) handleRegisterSource(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	var req RegisterSourceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 
@@ -199,11 +200,11 @@ func (h *LineageHandler) handleRegisterSource(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := h.tracker.RegisterSource(source); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":   true,
 		"source_id": req.ID,
 	})
@@ -212,7 +213,7 @@ func (h *LineageHandler) handleRegisterSource(w http.ResponseWriter, r *http.Req
 // handleListConsumers handles GET /v1/lineage/consumers
 func (h *LineageHandler) handleListConsumers(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
@@ -226,7 +227,7 @@ func (h *LineageHandler) handleListConsumers(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"consumers": consumers,
 		"count":     len(consumers),
 	})
@@ -245,18 +246,18 @@ type RegisterConsumerRequest struct {
 // handleRegisterConsumer handles POST /v1/lineage/consumers
 func (h *LineageHandler) handleRegisterConsumer(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	var req RegisterConsumerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 
@@ -270,11 +271,11 @@ func (h *LineageHandler) handleRegisterConsumer(w http.ResponseWriter, r *http.R
 	}
 
 	if err := h.tracker.RegisterConsumer(consumer); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":     true,
 		"consumer_id": req.ID,
 	})
@@ -290,22 +291,22 @@ type LinkSourceRequest struct {
 // handleLinkSource handles POST /v1/lineage/link/source
 func (h *LineageHandler) handleLinkSource(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	var req LinkSourceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.tracker.LinkSourceToFeature(req.SourceID, req.FeatureID, req.Fields); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -320,22 +321,22 @@ type LinkConsumerRequest struct {
 // handleLinkConsumer handles POST /v1/lineage/link/consumer
 func (h *LineageHandler) handleLinkConsumer(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	var req LinkConsumerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.tracker.LinkFeatureToConsumer(req.FeatureID, req.ConsumerID, req.Purpose); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -343,48 +344,50 @@ func (h *LineageHandler) handleLinkConsumer(w http.ResponseWriter, r *http.Reque
 // handleImpactAnalysis handles GET /v1/lineage/impact/{id}
 func (h *LineageHandler) handleImpactAnalysis(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	analysis, err := h.tracker.GetImpactAnalysis(featureID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, analysis)
+	h.writeJSON(r.Context(), w, http.StatusOK, analysis)
 }
 
 // handleGetGraph handles GET /v1/lineage/graph
 func (h *LineageHandler) handleGetGraph(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	graph := h.tracker.GetDependencyGraph()
 	data, err := graph.ExportJSON()
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 // handleGetGraphDOT handles GET /v1/lineage/graph/dot
 func (h *LineageHandler) handleGetGraphDOT(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
@@ -393,13 +396,15 @@ func (h *LineageHandler) handleGetGraphDOT(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(dot))
+	if _, err := w.Write([]byte(dot)); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 // handleGetGraphMermaid handles GET /v1/lineage/graph/mermaid
 func (h *LineageHandler) handleGetGraphMermaid(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
@@ -408,13 +413,15 @@ func (h *LineageHandler) handleGetGraphMermaid(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(mermaid))
+	if _, err := w.Write([]byte(mermaid)); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 // handleGetPIIFeatures handles GET /v1/lineage/pii
 func (h *LineageHandler) handleGetPIIFeatures(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
@@ -438,7 +445,7 @@ func (h *LineageHandler) handleGetPIIFeatures(w http.ResponseWriter, r *http.Req
 
 	features := h.tracker.GetPIIFeatures(minLevel)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features":  features,
 		"count":     len(features),
 		"min_level": minLevel.String(),
@@ -460,19 +467,19 @@ type SetPIIMetadataRequest struct {
 // handleSetPIIMetadata handles POST /v1/lineage/pii/{id}
 func (h *LineageHandler) handleSetPIIMetadata(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var req SetPIIMetadataRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -502,11 +509,11 @@ func (h *LineageHandler) handleSetPIIMetadata(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := h.tracker.SetPIIMetadata(featureID, pii); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":    true,
 		"feature_id": featureID,
 	})
@@ -515,7 +522,7 @@ func (h *LineageHandler) handleSetPIIMetadata(w http.ResponseWriter, r *http.Req
 // handleGetAuditLog handles GET /v1/lineage/audit
 func (h *LineageHandler) handleGetAuditLog(w http.ResponseWriter, r *http.Request) {
 	if h.tracker == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "lineage tracker not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "lineage tracker not configured")
 		return
 	}
 
@@ -528,17 +535,17 @@ func (h *LineageHandler) handleGetAuditLog(w http.ResponseWriter, r *http.Reques
 
 	events := h.tracker.GetAuditLog(since)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"events": events,
 		"count":  len(events),
 		"since":  since,
 	})
 }
 
-func (h *LineageHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *LineageHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *LineageHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *LineageHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

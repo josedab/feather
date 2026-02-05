@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -24,7 +25,7 @@ func newTestGraphQLServer(t *testing.T) *testGraphQLServer {
 	t.Helper()
 
 	registry := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024, // 1MB
 		WarmInMemory: true,
 	}, registry)
@@ -96,7 +97,7 @@ func (ts *testGraphQLServer) get(path string) *httptest.ResponseRecorder {
 
 func TestGraphQLHandler_NewGraphQLHandler(t *testing.T) {
 	registry := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, registry)

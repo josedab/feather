@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -144,7 +145,7 @@ type CompatibilityRequest struct {
 // handleListEmbeddings handles GET /v1/embeddings
 func (h *EmbeddingHandler) handleListEmbeddings(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
@@ -165,11 +166,11 @@ func (h *EmbeddingHandler) handleListEmbeddings(w http.ResponseWriter, r *http.R
 
 	embeddings, err := h.store.List(r.Context(), modelID, limit, offset)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"embeddings": embeddings,
 		"count":      len(embeddings),
 	})
@@ -178,22 +179,22 @@ func (h *EmbeddingHandler) handleListEmbeddings(w http.ResponseWriter, r *http.R
 // handleStoreEmbedding handles POST /v1/embeddings
 func (h *EmbeddingHandler) handleStoreEmbedding(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
 	var req EmbeddingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Vector) == 0 {
-		h.writeError(w, http.StatusBadRequest, "vector is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "vector is required")
 		return
 	}
 	if req.ModelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id is required")
 		return
 	}
 
@@ -214,11 +215,11 @@ func (h *EmbeddingHandler) handleStoreEmbedding(w http.ResponseWriter, r *http.R
 	}
 
 	if err := h.store.Put(r.Context(), emb); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":      true,
 		"embedding_id": emb.ID,
 	})
@@ -227,44 +228,44 @@ func (h *EmbeddingHandler) handleStoreEmbedding(w http.ResponseWriter, r *http.R
 // handleGetEmbedding handles GET /v1/embeddings/{id}
 func (h *EmbeddingHandler) handleGetEmbedding(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
 	embeddingID := r.PathValue("id")
 	if embeddingID == "" {
-		h.writeError(w, http.StatusBadRequest, "embedding ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "embedding ID required")
 		return
 	}
 
 	emb, err := h.store.Get(r.Context(), embeddingID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, emb)
+	h.writeJSON(r.Context(), w, http.StatusOK, emb)
 }
 
 // handleDeleteEmbedding handles DELETE /v1/embeddings/{id}
 func (h *EmbeddingHandler) handleDeleteEmbedding(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
 	embeddingID := r.PathValue("id")
 	if embeddingID == "" {
-		h.writeError(w, http.StatusBadRequest, "embedding ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "embedding ID required")
 		return
 	}
 
 	if err := h.store.Delete(r.Context(), embeddingID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -272,45 +273,45 @@ func (h *EmbeddingHandler) handleDeleteEmbedding(w http.ResponseWriter, r *http.
 // handleGetByHash handles GET /v1/embeddings/hash/{hash}
 func (h *EmbeddingHandler) handleGetByHash(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
 	hash := r.PathValue("hash")
 	if hash == "" {
-		h.writeError(w, http.StatusBadRequest, "hash required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "hash required")
 		return
 	}
 
 	emb, err := h.store.GetByHash(r.Context(), hash)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, emb)
+	h.writeJSON(r.Context(), w, http.StatusOK, emb)
 }
 
 // handleGetByModel handles GET /v1/embeddings/model/{modelID}
 func (h *EmbeddingHandler) handleGetByModel(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
 	modelID := r.PathValue("modelID")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model ID required")
 		return
 	}
 
 	embeddings, err := h.store.GetByModel(r.Context(), modelID)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"embeddings": embeddings,
 		"count":      len(embeddings),
 		"model_id":   modelID,
@@ -320,22 +321,22 @@ func (h *EmbeddingHandler) handleGetByModel(w http.ResponseWriter, r *http.Reque
 // handleLookup handles POST /v1/embeddings/lookup
 func (h *EmbeddingHandler) handleLookup(w http.ResponseWriter, r *http.Request) {
 	if h.dedup == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "deduplicator not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "deduplicator not configured")
 		return
 	}
 
 	var req LookupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Contents) == 0 {
-		h.writeError(w, http.StatusBadRequest, "contents is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "contents is required")
 		return
 	}
 	if req.ModelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id is required")
 		return
 	}
 
@@ -354,7 +355,7 @@ func (h *EmbeddingHandler) handleLookup(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results":    results,
 		"total":      len(req.Contents),
 		"cache_hits": hits,
@@ -364,29 +365,29 @@ func (h *EmbeddingHandler) handleLookup(w http.ResponseWriter, r *http.Request) 
 // handleGenerate handles POST /v1/embeddings/generate
 func (h *EmbeddingHandler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	if h.provider == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding provider not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding provider not configured")
 		return
 	}
 
 	var req GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Content == "" {
-		h.writeError(w, http.StatusBadRequest, "content is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "content is required")
 		return
 	}
 	if req.ModelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id is required")
 		return
 	}
 
 	// Check cache first
 	if req.UseCache && h.dedup != nil {
 		if emb, found := h.dedup.CheckDuplicate(r.Context(), req.Content, req.ModelID); found {
-			h.writeJSON(w, http.StatusOK, map[string]interface{}{
+			h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 				"embedding":  emb,
 				"cache_hit":  true,
 				"api_called": false,
@@ -398,12 +399,12 @@ func (h *EmbeddingHandler) handleGenerate(w http.ResponseWriter, r *http.Request
 	// Generate embedding
 	vectors, err := h.provider.GenerateEmbeddings(r.Context(), []string{req.Content}, req.ModelID)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if len(vectors) == 0 {
-		h.writeError(w, http.StatusInternalServerError, "no embeddings generated")
+		h.writeError(r.Context(), w, http.StatusInternalServerError, "no embeddings generated")
 		return
 	}
 
@@ -426,7 +427,7 @@ func (h *EmbeddingHandler) handleGenerate(w http.ResponseWriter, r *http.Request
 		_ = h.store.Put(r.Context(), emb)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"embedding":  emb,
 		"cache_hit":  false,
 		"api_called": true,
@@ -436,22 +437,22 @@ func (h *EmbeddingHandler) handleGenerate(w http.ResponseWriter, r *http.Request
 // handleBatch handles POST /v1/embeddings/batch
 func (h *EmbeddingHandler) handleBatch(w http.ResponseWriter, r *http.Request) {
 	if h.batch == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "batch processor not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "batch processor not configured")
 		return
 	}
 
 	var req BatchGenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Contents) == 0 {
-		h.writeError(w, http.StatusBadRequest, "contents is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "contents is required")
 		return
 	}
 	if req.ModelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id is required")
 		return
 	}
 
@@ -464,11 +465,11 @@ func (h *EmbeddingHandler) handleBatch(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.batch.ProcessSync(r.Context(), batchReq)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"embeddings": result.Embeddings,
 		"count":      len(result.Embeddings),
 		"cache_hits": result.CacheHits,
@@ -480,22 +481,22 @@ func (h *EmbeddingHandler) handleBatch(w http.ResponseWriter, r *http.Request) {
 // handleBatchAsync handles POST /v1/embeddings/batch/async
 func (h *EmbeddingHandler) handleBatchAsync(w http.ResponseWriter, r *http.Request) {
 	if h.batch == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "batch processor not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "batch processor not configured")
 		return
 	}
 
 	var req BatchGenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.Contents) == 0 {
-		h.writeError(w, http.StatusBadRequest, "contents is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "contents is required")
 		return
 	}
 	if req.ModelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id is required")
 		return
 	}
 
@@ -507,11 +508,11 @@ func (h *EmbeddingHandler) handleBatchAsync(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := h.batch.Submit(batchReq); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusAccepted, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusAccepted, map[string]interface{}{
 		"success":    true,
 		"request_id": batchReq.ID,
 		"queued":     len(req.Contents),
@@ -521,13 +522,13 @@ func (h *EmbeddingHandler) handleBatchAsync(w http.ResponseWriter, r *http.Reque
 // handleListModels handles GET /v1/embeddings/models
 func (h *EmbeddingHandler) handleListModels(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
 	models := h.version.ListModels()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"models": models,
 		"count":  len(models),
 	})
@@ -536,22 +537,22 @@ func (h *EmbeddingHandler) handleListModels(w http.ResponseWriter, r *http.Reque
 // handleRegisterModel handles POST /v1/embeddings/models
 func (h *EmbeddingHandler) handleRegisterModel(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
 	var req ModelRegistrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 	if req.Dimension <= 0 {
-		h.writeError(w, http.StatusBadRequest, "dimension must be positive")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "dimension must be positive")
 		return
 	}
 
@@ -566,11 +567,11 @@ func (h *EmbeddingHandler) handleRegisterModel(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.version.RegisterModel(model); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":  true,
 		"model_id": req.ID,
 	})
@@ -579,45 +580,45 @@ func (h *EmbeddingHandler) handleRegisterModel(w http.ResponseWriter, r *http.Re
 // handleGetModel handles GET /v1/embeddings/models/{modelID}
 func (h *EmbeddingHandler) handleGetModel(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
 	modelID := r.PathValue("modelID")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model ID required")
 		return
 	}
 
 	model, err := h.version.GetModel(modelID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, model)
+	h.writeJSON(r.Context(), w, http.StatusOK, model)
 }
 
 // handleListVersions handles GET /v1/embeddings/models/{modelID}/versions
 func (h *EmbeddingHandler) handleListVersions(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
 	modelID := r.PathValue("modelID")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model ID required")
 		return
 	}
 
 	versions, err := h.version.ListVersions(modelID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"versions": versions,
 		"count":    len(versions),
 		"model_id": modelID,
@@ -627,24 +628,24 @@ func (h *EmbeddingHandler) handleListVersions(w http.ResponseWriter, r *http.Req
 // handleRegisterVersion handles POST /v1/embeddings/models/{modelID}/versions
 func (h *EmbeddingHandler) handleRegisterVersion(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
 	modelID := r.PathValue("modelID")
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model ID required")
 		return
 	}
 
 	var req VersionRegistrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Version == "" {
-		h.writeError(w, http.StatusBadRequest, "version is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "version is required")
 		return
 	}
 
@@ -657,11 +658,11 @@ func (h *EmbeddingHandler) handleRegisterVersion(w http.ResponseWriter, r *http.
 	}
 
 	if err := h.version.RegisterVersion(version); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":  true,
 		"model_id": modelID,
 		"version":  req.Version,
@@ -671,7 +672,7 @@ func (h *EmbeddingHandler) handleRegisterVersion(w http.ResponseWriter, r *http.
 // handleDeprecateVersion handles POST /v1/embeddings/models/{modelID}/versions/{version}/deprecate
 func (h *EmbeddingHandler) handleDeprecateVersion(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
@@ -679,20 +680,20 @@ func (h *EmbeddingHandler) handleDeprecateVersion(w http.ResponseWriter, r *http
 	version := r.PathValue("version")
 
 	if modelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model ID required")
 		return
 	}
 	if version == "" {
-		h.writeError(w, http.StatusBadRequest, "version required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "version required")
 		return
 	}
 
 	if err := h.version.DeprecateVersion(modelID, version); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":  true,
 		"model_id": modelID,
 		"version":  version,
@@ -702,32 +703,32 @@ func (h *EmbeddingHandler) handleDeprecateVersion(w http.ResponseWriter, r *http
 // handleCheckCompatibility handles POST /v1/embeddings/compatibility
 func (h *EmbeddingHandler) handleCheckCompatibility(w http.ResponseWriter, r *http.Request) {
 	if h.version == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "version manager not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "version manager not configured")
 		return
 	}
 
 	var req CompatibilityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ModelID == "" {
-		h.writeError(w, http.StatusBadRequest, "model_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "model_id is required")
 		return
 	}
 	if req.FromVersion == "" || req.ToVersion == "" {
-		h.writeError(w, http.StatusBadRequest, "from_version and to_version are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "from_version and to_version are required")
 		return
 	}
 
 	compatible, err := h.version.CheckCompatibility(req.ModelID, req.FromVersion, req.ToVersion)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"compatible":   compatible,
 		"model_id":     req.ModelID,
 		"from_version": req.FromVersion,
@@ -752,30 +753,30 @@ func (h *EmbeddingHandler) handleGetStats(w http.ResponseWriter, r *http.Request
 		stats["batch"] = h.batch.Stats()
 	}
 
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleClear handles POST /v1/embeddings/clear
 func (h *EmbeddingHandler) handleClear(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "embedding store not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "embedding store not configured")
 		return
 	}
 
 	if err := h.store.Clear(r.Context()); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
 
-func (h *EmbeddingHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *EmbeddingHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *EmbeddingHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *EmbeddingHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

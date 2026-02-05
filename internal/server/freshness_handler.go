@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -54,14 +55,14 @@ func (h *FreshnessHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleGetAllMetrics returns metrics for all tracked features.
 func (h *FreshnessHandler) handleGetAllMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := h.manager.GetAllMetrics()
-	writeJSONResponse(w, http.StatusOK, metrics)
+	writeJSONResponse(r.Context(), w, http.StatusOK, metrics)
 }
 
 // handleGetFeatureMetrics returns metrics for a specific feature.
 func (h *FreshnessHandler) handleGetFeatureMetrics(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
@@ -69,7 +70,7 @@ func (h *FreshnessHandler) handleGetFeatureMetrics(w http.ResponseWriter, r *htt
 	changeMetrics, hasChange := h.manager.GetChangeMetrics(feature)
 
 	if !hasAccess && !hasChange {
-		writeJSONError(w, http.StatusNotFound, "feature not found")
+		writeJSONError(r.Context(), w, http.StatusNotFound, "feature not found")
 		return
 	}
 
@@ -83,43 +84,43 @@ func (h *FreshnessHandler) handleGetFeatureMetrics(w http.ResponseWriter, r *htt
 		response.Change = changeMetrics
 	}
 
-	writeJSONResponse(w, http.StatusOK, response)
+	writeJSONResponse(r.Context(), w, http.StatusOK, response)
 }
 
 // handleGetTTL returns the recommended TTL for a feature.
 func (h *FreshnessHandler) handleGetTTL(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
 	result := h.manager.GetTTLWithReason(feature)
-	writeJSONResponse(w, http.StatusOK, result)
+	writeJSONResponse(r.Context(), w, http.StatusOK, result)
 }
 
 // handleGetAllPredictions returns predictions for all tracked features.
 func (h *FreshnessHandler) handleGetAllPredictions(w http.ResponseWriter, r *http.Request) {
 	predictions := h.manager.GetAllPredictions()
-	writeJSONResponse(w, http.StatusOK, predictions)
+	writeJSONResponse(r.Context(), w, http.StatusOK, predictions)
 }
 
 // handleGetPrediction returns the prediction for a specific feature.
 func (h *FreshnessHandler) handleGetPrediction(w http.ResponseWriter, r *http.Request) {
 	feature := r.PathValue("feature")
 	if feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
 	prediction := h.manager.GetPrediction(feature)
-	writeJSONResponse(w, http.StatusOK, prediction)
+	writeJSONResponse(r.Context(), w, http.StatusOK, prediction)
 }
 
 // handleListPolicies returns all policies.
 func (h *FreshnessHandler) handleListPolicies(w http.ResponseWriter, r *http.Request) {
 	policies := h.manager.ListPolicies()
-	writeJSONResponse(w, http.StatusOK, policies)
+	writeJSONResponse(r.Context(), w, http.StatusOK, policies)
 }
 
 // PolicyRequest represents a policy create/update request.
@@ -137,7 +138,7 @@ type PolicyRequest struct {
 func (h *FreshnessHandler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 	var req PolicyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
@@ -152,51 +153,51 @@ func (h *FreshnessHandler) handleCreatePolicy(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := h.manager.RegisterPolicy(policy); err != nil {
-		if err == freshness.ErrPolicyExists {
-			writeJSONError(w, http.StatusConflict, err.Error())
-		} else if err == freshness.ErrInvalidPolicy {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, freshness.ErrPolicyExists) {
+			writeJSONError(r.Context(), w, http.StatusConflict, err.Error())
+		} else if errors.Is(err, freshness.ErrInvalidPolicy) {
+			writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
 		} else {
-			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 
-	writeJSONResponse(w, http.StatusCreated, policy)
+	writeJSONResponse(r.Context(), w, http.StatusCreated, policy)
 }
 
 // handleGetPolicy retrieves a policy by ID.
 func (h *FreshnessHandler) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		writeJSONError(w, http.StatusBadRequest, "policy id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "policy id is required")
 		return
 	}
 
 	policy, err := h.manager.GetPolicy(id)
 	if err != nil {
-		if err == freshness.ErrPolicyNotFound {
-			writeJSONError(w, http.StatusNotFound, err.Error())
+		if errors.Is(err, freshness.ErrPolicyNotFound) {
+			writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		} else {
-			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 
-	writeJSONResponse(w, http.StatusOK, policy)
+	writeJSONResponse(r.Context(), w, http.StatusOK, policy)
 }
 
 // handleUpdatePolicy updates an existing policy.
 func (h *FreshnessHandler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		writeJSONError(w, http.StatusBadRequest, "policy id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "policy id is required")
 		return
 	}
 
 	var req PolicyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
@@ -211,32 +212,32 @@ func (h *FreshnessHandler) handleUpdatePolicy(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := h.manager.UpdatePolicy(policy); err != nil {
-		if err == freshness.ErrPolicyNotFound {
-			writeJSONError(w, http.StatusNotFound, err.Error())
-		} else if err == freshness.ErrInvalidPolicy {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, freshness.ErrPolicyNotFound) {
+			writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
+		} else if errors.Is(err, freshness.ErrInvalidPolicy) {
+			writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
 		} else {
-			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 
-	writeJSONResponse(w, http.StatusOK, policy)
+	writeJSONResponse(r.Context(), w, http.StatusOK, policy)
 }
 
 // handleDeletePolicy deletes a policy.
 func (h *FreshnessHandler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		writeJSONError(w, http.StatusBadRequest, "policy id is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "policy id is required")
 		return
 	}
 
 	if err := h.manager.DeletePolicy(id); err != nil {
-		if err == freshness.ErrPolicyNotFound {
-			writeJSONError(w, http.StatusNotFound, err.Error())
+		if errors.Is(err, freshness.ErrPolicyNotFound) {
+			writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		} else {
-			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
@@ -255,12 +256,12 @@ type AccessRecordRequest struct {
 func (h *FreshnessHandler) handleRecordAccess(w http.ResponseWriter, r *http.Request) {
 	var req AccessRecordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.Feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
@@ -279,12 +280,12 @@ type ChangeRecordRequest struct {
 func (h *FreshnessHandler) handleRecordChange(w http.ResponseWriter, r *http.Request) {
 	var req ChangeRecordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.Feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
@@ -302,12 +303,12 @@ type DriftRecordRequest struct {
 func (h *FreshnessHandler) handleRecordDrift(w http.ResponseWriter, r *http.Request) {
 	var req DriftRecordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.Feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
@@ -324,12 +325,12 @@ type StaleRecordRequest struct {
 func (h *FreshnessHandler) handleRecordStale(w http.ResponseWriter, r *http.Request) {
 	var req StaleRecordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
 
 	if req.Feature == "" {
-		writeJSONError(w, http.StatusBadRequest, "feature is required")
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "feature is required")
 		return
 	}
 
@@ -340,11 +341,11 @@ func (h *FreshnessHandler) handleRecordStale(w http.ResponseWriter, r *http.Requ
 // handleGetStats returns freshness manager statistics.
 func (h *FreshnessHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.manager.Stats()
-	writeJSONResponse(w, http.StatusOK, stats)
+	writeJSONResponse(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleEvaluateAll evaluates freshness for all tracked features.
 func (h *FreshnessHandler) handleEvaluateAll(w http.ResponseWriter, r *http.Request) {
 	results := h.manager.EvaluateAll()
-	writeJSONResponse(w, http.StatusOK, results)
+	writeJSONResponse(r.Context(), w, http.StatusOK, results)
 }

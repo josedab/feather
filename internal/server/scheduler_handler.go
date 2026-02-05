@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -57,7 +58,7 @@ type ScheduleJobRequest struct {
 // handleListJobs handles GET /v1/scheduler/jobs
 func (h *SchedulerHandler) handleListJobs(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
@@ -68,7 +69,7 @@ func (h *SchedulerHandler) handleListJobs(w http.ResponseWriter, r *http.Request
 		jobs[i] = h.entryToJSON(entry)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"jobs":  jobs,
 		"count": len(jobs),
 	})
@@ -77,59 +78,59 @@ func (h *SchedulerHandler) handleListJobs(w http.ResponseWriter, r *http.Request
 // handleGetJob handles GET /v1/scheduler/jobs/{id}
 func (h *SchedulerHandler) handleGetJob(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
 	entry, err := h.scheduler.GetEntry(jobID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.entryToJSON(entry))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.entryToJSON(entry))
 }
 
 // handleCreateJob handles POST /v1/scheduler/jobs
 func (h *SchedulerHandler) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	var req ScheduleJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.JobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job_id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job_id required")
 		return
 	}
 	if req.ConnectorName == "" {
-		h.writeError(w, http.StatusBadRequest, "connector_name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "connector_name required")
 		return
 	}
 	if req.Schedule == "" {
-		h.writeError(w, http.StatusBadRequest, "schedule required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "schedule required")
 		return
 	}
 
 	err := h.scheduler.Schedule(req.JobID, req.ConnectorName, req.Schedule, req.MaxRetries)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	entry, _ := h.scheduler.GetEntry(req.JobID)
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"job":     h.entryToJSON(entry),
 	})
@@ -138,23 +139,23 @@ func (h *SchedulerHandler) handleCreateJob(w http.ResponseWriter, r *http.Reques
 // handleDeleteJob handles DELETE /v1/scheduler/jobs/{id}
 func (h *SchedulerHandler) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
 	err := h.scheduler.Unschedule(jobID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -162,24 +163,24 @@ func (h *SchedulerHandler) handleDeleteJob(w http.ResponseWriter, r *http.Reques
 // handleEnableJob handles POST /v1/scheduler/jobs/{id}/enable
 func (h *SchedulerHandler) handleEnableJob(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
 	err := h.scheduler.Enable(jobID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	entry, _ := h.scheduler.GetEntry(jobID)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"job":     h.entryToJSON(entry),
 	})
@@ -188,24 +189,24 @@ func (h *SchedulerHandler) handleEnableJob(w http.ResponseWriter, r *http.Reques
 // handleDisableJob handles POST /v1/scheduler/jobs/{id}/disable
 func (h *SchedulerHandler) handleDisableJob(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
 	err := h.scheduler.Disable(jobID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	entry, _ := h.scheduler.GetEntry(jobID)
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"job":     h.entryToJSON(entry),
 	})
@@ -214,23 +215,23 @@ func (h *SchedulerHandler) handleDisableJob(w http.ResponseWriter, r *http.Reque
 // handleTriggerJob handles POST /v1/scheduler/jobs/{id}/trigger
 func (h *SchedulerHandler) handleTriggerJob(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	jobID := r.PathValue("id")
 	if jobID == "" {
-		h.writeError(w, http.StatusBadRequest, "job ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job ID required")
 		return
 	}
 
-	err := h.scheduler.TriggerNow(jobID)
+	err := h.scheduler.TriggerNow(r.Context(), jobID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusAccepted, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusAccepted, map[string]interface{}{
 		"success": true,
 		"message": "job triggered",
 	})
@@ -239,7 +240,7 @@ func (h *SchedulerHandler) handleTriggerJob(w http.ResponseWriter, r *http.Reque
 // handleGetStatus handles GET /v1/scheduler/status
 func (h *SchedulerHandler) handleGetStatus(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
@@ -251,7 +252,7 @@ func (h *SchedulerHandler) handleGetStatus(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"running":       h.scheduler.IsRunning(),
 		"total_jobs":    len(entries),
 		"enabled_jobs":  enabledCount,
@@ -262,17 +263,17 @@ func (h *SchedulerHandler) handleGetStatus(w http.ResponseWriter, r *http.Reques
 // handleStart handles POST /v1/scheduler/start
 func (h *SchedulerHandler) handleStart(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
-	err := h.scheduler.Start()
+	err := h.scheduler.Start(r.Context())
 	if err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"running": true,
 	})
@@ -281,17 +282,17 @@ func (h *SchedulerHandler) handleStart(w http.ResponseWriter, r *http.Request) {
 // handleStop handles POST /v1/scheduler/stop
 func (h *SchedulerHandler) handleStop(w http.ResponseWriter, r *http.Request) {
 	if h.scheduler == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "scheduler not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "scheduler not configured")
 		return
 	}
 
 	err := h.scheduler.Stop()
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"running": false,
 	})
@@ -318,14 +319,12 @@ func (h *SchedulerHandler) entryToJSON(entry *warehouse.ScheduleEntry) ScheduleJ
 	return job
 }
 
-func (h *SchedulerHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+func (h *SchedulerHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *SchedulerHandler) writeError(w http.ResponseWriter, status int, message string) {
-	h.writeJSON(w, status, map[string]interface{}{
+func (h *SchedulerHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	h.writeJSON(ctx, w, status, map[string]interface{}{
 		"error": message,
 	})
 }

@@ -106,24 +106,24 @@ type CreateJobRequest struct {
 func (h *BackfillHandler) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	var req CreateJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" || len(req.Features) == 0 {
-		h.writeError(w, http.StatusBadRequest, "id and features are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id and features are required")
 		return
 	}
 
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid start_time format")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid start_time format")
 		return
 	}
 
 	endTime, err := time.Parse(time.RFC3339, req.EndTime)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid end_time format")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid end_time format")
 		return
 	}
 
@@ -150,11 +150,11 @@ func (h *BackfillHandler) handleCreateJob(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := h.manager.CreateJob(job); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"job":     job,
 	})
@@ -165,7 +165,7 @@ func (h *BackfillHandler) handleListJobs(w http.ResponseWriter, r *http.Request)
 	status := backfill.JobStatus(r.URL.Query().Get("status"))
 	jobs := h.manager.ListJobs(status)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"jobs":  jobs,
 		"count": len(jobs),
 	})
@@ -175,33 +175,33 @@ func (h *BackfillHandler) handleListJobs(w http.ResponseWriter, r *http.Request)
 func (h *BackfillHandler) handleGetJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	job := h.manager.GetJob(id)
 	if job == nil {
-		h.writeError(w, http.StatusNotFound, "job not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "job not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, job)
+	h.writeJSON(r.Context(), w, http.StatusOK, job)
 }
 
 // handleDeleteJob handles DELETE /v1/backfill/jobs/{id}
 func (h *BackfillHandler) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	if err := h.manager.DeleteJob(id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 	})
@@ -211,16 +211,16 @@ func (h *BackfillHandler) handleDeleteJob(w http.ResponseWriter, r *http.Request
 func (h *BackfillHandler) handleStartJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	if err := h.manager.StartJob(r.Context(), id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 		"status":  "running",
@@ -231,16 +231,16 @@ func (h *BackfillHandler) handleStartJob(w http.ResponseWriter, r *http.Request)
 func (h *BackfillHandler) handlePauseJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	if err := h.manager.PauseJob(id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 		"status":  "paused",
@@ -251,16 +251,16 @@ func (h *BackfillHandler) handlePauseJob(w http.ResponseWriter, r *http.Request)
 func (h *BackfillHandler) handleResumeJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	if err := h.manager.ResumeJob(r.Context(), id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 		"status":  "running",
@@ -271,19 +271,19 @@ func (h *BackfillHandler) handleResumeJob(w http.ResponseWriter, r *http.Request
 func (h *BackfillHandler) handleCancelJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	if err := h.manager.CancelJob(id); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
-		"status":  "cancelled",
+		"status":  "canceled",
 	})
 }
 
@@ -291,68 +291,70 @@ func (h *BackfillHandler) handleCancelJob(w http.ResponseWriter, r *http.Request
 func (h *BackfillHandler) handleGetCheckpoint(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	checkpoint := h.manager.GetCheckpoint(id)
 	if checkpoint == nil {
-		h.writeError(w, http.StatusNotFound, "checkpoint not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "checkpoint not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, checkpoint)
+	h.writeJSON(r.Context(), w, http.StatusOK, checkpoint)
 }
 
 // handleGetStats handles GET /v1/backfill/stats
 func (h *BackfillHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.manager.GetStats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleExportJob handles GET /v1/backfill/jobs/{id}/export
 func (h *BackfillHandler) handleExportJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "job id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "job id required")
 		return
 	}
 
 	data, err := h.manager.ExportJob(id)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=backfill_job_"+id+".json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 // handleImportJob handles POST /v1/backfill/import
 func (h *BackfillHandler) handleImportJob(w http.ResponseWriter, r *http.Request) {
 	var job backfill.Job
 	if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.manager.CreateJob(&job); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"job":     &job,
 	})
 }
 
-func (h *BackfillHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *BackfillHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *BackfillHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *BackfillHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

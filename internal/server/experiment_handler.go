@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -133,7 +134,7 @@ type AssignmentJSON struct {
 // handleListExperiments handles GET /v1/experiments
 func (h *ExperimentHandler) handleListExperiments(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
@@ -144,7 +145,7 @@ func (h *ExperimentHandler) handleListExperiments(w http.ResponseWriter, r *http
 		response[i] = h.experimentToJSON(exp)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"experiments": response,
 		"count":       len(response),
 	})
@@ -153,7 +154,7 @@ func (h *ExperimentHandler) handleListExperiments(w http.ResponseWriter, r *http
 // handleListActiveExperiments handles GET /v1/experiments/active
 func (h *ExperimentHandler) handleListActiveExperiments(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
@@ -164,7 +165,7 @@ func (h *ExperimentHandler) handleListActiveExperiments(w http.ResponseWriter, r
 		response[i] = h.experimentToJSON(exp)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"experiments": response,
 		"count":       len(response),
 	})
@@ -173,46 +174,46 @@ func (h *ExperimentHandler) handleListActiveExperiments(w http.ResponseWriter, r
 // handleGetExperiment handles GET /v1/experiments/{id}
 func (h *ExperimentHandler) handleGetExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	exp, err := h.engine.GetExperiment(experimentID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.experimentToJSON(exp))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.experimentToJSON(exp))
 }
 
 // handleCreateExperiment handles POST /v1/experiments
 func (h *ExperimentHandler) handleCreateExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	var req ExperimentJSON
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	exp := h.jsonToExperiment(&req)
 
 	if err := h.engine.CreateExperiment(exp); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":       true,
 		"experiment_id": exp.ID,
 	})
@@ -221,19 +222,19 @@ func (h *ExperimentHandler) handleCreateExperiment(w http.ResponseWriter, r *htt
 // handleUpdateExperiment handles PUT /v1/experiments/{id}
 func (h *ExperimentHandler) handleUpdateExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	var req ExperimentJSON
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -241,11 +242,11 @@ func (h *ExperimentHandler) handleUpdateExperiment(w http.ResponseWriter, r *htt
 	exp := h.jsonToExperiment(&req)
 
 	if err := h.engine.UpdateExperiment(exp); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -253,22 +254,22 @@ func (h *ExperimentHandler) handleUpdateExperiment(w http.ResponseWriter, r *htt
 // handleStartExperiment handles POST /v1/experiments/{id}/start
 func (h *ExperimentHandler) handleStartExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	if err := h.engine.StartExperiment(experimentID); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"status":  "running",
 	})
@@ -277,22 +278,22 @@ func (h *ExperimentHandler) handleStartExperiment(w http.ResponseWriter, r *http
 // handlePauseExperiment handles POST /v1/experiments/{id}/pause
 func (h *ExperimentHandler) handlePauseExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	if err := h.engine.PauseExperiment(experimentID); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"status":  "paused",
 	})
@@ -301,23 +302,26 @@ func (h *ExperimentHandler) handlePauseExperiment(w http.ResponseWriter, r *http
 // handleStopExperiment handles POST /v1/experiments/{id}/stop
 func (h *ExperimentHandler) handleStopExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	var req struct {
 		Completed bool `json:"completed"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
 
 	if err := h.engine.StopExperiment(experimentID, req.Completed); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -326,7 +330,7 @@ func (h *ExperimentHandler) handleStopExperiment(w http.ResponseWriter, r *http.
 		status = "completed"
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"status":  status,
 	})
@@ -341,34 +345,34 @@ type AssignmentRequest struct {
 // handleGetAssignment handles POST /v1/experiments/{id}/assign
 func (h *ExperimentHandler) handleGetAssignment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	var req AssignmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.UserID == "" {
-		h.writeError(w, http.StatusBadRequest, "user_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "user_id is required")
 		return
 	}
 
 	assignment, err := h.engine.GetAssignment(r.Context(), experimentID, req.UserID, req.Attributes)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, AssignmentJSON{
+	h.writeJSON(r.Context(), w, http.StatusOK, AssignmentJSON{
 		ExperimentID: assignment.ExperimentID,
 		VariantID:    assignment.VariantID,
 		UserID:       assignment.UserID,
@@ -388,24 +392,24 @@ type FeatureValueRequest struct {
 // handleGetFeatureValue handles POST /v1/features/value
 func (h *ExperimentHandler) handleGetFeatureValue(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	var req FeatureValueRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.FeatureID == "" || req.UserID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature_id and user_id are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature_id and user_id are required")
 		return
 	}
 
 	value, assignment, err := h.engine.GetFeatureValue(r.Context(), req.FeatureID, req.UserID, req.Attributes, req.DefaultValue)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -425,7 +429,7 @@ func (h *ExperimentHandler) handleGetFeatureValue(w http.ResponseWriter, r *http
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, response)
+	h.writeJSON(r.Context(), w, http.StatusOK, response)
 }
 
 // ExposureEventJSON represents an exposure event in JSON format.
@@ -439,18 +443,18 @@ type ExposureEventJSON struct {
 // handleTrackExposure handles POST /v1/experiments/exposure
 func (h *ExperimentHandler) handleTrackExposure(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	var req ExposureEventJSON
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ExperimentID == "" || req.UserID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment_id and user_id are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment_id and user_id are required")
 		return
 	}
 
@@ -463,7 +467,7 @@ func (h *ExperimentHandler) handleTrackExposure(w http.ResponseWriter, r *http.R
 
 	h.engine.TrackExposure(event)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -481,18 +485,18 @@ type MetricEventJSON struct {
 // handleTrackMetric handles POST /v1/experiments/metric
 func (h *ExperimentHandler) handleTrackMetric(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	var req MetricEventJSON
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ExperimentID == "" || req.MetricID == "" || req.UserID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment_id, metric_id, and user_id are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment_id, metric_id, and user_id are required")
 		return
 	}
 
@@ -507,7 +511,7 @@ func (h *ExperimentHandler) handleTrackMetric(w http.ResponseWriter, r *http.Req
 
 	h.engine.TrackMetric(event)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -515,35 +519,35 @@ func (h *ExperimentHandler) handleTrackMetric(w http.ResponseWriter, r *http.Req
 // handleAnalyzeExperiment handles GET /v1/experiments/{id}/results
 func (h *ExperimentHandler) handleAnalyzeExperiment(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	experimentID := r.PathValue("id")
 	if experimentID == "" {
-		h.writeError(w, http.StatusBadRequest, "experiment ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "experiment ID required")
 		return
 	}
 
 	results, err := h.engine.AnalyzeExperiment(experimentID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, results)
+	h.writeJSON(r.Context(), w, http.StatusOK, results)
 }
 
 // handleGetExperimentsByFeature handles GET /v1/experiments/feature/{featureId}
 func (h *ExperimentHandler) handleGetExperimentsByFeature(w http.ResponseWriter, r *http.Request) {
 	if h.engine == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "experiment engine not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "experiment engine not configured")
 		return
 	}
 
 	featureID := r.PathValue("featureId")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
@@ -554,7 +558,7 @@ func (h *ExperimentHandler) handleGetExperimentsByFeature(w http.ResponseWriter,
 		response[i] = h.experimentToJSON(exp)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"feature_id":  featureID,
 		"experiments": response,
 		"count":       len(response),
@@ -696,10 +700,10 @@ func (h *ExperimentHandler) jsonToExperiment(j *ExperimentJSON) *experiment.Expe
 	return exp
 }
 
-func (h *ExperimentHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *ExperimentHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *ExperimentHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *ExperimentHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

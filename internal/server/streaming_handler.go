@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -16,9 +17,9 @@ type StreamingHandler struct {
 }
 
 // NewStreamingHandler creates a new streaming handler.
-func NewStreamingHandler() *StreamingHandler {
+func NewStreamingHandler(ctx context.Context) *StreamingHandler {
 	return &StreamingHandler{
-		hub: streaming.NewHub(),
+		hub: streaming.NewHub(ctx),
 	}
 }
 
@@ -57,7 +58,7 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 	entities := r.URL.Query()["entity"]
 	eventTypes := r.URL.Query()["event_type"]
 
-	var types []streaming.StreamEventType
+	types := make([]streaming.StreamEventType, 0, len(eventTypes))
 	for _, et := range eventTypes {
 		types = append(types, streaming.StreamEventType(et))
 	}
@@ -78,7 +79,7 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 	// Get flusher for streaming
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		h.writeError(w, http.StatusInternalServerError, "streaming not supported")
+		h.writeError(r.Context(), w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -91,7 +92,10 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	data, _ := json.Marshal(connEvent)
-	w.Write([]byte("event: connected\ndata: " + string(data) + "\n\n"))
+	if _, err := w.Write([]byte("event: connected\ndata: " + string(data) + "\n\n")); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	flusher.Flush()
 
 	// Send heartbeat periodically
@@ -104,7 +108,10 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case <-heartbeat.C:
-			w.Write([]byte("event: heartbeat\ndata: {}\n\n"))
+			if _, err := w.Write([]byte("event: heartbeat\ndata: {}\n\n")); err != nil {
+				h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+				return
+			}
 			flusher.Flush()
 		case event, ok := <-events:
 			if !ok {
@@ -114,13 +121,16 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				continue
 			}
-			w.Write([]byte("event: " + string(event.Type) + "\ndata: " + string(data) + "\n\n"))
+			if _, err := w.Write([]byte("event: " + string(event.Type) + "\ndata: " + string(data) + "\n\n")); err != nil {
+				h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+				return
+			}
 			flusher.Flush()
 		}
 	}
 }
 
-// SubscribeRequest represents a subscription request.
+// StreamSubscribeRequest represents a subscription request.
 type StreamSubscribeRequest struct {
 	ClientID   string            `json:"client_id"`
 	Features   []string          `json:"features,omitempty"`
@@ -133,11 +143,11 @@ type StreamSubscribeRequest struct {
 func (h *StreamingHandler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	var req StreamSubscribeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	var types []streaming.StreamEventType
+	types := make([]streaming.StreamEventType, 0, len(req.EventTypes))
 	for _, et := range req.EventTypes {
 		types = append(types, streaming.StreamEventType(et))
 	}
@@ -154,7 +164,7 @@ func (h *StreamingHandler) handleSubscribe(w http.ResponseWriter, r *http.Reques
 
 	_, _ = h.hub.Subscribe(sub)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":         true,
 		"subscription_id": sub.ID,
 		"message":         "Use SSE endpoint /v1/stream/events with subscription parameters",
@@ -165,13 +175,13 @@ func (h *StreamingHandler) handleSubscribe(w http.ResponseWriter, r *http.Reques
 func (h *StreamingHandler) handleUnsubscribe(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		h.writeError(w, http.StatusBadRequest, "subscription id required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "subscription id required")
 		return
 	}
 
 	h.hub.Unsubscribe(id)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"id":      id,
 	})
@@ -181,7 +191,7 @@ func (h *StreamingHandler) handleUnsubscribe(w http.ResponseWriter, r *http.Requ
 func (h *StreamingHandler) handleListSubscriptions(w http.ResponseWriter, r *http.Request) {
 	subs := h.hub.GetSubscriptions()
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"subscriptions": subs,
 		"count":         len(subs),
 	})
@@ -200,12 +210,12 @@ type StreamPublishRequest struct {
 func (h *StreamingHandler) handlePublish(w http.ResponseWriter, r *http.Request) {
 	var req StreamPublishRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Type == "" {
-		h.writeError(w, http.StatusBadRequest, "type is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "type is required")
 		return
 	}
 
@@ -217,9 +227,12 @@ func (h *StreamingHandler) handlePublish(w http.ResponseWriter, r *http.Request)
 		Metadata: req.Metadata,
 	}
 
-	h.hub.Publish(event)
+	if err := h.hub.Publish(r.Context(), event); err != nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, err.Error())
+		return
+	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"event":   event,
 	})
@@ -228,19 +241,21 @@ func (h *StreamingHandler) handlePublish(w http.ResponseWriter, r *http.Request)
 // handleStats handles GET /v1/stream/stats
 func (h *StreamingHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.hub.Stats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 func generateSubscriptionID() string {
 	bytes := make([]byte, 16)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		return "sub_fallback"
+	}
 	return "sub_" + hex.EncodeToString(bytes)
 }
 
-func (h *StreamingHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *StreamingHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *StreamingHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *StreamingHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

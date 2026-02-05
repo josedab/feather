@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/federation"
@@ -114,7 +116,7 @@ type CatalogEntryJSON struct {
 // handleListNodes handles GET /v1/federation/nodes
 func (h *FederationHandler) handleListNodes(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
@@ -125,7 +127,7 @@ func (h *FederationHandler) handleListNodes(w http.ResponseWriter, r *http.Reque
 		response[i] = h.nodeToJSON(node)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"nodes": response,
 		"count": len(response),
 	})
@@ -134,23 +136,23 @@ func (h *FederationHandler) handleListNodes(w http.ResponseWriter, r *http.Reque
 // handleGetNode handles GET /v1/federation/nodes/{id}
 func (h *FederationHandler) handleGetNode(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	nodeID := r.PathValue("id")
 	if nodeID == "" {
-		h.writeError(w, http.StatusBadRequest, "node ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "node ID required")
 		return
 	}
 
 	node, err := h.federation.GetNode(nodeID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.nodeToJSON(node))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.nodeToJSON(node))
 }
 
 // JoinNodeRequest represents a request to join a node.
@@ -168,23 +170,23 @@ type JoinNodeRequest struct {
 // handleJoinNode handles POST /v1/federation/nodes
 func (h *FederationHandler) handleJoinNode(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	var req JoinNodeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 
 	if req.Address == "" {
-		h.writeError(w, http.StatusBadRequest, "address is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "address is required")
 		return
 	}
 
@@ -215,11 +217,11 @@ func (h *FederationHandler) handleJoinNode(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.federation.JoinNode(node); err != nil {
-		h.writeError(w, http.StatusConflict, err.Error())
+		h.writeError(r.Context(), w, http.StatusConflict, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"node_id": req.ID,
 	})
@@ -228,22 +230,22 @@ func (h *FederationHandler) handleJoinNode(w http.ResponseWriter, r *http.Reques
 // handleLeaveNode handles DELETE /v1/federation/nodes/{id}
 func (h *FederationHandler) handleLeaveNode(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	nodeID := r.PathValue("id")
 	if nodeID == "" {
-		h.writeError(w, http.StatusBadRequest, "node ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "node ID required")
 		return
 	}
 
 	if err := h.federation.LeaveNode(nodeID); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -251,7 +253,7 @@ func (h *FederationHandler) handleLeaveNode(w http.ResponseWriter, r *http.Reque
 // handleListCatalog handles GET /v1/federation/catalog
 func (h *FederationHandler) handleListCatalog(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
@@ -262,7 +264,7 @@ func (h *FederationHandler) handleListCatalog(w http.ResponseWriter, r *http.Req
 		response[i] = h.catalogEntryToJSON(entry)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"catalog": response,
 		"count":   len(response),
 	})
@@ -271,23 +273,23 @@ func (h *FederationHandler) handleListCatalog(w http.ResponseWriter, r *http.Req
 // handleGetFeature handles GET /v1/federation/features/{id}
 func (h *FederationHandler) handleGetFeature(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
-	feature, err := h.federation.GetFeature(featureID)
+	feature, err := h.federation.GetFeature(r.Context(), featureID)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, h.featureToJSON(feature))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.featureToJSON(feature))
 }
 
 // ShareFeatureRequest represents a request to share a feature.
@@ -306,18 +308,18 @@ type ShareFeatureRequest struct {
 // handleShareFeature handles POST /v1/federation/features
 func (h *FederationHandler) handleShareFeature(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	var req ShareFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.ID == "" {
-		h.writeError(w, http.StatusBadRequest, "id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "id is required")
 		return
 	}
 
@@ -351,11 +353,11 @@ func (h *FederationHandler) handleShareFeature(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.federation.ShareFeature(feature); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":    true,
 		"feature_id": req.ID,
 	})
@@ -364,19 +366,19 @@ func (h *FederationHandler) handleShareFeature(w http.ResponseWriter, r *http.Re
 // handleUpdateFeature handles PUT /v1/federation/features/{id}
 func (h *FederationHandler) handleUpdateFeature(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var req ShareFeatureRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -405,17 +407,17 @@ func (h *FederationHandler) handleUpdateFeature(w http.ResponseWriter, r *http.R
 	}
 
 	if err := h.federation.UpdateFeature(feature); err != nil {
-		if err == federation.ErrFeatureNotFound {
-			h.writeError(w, http.StatusNotFound, err.Error())
-		} else if err == federation.ErrNotFeatureOwner {
-			h.writeError(w, http.StatusForbidden, err.Error())
+		if errors.Is(err, federation.ErrFeatureNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
+		} else if errors.Is(err, federation.ErrNotFeatureOwner) {
+			h.writeError(r.Context(), w, http.StatusForbidden, err.Error())
 		} else {
-			h.writeError(w, http.StatusInternalServerError, err.Error())
+			h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -423,28 +425,28 @@ func (h *FederationHandler) handleUpdateFeature(w http.ResponseWriter, r *http.R
 // handleDeleteFeature handles DELETE /v1/federation/features/{id}
 func (h *FederationHandler) handleDeleteFeature(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	if err := h.federation.DeleteFeature(featureID); err != nil {
-		if err == federation.ErrFeatureNotFound {
-			h.writeError(w, http.StatusNotFound, err.Error())
-		} else if err == federation.ErrNotFeatureOwner {
-			h.writeError(w, http.StatusForbidden, err.Error())
+		if errors.Is(err, federation.ErrFeatureNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
+		} else if errors.Is(err, federation.ErrNotFeatureOwner) {
+			h.writeError(r.Context(), w, http.StatusForbidden, err.Error())
 		} else {
-			h.writeError(w, http.StatusInternalServerError, err.Error())
+			h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -463,13 +465,13 @@ type SearchFeaturesRequest struct {
 // handleSearchFeatures handles POST /v1/federation/search
 func (h *FederationHandler) handleSearchFeatures(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	var req SearchFeaturesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -490,7 +492,7 @@ func (h *FederationHandler) handleSearchFeatures(w http.ResponseWriter, r *http.
 
 	results, err := h.federation.SearchFeatures(query)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -499,7 +501,7 @@ func (h *FederationHandler) handleSearchFeatures(w http.ResponseWriter, r *http.
 		response[i] = h.catalogEntryToJSON(entry)
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": response,
 		"count":   len(response),
 	})
@@ -513,33 +515,33 @@ type ReplicateRequest struct {
 // handleReplicateFeature handles POST /v1/federation/features/{id}/replicate
 func (h *FederationHandler) handleReplicateFeature(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var req ReplicateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if len(req.TargetNodes) == 0 {
-		h.writeError(w, http.StatusBadRequest, "target_nodes required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "target_nodes required")
 		return
 	}
 
 	if err := h.federation.ReplicateFeature(r.Context(), featureID, req.TargetNodes); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":       true,
 		"replicated_to": req.TargetNodes,
 	})
@@ -559,19 +561,19 @@ type ReplicationPolicyRequest struct {
 // handleSetReplicationPolicy handles PUT /v1/federation/features/{id}/policy
 func (h *FederationHandler) handleSetReplicationPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	featureID := r.PathValue("id")
 	if featureID == "" {
-		h.writeError(w, http.StatusBadRequest, "feature ID required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature ID required")
 		return
 	}
 
 	var req ReplicationPolicyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -585,11 +587,11 @@ func (h *FederationHandler) handleSetReplicationPolicy(w http.ResponseWriter, r 
 	}
 
 	if err := h.federation.SetReplicationPolicy(featureID, policy); err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -597,23 +599,23 @@ func (h *FederationHandler) handleSetReplicationPolicy(w http.ResponseWriter, r 
 // handleGetStats handles GET /v1/federation/stats
 func (h *FederationHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	stats := h.federation.GetStats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleGetLocalNode handles GET /v1/federation/local
 func (h *FederationHandler) handleGetLocalNode(w http.ResponseWriter, r *http.Request) {
 	if h.federation == nil {
-		h.writeError(w, http.StatusServiceUnavailable, "federation not configured")
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "federation not configured")
 		return
 	}
 
 	node := h.federation.GetLocalNode()
-	h.writeJSON(w, http.StatusOK, h.nodeToJSON(node))
+	h.writeJSON(r.Context(), w, http.StatusOK, h.nodeToJSON(node))
 }
 
 func (h *FederationHandler) nodeToJSON(node *federation.Node) NodeJSON {
@@ -701,10 +703,10 @@ func (h *FederationHandler) catalogEntryToJSON(entry *federation.CatalogEntry) C
 	return result
 }
 
-func (h *FederationHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *FederationHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *FederationHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *FederationHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

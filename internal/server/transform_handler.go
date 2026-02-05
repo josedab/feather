@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/storage"
@@ -90,7 +92,7 @@ func (h *TransformHandler) handleListTransforms(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"transforms": result,
 		"count":      len(result),
 	})
@@ -100,34 +102,34 @@ func (h *TransformHandler) handleListTransforms(w http.ResponseWriter, r *http.R
 func (h *TransformHandler) handleRegisterTransform(w http.ResponseWriter, r *http.Request) {
 	var req TransformRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
 	if req.Type == "" {
-		h.writeError(w, http.StatusBadRequest, "type is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "type is required")
 		return
 	}
 
 	if len(req.Inputs) == 0 {
-		h.writeError(w, http.StatusBadRequest, "inputs are required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "inputs are required")
 		return
 	}
 
 	if req.Output == "" {
-		h.writeError(w, http.StatusBadRequest, "output is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "output is required")
 		return
 	}
 
 	t := &transform.Transform{
 		Name:        req.Name,
 		Description: req.Description,
-		Type:        transform.TransformType(req.Type),
+		Type:        transform.Type(req.Type),
 		Expression:  req.Expression,
 		Inputs:      req.Inputs,
 		Output:      req.Output,
@@ -141,15 +143,15 @@ func (h *TransformHandler) handleRegisterTransform(w http.ResponseWriter, r *htt
 	}
 
 	if err := h.pipeline.RegisterTransform(t); err != nil {
-		if err == transform.ErrDependencyCycle {
-			h.writeError(w, http.StatusConflict, "dependency cycle detected")
+		if errors.Is(err, transform.ErrDependencyCycle) {
+			h.writeError(r.Context(), w, http.StatusConflict, "dependency cycle detected")
 			return
 		}
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"name":    req.Name,
 		"type":    req.Type,
@@ -161,17 +163,17 @@ func (h *TransformHandler) handleRegisterTransform(w http.ResponseWriter, r *htt
 func (h *TransformHandler) handleGetTransform(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "transform name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "transform name required")
 		return
 	}
 
 	t, err := h.pipeline.GetTransform(name)
 	if err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"name":        t.Name,
 		"description": t.Description,
 		"type":        t.Type,
@@ -191,16 +193,16 @@ func (h *TransformHandler) handleGetTransform(w http.ResponseWriter, r *http.Req
 func (h *TransformHandler) handleUnregisterTransform(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "transform name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "transform name required")
 		return
 	}
 
 	if err := h.pipeline.UnregisterTransform(name); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 	})
 }
@@ -209,29 +211,29 @@ func (h *TransformHandler) handleUnregisterTransform(w http.ResponseWriter, r *h
 func (h *TransformHandler) handleDefineFromDSL(w http.ResponseWriter, r *http.Request) {
 	var req DSLRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Name == "" {
-		h.writeError(w, http.StatusBadRequest, "name is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
 
 	if req.Expression == "" {
-		h.writeError(w, http.StatusBadRequest, "expression is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "expression is required")
 		return
 	}
 
 	if err := h.dsl.Define(req.Name, req.Expression); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Get the created transform to return details
 	t, _ := h.pipeline.GetTransform(req.Name)
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":    true,
 		"name":       req.Name,
 		"type":       t.Type,
@@ -245,32 +247,32 @@ func (h *TransformHandler) handleDefineFromDSL(w http.ResponseWriter, r *http.Re
 func (h *TransformHandler) handleExecute(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "transform name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "transform name required")
 		return
 	}
 
 	var req ExecuteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityID == "" {
-		h.writeError(w, http.StatusBadRequest, "entity_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_id is required")
 		return
 	}
 
 	result, err := h.pipeline.Execute(r.Context(), name, req.EntityID)
 	if err != nil {
-		if err == transform.ErrTransformNotFound {
-			h.writeError(w, http.StatusNotFound, "transform not found")
+		if errors.Is(err, transform.ErrTransformNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "transform not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":   true,
 		"transform": name,
 		"entity_id": req.EntityID,
@@ -282,34 +284,34 @@ func (h *TransformHandler) handleExecute(w http.ResponseWriter, r *http.Request)
 func (h *TransformHandler) handleExecuteAndStore(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "transform name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "transform name required")
 		return
 	}
 
 	var req ExecuteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.EntityID == "" {
-		h.writeError(w, http.StatusBadRequest, "entity_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_id is required")
 		return
 	}
 
 	if err := h.pipeline.ExecuteAndStore(r.Context(), name, req.EntityID); err != nil {
-		if err == transform.ErrTransformNotFound {
-			h.writeError(w, http.StatusNotFound, "transform not found")
+		if errors.Is(err, transform.ErrTransformNotFound) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "transform not found")
 			return
 		}
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Get the transform to return the output feature name
 	t, _ := h.pipeline.GetTransform(name)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":        true,
 		"transform":      name,
 		"entity_id":      req.EntityID,
@@ -322,27 +324,27 @@ func (h *TransformHandler) handleExecuteAndStore(w http.ResponseWriter, r *http.
 func (h *TransformHandler) handleExecuteChain(w http.ResponseWriter, r *http.Request) {
 	var req ChainExecuteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.OutputFeature == "" {
-		h.writeError(w, http.StatusBadRequest, "output_feature is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "output_feature is required")
 		return
 	}
 
 	if req.EntityID == "" {
-		h.writeError(w, http.StatusBadRequest, "entity_id is required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity_id is required")
 		return
 	}
 
 	result, err := h.pipeline.ExecuteChain(r.Context(), req.OutputFeature, req.EntityID)
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":        true,
 		"output_feature": req.OutputFeature,
 		"entity_id":      req.EntityID,
@@ -350,10 +352,10 @@ func (h *TransformHandler) handleExecuteChain(w http.ResponseWriter, r *http.Req
 	})
 }
 
-func (h *TransformHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *TransformHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *TransformHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *TransformHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

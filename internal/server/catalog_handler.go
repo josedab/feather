@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -59,7 +60,7 @@ func (h *CatalogHandler) GetCatalog() *registry.Catalog {
 func (h *CatalogHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Request) {
 	var def registry.FeatureDefinition
 	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -69,11 +70,11 @@ func (h *CatalogHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.catalog.Register(&def, registeredBy); err != nil {
-		h.writeError(w, http.StatusBadRequest, err.Error())
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusCreated, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success": true,
 		"feature": def,
 	})
@@ -99,7 +100,7 @@ func (h *CatalogHandler) handleListFeatures(w http.ResponseWriter, r *http.Reque
 
 	features := h.catalog.List(filter)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 	})
@@ -136,33 +137,33 @@ func splitString(s, sep string) []string {
 func (h *CatalogHandler) handleGetFeature(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	def := h.catalog.Get(name)
 	if def == nil {
-		h.writeError(w, http.StatusNotFound, "feature not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "feature not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, def)
+	h.writeJSON(r.Context(), w, http.StatusOK, def)
 }
 
 // handleDeleteFeature handles DELETE /v1/catalog/features/{name}
 func (h *CatalogHandler) handleDeleteFeature(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	if err := h.catalog.Delete(name); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"name":    name,
 	})
@@ -177,13 +178,13 @@ type SetStatusRequest struct {
 func (h *CatalogHandler) handleSetStatus(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	var req SetStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -193,11 +194,11 @@ func (h *CatalogHandler) handleSetStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.catalog.SetStatus(name, registry.FeatureStatus(req.Status), updatedBy); err != nil {
-		h.writeError(w, http.StatusNotFound, err.Error())
+		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"name":    name,
 		"status":  req.Status,
@@ -208,13 +209,13 @@ func (h *CatalogHandler) handleSetStatus(w http.ResponseWriter, r *http.Request)
 func (h *CatalogHandler) handleGetVersions(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	versions := h.catalog.GetVersionHistory(name)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"versions": versions,
 		"count":    len(versions),
 	})
@@ -226,30 +227,30 @@ func (h *CatalogHandler) handleGetVersion(w http.ResponseWriter, r *http.Request
 	versionStr := r.PathValue("version")
 
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	version, err := strconv.Atoi(versionStr)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid version number")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid version number")
 		return
 	}
 
 	def := h.catalog.GetVersion(name, version)
 	if def == nil {
-		h.writeError(w, http.StatusNotFound, "version not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "version not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, def)
+	h.writeJSON(r.Context(), w, http.StatusOK, def)
 }
 
 // handleSearch handles GET /v1/catalog/search
 func (h *CatalogHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		h.writeError(w, http.StatusBadRequest, "search query required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "search query required")
 		return
 	}
 
@@ -262,7 +263,7 @@ func (h *CatalogHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	results := h.catalog.Search(query, limit)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"results": results,
 		"count":   len(results),
 		"query":   query,
@@ -273,13 +274,13 @@ func (h *CatalogHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 func (h *CatalogHandler) handleGetByTag(w http.ResponseWriter, r *http.Request) {
 	tag := r.PathValue("tag")
 	if tag == "" {
-		h.writeError(w, http.StatusBadRequest, "tag required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "tag required")
 		return
 	}
 
 	features := h.catalog.GetByTag(tag)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"tag":      tag,
@@ -290,13 +291,13 @@ func (h *CatalogHandler) handleGetByTag(w http.ResponseWriter, r *http.Request) 
 func (h *CatalogHandler) handleGetByOwner(w http.ResponseWriter, r *http.Request) {
 	owner := r.PathValue("owner")
 	if owner == "" {
-		h.writeError(w, http.StatusBadRequest, "owner required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "owner required")
 		return
 	}
 
 	features := h.catalog.GetByOwner(owner)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"owner":    owner,
@@ -307,13 +308,13 @@ func (h *CatalogHandler) handleGetByOwner(w http.ResponseWriter, r *http.Request
 func (h *CatalogHandler) handleGetByTeam(w http.ResponseWriter, r *http.Request) {
 	team := r.PathValue("team")
 	if team == "" {
-		h.writeError(w, http.StatusBadRequest, "team required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "team required")
 		return
 	}
 
 	features := h.catalog.GetByTeam(team)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"team":     team,
@@ -324,13 +325,13 @@ func (h *CatalogHandler) handleGetByTeam(w http.ResponseWriter, r *http.Request)
 func (h *CatalogHandler) handleGetByCategory(w http.ResponseWriter, r *http.Request) {
 	category := r.PathValue("category")
 	if category == "" {
-		h.writeError(w, http.StatusBadRequest, "category required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "category required")
 		return
 	}
 
 	features := h.catalog.GetByCategory(category)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features": features,
 		"count":    len(features),
 		"category": category,
@@ -341,13 +342,13 @@ func (h *CatalogHandler) handleGetByCategory(w http.ResponseWriter, r *http.Requ
 func (h *CatalogHandler) handleGetByEntity(w http.ResponseWriter, r *http.Request) {
 	entity := r.PathValue("entity")
 	if entity == "" {
-		h.writeError(w, http.StatusBadRequest, "entity type required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "entity type required")
 		return
 	}
 
 	features := h.catalog.GetByEntityType(entity)
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"features":    features,
 		"count":       len(features),
 		"entity_type": entity,
@@ -358,44 +359,46 @@ func (h *CatalogHandler) handleGetByEntity(w http.ResponseWriter, r *http.Reques
 func (h *CatalogHandler) handleGetLineage(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
-		h.writeError(w, http.StatusBadRequest, "feature name required")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "feature name required")
 		return
 	}
 
 	lineage := h.catalog.GetLineage(name)
 	if lineage == nil {
-		h.writeError(w, http.StatusNotFound, "feature not found")
+		h.writeError(r.Context(), w, http.StatusNotFound, "feature not found")
 		return
 	}
 
-	h.writeJSON(w, http.StatusOK, lineage)
+	h.writeJSON(r.Context(), w, http.StatusOK, lineage)
 }
 
 // handleGetStats handles GET /v1/catalog/stats
 func (h *CatalogHandler) handleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats := h.catalog.GetStats()
-	h.writeJSON(w, http.StatusOK, stats)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 // handleExport handles GET /v1/catalog/export
 func (h *CatalogHandler) handleExport(w http.ResponseWriter, r *http.Request) {
 	data, err := h.catalog.Export()
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=feature_catalog.json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+	}
 }
 
 // handleImport handles POST /v1/catalog/import
 func (h *CatalogHandler) handleImport(w http.ResponseWriter, r *http.Request) {
 	var features []registry.FeatureDefinition
 	if err := json.NewDecoder(r.Body).Decode(&features); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid request body")
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -411,17 +414,17 @@ func (h *CatalogHandler) handleImport(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.writeJSON(w, http.StatusOK, map[string]interface{}{
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"success":  true,
 		"imported": imported,
 		"total":    len(features),
 	})
 }
 
-func (h *CatalogHandler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	writeJSONResponse(w, status, data)
+func (h *CatalogHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
+	writeJSONResponse(ctx, w, status, data)
 }
 
-func (h *CatalogHandler) writeError(w http.ResponseWriter, status int, message string) {
-	writeJSONError(w, status, message)
+func (h *CatalogHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	writeJSONError(ctx, w, status, message)
 }

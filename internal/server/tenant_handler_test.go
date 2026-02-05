@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // testTenantServer wraps a TenantHandler for testing.
@@ -80,12 +82,8 @@ func (ts *testTenantServer) delete(path string) *httptest.ResponseRecorder {
 func TestTenantHandler_NewTenantHandler(t *testing.T) {
 	handler := NewTenantHandler(1024 * 1024 * 1024)
 
-	if handler == nil {
-		t.Error("Expected handler to be non-nil")
-	}
-	if handler.registry == nil {
-		t.Error("Expected registry to be non-nil")
-	}
+	require.NotNil(t, handler)
+	require.NotNil(t, handler.registry)
 }
 
 func TestTenantHandler_ListTenants(t *testing.T) {

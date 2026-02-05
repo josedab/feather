@@ -61,14 +61,14 @@ func (h *DBTHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 
 	var req DBTSyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
 
 	// Parse manifest
 	manifest, err := dbt.ParseManifestFromBytes(req.Manifest)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid manifest: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid manifest: "+err.Error())
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *DBTHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	// Sync manifest
 	result, err := adapter.SyncManifest(manifest)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "sync failed: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, "sync failed: "+err.Error())
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *DBTHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 		result.FeaturesUpdated = updated
 	}
 
-	writeJSONResponse(w, http.StatusOK, result)
+	writeJSONResponse(r.Context(), w, http.StatusOK, result)
 }
 
 // handleValidate handles POST /v1/dbt/validate
@@ -127,21 +127,21 @@ func (h *DBTHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 
 	var req DBTSyncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
 
 	// Parse manifest
 	manifest, err := dbt.ParseManifestFromBytes(req.Manifest)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid manifest: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid manifest: "+err.Error())
 		return
 	}
 
 	// Validate without syncing
 	result, err := h.adapter.ValidateManifest(manifest)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "validation failed: "+err.Error())
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, "validation failed: "+err.Error())
 		return
 	}
 
@@ -149,7 +149,7 @@ func (h *DBTHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	result.FeaturesCreated = 0
 	result.FeaturesUpdated = 0
 
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"valid":        result.Success && len(result.Errors) == 0,
 		"features":     len(result.Features),
 		"errors":       result.Errors,
@@ -159,14 +159,14 @@ func (h *DBTHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 
 // DBTStatusResponse represents the status of dbt sync.
 type DBTStatusResponse struct {
-	LastSyncAt       *time.Time `json:"last_sync_at,omitempty"`
-	LastSyncSuccess  *bool      `json:"last_sync_success,omitempty"`
-	FeaturesCreated  int        `json:"features_created"`
-	FeaturesUpdated  int        `json:"features_updated"`
-	FeaturesSkipped  int        `json:"features_skipped"`
-	ErrorCount       int        `json:"error_count"`
-	ProjectName      string     `json:"project_name,omitempty"`
-	ManifestVersion  string     `json:"manifest_version,omitempty"`
+	LastSyncAt      *time.Time `json:"last_sync_at,omitempty"`
+	LastSyncSuccess *bool      `json:"last_sync_success,omitempty"`
+	FeaturesCreated int        `json:"features_created"`
+	FeaturesUpdated int        `json:"features_updated"`
+	FeaturesSkipped int        `json:"features_skipped"`
+	ErrorCount      int        `json:"error_count"`
+	ProjectName     string     `json:"project_name,omitempty"`
+	ManifestVersion string     `json:"manifest_version,omitempty"`
 }
 
 // handleStatus handles GET /v1/dbt/status
@@ -193,7 +193,7 @@ func (h *DBTHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
 		response.ManifestVersion = lastSync.ManifestVersion
 	}
 
-	writeJSONResponse(w, http.StatusOK, response)
+	writeJSONResponse(r.Context(), w, http.StatusOK, response)
 }
 
 // convertDBTFeatureToCatalog converts a dbt feature definition to a catalog feature definition.
