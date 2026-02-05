@@ -21,7 +21,10 @@ import (
 
 // Handler registrations: Experimental — Working implementation, may be incomplete or
 // change significantly. Use at your own risk.
-
+//
+// Registers: graphql, autogen, ui, rag, plugin, playground, pushdown, llm_features,
+// gitops, time_travel, catalog_ui, feather_cloud, stream_dsl, llm_gateway,
+// skew_detect, compute_graph.
 func init() {
 	registerHandler("graphql", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		if deps.Store == nil || deps.Schema == nil {

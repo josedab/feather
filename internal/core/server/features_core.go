@@ -12,7 +12,10 @@ import (
 
 // Handler registrations: Stable — Production-ready, well-tested, breaking changes
 // follow semver. Safe for all deployments.
-
+//
+// Registers: groups, backfill, streaming, catalog, auth, ml, transform, cache,
+// consistency, observability, benchmark, impact, model_serving, governance,
+// freshness, sla, drift, semantic, quality, sharding, marketplace.
 func init() {
 	registerHandler("groups", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 		return NewGroupsHandler()

@@ -15,7 +15,9 @@ import (
 
 // Handler registrations: Next-gen v4 — Advanced data transport, privacy, ML optimization,
 // and developer experience features.
-
+//
+// Registers: arrow_flight, diff_privacy, prefetch, notebook_sdk, quality_gates,
+// compression, audit_trail, query_planner, fed_learning, playground_v2.
 func init() {
 	registerHandler("arrow_flight", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewArrowFlightHandler(arrowflight.NewServer(arrowflight.DefaultConfig()))

@@ -27,7 +27,12 @@ import (
 )
 
 // Handler registrations: Next-gen platform — Platform, tools, and integration features.
-
+//
+// Registers: finops, parity, monitoring, k8s_autoscaler, multi_region, bench_suite,
+// ftl, quality_score, explorer, orchestrator, mobile_sync, ml_integrations, smpc,
+// flink_pipeline, cloud_control, realtime_monitor, cdc_materialization,
+// python_transforms, region_federation, lineage_analysis, wasm_runtime, llm_store,
+// model_registry.
 func init() {
 	registerHandler("finops", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewFinOpsHandler(finops.NewManager(finops.DefaultManagerConfig()))

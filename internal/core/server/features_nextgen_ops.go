@@ -14,7 +14,10 @@ import (
 )
 
 // Handler registrations: Next-gen v3 — Operations, governance, and infrastructure features.
-
+//
+// Registers: api_gateway, importance_scoring, anomaly_detect, feather_cli,
+// incr_materialization, webhook_events, cloud_storage, audit_log, openapi_sync,
+// terraform_provider.
 func init() {
 	registerHandler("api_gateway", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewAPIGatewayHandler(apigateway.NewGateway(apigateway.DefaultGatewayConfig()))

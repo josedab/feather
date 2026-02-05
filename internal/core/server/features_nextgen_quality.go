@@ -15,7 +15,9 @@ import (
 )
 
 // Handler registrations: Next-gen v2 — Data quality, lineage, and discovery features.
-
+//
+// Registers: lineage_graph, adaptive_cache, contract_test, backpressure, offline_store,
+// bench_pub, gitops_defs, ab_features, federated_discovery, wasm_udf, nl_discovery.
 func init() {
 	registerHandler("lineage_graph", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewLineageGraphHandler(lineagegraph.NewGraph(lineagegraph.DefaultGraphConfig()))

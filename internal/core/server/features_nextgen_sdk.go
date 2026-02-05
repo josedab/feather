@@ -14,7 +14,10 @@ import (
 )
 
 // Handler registrations: Next-gen v1 — SDK, pipeline, and compatibility features.
-
+//
+// Registers: stream_compute, sdk_codegen, prompt_store, consistency_validator,
+// feature_dashboard, featherql_v2, embedding_mgmt, schema_evolution, feast_compat,
+// feast_gateway, saas_control.
 func init() {
 	registerHandler("stream_compute", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewStreamComputeHandler(streamcompute.NewEngine(streamcompute.DefaultEngineConfig()))

@@ -26,7 +26,12 @@ import (
 
 // Handler registrations: Beta — Functional and tested, API may change between minor
 // releases. Suitable for staging and non-critical production.
-
+//
+// Registers: tenant, warehouse, embedding, composition, migration, saas, cost,
+// cluster, scheduler, lineage, wasm, federation, experiment, dbt, compute,
+// consensus, stream_sql, control_plane, versioning, validation, dashboard_v2,
+// billing, cloud_service, featherql, llm_cache, autofe, geo_routing, ab_rollout,
+// edge_runtime, contracts, materialization, replication.
 func init() {
 	registerHandler("tenant", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		maxBytes := deps.Config.Core.TenantMaxBytes
