@@ -26,6 +26,7 @@ node_modules/
 *.swp
 *.swo
 *~
+.vscode/launch.local.json
 
 # OS files
 .DS_Store
