@@ -207,12 +207,15 @@ func LoadFromFile(path string) (*Config, error) {
 }
 
 // LoadFromBytes parses YAML configuration from raw bytes.
+// Unknown fields are rejected to catch typos early.
 func LoadFromBytes(data []byte) (*Config, error) {
 	// Expand environment variables
 	data = []byte(os.ExpandEnv(string(data)))
 
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	dec := yaml.NewDecoder(strings.NewReader(string(data)))
+	dec.KnownFields(true)
+	if err := dec.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
 	}
 

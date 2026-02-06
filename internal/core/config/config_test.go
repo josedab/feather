@@ -867,6 +867,33 @@ func TestGetEnvHelpers(t *testing.T) {
 }
 
 // Helper function to find index of character in string
+func TestLoadFromBytes_RejectsUnknownFields(t *testing.T) {
+	yaml := []byte(`
+storrage:
+  hot:
+    max_memory: 1GB
+`)
+	_, err := LoadFromBytes(yaml)
+	if err == nil {
+		t.Fatal("expected error for unknown field 'storrage', got nil")
+	}
+}
+
+func TestLoadFromBytes_AcceptsKnownFields(t *testing.T) {
+	yaml := []byte(`
+storage:
+  hot:
+    max_memory: 1GB
+`)
+	cfg, err := LoadFromBytes(yaml)
+	if err != nil {
+		t.Fatalf("unexpected error for valid config: %v", err)
+	}
+	if cfg.Storage.Hot.MaxMemory != "1GB" {
+		t.Errorf("expected max_memory=1GB, got %s", cfg.Storage.Hot.MaxMemory)
+	}
+}
+
 func indexOf(s string, c byte) int {
 	for i := 0; i < len(s); i++ {
 		if s[i] == c {
