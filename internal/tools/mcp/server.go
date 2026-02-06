@@ -767,5 +767,7 @@ func (s *Server) writeError(w io.Writer, id interface{}, code int, message strin
 			Data:    data,
 		},
 	}
-	_ = s.writeResponse(w, resp)
+	if err := s.writeResponse(w, resp); err != nil {
+		slog.Warn("failed to write MCP response", "error", err)
+	}
 }

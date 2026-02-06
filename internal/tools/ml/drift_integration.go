@@ -2,6 +2,7 @@ package ml
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -141,7 +142,9 @@ func (m *ModelDriftMonitor) RecordValidationResult(result *ValidationResult) {
 					"actual":   issue.ActualValue,
 				},
 			}
-			_ = m.RecordAlert(alert)
+			if err := m.RecordAlert(alert); err != nil {
+				slog.Warn("failed to record model drift alert", "alert_id", alert.AlertID, "error", err)
+			}
 		}
 	}
 }
@@ -508,7 +511,9 @@ func (b *DriftDetectorBridge) OnDriftDetected(featureName string, driftType stri
 			Timestamp:    time.Now(),
 		}
 
-		_ = b.driftMonitor.RecordAlert(alert)
+		if err := b.driftMonitor.RecordAlert(alert); err != nil {
+			slog.Warn("failed to record drift alert", "model", model.Name, "feature", featureName, "error", err)
+		}
 	}
 }
 
