@@ -424,7 +424,9 @@ func (h *EmbeddingHandler) handleGenerate(w http.ResponseWriter, r *http.Request
 
 	// Store in cache
 	if h.store != nil {
-		_ = h.store.Put(r.Context(), emb)
+		if err := h.store.Put(r.Context(), emb); err != nil {
+			slog.Warn("failed to cache embedding", "error", err)
+		}
 	}
 
 	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{

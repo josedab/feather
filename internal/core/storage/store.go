@@ -250,7 +250,9 @@ func (s *Store) Get(entityKey string, features []string) (map[string]*domain.Fea
 			result[k] = v
 		}
 		if len(warmResult) > 0 {
-			_ = s.hot.Put(entityKey, warmResult)
+			if err := s.hot.Put(entityKey, warmResult); err != nil {
+				slog.Debug("failed to promote warm result to hot tier", "entity", entityKey, "error", err)
+			}
 		}
 	}
 
