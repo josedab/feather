@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -162,7 +163,9 @@ func (h *StreamingHandler) handleSubscribe(w http.ResponseWriter, r *http.Reques
 		CreatedAt:  time.Now(),
 	}
 
-	_, _ = h.hub.Subscribe(sub)
+	if _, err := h.hub.Subscribe(sub); err != nil {
+		slog.Warn("failed to subscribe to streaming hub", "subscription_id", sub.ID, "error", err)
+	}
 
 	h.writeJSON(r.Context(), w, http.StatusCreated, map[string]interface{}{
 		"success":         true,

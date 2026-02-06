@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -83,7 +84,9 @@ func (h *CloudStorageHandler) handleGetObject(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", info.ContentType)
 	w.Header().Set("ETag", info.ETag)
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		slog.Debug("failed to write cloud storage object", "error", err)
+	}
 }
 
 // handleDeleteObject handles DELETE /v1/storage/objects/{key}

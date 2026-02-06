@@ -3,6 +3,7 @@ package server
 import (
 	_ "embed"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 )
 
@@ -19,7 +20,9 @@ func (s *HTTPServer) registerDocsRoutes() {
 func (s *HTTPServer) handleOpenAPISpec(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	_, _ = w.Write(openapiSpec)
+	if _, err := w.Write(openapiSpec); err != nil {
+		slog.Debug("failed to write OpenAPI spec", "error", err)
+	}
 }
 
 // handleOpenAPIJSON serves a dynamically generated API inventory from the handler registry.
@@ -54,7 +57,9 @@ func (s *HTTPServer) handleOpenAPIJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	_ = json.NewEncoder(w).Encode(info)
+	if err := json.NewEncoder(w).Encode(info); err != nil {
+		slog.Debug("failed to encode OpenAPI JSON", "error", err)
+	}
 }
 
 func (s *HTTPServer) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +70,7 @@ func (s *HTTPServer) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
 	specURL := scheme + "://" + r.Host + "/v1/openapi.yaml"
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(`<!doctype html>
+	if _, err := w.Write([]byte(`<!doctype html>
 <html>
 <head>
   <title>Feather API Reference</title>
@@ -76,5 +81,7 @@ func (s *HTTPServer) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
   <script id="api-reference" data-url="` + specURL + `"></script>
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
-</html>`))
+</html>`)); err != nil {
+		slog.Debug("failed to write API docs page", "error", err)
+	}
 }
