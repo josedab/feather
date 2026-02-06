@@ -149,7 +149,7 @@ func (s *Store) ListIndexes() []string {
 // Upsert adds or updates a vector with optional metadata.
 func (idx *Index) Upsert(id string, vector []float32, metadata map[string]interface{}) error {
 	if err := idx.hnsw.Insert(id, vector); err != nil {
-		return err
+		return fmt.Errorf("inserting vector %s: %w", id, err)
 	}
 
 	if metadata != nil {
@@ -185,7 +185,7 @@ func (idx *Index) Search(query []float32, k int, opts *SearchOptions) ([]SearchR
 
 	results, err := idx.hnsw.Search(query, k, ef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("searching index %s: %w", idx.Name, err)
 	}
 
 	// Enrich with metadata
@@ -285,7 +285,7 @@ func (s *Store) Save(indexName string) error {
 	// Create directory
 	indexDir := filepath.Join(s.dataDir, "vectors", indexName)
 	if err := os.MkdirAll(indexDir, 0750); err != nil {
-		return err
+		return fmt.Errorf("creating index directory %s: %w", indexName, err)
 	}
 
 	// Save metadata
@@ -304,10 +304,10 @@ func (s *Store) Save(indexName string) error {
 		DistanceType: idx.DistanceType,
 	})
 	if marshalErr != nil {
-		return marshalErr
+		return fmt.Errorf("marshaling config for index %s: %w", indexName, marshalErr)
 	}
 	if writeErr := os.WriteFile(configPath, configData, 0600); writeErr != nil {
-		return writeErr
+		return fmt.Errorf("writing config for index %s: %w", indexName, writeErr)
 	}
 
 	// Save vectors and metadata
@@ -327,9 +327,12 @@ func (s *Store) Save(indexName string) error {
 	dataPath := filepath.Join(indexDir, "data.json")
 	dataBytes, err := json.Marshal(records)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling data for index %s: %w", indexName, err)
 	}
-	return os.WriteFile(dataPath, dataBytes, 0600)
+	if writeErr := os.WriteFile(dataPath, dataBytes, 0600); writeErr != nil {
+		return fmt.Errorf("writing data for index %s: %w", indexName, writeErr)
+	}
+	return nil
 }
 
 // Load loads an index from disk.
@@ -348,7 +351,7 @@ func (s *Store) Load(indexName string) error {
 	configPath := filepath.Join(indexDir, "config.json")
 	configData, readErr := os.ReadFile(configPath)
 	if readErr != nil {
-		return readErr
+		return fmt.Errorf("reading config for index %s: %w", indexName, readErr)
 	}
 
 	var config struct {
@@ -357,13 +360,13 @@ func (s *Store) Load(indexName string) error {
 		DistanceType DistanceType `json:"distance_type"`
 	}
 	if unmarshalErr := json.Unmarshal(configData, &config); unmarshalErr != nil {
-		return unmarshalErr
+		return fmt.Errorf("unmarshaling config for index %s: %w", indexName, unmarshalErr)
 	}
 
 	// Create index
 	idx, err := s.CreateIndex(config.Name, config.Dimension, config.DistanceType)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating index %s: %w", indexName, err)
 	}
 
 	// Load data
@@ -373,12 +376,12 @@ func (s *Store) Load(indexName string) error {
 		if os.IsNotExist(err) {
 			return nil // No data yet
 		}
-		return err
+		return fmt.Errorf("reading data for index %s: %w", indexName, err)
 	}
 
 	records := make([]Record, 0)
 	if err := json.Unmarshal(dataBytes, &records); err != nil {
-		return err
+		return fmt.Errorf("unmarshaling data for index %s: %w", indexName, err)
 	}
 
 	return idx.UpsertBatch(records)
