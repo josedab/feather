@@ -93,6 +93,7 @@ type Gateway struct {
 	totalRouted      int64
 	totalCoalesced   int64
 	totalRateLimited int64
+	stopCh           chan struct{}
 }
 
 // NewGateway creates a new Gateway with the given configuration.
@@ -104,6 +105,7 @@ func NewGateway(config GatewayConfig) *Gateway {
 		coalescePending:  make(map[string][]chan RouteResult),
 		backendRequests:  make(map[string]int64),
 		backendLatencies: make(map[string][]float64),
+		stopCh:           make(chan struct{}),
 	}
 }
 
@@ -195,7 +197,11 @@ func (g *Gateway) Route(tenantID, entityKey string) (*RouteResult, error) {
 	// Set up coalescing window for this key
 	g.coalescePending[coalesceKey] = make([]chan RouteResult, 0)
 	go func() {
-		time.Sleep(time.Duration(g.config.CoalesceWindowMs) * time.Millisecond)
+		select {
+		case <-time.After(time.Duration(g.config.CoalesceWindowMs) * time.Millisecond):
+		case <-g.stopCh:
+			return
+		}
 		g.mu.Lock()
 		delete(g.coalescePending, coalesceKey)
 		g.mu.Unlock()
@@ -206,6 +212,11 @@ func (g *Gateway) Route(tenantID, entityKey string) (*RouteResult, error) {
 		BackendURL: selected.URL,
 		LatencyMs:  selected.Latency,
 	}, nil
+}
+
+// Stop signals all background goroutines to exit.
+func (g *Gateway) Stop() {
+	close(g.stopCh)
 }
 
 // selectBackendLocked picks a healthy backend weighted by inverse latency.
