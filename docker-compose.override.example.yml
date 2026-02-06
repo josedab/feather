@@ -1,0 +1,32 @@
+# docker-compose.override.yml — Live reload for development
+#
+# Copy this file to docker-compose.override.yml to enable live reload:
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#
+# Then run:
+#   docker compose -f docker-compose.dev.yml -f docker-compose.override.yml up
+#
+# Code changes on the host will be reflected inside the container via
+# the bind-mounted source directory and air (Go live reloader).
+# Requires .air.toml in the project root (already present).
+
+version: '3.8'
+
+services:
+  feather:
+    image: golang:1.24
+    volumes:
+      - .:/app
+      - ./configs:/etc/feather:ro
+      - go-mod-cache:/go/pkg/mod
+    working_dir: /app
+    command: >
+      sh -c "
+        go install github.com/air-verse/air@latest &&
+        air -c .air.toml
+      "
+    environment:
+      - CGO_ENABLED=0
+
+volumes:
+  go-mod-cache:
