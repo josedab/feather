@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify
+.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -101,6 +101,10 @@ test-short:
 test-coverage:
 	$(GO) test -v -race -count=1 -coverprofile=coverage.out ./...
 	$(GO) tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
+	@if command -v open >/dev/null 2>&1; then open coverage.html; \
+	elif command -v xdg-open >/dev/null 2>&1; then xdg-open coverage.html; \
+	else echo "Open coverage.html in your browser to view the report."; fi
 
 ## test-integration: Run integration tests (requires Docker for some tests)
 test-integration:
@@ -116,6 +120,21 @@ PKG ?= ./...
 test-pkg:
 	$(GO) test -v -count=1 -cover -timeout 120s $(TEST_PKG)
 TEST_PKG ?= ./internal/core/...
+
+## test-watch: Re-run tests on file changes (TDD workflow; requires fswatch or entr)
+test-watch:
+	@if command -v fswatch >/dev/null 2>&1; then \
+		echo "Watching for changes (fswatch)... Ctrl-C to stop."; \
+		fswatch -o --include '\.go$$' --exclude '.*' . | xargs -n1 -I{} $(MAKE) test-quick; \
+	elif command -v entr >/dev/null 2>&1; then \
+		echo "Watching for changes (entr)... Ctrl-C to stop."; \
+		find . -name '*.go' | entr -c $(MAKE) test-quick; \
+	else \
+		echo "❌ Neither fswatch nor entr found. Install one:"; \
+		echo "   macOS:  brew install fswatch"; \
+		echo "   Linux:  apt install entr  (or)  brew install entr"; \
+		exit 1; \
+	fi
 
 ### Code Quality
 
@@ -361,4 +380,42 @@ bench:
 check: fmt-check vet lint test
 
 ## check-quick: Fast pre-commit checks (format, vet, lint, core tests — ~20s)
-check-quick: fmt-check vet lint test-core
+check-quick: hook-check fmt-check vet lint test-core
+
+# Warn if git hooks are not configured (non-blocking)
+hook-check:
+	@if [ -z "$$(git config core.hooksPath)" ]; then \
+		echo "⚠️  Git hooks not configured. Run 'make setup' to enable pre-commit hooks."; \
+	fi
+
+### Profiling
+
+PPROF_HOST ?= localhost:8080
+
+## profile-cpu: Capture a 30s CPU profile from the running server
+profile-cpu:
+	@echo "Collecting 30s CPU profile from $(PPROF_HOST)..."
+	$(GO) tool pprof -http=:6060 http://$(PPROF_HOST)/debug/pprof/profile?seconds=30
+
+## profile-mem: Capture a heap memory profile from the running server
+profile-mem:
+	@echo "Collecting heap profile from $(PPROF_HOST)..."
+	$(GO) tool pprof -http=:6060 http://$(PPROF_HOST)/debug/pprof/heap
+
+### Dependencies
+
+## deps-check: Check for outdated or modified Go module dependencies
+deps-check:
+	@echo "Checking go.mod tidiness..."
+	@$(GO) mod tidy -diff 2>&1 || { echo "❌ go.mod is not tidy. Run 'go mod tidy'."; exit 1; }
+	@echo "✅ go.mod is tidy."
+	@echo ""
+	@echo "Checking for available dependency updates..."
+	@$(GO) list -m -u -mod=readonly all 2>/dev/null | grep '\[' || echo "All dependencies are up to date."
+	@echo ""
+	@echo "Checking for known vulnerabilities (requires govulncheck)..."
+	@if command -v govulncheck >/dev/null 2>&1; then \
+		govulncheck ./...; \
+	else \
+		echo "⚠️  govulncheck not installed. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
+	fi
