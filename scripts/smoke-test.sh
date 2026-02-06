@@ -8,6 +8,16 @@ BASE_URL="${FEATHER_URL:-http://localhost:8080}"
 PASS=0
 FAIL=0
 
+# Pre-flight: verify server is reachable before running tests
+if ! curl -sf --connect-timeout 3 "${BASE_URL}/health" >/dev/null 2>&1; then
+  echo "❌ Server not reachable at ${BASE_URL}" >&2
+  echo "" >&2
+  echo "Start the server first:" >&2
+  echo "  make run-dev       # foreground" >&2
+  echo "  make dev-start     # background" >&2
+  exit 1
+fi
+
 pass() { PASS=$((PASS + 1)); echo "  ✅ $1"; }
 fail() { FAIL=$((FAIL + 1)); echo "  ❌ $1" >&2; }
 
