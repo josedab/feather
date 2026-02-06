@@ -107,12 +107,12 @@ func (w *WarmTier) Get(entityKey string, features []string) (map[string]*domain.
 				continue
 			}
 			if err != nil {
-				return err
+				return fmt.Errorf("reading key for feature %s: %w", feature, err)
 			}
 
 			val, err := decodeFeatureValue(item)
 			if err != nil {
-				return err
+				return fmt.Errorf("decoding history for feature %s: %w", feature, err)
 			}
 			result[feature] = val
 		}
@@ -133,17 +133,17 @@ func (w *WarmTier) Put(entityKey string, features map[string]*domain.FeatureValu
 			key := featureKey(entityKey, name)
 			data, err := encodeFeatureValue(val)
 			if err != nil {
-				return err
+				return fmt.Errorf("encoding feature %s: %w", name, err)
 			}
 
 			if err := txn.Set(key, data); err != nil {
-				return err
+				return fmt.Errorf("setting feature %s: %w", name, err)
 			}
 
 			// Also store in history for point-in-time retrieval
 			histKey := historyKey(entityKey, name, val.Timestamp)
 			if err := txn.Set(histKey, data); err != nil {
-				return err
+				return fmt.Errorf("setting history for feature %s: %w", name, err)
 			}
 		}
 		return nil
@@ -156,7 +156,7 @@ func (w *WarmTier) Delete(entityKey string, features []string) error {
 		for _, feature := range features {
 			key := featureKey(entityKey, feature)
 			if err := txn.Delete(key); err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-				return err
+				return fmt.Errorf("deleting feature %s: %w", feature, err)
 			}
 		}
 		return nil
@@ -224,7 +224,7 @@ func (w *WarmTier) ExpireOlderThan(retention time.Duration) (int, error) {
 
 			if timestamp < cutoff {
 				if err := txn.Delete(key); err != nil {
-					return err
+					return fmt.Errorf("deleting expired key: %w", err)
 				}
 				deleted++
 			}
