@@ -205,7 +205,7 @@ func (s *GRPCServer) GetFeaturesStream(req *pb.GetFeaturesRequest, stream grpc.S
 			EntityKey: entityKey,
 			Features:  features,
 		}); err != nil {
-			return err
+			return fmt.Errorf("sending features for entity %s: %w", entityKey, err)
 		}
 	}
 
@@ -293,7 +293,7 @@ func (s *GRPCServer) getFeaturesForEntity(ctx context.Context, entityKey string,
 	// Get from storage
 	features, err := s.store.Get(entityKey, featureNames)
 	if err != nil && !domain.IsNotFound(err) {
-		return nil, err
+		return nil, fmt.Errorf("getting features for entity %s: %w", entityKey, err)
 	}
 
 	result := &pb.EntityFeatures{
@@ -400,11 +400,11 @@ func (s *GRPCServer) Watch(req *pb.HealthCheckRequest, stream grpc.ServerStreami
 	// Send initial status
 	resp, err := s.Check(stream.Context(), req)
 	if err != nil {
-		return err
+		return fmt.Errorf("checking health: %w", err)
 	}
 
 	if err := stream.Send(resp); err != nil {
-		return err
+		return fmt.Errorf("sending health response: %w", err)
 	}
 
 	// For now, we just send one response.
