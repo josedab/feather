@@ -11,6 +11,7 @@ import (
 // RuleType defines the type of validation rule.
 type RuleType string
 
+// RuleType constants for validation rules.
 const (
 	RuleTypeNotNull      RuleType = "not_null"
 	RuleTypeUnique       RuleType = "unique"
@@ -27,6 +28,7 @@ const (
 // Severity defines the severity of a validation failure.
 type Severity string
 
+// Severity constants for validation outcomes.
 const (
 	SeverityInfo     Severity = "info"
 	SeverityWarning  Severity = "warning"
@@ -124,7 +126,7 @@ type ValidationReport struct {
 }
 
 // QualityScore represents overall data quality metrics.
-type QualityScore struct {
+type QualityScore struct { //nolint:revive
 	FeatureID      string             `json:"feature_id,omitempty"`
 	GroupID        string             `json:"group_id,omitempty"`
 	OverallScore   float64            `json:"overall_score"`
@@ -495,7 +497,7 @@ func (v *Validator) validateFreshness(rule *ValidationRule, metadata map[string]
 	}
 
 	checkField := "timestamp"
-	if field, ok := rule.Config["check_field"].(string); ok {
+	if field, hasField := rule.Config["check_field"].(string); hasField {
 		checkField = field
 	}
 

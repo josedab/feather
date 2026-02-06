@@ -1,6 +1,7 @@
 package saas
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -45,7 +46,7 @@ func TestPlanRegistry_GetPlan_NotFound(t *testing.T) {
 	registry := NewPlanRegistry()
 
 	_, err := registry.GetPlan("nonexistent")
-	if err != ErrPlanNotFound {
+	if !errors.Is(err, ErrPlanNotFound) {
 		t.Errorf("Expected ErrPlanNotFound, got %v", err)
 	}
 }
@@ -88,7 +89,7 @@ func TestPlanRegistry_RegisterPlan_Duplicate(t *testing.T) {
 
 	_ = registry.RegisterPlan(plan)
 	err := registry.RegisterPlan(plan)
-	if err != ErrPlanAlreadyExists {
+	if !errors.Is(err, ErrPlanAlreadyExists) {
 		t.Errorf("Expected ErrPlanAlreadyExists, got %v", err)
 	}
 }
@@ -101,7 +102,7 @@ func TestPlanRegistry_RegisterPlan_Invalid(t *testing.T) {
 		Name: "No ID",
 	}
 	err := registry.RegisterPlan(plan)
-	if err != ErrInvalidPlan {
+	if !errors.Is(err, ErrInvalidPlan) {
 		t.Errorf("Expected ErrInvalidPlan, got %v", err)
 	}
 
@@ -110,7 +111,7 @@ func TestPlanRegistry_RegisterPlan_Invalid(t *testing.T) {
 		ID: "no-name",
 	}
 	err = registry.RegisterPlan(plan2)
-	if err != ErrInvalidPlan {
+	if !errors.Is(err, ErrInvalidPlan) {
 		t.Errorf("Expected ErrInvalidPlan, got %v", err)
 	}
 }
@@ -141,7 +142,7 @@ func TestPlanRegistry_UpdatePlan_NotFound(t *testing.T) {
 	}
 
 	err := registry.UpdatePlan(plan)
-	if err != ErrPlanNotFound {
+	if !errors.Is(err, ErrPlanNotFound) {
 		t.Errorf("Expected ErrPlanNotFound, got %v", err)
 	}
 }
@@ -164,7 +165,7 @@ func TestPlanRegistry_DeactivatePlan_NotFound(t *testing.T) {
 	registry := NewPlanRegistry()
 
 	err := registry.DeactivatePlan("nonexistent")
-	if err != ErrPlanNotFound {
+	if !errors.Is(err, ErrPlanNotFound) {
 		t.Errorf("Expected ErrPlanNotFound, got %v", err)
 	}
 }
@@ -192,12 +193,12 @@ func TestPlanRegistry_ComparePlans_NotFound(t *testing.T) {
 	registry := NewPlanRegistry()
 
 	_, err := registry.ComparePlans("free", "nonexistent")
-	if err != ErrPlanNotFound {
+	if !errors.Is(err, ErrPlanNotFound) {
 		t.Errorf("Expected ErrPlanNotFound, got %v", err)
 	}
 
 	_, err = registry.ComparePlans("nonexistent", "free")
-	if err != ErrPlanNotFound {
+	if !errors.Is(err, ErrPlanNotFound) {
 		t.Errorf("Expected ErrPlanNotFound, got %v", err)
 	}
 }
@@ -252,7 +253,6 @@ func TestPlanFeatures(t *testing.T) {
 
 func TestSubscriptionStatus(t *testing.T) {
 	sub := &Subscription{
-		ID:     "sub_1",
 		Status: SubscriptionActive,
 	}
 

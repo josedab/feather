@@ -715,7 +715,6 @@ func TestMaskingContext_Fields(t *testing.T) {
 		Roles:       []string{"admin", "user"},
 		Permissions: []string{"read", "write"},
 		Purpose:     "analytics",
-		RequestID:   "req-123",
 	}
 
 	assert.Equal(t, "user-1", ctx.UserID)
@@ -729,24 +728,16 @@ func TestMaskingRule_Fields(t *testing.T) {
 	rule := &MaskingRule{
 		FeatureName: "secret",
 		MaskingType: MaskingTypePartial,
-		PIICategory: PIICategorySSN,
-		Sensitivity: SensitivityCritical,
-		RedactValue: "***",
 		PartialConfig: &PartialMaskConfig{
 			ShowFirst:      0,
 			ShowLast:       4,
 			MaskChar:       "*",
 			PreserveFormat: true,
 		},
-		HashSalt: "salt123",
 		GeneralizeConfig: &GeneralizeConfig{
 			Type:      "range",
 			RangeSize: 10,
 		},
-		Enabled:     true,
-		Description: "SSN masking rule",
-		AppliesTo:   []string{"all"},
-		ExceptFor:   []string{"admin"},
 	}
 
 	assert.Equal(t, "secret", rule.FeatureName)

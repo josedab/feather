@@ -6,11 +6,11 @@ import "time"
 
 // Manifest represents a dbt manifest.json file structure.
 type Manifest struct {
-	Metadata ManifestMetadata   `json:"metadata"`
-	Nodes    map[string]Node    `json:"nodes"`
-	Sources  map[string]Source  `json:"sources"`
-	Metrics  map[string]Metric  `json:"metrics"`
-	Docs     map[string]Doc     `json:"docs"`
+	Metadata ManifestMetadata  `json:"metadata"`
+	Nodes    map[string]Node   `json:"nodes"`
+	Sources  map[string]Source `json:"sources"`
+	Metrics  map[string]Metric `json:"metrics"`
+	Docs     map[string]Doc    `json:"docs"`
 }
 
 // ManifestMetadata contains metadata about the dbt project.
@@ -27,26 +27,26 @@ type ManifestMetadata struct {
 
 // Node represents a dbt model, seed, snapshot, or other node type.
 type Node struct {
-	UniqueID       string            `json:"unique_id"`
-	Name           string            `json:"name"`
-	ResourceType   string            `json:"resource_type"` // model, seed, snapshot, test, source
-	PackageName    string            `json:"package_name"`
-	Path           string            `json:"path"`
-	OriginalPath   string            `json:"original_file_path"`
-	Description    string            `json:"description"`
-	Schema         string            `json:"schema"`
-	Database       string            `json:"database"`
-	Alias          string            `json:"alias,omitempty"`
-	Columns        map[string]Column `json:"columns"`
-	Config         NodeConfig        `json:"config"`
-	Tags           []string          `json:"tags"`
-	Meta           map[string]any    `json:"meta"`
-	DependsOn      DependsOn         `json:"depends_on"`
-	Refs           [][]string        `json:"refs"`
-	Sources        [][]string        `json:"sources"`
-	Materialized   string            `json:"materialized,omitempty"`
-	RelationName   string            `json:"relation_name,omitempty"`
-	CreatedAt      float64           `json:"created_at"`
+	UniqueID     string            `json:"unique_id"`
+	Name         string            `json:"name"`
+	ResourceType string            `json:"resource_type"` // model, seed, snapshot, test, source
+	PackageName  string            `json:"package_name"`
+	Path         string            `json:"path"`
+	OriginalPath string            `json:"original_file_path"`
+	Description  string            `json:"description"`
+	Schema       string            `json:"schema"`
+	Database     string            `json:"database"`
+	Alias        string            `json:"alias,omitempty"`
+	Columns      map[string]Column `json:"columns"`
+	Config       NodeConfig        `json:"config"`
+	Tags         []string          `json:"tags"`
+	Meta         map[string]any    `json:"meta"`
+	DependsOn    DependsOn         `json:"depends_on"`
+	Refs         [][]string        `json:"refs"`
+	Sources      [][]string        `json:"sources"`
+	Materialized string            `json:"materialized,omitempty"`
+	RelationName string            `json:"relation_name,omitempty"`
+	CreatedAt    float64           `json:"created_at"`
 }
 
 // Column represents a column in a dbt model.
@@ -160,15 +160,15 @@ type FeatureSource struct {
 
 // SyncResult represents the result of a dbt sync operation.
 type SyncResult struct {
-	Success          bool                `json:"success"`
-	FeaturesCreated  int                 `json:"features_created"`
-	FeaturesUpdated  int                 `json:"features_updated"`
-	FeaturesSkipped  int                 `json:"features_skipped"`
-	Errors           []SyncError         `json:"errors,omitempty"`
-	Features         []FeatureDefinition `json:"features,omitempty"`
-	SyncedAt         time.Time           `json:"synced_at"`
-	ManifestVersion  string              `json:"manifest_version"`
-	ProjectName      string              `json:"project_name"`
+	Success         bool                `json:"success"`
+	FeaturesCreated int                 `json:"features_created"`
+	FeaturesUpdated int                 `json:"features_updated"`
+	FeaturesSkipped int                 `json:"features_skipped"`
+	Errors          []SyncError         `json:"errors,omitempty"`
+	Features        []FeatureDefinition `json:"features,omitempty"`
+	SyncedAt        time.Time           `json:"synced_at"`
+	ManifestVersion string              `json:"manifest_version"`
+	ProjectName     string              `json:"project_name"`
 }
 
 // SyncError represents an error during sync.

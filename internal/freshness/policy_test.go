@@ -1,6 +1,7 @@
 package freshness
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -30,7 +31,7 @@ func TestPolicyRegistry_Register_EmptyID(t *testing.T) {
 	policy := &Policy{Name: "No ID"}
 	err := registry.Register(policy)
 
-	if err != ErrInvalidPolicy {
+	if !errors.Is(err, ErrInvalidPolicy) {
 		t.Errorf("Expected ErrInvalidPolicy, got %v", err)
 	}
 }
@@ -114,7 +115,7 @@ func TestPolicyRegistry_Update_NotFound(t *testing.T) {
 	policy := NewFixedPolicy("nonexistent", "Test", "*", 5*time.Minute, 10)
 	err := registry.Update(policy)
 
-	if err != ErrPolicyNotFound {
+	if !errors.Is(err, ErrPolicyNotFound) {
 		t.Errorf("Expected ErrPolicyNotFound, got %v", err)
 	}
 }
@@ -131,7 +132,7 @@ func TestPolicyRegistry_Delete(t *testing.T) {
 	}
 
 	_, err = registry.Get("test")
-	if err != ErrPolicyNotFound {
+	if !errors.Is(err, ErrPolicyNotFound) {
 		t.Error("Expected policy to be deleted")
 	}
 }
@@ -140,7 +141,7 @@ func TestPolicyRegistry_Delete_NotFound(t *testing.T) {
 	registry := NewPolicyRegistry()
 
 	err := registry.Delete("nonexistent")
-	if err != ErrPolicyNotFound {
+	if !errors.Is(err, ErrPolicyNotFound) {
 		t.Errorf("Expected ErrPolicyNotFound, got %v", err)
 	}
 }
@@ -165,7 +166,7 @@ func TestPolicyRegistry_Get_NotFound(t *testing.T) {
 	registry := NewPolicyRegistry()
 
 	_, err := registry.Get("nonexistent")
-	if err != ErrPolicyNotFound {
+	if !errors.Is(err, ErrPolicyNotFound) {
 		t.Errorf("Expected ErrPolicyNotFound, got %v", err)
 	}
 }

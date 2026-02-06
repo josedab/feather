@@ -2,6 +2,7 @@ package consistency
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -37,7 +38,7 @@ func TestChecker_CheckFeature_NoOfflineSource(t *testing.T) {
 	checker := NewChecker(nil, nil, cfg)
 
 	_, err := checker.CheckFeature(context.Background(), "entity:1", "feature_a")
-	if err != ErrOfflineSourceNotConfigured {
+	if !errors.Is(err, ErrOfflineSourceNotConfigured) {
 		t.Errorf("expected ErrOfflineSourceNotConfigured, got %v", err)
 	}
 }
@@ -83,7 +84,7 @@ func TestInMemoryOfflineSource_GetFeature_NotFound(t *testing.T) {
 	source := NewInMemoryOfflineSource("test")
 
 	_, _, err := source.GetFeature(context.Background(), "nonexistent", "feature")
-	if err != ErrFeatureNotFound {
+	if !errors.Is(err, ErrFeatureNotFound) {
 		t.Errorf("expected ErrFeatureNotFound, got %v", err)
 	}
 }
@@ -93,7 +94,7 @@ func TestInMemoryOfflineSource_GetFeature_EntityExistsButFeatureNotFound(t *test
 	source.SetFeature("entity:1", "feature_a", 1.0, time.Now())
 
 	_, _, err := source.GetFeature(context.Background(), "entity:1", "feature_b")
-	if err != ErrFeatureNotFound {
+	if !errors.Is(err, ErrFeatureNotFound) {
 		t.Errorf("expected ErrFeatureNotFound, got %v", err)
 	}
 }
@@ -137,7 +138,7 @@ func TestChecker_GenerateReport(t *testing.T) {
 	checker := NewChecker(nil, nil, cfg)
 
 	now := time.Now()
-	results := []*ConsistencyResult{
+	results := []*Result{
 		{EntityID: "e1", Feature: "f1", IsConsistent: true, CheckedAt: now},
 		{EntityID: "e2", Feature: "f1", IsConsistent: false, CheckedAt: now},
 		{EntityID: "e3", Feature: "f2", IsConsistent: true, CheckedAt: now},
@@ -173,7 +174,7 @@ func TestChecker_GenerateReport_Empty(t *testing.T) {
 	cfg := DefaultConfig()
 	checker := NewChecker(nil, nil, cfg)
 
-	report := checker.GenerateReport([]*ConsistencyResult{})
+	report := checker.GenerateReport([]*Result{})
 
 	if report.TotalChecks != 0 {
 		t.Errorf("TotalChecks = %d, want 0", report.TotalChecks)
@@ -189,7 +190,7 @@ func TestChecker_GetResults(t *testing.T) {
 
 	// Manually add results
 	now := time.Now()
-	checker.results = []*ConsistencyResult{
+	checker.results = []*Result{
 		{Feature: "f1", CheckedAt: now.Add(-2 * time.Hour)},
 		{Feature: "f1", CheckedAt: now.Add(-1 * time.Hour)},
 		{Feature: "f2", CheckedAt: now},
@@ -219,7 +220,7 @@ func TestChecker_GetInconsistencies(t *testing.T) {
 	checker := NewChecker(nil, nil, cfg)
 
 	now := time.Now()
-	checker.results = []*ConsistencyResult{
+	checker.results = []*Result{
 		{Feature: "f1", IsConsistent: true, CheckedAt: now},
 		{Feature: "f1", IsConsistent: false, CheckedAt: now},
 		{Feature: "f2", IsConsistent: false, CheckedAt: now},

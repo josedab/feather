@@ -150,6 +150,7 @@ type FeatureStoreStatus struct {
 // FeatureStorePhase represents the lifecycle phase.
 type FeatureStorePhase string
 
+// FeatureStorePhase values represent the lifecycle state.
 const (
 	PhasePending     FeatureStorePhase = "Pending"
 	PhaseCreating    FeatureStorePhase = "Creating"
@@ -292,15 +293,15 @@ type TransformSpec struct {
 
 // FeatureViewStatus defines the observed state of a FeatureView.
 type FeatureViewStatus struct {
-	Phase                string      `json:"phase,omitempty"`
-	Conditions           []Condition `json:"conditions,omitempty"`
-	ObservedGeneration   int64       `json:"observedGeneration,omitempty"`
+	Phase                   string      `json:"phase,omitempty"`
+	Conditions              []Condition `json:"conditions,omitempty"`
+	ObservedGeneration      int64       `json:"observedGeneration,omitempty"`
 	LastMaterializationTime time.Time   `json:"lastMaterializationTime,omitempty"`
 	NextMaterializationTime time.Time   `json:"nextMaterializationTime,omitempty"`
-	RowCount             int64       `json:"rowCount,omitempty"`
+	RowCount                int64       `json:"rowCount,omitempty"`
 }
 
-// Kubernetes-style type metadata (simplified).
+// TypeMeta contains Kubernetes-style type metadata.
 type TypeMeta struct {
 	Kind       string `json:"kind,omitempty"`
 	APIVersion string `json:"apiVersion,omitempty"`
@@ -356,7 +357,7 @@ type Affinity struct {
 
 // NodeAffinity defines node affinity rules.
 type NodeAffinity struct {
-	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
 }
 
@@ -386,13 +387,13 @@ type PreferredSchedulingTerm struct {
 
 // PodAffinity defines pod affinity rules.
 type PodAffinity struct {
-	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
 }
 
 // PodAntiAffinity defines pod anti-affinity rules.
 type PodAntiAffinity struct {
-	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
 }
 

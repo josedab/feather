@@ -164,7 +164,6 @@ type PredictiveCache struct {
 	warmingQueue *warmingQueue
 	config       PredictiveCacheConfig
 	stopCh       chan struct{}
-	mu           sync.RWMutex
 }
 
 // PredictiveCacheConfig configures the predictive cache.
@@ -280,7 +279,7 @@ func (c *PredictiveCache) warmCache(ctx context.Context) {
 			return
 		default:
 			// Access the feature to warm it in cache
-			c.store.Get(p.EntityID, []string{p.Feature})
+			_, _ = c.store.Get(p.EntityID, []string{p.Feature})
 		}
 	}
 }
@@ -360,7 +359,10 @@ func (q *warmingQueue) Swap(i, j int) {
 }
 
 func (q *warmingQueue) Push(x interface{}) {
-	item := x.(*warmingItem)
+	item, ok := x.(*warmingItem)
+	if !ok {
+		return
+	}
 	item.index = len(q.items)
 	q.items = append(q.items, item)
 }
@@ -397,7 +399,10 @@ func (q *warmingQueue) Next() (string, string, bool) {
 		return "", "", false
 	}
 
-	item := heap.Pop(q).(*warmingItem)
+	item, ok := heap.Pop(q).(*warmingItem)
+	if !ok || item == nil {
+		return "", "", false
+	}
 	return item.entityID, item.feature, true
 }
 

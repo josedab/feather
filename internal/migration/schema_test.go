@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -78,7 +79,7 @@ func TestSchemaConverter_ConvertProject_Nil(t *testing.T) {
 	converter := NewSchemaConverter(DefaultSchemaConverterConfig())
 
 	_, err := converter.ConvertProject(nil)
-	if err != ErrInvalidFeastSchema {
+	if !errors.Is(err, ErrInvalidFeastSchema) {
 		t.Errorf("Expected ErrInvalidFeastSchema, got %v", err)
 	}
 }
@@ -130,7 +131,7 @@ func TestSchemaConverter_ConvertFeatureView_Nil(t *testing.T) {
 	converter := NewSchemaConverter(DefaultSchemaConverterConfig())
 
 	_, _, err := converter.ConvertFeatureView(nil, nil)
-	if err != ErrInvalidFeastSchema {
+	if !errors.Is(err, ErrInvalidFeastSchema) {
 		t.Errorf("Expected ErrInvalidFeastSchema, got %v", err)
 	}
 }

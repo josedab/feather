@@ -1,6 +1,7 @@
 package freshness
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -198,7 +199,7 @@ func TestManager_PolicyCRUD(t *testing.T) {
 	}
 
 	_, err = manager.GetPolicy("test")
-	if err != ErrPolicyNotFound {
+	if !errors.Is(err, ErrPolicyNotFound) {
 		t.Error("Expected policy to be deleted")
 	}
 }

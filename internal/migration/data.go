@@ -3,6 +3,7 @@ package migration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -37,6 +38,7 @@ type DataMigratorConfig struct {
 // ErrorHandling defines how to handle migration errors.
 type ErrorHandling string
 
+// ErrorHandling constants.
 const (
 	ErrorSkip ErrorHandling = "skip" // Skip bad records
 	ErrorFail ErrorHandling = "fail" // Fail on first error
@@ -58,7 +60,7 @@ type FeatureRecord struct {
 }
 
 // MigrationStats tracks migration progress and statistics.
-type MigrationStats struct {
+type MigrationStats struct { //nolint:revive
 	StartTime        time.Time     `json:"start_time"`
 	EndTime          time.Time     `json:"end_time,omitempty"`
 	Duration         time.Duration `json:"duration,omitempty"`
@@ -71,6 +73,9 @@ type MigrationStats struct {
 	Warnings         []string      `json:"warnings,omitempty"`
 	Status           string        `json:"status"`
 }
+
+// StatusCanceled indicates a migration was canceled.
+const StatusCanceled = "canceled"
 
 // DefaultDataMigratorConfig returns sensible defaults.
 func DefaultDataMigratorConfig() DataMigratorConfig {
@@ -154,7 +159,7 @@ func (m *DataMigrator) MigrateFromSource(ctx context.Context, source DataSource,
 
 			batch, err := source.Read(ctx, m.config.BatchSize)
 			if err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					return
 				}
 				m.recordError(fmt.Sprintf("read error: %v", err))
@@ -188,7 +193,7 @@ func (m *DataMigrator) MigrateFromSource(ctx context.Context, source DataSource,
 		return m.GetStats(), err
 	case <-ctx.Done():
 		m.statsMu.Lock()
-		m.stats.Status = "cancelled"
+		m.stats.Status = StatusCanceled
 		m.statsMu.Unlock()
 		return m.GetStats(), ctx.Err()
 	}
@@ -285,7 +290,7 @@ func (m *DataMigrator) handleRecordError(err error, record map[string]interface{
 		m.stats.FailedRecords++
 		if len(m.stats.Errors) < 100 { // Limit stored errors
 			recordJSON, _ := json.Marshal(record)
-			m.stats.Errors = append(m.stats.Errors, fmt.Sprintf("%v: %s", err, string(recordJSON)[:min(200, len(recordJSON))]))
+			m.stats.Errors = append(m.stats.Errors, fmt.Sprintf("%v: %s", err, string(recordJSON)[:minInt(200, len(recordJSON))]))
 		}
 	case ErrorFail:
 		m.stats.FailedRecords++
@@ -417,8 +422,8 @@ func (fm *FieldMapping) MapFeatures(record map[string]interface{}) (map[string]i
 	return result, nil
 }
 
-// min returns the minimum of two integers.
-func min(a, b int) int {
+// minInt returns the minimum of two integers.
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}
@@ -426,7 +431,7 @@ func min(a, b int) int {
 }
 
 // MigrationPlan represents a planned migration.
-type MigrationPlan struct {
+type MigrationPlan struct { //nolint:revive
 	ID            string                 `json:"id"`
 	Name          string                 `json:"name"`
 	Description   string                 `json:"description,omitempty"`
@@ -440,7 +445,7 @@ type MigrationPlan struct {
 }
 
 // MigrationJob represents an active or completed migration job.
-type MigrationJob struct {
+type MigrationJob struct { //nolint:revive
 	ID          string          `json:"id"`
 	PlanID      string          `json:"plan_id"`
 	Stats       *MigrationStats `json:"stats"`

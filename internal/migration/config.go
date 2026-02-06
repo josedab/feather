@@ -1,3 +1,4 @@
+// Package migration provides utilities for migrating Feast configuration and data.
 package migration
 
 import (
@@ -257,7 +258,7 @@ func (c *ConfigMigrator) convertOfflineStore(store map[string]interface{}, resul
 }
 
 // MigrationReport generates a comprehensive migration report.
-type MigrationReport struct {
+type MigrationReport struct { //nolint:revive
 	ProjectName        string                  `json:"project_name"`
 	GeneratedAt        time.Time               `json:"generated_at"`
 	SchemaConversion   *SchemaConversionReport `json:"schema_conversion"`
@@ -373,7 +374,7 @@ func GenerateMigrationReport(project *FeastProject, schemaResult *ConvertResult,
 
 	// Subtract for warnings
 	warningPenalty := float64(len(schemaResult.Warnings)+len(configResult.Warnings)) * 2
-	report.CompatibilityScore = max(0, report.CompatibilityScore-warningPenalty)
+	report.CompatibilityScore = maxFloat64(0, report.CompatibilityScore-warningPenalty)
 
 	// Estimate effort
 	if report.CompatibilityScore >= 90 {
@@ -389,7 +390,7 @@ func GenerateMigrationReport(project *FeastProject, schemaResult *ConvertResult,
 	return report
 }
 
-func max(a, b float64) float64 {
+func maxFloat64(a, b float64) float64 {
 	if a > b {
 		return a
 	}

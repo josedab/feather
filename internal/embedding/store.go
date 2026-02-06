@@ -504,7 +504,7 @@ func (s *Store) List(ctx context.Context, modelID string, limit, offset int) ([]
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var result []*Embedding
+	result := make([]*Embedding, 0, len(s.embeddings))
 	count := 0
 	skipped := 0
 

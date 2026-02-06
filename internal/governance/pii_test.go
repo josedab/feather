@@ -479,17 +479,12 @@ func TestPIIDetector_Stats(t *testing.T) {
 }
 
 func TestPIIDetection_Fields(t *testing.T) {
-	now := time.Now()
 	detection := &PIIDetection{
-		Category:       PIICategoryEmail,
-		Sensitivity:    SensitivityMedium,
-		FeatureName:    "user_email",
-		Confidence:     0.95,
-		MatchedPattern: "email",
-		SampleValue:    "te****om",
-		Count:          5,
-		FirstDetected:  now,
-		LastDetected:   now,
+		Category:      PIICategoryEmail,
+		Sensitivity:   SensitivityMedium,
+		Confidence:    0.95,
+		Count:         5,
+		FirstDetected: time.Time{},
 	}
 
 	assert.Equal(t, PIICategoryEmail, detection.Category)
@@ -500,13 +495,9 @@ func TestPIIDetection_Fields(t *testing.T) {
 
 func TestPIIPattern_Fields(t *testing.T) {
 	pattern := &PIIPattern{
-		Name:        "custom_pattern",
-		Category:    PIICategoryCustom,
-		Sensitivity: SensitivityHigh,
-		Regex:       `CUSTOM-\d+`,
-		Keywords:    []string{"custom"},
-		Enabled:     true,
-		Description: "Custom pattern for testing",
+		Name:     "custom_pattern",
+		Category: PIICategoryCustom,
+		Keywords: []string{"custom"},
 	}
 
 	assert.Equal(t, "custom_pattern", pattern.Name)

@@ -21,6 +21,7 @@ var (
 // MaskingType represents the type of masking to apply.
 type MaskingType string
 
+// MaskingType constants.
 const (
 	MaskingTypeNone       MaskingType = "none"       // No masking
 	MaskingTypeRedact     MaskingType = "redact"     // Replace with fixed string

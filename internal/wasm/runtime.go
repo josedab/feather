@@ -71,20 +71,29 @@ type Plugin struct {
 type PluginType string
 
 const (
-	PluginTypeAggregation    PluginType = "aggregation"
+	// PluginTypeAggregation defines aggregation plugins.
+	PluginTypeAggregation PluginType = "aggregation"
+	// PluginTypeTransformation defines transformation plugins.
 	PluginTypeTransformation PluginType = "transformation"
-	PluginTypeFilter         PluginType = "filter"
-	PluginTypeEnrichment     PluginType = "enrichment"
-	PluginTypeValidation     PluginType = "validation"
+	// PluginTypeFilter defines filter plugins.
+	PluginTypeFilter PluginType = "filter"
+	// PluginTypeEnrichment defines enrichment plugins.
+	PluginTypeEnrichment PluginType = "enrichment"
+	// PluginTypeValidation defines validation plugins.
+	PluginTypeValidation PluginType = "validation"
 )
 
 // PluginState indicates the current state of a plugin.
 type PluginState string
 
 const (
-	PluginStateLoaded   PluginState = "loaded"
-	PluginStateActive   PluginState = "active"
-	PluginStateError    PluginState = "error"
+	// PluginStateLoaded indicates a plugin is loaded into memory.
+	PluginStateLoaded PluginState = "loaded"
+	// PluginStateActive indicates a plugin is active and callable.
+	PluginStateActive PluginState = "active"
+	// PluginStateError indicates a plugin encountered a runtime error.
+	PluginStateError PluginState = "error"
+	// PluginStateDisabled indicates a plugin is disabled.
 	PluginStateDisabled PluginState = "disabled"
 )
 
@@ -363,25 +372,25 @@ func (r *Runtime) executeAggregation(ctx context.Context, plugin *Plugin, fn *Fu
 		if len(floats) == 0 {
 			return nil, nil
 		}
-		min := floats[0]
+		minValue := floats[0]
 		for _, v := range floats[1:] {
-			if v < min {
-				min = v
+			if v < minValue {
+				minValue = v
 			}
 		}
-		return min, nil
+		return minValue, nil
 
 	case "max":
 		if len(floats) == 0 {
 			return nil, nil
 		}
-		max := floats[0]
+		maxValue := floats[0]
 		for _, v := range floats[1:] {
-			if v > max {
-				max = v
+			if v > maxValue {
+				maxValue = v
 			}
 		}
-		return max, nil
+		return maxValue, nil
 
 	default:
 		return nil, fmt.Errorf("unknown aggregation function: %s", fn.Name)
@@ -390,7 +399,10 @@ func (r *Runtime) executeAggregation(ctx context.Context, plugin *Plugin, fn *Fu
 
 func (r *Runtime) executeTransformation(ctx context.Context, plugin *Plugin, fn *FunctionSpec, args map[string]interface{}) (interface{}, error) {
 	value := args["value"]
-	config := args["config"].(map[string]interface{})
+	config, ok := args["config"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("config must be an object")
+	}
 
 	switch fn.Name {
 	case "normalize":
@@ -398,19 +410,28 @@ func (r *Runtime) executeTransformation(ctx context.Context, plugin *Plugin, fn 
 		if !ok {
 			return nil, fmt.Errorf("value must be a number")
 		}
-		min := config["min"].(float64)
-		max := config["max"].(float64)
-		if max == min {
+		minValue, ok := config["min"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("min must be a number")
+		}
+		maxValue, ok := config["max"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("max must be a number")
+		}
+		if maxValue == minValue {
 			return 0.0, nil
 		}
-		return (v - min) / (max - min), nil
+		return (v - minValue) / (maxValue - minValue), nil
 
 	case "scale":
 		v, ok := value.(float64)
 		if !ok {
 			return nil, fmt.Errorf("value must be a number")
 		}
-		factor := config["factor"].(float64)
+		factor, ok := config["factor"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("factor must be a number")
+		}
 		return v * factor, nil
 
 	case "log":
@@ -440,7 +461,10 @@ func (r *Runtime) executeTransformation(ctx context.Context, plugin *Plugin, fn 
 
 func (r *Runtime) executeFilter(ctx context.Context, plugin *Plugin, fn *FunctionSpec, args map[string]interface{}) (interface{}, error) {
 	value := args["value"]
-	condition := args["condition"].(string)
+	condition, ok := args["condition"].(string)
+	if !ok {
+		return nil, fmt.Errorf("condition must be a string")
+	}
 	threshold := args["threshold"]
 
 	switch condition {
@@ -463,7 +487,10 @@ func (r *Runtime) executeFilter(ctx context.Context, plugin *Plugin, fn *Functio
 
 func (r *Runtime) executeValidation(ctx context.Context, plugin *Plugin, fn *FunctionSpec, args map[string]interface{}) (interface{}, error) {
 	value := args["value"]
-	rules := args["rules"].(map[string]interface{})
+	rules, ok := args["rules"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("rules must be an object")
+	}
 
 	result := &ValidationResult{
 		Valid:  true,

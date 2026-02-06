@@ -76,15 +76,6 @@ type jsonRPCError struct {
 }
 
 // MCP Protocol types
-type initializeParams struct {
-	ProtocolVersion string      `json:"protocolVersion"`
-	Capabilities    interface{} `json:"capabilities"`
-	ClientInfo      struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-	} `json:"clientInfo"`
-}
-
 type initializeResult struct {
 	ProtocolVersion string       `json:"protocolVersion"`
 	Capabilities    capabilities `json:"capabilities"`
@@ -428,7 +419,7 @@ func (s *Server) toolListFeatureGroups(ctx context.Context) toolCallResult {
 	}
 
 	groups := s.schema.ListGroups()
-	var result []map[string]interface{}
+	result := make([]map[string]interface{}, 0, len(groups))
 	for _, g := range groups {
 		result = append(result, map[string]interface{}{
 			"name":          g.Name,
@@ -499,7 +490,7 @@ func (s *Server) toolVectorSearch(ctx context.Context, args json.RawMessage) too
 		return errorResult("Search failed: " + err.Error())
 	}
 
-	var searchResults []map[string]interface{}
+	searchResults := make([]map[string]interface{}, 0, len(results))
 	for _, r := range results {
 		searchResults = append(searchResults, map[string]interface{}{
 			"id":       r.ID,
@@ -519,7 +510,7 @@ func (s *Server) toolListVectorIndexes(ctx context.Context) toolCallResult {
 	}
 
 	indexes := s.vectors.ListIndexes()
-	var result []map[string]interface{}
+	result := make([]map[string]interface{}, 0, len(indexes))
 
 	for _, name := range indexes {
 		idx, err := s.vectors.GetIndex(name)
@@ -603,5 +594,5 @@ func (s *Server) writeError(w io.Writer, id interface{}, code int, message strin
 			Data:    data,
 		},
 	}
-	s.writeResponse(w, resp)
+	_ = s.writeResponse(w, resp)
 }

@@ -485,12 +485,8 @@ func TestResultCache_ClearPrefix(t *testing.T) {
 
 func TestExecutionResult(t *testing.T) {
 	result := &ExecutionResult{
-		NodeID:    "node1",
-		Value:     42.0,
-		Duration:  100 * time.Millisecond,
-		CacheHit:  false,
-		Error:     "",
-		Timestamp: time.Now(),
+		NodeID: "node1",
+		Value:  42.0,
 	}
 
 	if result.NodeID != "node1" {

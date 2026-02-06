@@ -131,7 +131,7 @@ func (r *HybridRanker) Rank(ctx context.Context, req RankRequest) ([]RankedResul
 	}
 
 	// Score and rank each result
-	var rankedResults []RankedResult
+	rankedResults := make([]RankedResult, 0, len(semanticResults))
 
 	for _, sr := range semanticResults {
 		if excludeSet[sr.Feature.ID] {
@@ -604,7 +604,7 @@ func (r *HybridRanker) RecommendForModel(ctx context.Context, existingFeatures [
 	query := modelUseCase
 	if len(queryParts) > 0 {
 		// Add context from existing features
-		query += " " + strings.Join(queryParts[:min(len(queryParts), 3)], " ")
+		query += " " + strings.Join(queryParts[:minRankerInt(len(queryParts), 3)], " ")
 	}
 
 	req := RankRequest{
@@ -620,7 +620,7 @@ func (r *HybridRanker) RecommendForModel(ctx context.Context, existingFeatures [
 	return r.Rank(ctx, req)
 }
 
-func min(a, b int) int {
+func minRankerInt(a, b int) int {
 	if a < b {
 		return a
 	}

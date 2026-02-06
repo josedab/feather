@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -46,7 +47,7 @@ func TestManager_CreateGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := m.CreateGroup(tt.group, tt.createdBy)
-			if err != tt.wantErr {
+			if err != nil && !errors.Is(err, tt.wantErr) {
 				t.Errorf("CreateGroup() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -67,7 +68,7 @@ func TestManager_CreateGroup_Duplicate(t *testing.T) {
 	}
 
 	err = m.CreateGroup(group, "admin")
-	if err != ErrGroupExists {
+	if err != nil && !errors.Is(err, ErrGroupExists) {
 		t.Errorf("CreateGroup() duplicate error = %v, want %v", err, ErrGroupExists)
 	}
 }
@@ -90,7 +91,7 @@ func TestManager_GetGroup(t *testing.T) {
 	// Get existing group
 	got := m.GetGroup("user-features")
 	if got == nil {
-		t.Error("GetGroup() returned nil for existing group")
+		t.Fatal("GetGroup() returned nil for existing group")
 	}
 	if got.Name != "User Features" {
 		t.Errorf("GetGroup() Name = %v, want %v", got.Name, "User Features")
@@ -152,7 +153,7 @@ func TestManager_UpdateGroup_NotFound(t *testing.T) {
 	}
 
 	err := m.UpdateGroup(updated, "editor")
-	if err != ErrGroupNotFound {
+	if err != nil && !errors.Is(err, ErrGroupNotFound) {
 		t.Errorf("UpdateGroup() error = %v, want %v", err, ErrGroupNotFound)
 	}
 }
@@ -185,7 +186,7 @@ func TestManager_DeleteGroup_NotFound(t *testing.T) {
 	m := NewManager()
 
 	err := m.DeleteGroup("non-existing")
-	if err != ErrGroupNotFound {
+	if err != nil && !errors.Is(err, ErrGroupNotFound) {
 		t.Errorf("DeleteGroup() error = %v, want %v", err, ErrGroupNotFound)
 	}
 }
@@ -272,7 +273,7 @@ func TestManager_AddFeature_Duplicate(t *testing.T) {
 	}
 
 	err = m.AddFeature("user-features", feature, "admin")
-	if err != ErrFeatureExists {
+	if err != nil && !errors.Is(err, ErrFeatureExists) {
 		t.Errorf("AddFeature() duplicate error = %v, want %v", err, ErrFeatureExists)
 	}
 }
@@ -322,7 +323,7 @@ func TestManager_RemoveFeature_NotFound(t *testing.T) {
 	}
 
 	err = m.RemoveFeature("user-features", "non-existing", "admin")
-	if err != ErrFeatureNotInGroup {
+	if err != nil && !errors.Is(err, ErrFeatureNotInGroup) {
 		t.Errorf("RemoveFeature() error = %v, want %v", err, ErrFeatureNotInGroup)
 	}
 }
@@ -472,7 +473,7 @@ func TestManager_CreateView(t *testing.T) {
 
 	got := m.GetView("user-basic-view")
 	if got == nil {
-		t.Error("GetView() returned nil")
+		t.Fatal("GetView() returned nil")
 	}
 	if len(got.Features) != 2 {
 		t.Errorf("CreateView() Features count = %v, want %v", len(got.Features), 2)
@@ -523,7 +524,7 @@ func TestManager_CreateView_Errors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := m.CreateView(tt.view)
-			if err != tt.wantErr {
+			if err != nil && !errors.Is(err, tt.wantErr) {
 				t.Errorf("CreateView() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -558,7 +559,7 @@ func TestManager_DeleteView_NotFound(t *testing.T) {
 	m := NewManager()
 
 	err := m.DeleteView("non-existing")
-	if err != ErrViewNotFound {
+	if err != nil && !errors.Is(err, ErrViewNotFound) {
 		t.Errorf("DeleteView() error = %v, want %v", err, ErrViewNotFound)
 	}
 }
@@ -639,7 +640,7 @@ func TestManager_GetGroupVersion(t *testing.T) {
 	// Get version 1
 	v1 := m.GetGroupVersion("user-features", 1)
 	if v1 == nil {
-		t.Error("GetGroupVersion(1) returned nil")
+		t.Fatal("GetGroupVersion(1) returned nil")
 	}
 	if v1.Description != "Version 1" {
 		t.Errorf("GetGroupVersion(1) Description = %v, want %v", v1.Description, "Version 1")
@@ -648,7 +649,7 @@ func TestManager_GetGroupVersion(t *testing.T) {
 	// Get version 2 (current)
 	v2 := m.GetGroupVersion("user-features", 2)
 	if v2 == nil {
-		t.Error("GetGroupVersion(2) returned nil")
+		t.Fatal("GetGroupVersion(2) returned nil")
 	}
 	if v2.Description != "Version 2" {
 		t.Errorf("GetGroupVersion(2) Description = %v, want %v", v2.Description, "Version 2")

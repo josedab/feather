@@ -19,6 +19,7 @@ var (
 // PIICategory represents a category of personally identifiable information.
 type PIICategory string
 
+// PIICategory constants.
 const (
 	PIICategoryEmail          PIICategory = "email"
 	PIICategoryPhone          PIICategory = "phone"
@@ -40,6 +41,7 @@ const (
 // PIISensitivity indicates the sensitivity level of PII.
 type PIISensitivity string
 
+// PIISensitivity constants.
 const (
 	SensitivityLow      PIISensitivity = "low"
 	SensitivityMedium   PIISensitivity = "medium"

@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/feather-store/feather/internal/domain"
 )
 
 func setupPartitionTest(t *testing.T) (*TenantRegistry, *PartitionedHotTier) {

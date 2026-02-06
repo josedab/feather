@@ -2,6 +2,7 @@ package backfill
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -68,7 +69,7 @@ func TestManager_CreateJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := m.CreateJob(tt.job)
-			if err != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("CreateJob() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -90,7 +91,7 @@ func TestManager_CreateJob_Duplicate(t *testing.T) {
 	}
 
 	err = m.CreateJob(job)
-	if err != ErrJobExists {
+	if !errors.Is(err, ErrJobExists) {
 		t.Errorf("CreateJob() duplicate error = %v, want %v", err, ErrJobExists)
 	}
 }
@@ -136,7 +137,7 @@ func TestManager_GetJob(t *testing.T) {
 	// Get existing job
 	got := m.GetJob("job-1")
 	if got == nil {
-		t.Error("GetJob() returned nil for existing job")
+		t.Fatal("GetJob() returned nil for existing job")
 	}
 	if got.Name != "Test Job" {
 		t.Errorf("GetJob() Name = %v, want %v", got.Name, "Test Job")
@@ -207,7 +208,7 @@ func TestManager_DeleteJob_NotFound(t *testing.T) {
 	m := NewManager(writer)
 
 	err := m.DeleteJob("non-existing")
-	if err != ErrJobNotFound {
+	if !errors.Is(err, ErrJobNotFound) {
 		t.Errorf("DeleteJob() error = %v, want %v", err, ErrJobNotFound)
 	}
 }
@@ -228,7 +229,7 @@ func TestManager_DeleteJob_Running(t *testing.T) {
 	m.StartJob(context.Background(), "job-1")
 
 	err := m.DeleteJob("job-1")
-	if err != ErrCannotDeleteRunning {
+	if !errors.Is(err, ErrCannotDeleteRunning) {
 		t.Errorf("DeleteJob() error = %v, want %v", err, ErrCannotDeleteRunning)
 	}
 
@@ -279,7 +280,7 @@ func TestManager_StartJob_NotFound(t *testing.T) {
 	m := NewManager(writer)
 
 	err := m.StartJob(context.Background(), "non-existing")
-	if err != ErrJobNotFound {
+	if !errors.Is(err, ErrJobNotFound) {
 		t.Errorf("StartJob() error = %v, want %v", err, ErrJobNotFound)
 	}
 }
@@ -298,7 +299,7 @@ func TestManager_StartJob_AlreadyRunning(t *testing.T) {
 	m.StartJob(context.Background(), "job-1")
 
 	err := m.StartJob(context.Background(), "job-1")
-	if err != ErrJobAlreadyRunning {
+	if !errors.Is(err, ErrJobAlreadyRunning) {
 		t.Errorf("StartJob() error = %v, want %v", err, ErrJobAlreadyRunning)
 	}
 
@@ -342,7 +343,7 @@ func TestManager_PauseJob_NotRunning(t *testing.T) {
 	m.CreateJob(job)
 
 	err := m.PauseJob("job-1")
-	if err != ErrJobNotRunning {
+	if !errors.Is(err, ErrJobNotRunning) {
 		t.Errorf("PauseJob() error = %v, want %v", err, ErrJobNotRunning)
 	}
 }
@@ -387,7 +388,7 @@ func TestManager_ResumeJob_NotPaused(t *testing.T) {
 	m.CreateJob(job)
 
 	err := m.ResumeJob(context.Background(), "job-1")
-	if err != ErrJobNotPaused {
+	if !errors.Is(err, ErrJobNotPaused) {
 		t.Errorf("ResumeJob() error = %v, want %v", err, ErrJobNotPaused)
 	}
 }
@@ -421,7 +422,7 @@ func TestManager_CancelJob_NotFound(t *testing.T) {
 	m := NewManager(writer)
 
 	err := m.CancelJob("non-existing")
-	if err != ErrJobNotFound {
+	if !errors.Is(err, ErrJobNotFound) {
 		t.Errorf("CancelJob() error = %v, want %v", err, ErrJobNotFound)
 	}
 }
@@ -496,7 +497,7 @@ func TestManager_ExportJob_NotFound(t *testing.T) {
 	m := NewManager(writer)
 
 	_, err := m.ExportJob("non-existing")
-	if err != ErrJobNotFound {
+	if !errors.Is(err, ErrJobNotFound) {
 		t.Errorf("ExportJob() error = %v, want %v", err, ErrJobNotFound)
 	}
 }
@@ -514,7 +515,7 @@ func TestManager_ImportJob(t *testing.T) {
 
 	got := m.GetJob("imported-job")
 	if got == nil {
-		t.Error("ImportJob() job not found after import")
+		t.Fatal("ImportJob() job not found after import")
 	}
 	if got.Name != "Imported Job" {
 		t.Errorf("ImportJob() Name = %v, want %v", got.Name, "Imported Job")
@@ -563,7 +564,7 @@ func TestMockReader(t *testing.T) {
 
 	// Should return ErrEndOfData after 100 reads
 	_, err := reader.Read(context.Background(), time.Now(), time.Now().Add(time.Hour))
-	if err != ErrEndOfData {
+	if !errors.Is(err, ErrEndOfData) {
 		t.Errorf("Read() after 100 iterations error = %v, want %v", err, ErrEndOfData)
 	}
 

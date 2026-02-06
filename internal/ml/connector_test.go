@@ -8,15 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/storage"
 )
 
 func createTestStore(t *testing.T) *storage.Store {
 	t.Helper()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   100 * 1024 * 1024,
 		WarmInMemory: true,
 	}, nil)

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupMiddlewareTest(t *testing.T) (*TenantRegistry, *TenantMiddleware) {
+func setupMiddlewareTest(t *testing.T) (*TenantRegistry, *Middleware) {
 	t.Helper()
 	registry := NewTenantRegistry()
 	middleware := NewTenantMiddleware(registry)

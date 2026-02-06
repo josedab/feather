@@ -20,6 +20,7 @@ var (
 // ACLPermission represents a specific permission.
 type ACLPermission string
 
+// ACLPermission constants.
 const (
 	ACLPermissionRead   ACLPermission = "read"
 	ACLPermissionWrite  ACLPermission = "write"
@@ -31,6 +32,7 @@ const (
 // ACLEffect is the result of an ACL evaluation.
 type ACLEffect string
 
+// ACLEffect constants.
 const (
 	ACLEffectAllow ACLEffect = "allow"
 	ACLEffectDeny  ACLEffect = "deny"
@@ -575,12 +577,15 @@ func (c *ColumnACLController) evaluateTimeCondition(cond ACLCondition, t time.Ti
 
 func (c *ColumnACLController) evaluateIPCondition(cond ACLCondition, ip string) bool {
 	if cond.Operator == "equals" {
-		return ip == cond.Value.(string)
+		if value, ok := cond.Value.(string); ok {
+			return ip == value
+		}
+		return false
 	}
 	if cond.Operator == "in" {
 		if ips, ok := cond.Value.([]interface{}); ok {
 			for _, allowed := range ips {
-				if ip == allowed.(string) {
+				if value, ok := allowed.(string); ok && ip == value {
 					return true
 				}
 			}
@@ -591,12 +596,15 @@ func (c *ColumnACLController) evaluateIPCondition(cond ACLCondition, ip string) 
 
 func (c *ColumnACLController) evaluatePurposeCondition(cond ACLCondition, purpose string) bool {
 	if cond.Operator == "equals" {
-		return purpose == cond.Value.(string)
+		if value, ok := cond.Value.(string); ok {
+			return purpose == value
+		}
+		return false
 	}
 	if cond.Operator == "in" {
 		if purposes, ok := cond.Value.([]interface{}); ok {
 			for _, allowed := range purposes {
-				if purpose == allowed.(string) {
+				if value, ok := allowed.(string); ok && purpose == value {
 					return true
 				}
 			}

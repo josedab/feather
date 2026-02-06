@@ -8,17 +8,16 @@ import (
 
 // AnalyticsCollector collects usage analytics.
 type AnalyticsCollector struct {
-	mu               sync.RWMutex
-	featureAccess    map[string]*FeatureAccessStats
-	entityAccess     map[string]*EntityAccessStats
-	hourlyRequests   [24]int64
-	dailyRequests    [30]int64
-	currentHour      int
-	currentDay       int
-	totalRequests    int64
-	totalLatencyUs   int64
-	cacheHits        int64
-	cacheMisses      int64
+	mu             sync.RWMutex
+	featureAccess  map[string]*FeatureAccessStats
+	entityAccess   map[string]*EntityAccessStats
+	hourlyRequests [24]int64
+	currentHour    int
+	currentDay     int
+	totalRequests  int64
+	totalLatencyUs int64
+	cacheHits      int64
+	cacheMisses    int64
 }
 
 // FeatureAccessStats tracks access to a feature.
@@ -135,15 +134,15 @@ func (c *AnalyticsCollector) GetAnalytics() *Analytics {
 	}
 
 	return &Analytics{
-		TotalRequests:      totalReq,
-		AvgLatencyUs:       avgLatency,
-		CacheHitRate:       cacheHitRate,
-		UniqueFeatures:     int64(len(c.featureAccess)),
-		UniqueEntityTypes:  int64(len(c.entityAccess)),
-		TopFeatures:        topFeatures,
-		HourlyBreakdown:    hourly,
-		Period:             "24h",
-		GeneratedAt:        time.Now(),
+		TotalRequests:     totalReq,
+		AvgLatencyUs:      avgLatency,
+		CacheHitRate:      cacheHitRate,
+		UniqueFeatures:    int64(len(c.featureAccess)),
+		UniqueEntityTypes: int64(len(c.entityAccess)),
+		TopFeatures:       topFeatures,
+		HourlyBreakdown:   hourly,
+		Period:            "24h",
+		GeneratedAt:       time.Now(),
 	}
 }
 
@@ -153,7 +152,7 @@ func (c *AnalyticsCollector) getTopFeatures(n int) []TopFeature {
 		requests int64
 	}
 
-	var sorted []kv
+	sorted := make([]kv, 0, len(c.featureAccess))
 	for name, stats := range c.featureAccess {
 		sorted = append(sorted, kv{name, stats.TotalRequests})
 	}

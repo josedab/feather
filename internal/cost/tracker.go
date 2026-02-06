@@ -153,7 +153,7 @@ func (t *Tracker) GetUsage(tenantID string, start, end time.Time) []UsageRecord 
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	var records []UsageRecord
+	records := make([]UsageRecord, 0, len(t.usageRecords))
 	for _, r := range t.usageRecords {
 		if tenantID != "" && r.TenantID != tenantID {
 			continue
@@ -171,7 +171,7 @@ func (t *Tracker) GetCosts(tenantID string, start, end time.Time) []CostEntry {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	var entries []CostEntry
+	entries := make([]CostEntry, 0, len(t.costEntries))
 	for _, e := range t.costEntries {
 		if tenantID != "" && e.TenantID != tenantID {
 			continue
@@ -307,7 +307,7 @@ func (t *Tracker) GetTimeSeries(tenantID string, start, end time.Time, granulari
 	}
 
 	// Convert to sorted slice
-	var points []TimeSeriesPoint
+	points := make([]TimeSeriesPoint, 0, len(buckets))
 	for _, p := range buckets {
 		points = append(points, *p)
 	}
@@ -379,8 +379,8 @@ func (t *Tracker) RecordCount() int {
 }
 
 // SetMaxRecords sets the maximum number of records to retain.
-func (t *Tracker) SetMaxRecords(max int) {
+func (t *Tracker) SetMaxRecords(maxRecords int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.maxRecords = max
+	t.maxRecords = maxRecords
 }

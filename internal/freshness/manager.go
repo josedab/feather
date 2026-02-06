@@ -1,9 +1,6 @@
 package freshness
 
-import (
-	"sync"
-	"time"
-)
+import "time"
 
 // Manager provides the main interface for adaptive feature freshness.
 type Manager struct {
@@ -12,7 +9,6 @@ type Manager struct {
 	registry  *PolicyRegistry
 	evaluator *PolicyEvaluator
 	config    ManagerConfig
-	mu        sync.RWMutex
 }
 
 // ManagerConfig configures the freshness manager.
@@ -216,7 +212,7 @@ func NewAdaptivePolicy(id, name, pattern string, minTTL, maxTTL time.Duration, p
 	}
 }
 
-// NewTimePolicyPolicy creates a time-based TTL policy.
+// NewTimePolicy creates a time-based TTL policy.
 func NewTimePolicy(id, name, pattern string, peakStart, peakEnd int, peakTTL, offPeakTTL time.Duration, priority int) *Policy {
 	return &Policy{
 		ID:             id,

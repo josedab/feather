@@ -617,14 +617,8 @@ func TestCreateStandardPolicies(t *testing.T) {
 
 func TestPolicyViolation_Fields(t *testing.T) {
 	v := PolicyViolation{
-		Policy:    "test-policy",
-		Rule:      "test-rule",
-		Resource:  "test-resource",
-		Namespace: "test-ns",
-		Field:     "metadata.owner",
-		Message:   "Owner is required",
-		Severity:  "error",
-		Timestamp: time.Now(),
+		Policy:   "test-policy",
+		Severity: "error",
 	}
 
 	if v.Policy != "test-policy" {
@@ -645,7 +639,6 @@ func TestPolicyResult_Fields(t *testing.T) {
 		Warnings: []PolicyViolation{
 			{Policy: "p2", Rule: "r2", Message: "warning 1", Severity: "warning"},
 		},
-		Timestamp: time.Now(),
 	}
 
 	if result.Passed {

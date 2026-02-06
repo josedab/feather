@@ -10,6 +10,7 @@ import (
 // SLOType defines the type of SLO.
 type SLOType string
 
+// SLOType constants for SLO definitions.
 const (
 	SLOTypeLatency      SLOType = "latency"
 	SLOTypeAvailability SLOType = "availability"
@@ -198,6 +199,7 @@ func (t *SLOTracker) getStatusLocked(sloName string) *SLOStatus {
 		status.InCompliance = status.CurrentValue >= def.Target
 		status.ErrorBudget = calculateErrorBudget(status.CurrentValue, def.Target)
 		status.ErrorBudgetUsed = 100 - status.ErrorBudget
+	case SLOTypeFreshness, SLOTypeThroughput:
 	}
 
 	// Calculate burn rate

@@ -6,31 +6,43 @@ import (
 )
 
 // CostCategory represents a category of costs.
-type CostCategory string
+type CostCategory string //nolint:revive
 
 const (
+	// CostCategoryStorage represents storage costs.
 	CostCategoryStorage CostCategory = "storage"
+	// CostCategoryCompute represents compute costs.
 	CostCategoryCompute CostCategory = "compute"
+	// CostCategoryNetwork represents network costs.
 	CostCategoryNetwork CostCategory = "network"
-	CostCategoryAPI     CostCategory = "api"
-	CostCategoryML      CostCategory = "ml"
-	CostCategoryVector  CostCategory = "vector"
+	// CostCategoryAPI represents API costs.
+	CostCategoryAPI CostCategory = "api"
+	// CostCategoryML represents ML costs.
+	CostCategoryML CostCategory = "ml"
+	// CostCategoryVector represents vector costs.
+	CostCategoryVector CostCategory = "vector"
 )
 
 // CostUnit represents the unit of measurement for costs.
-type CostUnit string
+type CostUnit string //nolint:revive
 
 const (
-	CostUnitBytes      CostUnit = "bytes"
-	CostUnitRequests   CostUnit = "requests"
+	// CostUnitBytes represents bytes.
+	CostUnitBytes CostUnit = "bytes"
+	// CostUnitRequests represents requests.
+	CostUnitRequests CostUnit = "requests"
+	// CostUnitCPUSeconds represents CPU seconds.
 	CostUnitCPUSeconds CostUnit = "cpu_seconds"
+	// CostUnitGPUSeconds represents GPU seconds.
 	CostUnitGPUSeconds CostUnit = "gpu_seconds"
-	CostUnitTokens     CostUnit = "tokens"
+	// CostUnitTokens represents tokens.
+	CostUnitTokens CostUnit = "tokens"
+	// CostUnitEmbeddings represents embeddings.
 	CostUnitEmbeddings CostUnit = "embeddings"
 )
 
 // CostRate defines pricing for a specific metric.
-type CostRate struct {
+type CostRate struct { //nolint:revive
 	Category      CostCategory `json:"category"`
 	Unit          CostUnit     `json:"unit"`
 	PricePerUnit  float64      `json:"pricePerUnit"`
@@ -53,7 +65,7 @@ type UsageRecord struct {
 }
 
 // CostEntry represents a calculated cost for usage.
-type CostEntry struct {
+type CostEntry struct { //nolint:revive
 	ID           string       `json:"id"`
 	TenantID     string       `json:"tenantId"`
 	FeatureGroup string       `json:"featureGroup,omitempty"`
@@ -70,7 +82,7 @@ type CostEntry struct {
 }
 
 // CostSummary provides an aggregated view of costs.
-type CostSummary struct {
+type CostSummary struct { //nolint:revive
 	TenantID     string                   `json:"tenantId,omitempty"`
 	FeatureGroup string                   `json:"featureGroup,omitempty"`
 	PeriodStart  time.Time                `json:"periodStart"`
@@ -105,11 +117,16 @@ type Invoice struct {
 type InvoiceStatus string
 
 const (
-	InvoiceStatusDraft     InvoiceStatus = "draft"
-	InvoiceStatusPending   InvoiceStatus = "pending"
-	InvoiceStatusPaid      InvoiceStatus = "paid"
-	InvoiceStatusOverdue   InvoiceStatus = "overdue"
-	InvoiceStatusCancelled InvoiceStatus = "cancelled"
+	// InvoiceStatusDraft indicates a draft invoice.
+	InvoiceStatusDraft InvoiceStatus = "draft"
+	// InvoiceStatusPending indicates a pending invoice.
+	InvoiceStatusPending InvoiceStatus = "pending"
+	// InvoiceStatusPaid indicates a paid invoice.
+	InvoiceStatusPaid InvoiceStatus = "paid"
+	// InvoiceStatusOverdue indicates an overdue invoice.
+	InvoiceStatusOverdue InvoiceStatus = "overdue"
+	// InvoiceStatusCancelled indicates a canceled invoice.
+	InvoiceStatusCancelled InvoiceStatus = "cancelled" //nolint:misspell
 )
 
 // LineItem represents a single item on an invoice.
@@ -149,10 +166,14 @@ type Budget struct {
 type BudgetPeriod string
 
 const (
-	BudgetPeriodDaily   BudgetPeriod = "daily"
-	BudgetPeriodWeekly  BudgetPeriod = "weekly"
+	// BudgetPeriodDaily represents a daily budget.
+	BudgetPeriodDaily BudgetPeriod = "daily"
+	// BudgetPeriodWeekly represents a weekly budget.
+	BudgetPeriodWeekly BudgetPeriod = "weekly"
+	// BudgetPeriodMonthly represents a monthly budget.
 	BudgetPeriodMonthly BudgetPeriod = "monthly"
-	BudgetPeriodYearly  BudgetPeriod = "yearly"
+	// BudgetPeriodYearly represents a yearly budget.
+	BudgetPeriodYearly BudgetPeriod = "yearly"
 )
 
 // BudgetStatus represents current budget consumption.
@@ -188,10 +209,14 @@ type Alert struct {
 type AlertType string
 
 const (
+	// AlertTypeBudgetThreshold indicates a budget threshold alert.
 	AlertTypeBudgetThreshold AlertType = "budget_threshold"
-	AlertTypeBudgetExceeded  AlertType = "budget_exceeded"
+	// AlertTypeBudgetExceeded indicates a budget exceeded alert.
+	AlertTypeBudgetExceeded AlertType = "budget_exceeded"
+	// AlertTypeAnomalyDetected indicates an anomaly alert.
 	AlertTypeAnomalyDetected AlertType = "anomaly_detected"
-	AlertTypeCostSpike       AlertType = "cost_spike"
+	// AlertTypeCostSpike indicates a cost spike alert.
+	AlertTypeCostSpike AlertType = "cost_spike"
 )
 
 // Chargeback represents cost allocation to a cost center.
@@ -217,7 +242,7 @@ type ChargebackItem struct {
 }
 
 // CostAllocationRule defines how costs are allocated.
-type CostAllocationRule struct {
+type CostAllocationRule struct { //nolint:revive
 	ID            string    `json:"id"`
 	TenantID      string    `json:"tenantId"`
 	Name          string    `json:"name"`
@@ -243,7 +268,7 @@ type ReportConfig struct {
 }
 
 // CostReport represents a generated cost report.
-type CostReport struct {
+type CostReport struct { //nolint:revive
 	ID           string                   `json:"id"`
 	Config       ReportConfig             `json:"config"`
 	PeriodStart  time.Time                `json:"periodStart"`
@@ -267,7 +292,7 @@ type TimeSeriesPoint struct {
 }
 
 // CostTrends represents cost trends over time.
-type CostTrends struct {
+type CostTrends struct { //nolint:revive
 	PeriodOverPeriodChange float64   `json:"periodOverPeriodChange"` // Percentage
 	AverageDailyCost       float64   `json:"averageDailyCost"`
 	ProjectedMonthly       float64   `json:"projectedMonthly"`

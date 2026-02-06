@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 )
 
 // mockResourceStore is a mock implementation of ResourceStore for testing.
@@ -620,7 +619,7 @@ func TestSyncManager_GetLastResult(t *testing.T) {
 
 	lastResult = manager.GetLastResult()
 	if lastResult == nil {
-		t.Error("Expected non-nil result after sync")
+		t.Fatal("Expected non-nil result after sync")
 	}
 	if lastResult.State != SyncStateSuccess {
 		t.Errorf("Expected state Success, got %s", lastResult.State)
@@ -719,16 +718,8 @@ func TestSyncManager_CalculateHash(t *testing.T) {
 
 func TestSyncResult_Fields(t *testing.T) {
 	result := SyncResult{
-		State:      SyncStateSuccess,
-		StartTime:  time.Now().Add(-time.Minute),
-		EndTime:    time.Now(),
-		Created:    []string{"feature1"},
-		Updated:    []string{"feature2"},
-		Deleted:    []string{"feature3"},
-		Unchanged:  []string{"feature4"},
-		DryRun:     false,
-		CommitHash: "abc123",
-		Message:    "Sync completed",
+		State:   SyncStateSuccess,
+		Created: []string{"feature1"},
 	}
 
 	if result.State != SyncStateSuccess {
@@ -741,11 +732,9 @@ func TestSyncResult_Fields(t *testing.T) {
 
 func TestDiffReport_Fields(t *testing.T) {
 	report := DiffReport{
-		ToCreate:  []string{"new"},
-		ToUpdate:  []string{"existing"},
-		ToDelete:  []string{"orphan"},
-		Unchanged: []string{"same"},
-		Timestamp: time.Now(),
+		ToCreate: []string{"new"},
+		ToUpdate: []string{"existing"},
+		ToDelete: []string{"orphan"},
 	}
 
 	if len(report.ToCreate) != 1 {
@@ -761,14 +750,8 @@ func TestDiffReport_Fields(t *testing.T) {
 
 func TestSyncConfig_Fields(t *testing.T) {
 	config := SyncConfig{
-		Mode:            SyncModeApply,
-		SourcePath:      "/path/to/source",
-		FilePattern:     "**/*.yaml",
-		Namespaces:      []string{"prod", "staging"},
-		Labels:          map[string]string{"env": "prod"},
-		PruneOrphans:    true,
-		EnforcePolicies: true,
-		ContinueOnError: false,
+		Mode:         SyncModeApply,
+		PruneOrphans: true,
 	}
 
 	if config.Mode != SyncModeApply {

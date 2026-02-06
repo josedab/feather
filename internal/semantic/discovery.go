@@ -53,39 +53,39 @@ type DiscoveryConfig struct {
 	EnableGraphSearch bool    `json:"enable_graph_search"`
 
 	// History configuration
-	MaxQueryHistory        int           `json:"max_query_history"`
-	QueryHistoryTTL        time.Duration `json:"query_history_ttl"`
-	EnablePersonalization  bool          `json:"enable_personalization"`
-	PersonalizationWeight  float64       `json:"personalization_weight"`
+	MaxQueryHistory       int           `json:"max_query_history"`
+	QueryHistoryTTL       time.Duration `json:"query_history_ttl"`
+	EnablePersonalization bool          `json:"enable_personalization"`
+	PersonalizationWeight float64       `json:"personalization_weight"`
 
 	// Performance
-	ParallelQueries   int           `json:"parallel_queries"`
-	QueryTimeout      time.Duration `json:"query_timeout"`
-	CacheEnabled      bool          `json:"cache_enabled"`
-	CacheTTL          time.Duration `json:"cache_ttl"`
+	ParallelQueries int           `json:"parallel_queries"`
+	QueryTimeout    time.Duration `json:"query_timeout"`
+	CacheEnabled    bool          `json:"cache_enabled"`
+	CacheTTL        time.Duration `json:"cache_ttl"`
 }
 
 // DefaultDiscoveryConfig returns sensible defaults.
 func DefaultDiscoveryConfig() DiscoveryConfig {
 	return DiscoveryConfig{
-		DefaultLimit:           10,
-		MaxLimit:               100,
-		MinSemanticScore:       0.3,
-		MinRecommendScore:      0.4,
-		EnableExplanations:     true,
-		EnableAutoComplete:     true,
-		EnableRelatedSearch:    true,
-		MaxGraphDepth:          3,
-		MinEdgeWeight:          0.3,
-		EnableGraphSearch:      true,
-		MaxQueryHistory:        1000,
-		QueryHistoryTTL:        7 * 24 * time.Hour,
-		EnablePersonalization:  true,
-		PersonalizationWeight:  0.15,
-		ParallelQueries:        4,
-		QueryTimeout:           30 * time.Second,
-		CacheEnabled:           true,
-		CacheTTL:               15 * time.Minute,
+		DefaultLimit:          10,
+		MaxLimit:              100,
+		MinSemanticScore:      0.3,
+		MinRecommendScore:     0.4,
+		EnableExplanations:    true,
+		EnableAutoComplete:    true,
+		EnableRelatedSearch:   true,
+		MaxGraphDepth:         3,
+		MinEdgeWeight:         0.3,
+		EnableGraphSearch:     true,
+		MaxQueryHistory:       1000,
+		QueryHistoryTTL:       7 * 24 * time.Hour,
+		EnablePersonalization: true,
+		PersonalizationWeight: 0.15,
+		ParallelQueries:       4,
+		QueryTimeout:          30 * time.Second,
+		CacheEnabled:          true,
+		CacheTTL:              15 * time.Minute,
 	}
 }
 
@@ -140,24 +140,25 @@ type FeatureNode struct {
 
 // FeatureEdge represents a relationship between features.
 type FeatureEdge struct {
-	SourceID     string           `json:"source_id"`
-	TargetID     string           `json:"target_id"`
-	Weight       float32          `json:"weight"`      // 0-1 strength
-	EdgeType     FeatureEdgeType  `json:"edge_type"`
+	SourceID     string            `json:"source_id"`
+	TargetID     string            `json:"target_id"`
+	Weight       float32           `json:"weight"` // 0-1 strength
+	EdgeType     FeatureEdgeType   `json:"edge_type"`
 	Metadata     map[string]string `json:"metadata,omitempty"`
-	CreatedAt    time.Time        `json:"created_at"`
-	LastAccessed time.Time        `json:"last_accessed"`
+	CreatedAt    time.Time         `json:"created_at"`
+	LastAccessed time.Time         `json:"last_accessed"`
 }
 
 // FeatureEdgeType defines types of relationships.
 type FeatureEdgeType string
 
+// Feature edge types for relationship graph metadata.
 const (
-	EdgeTypeSimilar     FeatureEdgeType = "similar"      // Semantically similar
-	EdgeTypeDerived     FeatureEdgeType = "derived"      // One derived from another
-	EdgeTypeCoUsed      FeatureEdgeType = "co_used"      // Used together in models
-	EdgeTypeRelated     FeatureEdgeType = "related"      // Related by domain/entity
-	EdgeTypeAggregation FeatureEdgeType = "aggregation"  // Aggregation relationship
+	EdgeTypeSimilar     FeatureEdgeType = "similar"     // Semantically similar
+	EdgeTypeDerived     FeatureEdgeType = "derived"     // One derived from another
+	EdgeTypeCoUsed      FeatureEdgeType = "co_used"     // Used together in models
+	EdgeTypeRelated     FeatureEdgeType = "related"     // Related by domain/entity
+	EdgeTypeAggregation FeatureEdgeType = "aggregation" // Aggregation relationship
 )
 
 // NewFeatureDiscovery creates a new feature discovery engine.
@@ -204,18 +205,18 @@ func newFeatureGraph() *FeatureGraph {
 // DiscoveryQuery represents a discovery query.
 type DiscoveryQuery struct {
 	// Core query
-	Query   string `json:"query"`
-	UserID  string `json:"user_id,omitempty"`
+	Query  string `json:"query"`
+	UserID string `json:"user_id,omitempty"`
 
 	// Filters
-	Categories   []string `json:"categories,omitempty"`
-	Domains      []string `json:"domains,omitempty"`
-	EntityTypes  []string `json:"entity_types,omitempty"`
-	Tags         []string `json:"tags,omitempty"`
-	Owners       []string `json:"owners,omitempty"`
-	Teams        []string `json:"teams,omitempty"`
-	UseCases     []string `json:"use_cases,omitempty"`
-	DataTypes    []string `json:"data_types,omitempty"`
+	Categories  []string `json:"categories,omitempty"`
+	Domains     []string `json:"domains,omitempty"`
+	EntityTypes []string `json:"entity_types,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Owners      []string `json:"owners,omitempty"`
+	Teams       []string `json:"teams,omitempty"`
+	UseCases    []string `json:"use_cases,omitempty"`
+	DataTypes   []string `json:"data_types,omitempty"`
 
 	// Quality filters
 	MinQuality   float32 `json:"min_quality,omitempty"`
@@ -223,10 +224,10 @@ type DiscoveryQuery struct {
 	MinFreshness string  `json:"min_freshness,omitempty"` // "real-time", "hourly", "daily"
 
 	// Exclusions
-	ExcludeFeatures    []string `json:"exclude_features,omitempty"`
-	ExcludeCategories  []string `json:"exclude_categories,omitempty"`
-	ExcludeDomains     []string `json:"exclude_domains,omitempty"`
-	ExcludeDeprecated  bool     `json:"exclude_deprecated,omitempty"`
+	ExcludeFeatures   []string `json:"exclude_features,omitempty"`
+	ExcludeCategories []string `json:"exclude_categories,omitempty"`
+	ExcludeDomains    []string `json:"exclude_domains,omitempty"`
+	ExcludeDeprecated bool     `json:"exclude_deprecated,omitempty"`
 
 	// Result options
 	Limit              int  `json:"limit,omitempty"`
@@ -242,9 +243,9 @@ type DiscoveryQuery struct {
 // DiscoveryResult represents discovery results.
 type DiscoveryResult struct {
 	// Query info
-	Query        string `json:"query"`
-	TotalResults int    `json:"total_results"`
-	ReturnedCount int   `json:"returned_count"`
+	Query         string `json:"query"`
+	TotalResults  int    `json:"total_results"`
+	ReturnedCount int    `json:"returned_count"`
 
 	// Results
 	Features    []DiscoveredFeature `json:"features"`
@@ -262,42 +263,42 @@ type DiscoveryResult struct {
 // DiscoveredFeature represents a discovered feature with enrichment.
 type DiscoveredFeature struct {
 	// Feature info
-	Feature     *EnrichedFeature     `json:"feature"`
+	Feature *EnrichedFeature `json:"feature"`
 
 	// Scoring
-	Score       float64              `json:"score"`
-	ScoreBreakdown *ScoreBreakdown   `json:"score_breakdown,omitempty"`
+	Score          float64         `json:"score"`
+	ScoreBreakdown *ScoreBreakdown `json:"score_breakdown,omitempty"`
 
 	// Explanation
 	Explanation *FeatureExplanation `json:"explanation,omitempty"`
 
 	// Relationships
-	RelatedCount int                `json:"related_count"`
-	TopRelated   []string           `json:"top_related,omitempty"`
+	RelatedCount int      `json:"related_count"`
+	TopRelated   []string `json:"top_related,omitempty"`
 
 	// Actions
-	Bookmarked   bool               `json:"bookmarked,omitempty"`
-	LastViewed   *time.Time         `json:"last_viewed,omitempty"`
+	Bookmarked bool       `json:"bookmarked,omitempty"`
+	LastViewed *time.Time `json:"last_viewed,omitempty"`
 }
 
 // ScoreBreakdown provides detailed score analysis.
 type ScoreBreakdown struct {
-	SemanticScore      float64 `json:"semantic_score"`
-	MetadataScore      float64 `json:"metadata_score"`
-	PopularityScore    float64 `json:"popularity_score"`
-	QualityScore       float64 `json:"quality_score"`
-	FreshnessScore     float64 `json:"freshness_score"`
+	SemanticScore        float64 `json:"semantic_score"`
+	MetadataScore        float64 `json:"metadata_score"`
+	PopularityScore      float64 `json:"popularity_score"`
+	QualityScore         float64 `json:"quality_score"`
+	FreshnessScore       float64 `json:"freshness_score"`
 	PersonalizationScore float64 `json:"personalization_score,omitempty"`
-	BoostMultiplier    float64 `json:"boost_multiplier"`
-	PenaltyMultiplier  float64 `json:"penalty_multiplier"`
+	BoostMultiplier      float64 `json:"boost_multiplier"`
+	PenaltyMultiplier    float64 `json:"penalty_multiplier"`
 }
 
 // RelatedResult represents related search results.
 type RelatedResult struct {
-	FeatureID  string  `json:"feature_id"`
-	Name       string  `json:"name"`
-	Relation   string  `json:"relation"` // "similar", "derived", "co_used"
-	Score      float64 `json:"score"`
+	FeatureID string  `json:"feature_id"`
+	Name      string  `json:"name"`
+	Relation  string  `json:"relation"` // "similar", "derived", "co_used"
+	Score     float64 `json:"score"`
 }
 
 // QuerySuggestion suggests query refinements.
@@ -397,16 +398,16 @@ func (fd *FeatureDiscovery) Discover(ctx context.Context, query DiscoveryQuery) 
 
 func (fd *FeatureDiscovery) buildRankRequest(query DiscoveryQuery) RankRequest {
 	req := RankRequest{
-		Query:       query.Query,
-		Categories:  query.Categories,
-		Domains:     query.Domains,
-		EntityTypes: query.EntityTypes,
-		Tags:        query.Tags,
-		UseCases:    query.UseCases,
-		MinQuality:  query.MinQuality,
-		OnlyFresh:   query.OnlyFresh,
+		Query:           query.Query,
+		Categories:      query.Categories,
+		Domains:         query.Domains,
+		EntityTypes:     query.EntityTypes,
+		Tags:            query.Tags,
+		UseCases:        query.UseCases,
+		MinQuality:      query.MinQuality,
+		OnlyFresh:       query.OnlyFresh,
 		ExcludeFeatures: query.ExcludeFeatures,
-		Limit:       query.Limit * 3, // Get more for filtering
+		Limit:           query.Limit * 3, // Get more for filtering
 	}
 
 	if len(query.Owners) > 0 {
@@ -798,7 +799,7 @@ func (fd *FeatureDiscovery) findGraphSimilar(featureID string, limit int) []Rank
 		return nil
 	}
 
-	var results []RankedResult
+	results := make([]RankedResult, 0, len(edges))
 
 	for targetID, edge := range edges {
 		if edge.EdgeType != EdgeTypeSimilar && edge.EdgeType != EdgeTypeRelated {
@@ -1095,7 +1096,7 @@ func (fd *FeatureDiscovery) GetFeatureGraph(featureID string, depth int) (*Featu
 
 // FeatureSubgraph represents a subgraph around a feature.
 type FeatureSubgraph struct {
-	RootID string                   `json:"root_id"`
+	RootID string                  `json:"root_id"`
 	Nodes  map[string]*FeatureNode `json:"nodes"`
 	Edges  []*FeatureEdge          `json:"edges"`
 }
@@ -1307,13 +1308,13 @@ func (fd *FeatureDiscovery) GetDiscoveryStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_queries":      len(fd.queryHistory),
-		"unique_users":       len(fd.userPreferences),
-		"graph_nodes":        len(fd.graph.nodes),
-		"graph_edges":        totalEdges,
-		"edges_by_type":      edgesByType,
-		"indexed_features":   fd.indexer.GetStats()["total_features"],
-		"config":             fd.config,
+		"total_queries":    len(fd.queryHistory),
+		"unique_users":     len(fd.userPreferences),
+		"graph_nodes":      len(fd.graph.nodes),
+		"graph_edges":      totalEdges,
+		"edges_by_type":    edgesByType,
+		"indexed_features": fd.indexer.GetStats()["total_features"],
+		"config":           fd.config,
 	}
 }
 
@@ -1409,8 +1410,12 @@ func (fd *FeatureDiscovery) InferFeatureRelationships(ctx context.Context) error
 				// Calculate similarity based on metadata
 				sim := calculateMetadataSimilarity(features[i], features[j])
 				if sim >= fd.config.MinEdgeWeight {
-					fd.AddFeatureRelationship(features[i].FeatureID, features[j].FeatureID, EdgeTypeRelated, sim)
-					fd.AddFeatureRelationship(features[j].FeatureID, features[i].FeatureID, EdgeTypeRelated, sim)
+					if err := fd.AddFeatureRelationship(features[i].FeatureID, features[j].FeatureID, EdgeTypeRelated, sim); err != nil {
+						fd.logger.Warn("failed to add related edge", "source", features[i].FeatureID, "target", features[j].FeatureID, "error", err)
+					}
+					if err := fd.AddFeatureRelationship(features[j].FeatureID, features[i].FeatureID, EdgeTypeRelated, sim); err != nil {
+						fd.logger.Warn("failed to add related edge", "source", features[j].FeatureID, "target", features[i].FeatureID, "error", err)
+					}
 				}
 			}
 		}
@@ -1425,7 +1430,9 @@ func (fd *FeatureDiscovery) InferFeatureRelationships(ctx context.Context) error
 
 		// Add derived edges
 		for _, sourceID := range lineage.SourceFeatures {
-			fd.AddFeatureRelationship(sourceID, meta.FeatureID, EdgeTypeDerived, 0.8)
+			if err := fd.AddFeatureRelationship(sourceID, meta.FeatureID, EdgeTypeDerived, 0.8); err != nil {
+				fd.logger.Warn("failed to add derived edge", "source", sourceID, "target", meta.FeatureID, "error", err)
+			}
 		}
 	}
 
@@ -1450,7 +1457,9 @@ func (fd *FeatureDiscovery) InferFeatureRelationships(ctx context.Context) error
 				for _, otherModel := range otherUsage.ModelsUsing {
 					if otherModel == model {
 						// Same model uses both features
-						fd.AddFeatureRelationship(meta.FeatureID, otherMeta.FeatureID, EdgeTypeCoUsed, 0.7)
+						if err := fd.AddFeatureRelationship(meta.FeatureID, otherMeta.FeatureID, EdgeTypeCoUsed, 0.7); err != nil {
+							fd.logger.Warn("failed to add co-used edge", "source", meta.FeatureID, "target", otherMeta.FeatureID, "error", err)
+						}
 						break
 					}
 				}

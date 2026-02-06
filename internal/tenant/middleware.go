@@ -2,26 +2,29 @@ package tenant
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// TenantMiddleware provides HTTP middleware for multi-tenant operations.
-type TenantMiddleware struct {
+//revive:disable:exported
+
+// Middleware provides HTTP middleware for multi-tenant operations.
+type Middleware struct {
 	registry *TenantRegistry
 }
 
 // NewTenantMiddleware creates a new tenant middleware.
-func NewTenantMiddleware(registry *TenantRegistry) *TenantMiddleware {
-	return &TenantMiddleware{
+func NewTenantMiddleware(registry *TenantRegistry) *Middleware {
+	return &Middleware{
 		registry: registry,
 	}
 }
 
 // ExtractTenant extracts tenant ID from the request and adds it to context.
-func (m *TenantMiddleware) ExtractTenant(next http.Handler) http.Handler {
+func (m *Middleware) ExtractTenant(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Try multiple sources for tenant ID
 		tenantID := r.Header.Get("X-Tenant-ID")
@@ -39,7 +42,7 @@ func (m *TenantMiddleware) ExtractTenant(next http.Handler) http.Handler {
 }
 
 // EnforceTenant ensures a valid tenant is present and enabled.
-func (m *TenantMiddleware) EnforceTenant(next http.Handler) http.Handler {
+func (m *Middleware) EnforceTenant(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tenantID := TenantFromContext(r.Context())
 		if tenantID == "" {
@@ -63,7 +66,7 @@ func (m *TenantMiddleware) EnforceTenant(next http.Handler) http.Handler {
 }
 
 // EnforceRateLimit enforces rate limiting for the tenant.
-func (m *TenantMiddleware) EnforceRateLimit(next http.Handler) http.Handler {
+func (m *Middleware) EnforceRateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tenantID := TenantFromContext(r.Context())
 		if tenantID == "" {
@@ -72,7 +75,7 @@ func (m *TenantMiddleware) EnforceRateLimit(next http.Handler) http.Handler {
 		}
 
 		if err := m.registry.CheckRateLimit(tenantID); err != nil {
-			if err == ErrRateLimitExceeded {
+			if errors.Is(err, ErrRateLimitExceeded) {
 				w.Header().Set("Retry-After", "1")
 				http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 				return
@@ -85,7 +88,7 @@ func (m *TenantMiddleware) EnforceRateLimit(next http.Handler) http.Handler {
 }
 
 // EnforceQuota checks storage quota before write operations.
-func (m *TenantMiddleware) EnforceQuota(quotaType string, amount int64) func(http.Handler) http.Handler {
+func (m *Middleware) EnforceQuota(quotaType string, amount int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tenantID := TenantFromContext(r.Context())
@@ -105,7 +108,7 @@ func (m *TenantMiddleware) EnforceQuota(quotaType string, amount int64) func(htt
 }
 
 // RecordMetrics records request metrics for the tenant.
-func (m *TenantMiddleware) RecordMetrics(next http.Handler) http.Handler {
+func (m *Middleware) RecordMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tenantID := TenantFromContext(r.Context())
 		start := time.Now()
@@ -122,6 +125,8 @@ func (m *TenantMiddleware) RecordMetrics(next http.Handler) http.Handler {
 		}
 	})
 }
+
+//revive:enable:exported
 
 // statusCapture captures the HTTP status code.
 type statusCapture struct {
@@ -158,7 +163,11 @@ func (l *ConcurrencyLimiter) Limit(next http.Handler) http.Handler {
 
 		// Get or create counter
 		counterI, _ := l.counters.LoadOrStore(tenantID, new(int64))
-		counter := counterI.(*int64)
+		counter, ok := counterI.(*int64)
+		if !ok {
+			http.Error(w, "concurrency limiter unavailable", http.StatusInternalServerError)
+			return
+		}
 
 		// Check limit
 		if err := l.registry.CheckQuota(tenantID, "concurrent", 1); err != nil {
@@ -168,14 +177,18 @@ func (l *ConcurrencyLimiter) Limit(next http.Handler) http.Handler {
 
 		// Increment counter
 		atomic.AddInt64(counter, 1)
-		l.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
+		if err := l.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
 			atomic.AddInt64(&u.ConcurrentRequests, 1)
-		})
+		}); err != nil {
+			http.Error(w, "tenant not found", http.StatusUnauthorized)
+			atomic.AddInt64(counter, -1)
+			return
+		}
 
 		// Ensure decrement on completion
 		defer func() {
 			atomic.AddInt64(counter, -1)
-			l.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
+			_ = l.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
 				atomic.AddInt64(&u.ConcurrentRequests, -1)
 			})
 		}()
@@ -328,20 +341,20 @@ func (pq *PriorityQueue) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// TenantAwareStore wraps storage operations with tenant isolation.
-type TenantAwareStore struct {
+// AwareStore wraps storage operations with tenant isolation.
+type AwareStore struct {
 	registry *TenantRegistry
 }
 
 // NewTenantAwareStore creates a new tenant-aware store wrapper.
-func NewTenantAwareStore(registry *TenantRegistry) *TenantAwareStore {
-	return &TenantAwareStore{
+func NewTenantAwareStore(registry *TenantRegistry) *AwareStore {
+	return &AwareStore{
 		registry: registry,
 	}
 }
 
 // PrefixEntityKey adds tenant prefix to entity key for isolation.
-func (s *TenantAwareStore) PrefixEntityKey(ctx context.Context, entityKey string) string {
+func (s *AwareStore) PrefixEntityKey(ctx context.Context, entityKey string) string {
 	tenantID := TenantFromContext(ctx)
 	if tenantID == "" || tenantID == "default" {
 		return entityKey
@@ -350,7 +363,7 @@ func (s *TenantAwareStore) PrefixEntityKey(ctx context.Context, entityKey string
 }
 
 // StripTenantPrefix removes tenant prefix from entity key.
-func (s *TenantAwareStore) StripTenantPrefix(ctx context.Context, entityKey string) string {
+func (s *AwareStore) StripTenantPrefix(ctx context.Context, entityKey string) string {
 	tenantID := TenantFromContext(ctx)
 	if tenantID == "" || tenantID == "default" {
 		return entityKey
@@ -364,7 +377,7 @@ func (s *TenantAwareStore) StripTenantPrefix(ctx context.Context, entityKey stri
 }
 
 // CheckWriteAccess checks if the tenant can write to storage.
-func (s *TenantAwareStore) CheckWriteAccess(ctx context.Context, estimatedBytes int64) error {
+func (s *AwareStore) CheckWriteAccess(ctx context.Context, estimatedBytes int64) error {
 	tenantID := TenantFromContext(ctx)
 	if tenantID == "" {
 		return nil
@@ -374,25 +387,29 @@ func (s *TenantAwareStore) CheckWriteAccess(ctx context.Context, estimatedBytes 
 }
 
 // RecordStorageUsage updates storage usage for a tenant.
-func (s *TenantAwareStore) RecordStorageUsage(ctx context.Context, deltaBytes int64) {
+func (s *AwareStore) RecordStorageUsage(ctx context.Context, deltaBytes int64) {
 	tenantID := TenantFromContext(ctx)
 	if tenantID == "" {
 		return
 	}
 
-	s.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
+	if err := s.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
 		u.StorageBytes += deltaBytes
-	})
+	}); err != nil {
+		return
+	}
 }
 
 // RecordEntityUsage updates entity count for a tenant.
-func (s *TenantAwareStore) RecordEntityUsage(ctx context.Context, delta int64) {
+func (s *AwareStore) RecordEntityUsage(ctx context.Context, delta int64) {
 	tenantID := TenantFromContext(ctx)
 	if tenantID == "" {
 		return
 	}
 
-	s.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
+	if err := s.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
 		u.EntityCount += delta
-	})
+	}); err != nil {
+		return
+	}
 }

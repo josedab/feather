@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"sync"
+	"errors"
 	"sync/atomic"
 )
 
@@ -35,7 +35,6 @@ func DefaultDeduplicationConfig() DeduplicationConfig {
 
 // Deduplicator handles embedding deduplication.
 type Deduplicator struct {
-	mu     sync.RWMutex
 	config DeduplicationConfig
 	store  *Store
 
@@ -116,7 +115,7 @@ func (d *Deduplicator) GetOrCreate(ctx context.Context, content string, modelID 
 		return emb, true, nil
 	}
 
-	if err != ErrEmbeddingNotFound {
+	if !errors.Is(err, ErrEmbeddingNotFound) {
 		return nil, false, err
 	}
 

@@ -1,3 +1,4 @@
+// Package experiment provides feature experiment management.
 package experiment
 
 import (
@@ -12,8 +13,9 @@ import (
 )
 
 // ExperimentType defines the type of experiment.
-type ExperimentType string
+type ExperimentType string //nolint:revive
 
+// ExperimentType constants.
 const (
 	ExperimentTypeABTest       ExperimentType = "ab_test"
 	ExperimentTypeMultivariate ExperimentType = "multivariate"
@@ -22,8 +24,9 @@ const (
 )
 
 // ExperimentStatus defines the status of an experiment.
-type ExperimentStatus string
+type ExperimentStatus string //nolint:revive
 
+// ExperimentStatus constants.
 const (
 	StatusDraft     ExperimentStatus = "draft"
 	StatusRunning   ExperimentStatus = "running"
@@ -35,6 +38,7 @@ const (
 // AllocationStrategy defines how users are assigned to variants.
 type AllocationStrategy string
 
+// AllocationStrategy constants.
 const (
 	AllocationRandom        AllocationStrategy = "random"
 	AllocationDeterministic AllocationStrategy = "deterministic"
@@ -146,7 +150,7 @@ type MetricEvent struct {
 }
 
 // ExperimentResults holds analysis results.
-type ExperimentResults struct {
+type ExperimentResults struct { //nolint:revive
 	ExperimentID   string          `json:"experiment_id"`
 	Status         string          `json:"status"`
 	SampleSize     int             `json:"sample_size"`
@@ -192,7 +196,7 @@ func NewEngine() *Engine {
 		assignments: make(map[string]map[string]*Assignment),
 		exposures:   make([]*ExposureEvent, 0),
 		metrics:     make([]*MetricEvent, 0),
-		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
+		rng:         rand.New(rand.NewSource(time.Now().UnixNano())), //nolint:gosec
 	}
 }
 
@@ -670,7 +674,7 @@ func (e *Engine) determineWinner(results *ExperimentResults, exp *Experiment) (*
 
 	var bestVariant string
 	var bestLift float64
-	var bestPValue float64 = 1.0
+	bestPValue := 1.0
 
 	for _, vr := range results.VariantResults {
 		// Skip control

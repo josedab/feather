@@ -148,7 +148,7 @@ func (p *Predictor) calculateAccessScore(metrics *AccessMetrics, hasMetrics bool
 
 	// Access rate score (normalize to 0-1)
 	// High access rate (>100/s) gets high score
-	rateScore := min(metrics.AccessRate/100.0, 1.0)
+	rateScore := minFloat64(metrics.AccessRate/100.0, 1.0)
 
 	// Cache hit rate directly contributes
 	hitScore := metrics.CacheHitRate
@@ -173,14 +173,14 @@ func (p *Predictor) calculateVolatilityScore(metrics *ChangeMetrics, hasMetrics 
 
 	// Update rate contribution
 	// High update rate (>1/s) = high volatility
-	updateScore := min(metrics.UpdateRate, 1.0)
+	updateScore := minFloat64(metrics.UpdateRate, 1.0)
 
 	// Change magnitude contribution
 	// Normalize avg change magnitude (assume 100 is "high")
-	magnitudeScore := min(metrics.AvgChangeMagnitude/100.0, 1.0)
+	magnitudeScore := minFloat64(metrics.AvgChangeMagnitude/100.0, 1.0)
 
 	// Raw volatility contribution
-	volatilityScore := min(metrics.Volatility/50.0, 1.0)
+	volatilityScore := minFloat64(metrics.Volatility/50.0, 1.0)
 
 	return (updateScore*0.4 + magnitudeScore*0.3 + volatilityScore*0.3)
 }
@@ -191,12 +191,12 @@ func (p *Predictor) calculateDriftScore(metrics *ChangeMetrics, hasMetrics bool)
 	}
 
 	// Drift score is already 0-1
-	return min(metrics.DriftScore, 1.0)
+	return minFloat64(metrics.DriftScore, 1.0)
 }
 
 func (p *Predictor) scoreToTTL(score float64) time.Duration {
 	// Score 0 = min TTL, Score 1 = max TTL
-	score = max(0, min(score, 1))
+	score = maxFloat64(0, minFloat64(score, 1))
 
 	minNs := float64(p.config.MinTTL.Nanoseconds())
 	maxNs := float64(p.config.MaxTTL.Nanoseconds())
@@ -240,7 +240,7 @@ func (p *Predictor) calculateConfidence(hasAccess, hasChange bool, accessMetrics
 		confidence = 0.1
 	}
 
-	return min(confidence, 1.0)
+	return minFloat64(confidence, 1.0)
 }
 
 func (p *Predictor) generateReason(accessScore, volatilityScore, driftScore float64, ttl time.Duration) string {
@@ -362,14 +362,14 @@ func (p *Predictor) Stats() PredictorStats {
 }
 
 // Helper functions
-func min(a, b float64) float64 {
+func minFloat64(a, b float64) float64 {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func max(a, b float64) float64 {
+func maxFloat64(a, b float64) float64 {
 	if a > b {
 		return a
 	}

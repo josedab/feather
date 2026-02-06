@@ -420,21 +420,10 @@ func TestStore_Close(t *testing.T) {
 }
 
 func TestEmbedding_Fields(t *testing.T) {
-	now := time.Now()
 	emb := &Embedding{
-		ID:             "emb-1",
-		ContentHash:    "hash-123",
-		Vector:         []float32{0.1, 0.2, 0.3},
-		Dimension:      3,
-		ModelID:        "text-embedding-ada-002",
-		ModelVersion:   "v1",
-		Content:        "test content",
-		Metadata:       map[string]interface{}{"key": "value"},
-		CreatedAt:      now,
-		LastAccessedAt: now,
-		AccessCount:    5,
-		ExpiresAt:      now.Add(time.Hour),
-		ByteSize:       100,
+		ID:          "emb-1",
+		Dimension:   3,
+		AccessCount: 5,
 	}
 
 	assert.Equal(t, "emb-1", emb.ID)

@@ -50,10 +50,12 @@ func NewOpenAIEmbedder(config OpenAIConfig) *OpenAIEmbedder {
 	}
 }
 
+// Dimension returns the embedding dimension configured for the embedder.
 func (e *OpenAIEmbedder) Dimension() int {
 	return e.dimension
 }
 
+// Embed generates a single embedding for the provided text.
 func (e *OpenAIEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
 	embeddings, err := e.EmbedBatch(ctx, []string{text})
 	if err != nil {
@@ -65,6 +67,7 @@ func (e *OpenAIEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 	return embeddings[0], nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (e *OpenAIEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return nil, nil
@@ -94,7 +97,9 @@ func (e *OpenAIEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]fl
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -157,10 +162,12 @@ func NewOllamaEmbedder(config OllamaConfig) *OllamaEmbedder {
 	}
 }
 
+// Dimension returns the embedding dimension configured for the embedder.
 func (e *OllamaEmbedder) Dimension() int {
 	return e.dimension
 }
 
+// Embed generates a single embedding for the provided text.
 func (e *OllamaEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
 	reqBody := map[string]interface{}{
 		"model":  e.model,
@@ -184,7 +191,9 @@ func (e *OllamaEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -202,6 +211,7 @@ func (e *OllamaEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 	return result.Embedding, nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (e *OllamaEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	embeddings := make([][]float32, len(texts))
 	for i, text := range texts {
@@ -234,10 +244,12 @@ func NewLocalEmbedder(dimension int) *LocalEmbedder {
 	}
 }
 
+// Dimension returns the embedding dimension configured for the embedder.
 func (e *LocalEmbedder) Dimension() int {
 	return e.dimension
 }
 
+// Embed generates a single embedding for the provided text.
 func (e *LocalEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
 	words := tokenize(text)
 	embedding := make([]float32, e.dimension)
@@ -251,7 +263,8 @@ func (e *LocalEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 	// Generate embedding using hashing trick
 	for word, freq := range wordFreq {
 		hash := simpleHash(word)
-		idx := hash % uint32(e.dimension)
+		//nolint:gosec // dimension is configured and hash is used for indexing only.
+		idx := int(hash % uint32(e.dimension))
 
 		// Use TF-IDF style weight
 		tf := float32(freq) / float32(len(words))
@@ -268,6 +281,7 @@ func (e *LocalEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 	return embedding, nil
 }
 
+// EmbedBatch generates embeddings for a batch of texts.
 func (e *LocalEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]float32, error) {
 	// First pass: update IDF
 	docFreq := make(map[string]int)

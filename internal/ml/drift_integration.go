@@ -141,7 +141,7 @@ func (m *ModelDriftMonitor) RecordValidationResult(result *ValidationResult) {
 					"actual":   issue.ActualValue,
 				},
 			}
-			m.RecordAlert(alert)
+			_ = m.RecordAlert(alert)
 		}
 	}
 }
@@ -297,7 +297,7 @@ func (m *ModelDriftMonitor) trimOldAlerts() {
 	}
 
 	toRemove := len(m.alerts) - m.maxAlerts
-	var oldest []*ModelDriftAlert
+	oldest := make([]*ModelDriftAlert, 0, len(m.alerts))
 
 	for _, alert := range m.alerts {
 		oldest = append(oldest, alert)
@@ -508,7 +508,7 @@ func (b *DriftDetectorBridge) OnDriftDetected(featureName string, driftType stri
 			Timestamp:    time.Now(),
 		}
 
-		b.driftMonitor.RecordAlert(alert)
+		_ = b.driftMonitor.RecordAlert(alert)
 	}
 }
 
@@ -517,13 +517,14 @@ func (b *DriftDetectorBridge) GetModelsForFeature(featureName string) []string {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	var result []string
 	if models, ok := b.featureModels[featureName]; ok {
+		result := make([]string, 0, len(models))
 		for modelID := range models {
 			result = append(result, modelID)
 		}
+		return result
 	}
-	return result
+	return nil
 }
 
 // GetFeaturesForModel returns the features used by a model.
@@ -531,13 +532,14 @@ func (b *DriftDetectorBridge) GetFeaturesForModel(modelID string) []string {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	var result []string
 	if features, ok := b.modelFeatures[modelID]; ok {
+		result := make([]string, 0, len(features))
 		for feature := range features {
 			result = append(result, feature)
 		}
+		return result
 	}
-	return result
+	return nil
 }
 
 // Stats returns bridge statistics.

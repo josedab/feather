@@ -68,6 +68,7 @@ type FreshnessConfig struct {
 // FeatureStatus represents the lifecycle status of a feature.
 type FeatureStatus string
 
+// FeatureStatus constants for feature lifecycle.
 const (
 	StatusDraft      FeatureStatus = "draft"
 	StatusActive     FeatureStatus = "active"

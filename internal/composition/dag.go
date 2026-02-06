@@ -23,12 +23,18 @@ var (
 type NodeType string
 
 const (
-	NodeTypeSource    NodeType = "source"    // Raw feature from store
-	NodeTypeTransform NodeType = "transform" // Single transformation
-	NodeTypeAggregate NodeType = "aggregate" // Aggregation over multiple features
-	NodeTypeJoin      NodeType = "join"      // Join features from different sources
-	NodeTypeFilter    NodeType = "filter"    // Conditional filtering
-	NodeTypeCustom    NodeType = "custom"    // Custom function
+	// NodeTypeSource represents a raw feature from the store.
+	NodeTypeSource NodeType = "source"
+	// NodeTypeTransform represents a single transformation.
+	NodeTypeTransform NodeType = "transform"
+	// NodeTypeAggregate represents aggregation over multiple features.
+	NodeTypeAggregate NodeType = "aggregate"
+	// NodeTypeJoin represents joining features from different sources.
+	NodeTypeJoin NodeType = "join"
+	// NodeTypeFilter represents conditional filtering.
+	NodeTypeFilter NodeType = "filter"
+	// NodeTypeCustom represents a custom function node.
+	NodeTypeCustom NodeType = "custom"
 )
 
 // Node represents a computation node in the DAG.
@@ -402,7 +408,7 @@ func (d *DAG) Clone() *DAG {
 	return clone
 }
 
-// Stats returns statistics about the DAG.
+// DAGStats reports statistics about the DAG.
 type DAGStats struct {
 	NodeCount   int            `json:"node_count"`
 	MaxLevel    int            `json:"max_level"`

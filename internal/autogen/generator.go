@@ -17,10 +17,14 @@ import (
 type LLMProvider string
 
 const (
-	ProviderOpenAI    LLMProvider = "openai"
+	// ProviderOpenAI uses the OpenAI API.
+	ProviderOpenAI LLMProvider = "openai"
+	// ProviderAnthropic uses the Anthropic API.
 	ProviderAnthropic LLMProvider = "anthropic"
-	ProviderOllama    LLMProvider = "ollama"
-	ProviderLocal     LLMProvider = "local"
+	// ProviderOllama uses a locally running Ollama instance.
+	ProviderOllama LLMProvider = "ollama"
+	// ProviderLocal uses a local rules-based generator.
+	ProviderLocal LLMProvider = "local"
 )
 
 // Config holds auto-generation configuration.
@@ -342,7 +346,9 @@ func (g *Generator) callOpenAI(ctx context.Context, prompt string) (string, int,
 	if err != nil {
 		return "", 0, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -401,7 +407,9 @@ func (g *Generator) callAnthropic(ctx context.Context, prompt string) (string, i
 	if err != nil {
 		return "", 0, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -458,7 +466,9 @@ func (g *Generator) callOllama(ctx context.Context, prompt string) (string, int,
 	if err != nil {
 		return "", 0, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

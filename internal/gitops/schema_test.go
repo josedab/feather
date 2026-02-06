@@ -343,8 +343,8 @@ func TestSchemaLoader_SaveDefinition(t *testing.T) {
 	}
 
 	// Save as JSON
-	if err := loader.SaveDefinition(def, "subdir/test.json"); err != nil {
-		t.Fatalf("SaveDefinition JSON failed: %v", err)
+	if saveErr := loader.SaveDefinition(def, "subdir/test.json"); saveErr != nil {
+		t.Fatalf("SaveDefinition JSON failed: %v", saveErr)
 	}
 
 	// Verify JSON file

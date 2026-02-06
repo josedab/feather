@@ -23,6 +23,7 @@ type GraphNode struct {
 // NodeType indicates the type of graph node.
 type NodeType string
 
+// NodeType constants for graph nodes.
 const (
 	NodeTypeFeature  NodeType = "feature"
 	NodeTypeSource   NodeType = "source"
@@ -40,6 +41,7 @@ type GraphEdge struct {
 // EdgeType indicates the type of relationship.
 type EdgeType string
 
+// EdgeType constants for graph relationships.
 const (
 	EdgeTypeDependsOn  EdgeType = "depends_on"
 	EdgeTypeSourceOf   EdgeType = "source_of"

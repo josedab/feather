@@ -254,7 +254,7 @@ func (m *ChargebackManager) GenerateInvoice(tenantID string, start, end time.Tim
 	}
 
 	// Create line items
-	var lineItems []LineItem
+	lineItems := make([]LineItem, 0, len(categoryTotals))
 	var subtotal float64
 
 	for cat, totals := range categoryTotals {

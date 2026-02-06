@@ -1,6 +1,7 @@
 package clientip
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -178,7 +179,7 @@ func TestResolver_GetClientIP(t *testing.T) {
 				t.Fatalf("NewResolver() error = %v", err)
 			}
 
-			req, _ := http.NewRequest("GET", "/", nil)
+			req, _ := http.NewRequestWithContext(context.Background(), "GET", "/", nil)
 			req.RemoteAddr = tt.remoteAddr
 			if tt.xff != "" {
 				req.Header.Set("X-Forwarded-For", tt.xff)

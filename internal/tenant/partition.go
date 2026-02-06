@@ -11,6 +11,9 @@ import (
 	"github.com/feather-store/feather/internal/domain"
 )
 
+// ErrPartitionNotFound indicates a tenant partition is missing.
+var ErrPartitionNotFound = errors.New("partition not found")
+
 // PartitionedHotTier provides tenant-aware hot tier partitioning.
 // It wraps the standard hot tier with per-tenant memory quotas and isolation.
 type PartitionedHotTier struct {
@@ -88,7 +91,7 @@ func (h *PartitionedHotTier) getOrCreatePartition(tenantID string) *tenantPartit
 	}
 
 	// Get tenant quota
-	var maxSize int64 = h.totalMaxSize / 10 // Default to 10% of total
+	maxSize := h.totalMaxSize / 10 // Default to 10% of total
 	if tenant, err := h.registry.GetTenant(tenantID); err == nil {
 		if tenant.Quotas.MaxHotTierBytes > 0 {
 			maxSize = tenant.Quotas.MaxHotTierBytes
@@ -460,7 +463,7 @@ func (h *PartitionedHotTier) DeletePartition(tenantID string) error {
 	defer h.mu.Unlock()
 
 	if _, exists := h.partitions[tenantID]; !exists {
-		return fmt.Errorf("partition not found: %s", tenantID)
+		return fmt.Errorf("%w: %s", ErrPartitionNotFound, tenantID)
 	}
 
 	delete(h.partitions, tenantID)

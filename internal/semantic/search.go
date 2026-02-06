@@ -207,7 +207,7 @@ func (s *Search) Search(ctx context.Context, query string, opts SearchOptions) (
 		score   float32
 	}
 
-	var scored []scoredFeature
+	scored := make([]scoredFeature, 0, len(s.embeddings))
 
 	for id, embedding := range s.embeddings {
 		feature := s.features[id]
@@ -270,7 +270,7 @@ func (s *Search) Suggest(ctx context.Context, featureID string, limit int) ([]Se
 		score   float32
 	}
 
-	var scored []scoredFeature
+	scored := make([]scoredFeature, 0, len(s.embeddings))
 
 	for id, embedding := range s.embeddings {
 		if id == featureID {
@@ -438,7 +438,8 @@ func (s *Search) generateTFIDFEmbedding(text string) []float32 {
 
 	for _, word := range words {
 		hash := simpleHash(word)
-		idx := hash % uint32(s.dimension)
+		//nolint:gosec // hash is bounded by dimension, used for indexing only.
+		idx := int(hash % uint32(uint64(s.dimension)))
 		embedding[idx] += 1.0
 	}
 

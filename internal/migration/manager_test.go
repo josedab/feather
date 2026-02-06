@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 	"time"
-
-	"github.com/feather-store/feather/internal/domain"
 )
 
 func TestNewManager(t *testing.T) {
@@ -369,19 +367,10 @@ func TestManager_ExecutePlan_NotFound(t *testing.T) {
 func TestFullMigration_Structure(t *testing.T) {
 	migration := &FullMigration{
 		Project: &FeastProject{Name: "test"},
-		SchemaResult: &ConvertResult{
-			FeatureGroups: make([]domain.FeatureGroup, 1),
-		},
-		ConfigResult: &ConfigConvertResult{
-			Config: &FeatherConfig{},
-		},
 		Report: &MigrationReport{
 			ProjectName:        "test",
 			CompatibilityScore: 95.0,
 		},
-		StartedAt:   time.Now().Add(-1 * time.Minute),
-		CompletedAt: time.Now(),
-		Status:      "completed",
 	}
 
 	if migration.Project.Name != "test" {

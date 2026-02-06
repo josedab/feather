@@ -46,6 +46,7 @@ var (
 // ConnectorState represents the connector lifecycle state.
 type ConnectorState string
 
+// ConnectorState constants.
 const (
 	StateUninitialized ConnectorState = "uninitialized"
 	StateRunning       ConnectorState = "running"
@@ -58,15 +59,17 @@ const (
 // DeliveryGuarantee specifies the delivery semantics.
 type DeliveryGuarantee string
 
+// DeliveryGuarantee constants.
 const (
-	GuaranteeAtLeastOnce  DeliveryGuarantee = "at_least_once"
-	GuaranteeAtMostOnce   DeliveryGuarantee = "at_most_once"
-	GuaranteeExactlyOnce  DeliveryGuarantee = "exactly_once"
+	GuaranteeAtLeastOnce DeliveryGuarantee = "at_least_once"
+	GuaranteeAtMostOnce  DeliveryGuarantee = "at_most_once"
+	GuaranteeExactlyOnce DeliveryGuarantee = "exactly_once"
 )
 
 // CheckpointMode determines checkpoint behavior.
 type CheckpointMode string
 
+// CheckpointMode constants.
 const (
 	CheckpointModeAligned   CheckpointMode = "aligned"
 	CheckpointModeUnaligned CheckpointMode = "unaligned"
@@ -373,7 +376,9 @@ func (c *Connector) Stop() error {
 	if c.metricsServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		c.metricsServer.Shutdown(ctx)
+		if err := c.metricsServer.Shutdown(ctx); err != nil {
+			c.logger.Error("metrics server shutdown failed", "error", err)
+		}
 	}
 
 	c.logger.Info("flink connector stopped",
@@ -677,7 +682,10 @@ func (c *Connector) startMetricsServer() {
 		return
 	}
 
-	c.metricsServer = &http.Server{Handler: mux}
+	c.metricsServer = &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	c.logger.Info("metrics server started", "port", c.config.MetricsPort)
 
 	if err := c.metricsServer.Serve(listener); err != nil && err != http.ErrServerClosed {
@@ -688,7 +696,9 @@ func (c *Connector) startMetricsServer() {
 func (c *Connector) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := c.Metrics()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(metrics)
+	if err := json.NewEncoder(w).Encode(metrics); err != nil {
+		c.logger.Error("failed to encode metrics", "error", err)
+	}
 }
 
 func (c *Connector) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -703,13 +713,15 @@ func (c *Connector) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": status,
 		"state":  state,
-	})
+	}); err != nil {
+		c.logger.Error("failed to encode health status", "error", err)
+	}
 }
 
-// CreateSink creates a new Flink sink for writing features.
+// Sink writes stream records to the feature store.
 type Sink struct {
 	connector *Connector
 	config    SinkConfig

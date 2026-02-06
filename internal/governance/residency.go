@@ -20,6 +20,7 @@ var (
 // Region represents a geographic region.
 type Region string
 
+// Region constants.
 const (
 	RegionUSEast      Region = "us-east"
 	RegionUSWest      Region = "us-west"
@@ -34,6 +35,7 @@ const (
 // RegionZone maps regions to compliance zones.
 type RegionZone string
 
+// RegionZone constants.
 const (
 	ZoneUS     RegionZone = "us"     // United States
 	ZoneEU     RegionZone = "eu"     // European Union (GDPR)
@@ -45,6 +47,7 @@ const (
 // ResidencyRequirement defines data residency requirements.
 type ResidencyRequirement string
 
+// ResidencyRequirement constants.
 const (
 	RequirementNone       ResidencyRequirement = "none"        // No requirement
 	RequirementSameZone   ResidencyRequirement = "same_zone"   // Must stay in same zone
@@ -55,6 +58,7 @@ const (
 // DataClassification classifies data for residency purposes.
 type DataClassification string
 
+// DataClassification constants.
 const (
 	ClassificationPublic       DataClassification = "public"
 	ClassificationInternal     DataClassification = "internal"

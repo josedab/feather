@@ -608,11 +608,14 @@ func TestFeatureExplanation_Fields(t *testing.T) {
 
 	assert.Equal(t, "test", explanation.FeatureID)
 	assert.Equal(t, "test query", explanation.Query)
+	assert.Equal(t, "Test summary", explanation.Summary)
 	assert.Equal(t, 0.85, explanation.Confidence)
 	assert.Equal(t, 1, len(explanation.MatchReasons))
 	assert.NotNil(t, explanation.DataInsights)
 	assert.NotNil(t, explanation.UsageContext)
 	assert.Equal(t, 2, len(explanation.Recommendations))
+	assert.False(t, explanation.GeneratedAt.IsZero())
+	assert.Equal(t, "template", explanation.GeneratedBy)
 }
 
 func TestMatchReason_Fields(t *testing.T) {

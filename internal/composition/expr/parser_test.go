@@ -382,13 +382,13 @@ func TestParser_ChainedPropertyAccess(t *testing.T) {
 
 func TestParser_ErrorCases(t *testing.T) {
 	tests := []string{
-		"(",        // unclosed paren
-		"[",        // unclosed bracket
-		"a[",       // unclosed index
-		"1 +",      // incomplete binary
-		"func(",    // unclosed call
-		"a ? b",    // incomplete ternary
-		"a.123",    // invalid property
+		"(",     // unclosed paren
+		"[",     // unclosed bracket
+		"a[",    // unclosed index
+		"1 +",   // incomplete binary
+		"func(", // unclosed call
+		"a ? b", // incomplete ternary
+		"a.123", // invalid property
 	}
 
 	for _, tt := range tests {

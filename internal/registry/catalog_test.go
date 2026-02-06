@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -40,7 +41,7 @@ func TestCatalog_Register_Validation(t *testing.T) {
 
 	// Test empty name
 	err := c.Register(&FeatureDefinition{}, "test-user")
-	if err != ErrNameRequired {
+	if !errors.Is(err, ErrNameRequired) {
 		t.Errorf("expected ErrNameRequired, got %v", err)
 	}
 }
@@ -163,6 +164,7 @@ func TestCatalog_Get(t *testing.T) {
 	got = c.Get("test_feature")
 	if got == nil {
 		t.Error("expected to find registered feature")
+		return
 	}
 	if got.Name != "test_feature" {
 		t.Errorf("expected name 'test_feature', got '%s'", got.Name)
@@ -253,7 +255,7 @@ func TestCatalog_Delete(t *testing.T) {
 
 	// Delete non-existent feature
 	err := c.Delete("non_existent")
-	if err != ErrFeatureNotFound {
+	if !errors.Is(err, ErrFeatureNotFound) {
 		t.Errorf("expected ErrFeatureNotFound, got %v", err)
 	}
 
@@ -302,7 +304,7 @@ func TestCatalog_SetStatus(t *testing.T) {
 
 	// Set status on non-existent feature
 	err := c.SetStatus("non_existent", StatusActive, "user")
-	if err != ErrFeatureNotFound {
+	if !errors.Is(err, ErrFeatureNotFound) {
 		t.Errorf("expected ErrFeatureNotFound, got %v", err)
 	}
 

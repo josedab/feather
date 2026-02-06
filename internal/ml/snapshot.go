@@ -20,6 +20,7 @@ var (
 // DistributionType represents the type of feature distribution.
 type DistributionType string
 
+// DistributionType constants for snapshot data.
 const (
 	DistTypeNumeric     DistributionType = "numeric"
 	DistTypeCategorical DistributionType = "categorical"
@@ -341,7 +342,7 @@ func (b *SnapshotBuilder) Build() *TrainingSnapshot {
 }
 
 func (b *SnapshotBuilder) computeNumericStats(fs *FeatureSnapshot, samples []interface{}) {
-	var values []float64
+	values := make([]float64, 0, len(samples))
 	var nullCount int64
 
 	for _, s := range samples {
@@ -474,7 +475,7 @@ func (b *SnapshotBuilder) computeCategoricalStats(fs *FeatureSnapshot, samples [
 }
 
 func (b *SnapshotBuilder) computeVectorStats(fs *FeatureSnapshot, samples []interface{}, first interface{}) {
-	var norms []float64
+	norms := make([]float64, 0, len(samples))
 	var dimension int
 
 	switch v := first.(type) {

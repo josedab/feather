@@ -307,7 +307,7 @@ func TestEnhancedIndexer_ListMetadata(t *testing.T) {
 }
 
 func TestFeatureMetadata_Fields(t *testing.T) {
-	now := time.Now()
+	now := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
 	meta := &FeatureMetadata{
 		FeatureID:     "test",
 		Name:          "Test Feature",
@@ -344,7 +344,29 @@ func TestFeatureMetadata_Fields(t *testing.T) {
 	assert.Equal(t, "numeric", meta.ValueType)
 	assert.Equal(t, "user", meta.Domain)
 	assert.True(t, meta.Nullable)
-	assert.Equal(t, float32(0.9), meta.QualityScore)
+	assert.InDelta(t, float32(0.9), meta.QualityScore, 0.0001)
+	assert.Equal(t, "Description", meta.Description)
+	assert.Equal(t, "float64", meta.DataType)
+	assert.Equal(t, "user", meta.EntityType)
+	assert.Equal(t, "test", meta.Category)
+	assert.Equal(t, "subtest", meta.Subcategory)
+	assert.Equal(t, []string{"tag1", "tag2"}, meta.Tags)
+	assert.Equal(t, []string{"label1"}, meta.Labels)
+	assert.Equal(t, "marketing", meta.BusinessUnit)
+	assert.Equal(t, []string{"fraud_detection"}, meta.UseCase)
+	assert.Equal(t, "owner", meta.Owner)
+	assert.Equal(t, "data", meta.Team)
+	assert.Equal(t, []string{"dev1"}, meta.Maintainers)
+	assert.Equal(t, "high", meta.DataQuality)
+	assert.InDelta(t, float32(0.98), meta.Completeness, 0.0001)
+	assert.Equal(t, "hourly", meta.Freshness)
+	assert.Equal(t, now, meta.CreatedAt)
+	assert.Equal(t, now, meta.UpdatedAt)
+	assert.Equal(t, "kafka", meta.Source)
+	assert.Equal(t, "events", meta.SourceTable)
+	assert.Equal(t, "docs", meta.Documentation)
+	assert.Equal(t, []string{"example1"}, meta.Examples)
+	assert.Equal(t, map[string]string{"custom": "value"}, meta.CustomFields)
 }
 
 func TestFeatureStatistics_Fields(t *testing.T) {
@@ -373,6 +395,22 @@ func TestFeatureStatistics_Fields(t *testing.T) {
 	assert.Equal(t, 50.0, stats.Mean)
 	assert.Equal(t, "normal", stats.Distribution)
 	assert.Equal(t, int64(500), stats.UniqueCount)
+	assert.Equal(t, "test", stats.FeatureID)
+	assert.Equal(t, 0.0, stats.Min)
+	assert.Equal(t, 100.0, stats.Max)
+	assert.Equal(t, 48.0, stats.Median)
+	assert.Equal(t, 15.0, stats.StdDev)
+	assert.Equal(t, map[string]float64{"p50": 48, "p99": 98}, stats.Percentiles)
+	assert.Equal(t, []TopValue{{Value: "A", Count: 100, Pct: 20}}, stats.TopValues)
+	assert.Equal(t, map[string]int64{"A": 100, "B": 80}, stats.ValueCounts)
+	assert.Equal(t, 0.1, stats.Skewness)
+	assert.Equal(t, 2.9, stats.Kurtosis)
+	assert.Equal(t, int64(50), stats.NullCount)
+	assert.Equal(t, 5.0, stats.NullPercentage)
+	assert.Equal(t, int64(10), stats.OutlierCount)
+	assert.Equal(t, 0.2, stats.Volatility)
+	assert.Equal(t, "stable", stats.Trend)
+	assert.Equal(t, int64(1000), stats.SampleSize)
 }
 
 func TestFeatureLineage_Fields(t *testing.T) {
@@ -392,10 +430,19 @@ func TestFeatureLineage_Fields(t *testing.T) {
 
 	assert.Equal(t, []string{"raw_a", "raw_b"}, lineage.SourceFeatures)
 	assert.Equal(t, "aggregation", lineage.TransformationType)
+	assert.Equal(t, "test", lineage.FeatureID)
+	assert.Equal(t, []string{"events_table"}, lineage.SourceTables)
+	assert.Equal(t, []string{"api"}, lineage.ExternalSources)
+	assert.Equal(t, []string{"derived_1"}, lineage.DependentFeatures)
+	assert.Equal(t, []string{"model_v1"}, lineage.DependentModels)
+	assert.Equal(t, "SUM(amount) OVER ...", lineage.TransformationCode)
+	assert.Equal(t, "v1.0", lineage.Version)
+	assert.Equal(t, "pipe-123", lineage.PipelineID)
+	assert.Equal(t, "daily_agg", lineage.PipelineName)
 }
 
 func TestFeatureUsage_Fields(t *testing.T) {
-	now := time.Now()
+	now := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
 	usage := &FeatureUsage{
 		FeatureID:       "test",
 		TotalReads:      100000,
@@ -415,4 +462,14 @@ func TestFeatureUsage_Fields(t *testing.T) {
 	assert.Equal(t, int64(100000), usage.TotalReads)
 	assert.Equal(t, 0.85, usage.PopularityScore)
 	assert.Equal(t, 2, usage.ModelCount)
+	assert.Equal(t, "test", usage.FeatureID)
+	assert.Equal(t, 500.0, usage.ReadRate)
+	assert.Equal(t, now, usage.LastReadAt)
+	assert.Equal(t, int64(1000), usage.UniqueReaders)
+	assert.Equal(t, []string{"model1", "model2"}, usage.ModelsUsing)
+	assert.Equal(t, 0.1, usage.TrendScore)
+	assert.Equal(t, 0.9, usage.ImportanceScore)
+	assert.Equal(t, []string{"model1"}, usage.CriticalModels)
+	assert.Equal(t, now.Add(-24*time.Hour), usage.WindowStart)
+	assert.Equal(t, now, usage.WindowEnd)
 }

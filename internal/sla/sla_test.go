@@ -10,14 +10,14 @@ import (
 func TestSLASpec_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		spec    SLASpec
+		spec    Spec
 		wantErr bool
 	}{
 		{
 			name: "valid latency SLA",
-			spec: SLASpec{
+			spec: Spec{
 				Name:    "api-latency",
-				Type:    SLATypeLatency,
+				Type:    TypeLatency,
 				Target:  100,
 				Window:  5 * time.Minute,
 				Enabled: true,
@@ -26,9 +26,9 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "valid availability SLA",
-			spec: SLASpec{
+			spec: Spec{
 				Name:    "api-availability",
-				Type:    SLATypeAvailability,
+				Type:    TypeAvailability,
 				Target:  99.9,
 				Window:  24 * time.Hour,
 				Enabled: true,
@@ -37,8 +37,8 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "missing name",
-			spec: SLASpec{
-				Type:   SLATypeLatency,
+			spec: Spec{
+				Type:   TypeLatency,
 				Target: 100,
 				Window: 5 * time.Minute,
 			},
@@ -46,7 +46,7 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "missing type",
-			spec: SLASpec{
+			spec: Spec{
 				Name:   "test",
 				Target: 100,
 				Window: 5 * time.Minute,
@@ -55,9 +55,9 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid target",
-			spec: SLASpec{
+			spec: Spec{
 				Name:   "test",
-				Type:   SLATypeLatency,
+				Type:   TypeLatency,
 				Target: 0,
 				Window: 5 * time.Minute,
 			},
@@ -65,9 +65,9 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid window",
-			spec: SLASpec{
+			spec: Spec{
 				Name:   "test",
-				Type:   SLATypeLatency,
+				Type:   TypeLatency,
 				Target: 100,
 				Window: 0,
 			},
@@ -75,9 +75,9 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid availability target",
-			spec: SLASpec{
+			spec: Spec{
 				Name:   "test",
-				Type:   SLATypeAvailability,
+				Type:   TypeAvailability,
 				Target: 150, // > 100%
 				Window: 5 * time.Minute,
 			},
@@ -85,7 +85,7 @@ func TestSLASpec_Validate(t *testing.T) {
 		},
 		{
 			name: "unknown type",
-			spec: SLASpec{
+			spec: Spec{
 				Name:   "test",
 				Type:   "unknown",
 				Target: 100,
@@ -146,9 +146,9 @@ func TestNewManager(t *testing.T) {
 func TestManager_RegisterSLA(t *testing.T) {
 	manager := NewManager(nil, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "test-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -173,9 +173,9 @@ func TestManager_RegisterSLA(t *testing.T) {
 func TestManager_RegisterSLA_Invalid(t *testing.T) {
 	manager := NewManager(nil, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name: "", // Invalid - missing name
-		Type: SLATypeLatency,
+		Type: TypeLatency,
 	}
 
 	err := manager.RegisterSLA(spec)
@@ -187,9 +187,9 @@ func TestManager_RegisterSLA_Invalid(t *testing.T) {
 func TestManager_UnregisterSLA(t *testing.T) {
 	manager := NewManager(nil, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "test-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -221,9 +221,9 @@ func TestManager_UnregisterSLA_NotFound(t *testing.T) {
 func TestManager_ListSLAs(t *testing.T) {
 	manager := NewManager(nil, DefaultManagerConfig())
 
-	specs := []*SLASpec{
-		{Name: "sla-1", Type: SLATypeLatency, Target: 100, Window: time.Minute, Enabled: true},
-		{Name: "sla-2", Type: SLATypeAvailability, Target: 99.9, Window: time.Hour, Enabled: true},
+	specs := []*Spec{
+		{Name: "sla-1", Type: TypeLatency, Target: 100, Window: time.Minute, Enabled: true},
+		{Name: "sla-2", Type: TypeAvailability, Target: 99.9, Window: time.Hour, Enabled: true},
 	}
 
 	for _, spec := range specs {
@@ -239,9 +239,9 @@ func TestManager_ListSLAs(t *testing.T) {
 func TestManager_GetStatus(t *testing.T) {
 	manager := NewManager(nil, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "test-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -275,9 +275,9 @@ func TestManager_GetStatus_NotFound(t *testing.T) {
 func TestManager_GetAllStatuses(t *testing.T) {
 	manager := NewManager(nil, DefaultManagerConfig())
 
-	specs := []*SLASpec{
-		{Name: "sla-1", Type: SLATypeLatency, Target: 100, Window: time.Minute, Enabled: true},
-		{Name: "sla-2", Type: SLATypeAvailability, Target: 99.9, Window: time.Hour, Enabled: true},
+	specs := []*Spec{
+		{Name: "sla-1", Type: TypeLatency, Target: 100, Window: time.Minute, Enabled: true},
+		{Name: "sla-2", Type: TypeAvailability, Target: 99.9, Window: time.Hour, Enabled: true},
 	}
 
 	for _, spec := range specs {
@@ -321,7 +321,7 @@ type mockAlertHandler struct {
 	recoveryCount int32
 }
 
-func (m *mockAlertHandler) OnWarning(_ context.Context, _ *SLAStatus) error {
+func (m *mockAlertHandler) OnWarning(_ context.Context, _ *Status) error {
 	atomic.AddInt32(&m.warningCount, 1)
 	return nil
 }
@@ -342,9 +342,9 @@ func TestManager_EvaluateSLA_Latency(t *testing.T) {
 	}
 	manager := NewManager(metrics, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "latency-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100, // 100ms
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -371,9 +371,9 @@ func TestManager_EvaluateSLA_Availability(t *testing.T) {
 	}
 	manager := NewManager(metrics, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "availability-sla",
-		Type:    SLATypeAvailability,
+		Type:    TypeAvailability,
 		Target:  99.9,
 		Window:  24 * time.Hour,
 		Enabled: true,
@@ -396,9 +396,9 @@ func TestManager_EvaluateSLA_Healthy(t *testing.T) {
 	}
 	manager := NewManager(metrics, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "healthy-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -424,9 +424,9 @@ func TestManager_AlertHandler_Breach(t *testing.T) {
 	handler := &mockAlertHandler{}
 	manager.AddAlertHandler(handler)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "alert-test-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -451,9 +451,9 @@ func TestManager_AlertHandler_Recovery(t *testing.T) {
 	handler := &mockAlertHandler{}
 	manager.AddAlertHandler(handler)
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "recovery-test-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -483,9 +483,9 @@ func TestManager_GetBreaches(t *testing.T) {
 	}
 	manager := NewManager(metrics, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "breach-history-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: true,
@@ -513,9 +513,9 @@ func TestManager_GetComplianceSummary(t *testing.T) {
 	}
 	manager := NewManager(metrics, DefaultManagerConfig())
 
-	specs := []*SLASpec{
-		{Name: "sla-1", Type: SLATypeLatency, Target: 100, Window: time.Minute, Enabled: true},
-		{Name: "sla-2", Type: SLATypeAvailability, Target: 99.9, Window: time.Hour, Enabled: true},
+	specs := []*Spec{
+		{Name: "sla-1", Type: TypeLatency, Target: 100, Window: time.Minute, Enabled: true},
+		{Name: "sla-2", Type: TypeAvailability, Target: 99.9, Window: time.Hour, Enabled: true},
 	}
 
 	for _, spec := range specs {
@@ -546,9 +546,9 @@ func TestManager_DisabledSLA(t *testing.T) {
 	}
 	manager := NewManager(metrics, DefaultManagerConfig())
 
-	spec := &SLASpec{
+	spec := &Spec{
 		Name:    "disabled-sla",
-		Type:    SLATypeLatency,
+		Type:    TypeLatency,
 		Target:  100,
 		Window:  5 * time.Minute,
 		Enabled: false, // Disabled

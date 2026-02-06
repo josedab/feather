@@ -33,8 +33,8 @@ type OfflineSource interface {
 	Name() string
 }
 
-// ConsistencyResult represents the result of a consistency check.
-type ConsistencyResult struct {
+// Result represents the result of a consistency check.
+type Result struct {
 	EntityID     string      `json:"entity_id"`
 	Feature      string      `json:"feature"`
 	OnlineValue  interface{} `json:"online_value"`
@@ -47,8 +47,8 @@ type ConsistencyResult struct {
 	Tolerance    float64     `json:"tolerance,omitempty"`
 }
 
-// ConsistencyReport summarizes consistency check results.
-type ConsistencyReport struct {
+// Report summarizes consistency check results.
+type Report struct {
 	TotalChecks       int                            `json:"total_checks"`
 	ConsistentCount   int                            `json:"consistent_count"`
 	InconsistentCount int                            `json:"inconsistent_count"`
@@ -95,7 +95,7 @@ type Checker struct {
 	onlineStore   *storage.Store
 	offlineSource OfflineSource
 	config        CheckerConfig
-	results       []*ConsistencyResult
+	results       []*Result
 	mu            sync.RWMutex
 }
 
@@ -105,7 +105,7 @@ func NewChecker(onlineStore *storage.Store, offlineSource OfflineSource, config 
 		onlineStore:   onlineStore,
 		offlineSource: offlineSource,
 		config:        config,
-		results:       make([]*ConsistencyResult, 0),
+		results:       make([]*Result, 0),
 	}
 }
 
@@ -117,7 +117,7 @@ func (c *Checker) SetOfflineSource(source OfflineSource) {
 }
 
 // CheckFeature checks consistency for a single entity/feature pair.
-func (c *Checker) CheckFeature(ctx context.Context, entityID string, featureName string) (*ConsistencyResult, error) {
+func (c *Checker) CheckFeature(ctx context.Context, entityID string, featureName string) (*Result, error) {
 	c.mu.RLock()
 	offlineSource := c.offlineSource
 	c.mu.RUnlock()
@@ -126,7 +126,7 @@ func (c *Checker) CheckFeature(ctx context.Context, entityID string, featureName
 		return nil, ErrOfflineSourceNotConfigured
 	}
 
-	result := &ConsistencyResult{
+	result := &Result{
 		EntityID:  entityID,
 		Feature:   featureName,
 		CheckedAt: time.Now(),
@@ -168,7 +168,7 @@ func (c *Checker) CheckFeature(ctx context.Context, entityID string, featureName
 }
 
 // CheckBatch checks consistency for multiple entity/feature pairs.
-func (c *Checker) CheckBatch(ctx context.Context, entityIDs []string, featureNames []string) ([]*ConsistencyResult, error) {
+func (c *Checker) CheckBatch(ctx context.Context, entityIDs []string, featureNames []string) ([]*Result, error) {
 	c.mu.RLock()
 	offlineSource := c.offlineSource
 	c.mu.RUnlock()
@@ -180,7 +180,7 @@ func (c *Checker) CheckBatch(ctx context.Context, entityIDs []string, featureNam
 	// Semaphore for concurrency control
 	sem := make(chan struct{}, c.config.Concurrency)
 	var wg sync.WaitGroup
-	resultsCh := make(chan *ConsistencyResult, len(entityIDs)*len(featureNames))
+	resultsCh := make(chan *Result, len(entityIDs)*len(featureNames))
 	errorsCh := make(chan error, 1)
 
 	for _, entityID := range entityIDs {
@@ -213,7 +213,7 @@ func (c *Checker) CheckBatch(ctx context.Context, entityIDs []string, featureNam
 	close(resultsCh)
 	close(errorsCh)
 
-	var results []*ConsistencyResult
+	results := make([]*Result, 0, len(entityIDs)*len(featureNames))
 	for result := range resultsCh {
 		results = append(results, result)
 	}
@@ -222,13 +222,13 @@ func (c *Checker) CheckBatch(ctx context.Context, entityIDs []string, featureNam
 }
 
 // GenerateReport generates a consistency report from results.
-func (c *Checker) GenerateReport(results []*ConsistencyResult) *ConsistencyReport {
+func (c *Checker) GenerateReport(results []*Result) *Report {
 	startTime := time.Now()
 	if len(results) > 0 {
 		startTime = results[0].CheckedAt
 	}
 
-	report := &ConsistencyReport{
+	report := &Report{
 		TotalChecks: len(results),
 		ByFeature:   make(map[string]*FeatureConsistency),
 		StartTime:   startTime,
@@ -282,11 +282,11 @@ func (c *Checker) GenerateReport(results []*ConsistencyResult) *ConsistencyRepor
 }
 
 // GetResults returns recent consistency check results.
-func (c *Checker) GetResults(feature string, since time.Time, limit int) []*ConsistencyResult {
+func (c *Checker) GetResults(feature string, since time.Time, limit int) []*Result {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	var filtered []*ConsistencyResult
+	var filtered []*Result
 	for i := len(c.results) - 1; i >= 0 && len(filtered) < limit; i-- {
 		r := c.results[i]
 		if r.CheckedAt.Before(since) {
@@ -301,11 +301,11 @@ func (c *Checker) GetResults(feature string, since time.Time, limit int) []*Cons
 }
 
 // GetInconsistencies returns only inconsistent results.
-func (c *Checker) GetInconsistencies(feature string, since time.Time, limit int) []*ConsistencyResult {
+func (c *Checker) GetInconsistencies(feature string, since time.Time, limit int) []*Result {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	var filtered []*ConsistencyResult
+	var filtered []*Result
 	for i := len(c.results) - 1; i >= 0 && len(filtered) < limit; i-- {
 		r := c.results[i]
 		if r.CheckedAt.Before(since) {
@@ -403,10 +403,12 @@ func NewHTTPOfflineSource(name, endpoint string, headers map[string]string) *HTT
 	}
 }
 
+// Name identifies the offline source.
 func (s *HTTPOfflineSource) Name() string {
 	return s.name
 }
 
+// GetFeature fetches a single feature from the offline service.
 func (s *HTTPOfflineSource) GetFeature(ctx context.Context, entityID string, featureName string) (interface{}, time.Time, error) {
 	url := fmt.Sprintf("%s/features/%s/%s", s.endpoint, entityID, featureName)
 
@@ -423,7 +425,9 @@ func (s *HTTPOfflineSource) GetFeature(ctx context.Context, entityID string, fea
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, time.Time{}, ErrFeatureNotFound
@@ -446,6 +450,7 @@ func (s *HTTPOfflineSource) GetFeature(ctx context.Context, entityID string, fea
 	return result.Value, timestamp, nil
 }
 
+// GetFeaturesBatch fetches multiple features in one request.
 func (s *HTTPOfflineSource) GetFeaturesBatch(ctx context.Context, entityIDs []string, featureNames []string) (map[string]map[string]interface{}, error) {
 	// Batch endpoint
 	url := fmt.Sprintf("%s/features/batch", s.endpoint)
@@ -471,7 +476,9 @@ func (s *HTTPOfflineSource) GetFeaturesBatch(ctx context.Context, entityIDs []st
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP error: %d", resp.StatusCode)
@@ -502,6 +509,7 @@ func NewInMemoryOfflineSource(name string) *InMemoryOfflineSource {
 	}
 }
 
+// Name identifies the offline source.
 func (s *InMemoryOfflineSource) Name() string {
 	return s.name
 }
@@ -519,6 +527,7 @@ func (s *InMemoryOfflineSource) SetFeature(entityID, featureName string, value i
 	s.times[entityID][featureName] = timestamp
 }
 
+// GetFeature returns a value from in-memory data.
 func (s *InMemoryOfflineSource) GetFeature(ctx context.Context, entityID string, featureName string) (interface{}, time.Time, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -537,6 +546,7 @@ func (s *InMemoryOfflineSource) GetFeature(ctx context.Context, entityID string,
 	return value, timestamp, nil
 }
 
+// GetFeaturesBatch returns values from in-memory data.
 func (s *InMemoryOfflineSource) GetFeaturesBatch(ctx context.Context, entityIDs []string, featureNames []string) (map[string]map[string]interface{}, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
