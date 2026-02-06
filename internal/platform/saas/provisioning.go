@@ -145,6 +145,7 @@ type ProvisioningManager struct {
 	instances      map[string]*Instance
 	regions        map[string]Region
 	mu             sync.RWMutex
+	stopCh         chan struct{}
 }
 
 // NewProvisioningManager creates a new provisioning manager.
@@ -154,6 +155,7 @@ func NewProvisioningManager(planRegistry *PlanRegistry, billingManager *BillingM
 		billingManager: billingManager,
 		instances:      make(map[string]*Instance),
 		regions:        make(map[string]Region),
+		stopCh:         make(chan struct{}),
 	}
 
 	// Initialize regions
@@ -162,6 +164,11 @@ func NewProvisioningManager(planRegistry *PlanRegistry, billingManager *BillingM
 	}
 
 	return pm
+}
+
+// Stop signals all background provisioning goroutines to exit.
+func (pm *ProvisioningManager) Stop() {
+	close(pm.stopCh)
 }
 
 // CreateInstance provisions a new instance.
@@ -235,7 +242,11 @@ func (pm *ProvisioningManager) provisionInstance(instance *Instance) {
 	pm.mu.Unlock()
 
 	// Simulate provisioning time
-	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-time.After(100 * time.Millisecond):
+	case <-pm.stopCh:
+		return
+	}
 
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
@@ -369,7 +380,11 @@ func (pm *ProvisioningManager) StopInstance(id string) error {
 
 	// Simulate stopping
 	go func() {
-		time.Sleep(50 * time.Millisecond)
+		select {
+		case <-time.After(50 * time.Millisecond):
+		case <-pm.stopCh:
+			return
+		}
 		pm.mu.Lock()
 		defer pm.mu.Unlock()
 		now := time.Now()
@@ -396,7 +411,11 @@ func (pm *ProvisioningManager) TerminateInstance(id string) error {
 
 	// Simulate termination
 	go func() {
-		time.Sleep(50 * time.Millisecond)
+		select {
+		case <-time.After(50 * time.Millisecond):
+		case <-pm.stopCh:
+			return
+		}
 		pm.mu.Lock()
 		defer pm.mu.Unlock()
 		instance.Status = InstanceTerminated
@@ -425,7 +444,11 @@ func (pm *ProvisioningManager) RestartInstance(id string) error {
 	instance.UpdatedAt = time.Now()
 
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		select {
+		case <-time.After(100 * time.Millisecond):
+		case <-pm.stopCh:
+			return
+		}
 		pm.mu.Lock()
 		defer pm.mu.Unlock()
 		now := time.Now()
