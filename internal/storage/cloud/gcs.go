@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -156,7 +157,9 @@ func (b *GCSBackend) Put(ctx context.Context, entityKey string, features map[str
 	// Write history if enabled
 	if b.config.HistoryEnabled {
 		histPath := b.historyPath(entityKey, time.Now())
-		b.client.Write(ctx, b.config.BucketName, histPath, data)
+		if err := b.client.Write(ctx, b.config.BucketName, histPath, data); err != nil {
+			atomic.AddInt64(&b.stats.errors, 1)
+		}
 	}
 
 	return nil
@@ -197,8 +200,7 @@ func (b *GCSBackend) GetAsOf(ctx context.Context, entityKey string, features []s
 	for _, obj := range objects {
 		// Extract timestamp from filename
 		var ts int64
-		_, err := fmt.Sscanf(path.Base(obj), "%d.json", &ts)
-		if err != nil {
+		if _, scanErr := fmt.Sscanf(path.Base(obj), "%d.json", &ts); scanErr != nil {
 			continue
 		}
 
@@ -242,7 +244,10 @@ func (b *GCSBackend) BatchGet(ctx context.Context, entityKeys []string, features
 			defer func() { <-sem }()
 
 			featureValues, err := b.Get(ctx, entityKey, features)
-			if err != nil && err != ErrNotFound {
+			if err != nil {
+				if errors.Is(err, ErrNotFound) {
+					return
+				}
 				errChan <- err
 				return
 			}
@@ -437,6 +442,8 @@ func (b *GCSBackend) decompress(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer gz.Close()
+	defer func() {
+		_ = gz.Close()
+	}()
 	return io.ReadAll(gz)
 }

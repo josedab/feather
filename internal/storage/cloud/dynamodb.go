@@ -78,58 +78,70 @@ type DynamoDBClient interface {
 	Scan(ctx context.Context, input *ScanInput) (*ScanOutput, error)
 }
 
-// SDK-agnostic types for DynamoDB operations
+// SDK-agnostic types for DynamoDB operations.
 
+// GetItemInput represents a GetItem request.
 type GetItemInput struct {
 	TableName      string
 	Key            map[string]interface{}
 	ConsistentRead bool
 }
 
+// GetItemOutput represents a GetItem response.
 type GetItemOutput struct {
 	Item map[string]interface{}
 }
 
+// PutItemInput represents a PutItem request.
 type PutItemInput struct {
 	TableName string
 	Item      map[string]interface{}
 }
 
+// DeleteItemInput represents a DeleteItem request.
 type DeleteItemInput struct {
 	TableName string
 	Key       map[string]interface{}
 }
 
+// BatchGetItemInput represents a BatchGetItem request.
 type BatchGetItemInput struct {
 	RequestItems map[string]*KeysAndAttributes
 }
 
+// KeysAndAttributes represents a batch get key set.
 type KeysAndAttributes struct {
 	Keys           []map[string]interface{}
 	ConsistentRead bool
 }
 
+// BatchGetItemOutput represents a BatchGetItem response.
 type BatchGetItemOutput struct {
 	Responses map[string][]map[string]interface{}
 }
 
+// BatchWriteItemInput represents a BatchWriteItem request.
 type BatchWriteItemInput struct {
 	RequestItems map[string][]*WriteRequest
 }
 
+// WriteRequest represents a single batch write request.
 type WriteRequest struct {
 	PutRequest    *PutRequest
 	DeleteRequest *DeleteRequest
 }
 
+// PutRequest represents a batch put request.
 type PutRequest struct {
 	Item map[string]interface{}
 }
 
+// DeleteRequest represents a batch delete request.
 type DeleteRequest struct {
 	Key map[string]interface{}
 }
 
+// QueryInput represents a Query request.
 type QueryInput struct {
 	TableName              string
 	KeyConditionExpression string
@@ -138,10 +150,12 @@ type QueryInput struct {
 	Limit                  int
 }
 
+// QueryOutput represents a Query response.
 type QueryOutput struct {
 	Items []map[string]interface{}
 }
 
+// ScanInput represents a Scan request.
 type ScanInput struct {
 	TableName         string
 	FilterExpression  string
@@ -150,6 +164,7 @@ type ScanInput struct {
 	ExclusiveStartKey map[string]interface{}
 }
 
+// ScanOutput represents a Scan response.
 type ScanOutput struct {
 	Items            []map[string]interface{}
 	LastEvaluatedKey map[string]interface{}
@@ -261,7 +276,9 @@ func (b *DynamoDBBackend) Put(ctx context.Context, entityKey string, features ma
 			Item:      histItem,
 		}
 		// Best effort - don't fail main operation
-		b.client.PutItem(ctx, histInput)
+		if err := b.client.PutItem(ctx, histInput); err != nil {
+			atomic.AddInt64(&b.stats.errors, 1)
+		}
 	}
 
 	return nil
@@ -376,7 +393,7 @@ func (b *DynamoDBBackend) BatchPut(ctx context.Context, updates map[string]map[s
 	}
 
 	// Build write requests
-	var requests []*WriteRequest
+	requests := make([]*WriteRequest, 0, len(updates))
 	for entityKey, features := range updates {
 		item, err := b.featuresToItem(entityKey, features)
 		if err != nil {
@@ -609,7 +626,9 @@ func (b *DynamoDBBackend) decompress(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer gz.Close()
+	defer func() {
+		_ = gz.Close()
+	}()
 	return io.ReadAll(gz)
 }
 

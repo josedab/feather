@@ -53,16 +53,16 @@ type Backend interface {
 
 // BackendStats contains backend statistics.
 type BackendStats struct {
-	ReadOps       int64   `json:"read_ops"`
-	WriteOps      int64   `json:"write_ops"`
-	BytesRead     int64   `json:"bytes_read"`
-	BytesWritten  int64   `json:"bytes_written"`
-	Errors        int64   `json:"errors"`
-	AvgReadMs     float64 `json:"avg_read_ms"`
-	AvgWriteMs    float64 `json:"avg_write_ms"`
-	ItemCount     int64   `json:"item_count"`
-	StorageBytes  int64   `json:"storage_bytes"`
-	ConnectionsActive int `json:"connections_active"`
+	ReadOps           int64   `json:"read_ops"`
+	WriteOps          int64   `json:"write_ops"`
+	BytesRead         int64   `json:"bytes_read"`
+	BytesWritten      int64   `json:"bytes_written"`
+	Errors            int64   `json:"errors"`
+	AvgReadMs         float64 `json:"avg_read_ms"`
+	AvgWriteMs        float64 `json:"avg_write_ms"`
+	ItemCount         int64   `json:"item_count"`
+	StorageBytes      int64   `json:"storage_bytes"`
+	ConnectionsActive int     `json:"connections_active"`
 }
 
 // BackendConfig contains common configuration options.
@@ -129,11 +129,11 @@ func Retry(ctx context.Context, config RetryConfig, fn func() error) error {
 	delay := config.BaseDelay
 
 	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
-		if err := fn(); err == nil {
+		err := fn()
+		if err == nil {
 			return nil
-		} else {
-			lastErr = err
 		}
+		lastErr = err
 
 		if attempt == config.MaxRetries {
 			break
