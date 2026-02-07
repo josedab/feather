@@ -3,8 +3,9 @@ package warehouse
 import (
 	"testing"
 
-	"github.com/feather-store/feather/internal/domain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/feather-store/feather/internal/domain"
 )
 
 func TestConnectorType_String(t *testing.T) {
@@ -235,6 +236,9 @@ func TestTableSchema_Fields(t *testing.T) {
 		PartitionedBy: []string{"timestamp"},
 	}
 
+	_ = schema.Schema
+	_ = schema.PrimaryKey
+	_ = schema.PartitionedBy
 	assert.Equal(t, "features", schema.Table)
 	assert.Len(t, schema.Columns, 2)
 	assert.Equal(t, "entity_key", schema.Columns[0].Name)
@@ -250,6 +254,9 @@ func TestColumnInfo_FeatureType(t *testing.T) {
 		Nullable:    true,
 	}
 
+	_ = col.Name
+	_ = col.Type
+	_ = col.Nullable
 	assert.Equal(t, domain.DataTypeInt64, col.FeatureType)
 }
 
@@ -278,6 +285,7 @@ func TestConnectorMetrics_Fields(t *testing.T) {
 		BytesTransferred:   1024 * 1024,
 	}
 
+	_ = metrics.BytesTransferred
 	assert.Equal(t, int64(5), metrics.ConnectionAttempts)
 	assert.Equal(t, int64(1), metrics.ConnectionFailures)
 	assert.Equal(t, int64(100), metrics.QueriesExecuted)
@@ -288,8 +296,7 @@ func TestConnectorMetrics_Fields(t *testing.T) {
 
 func TestCreateTableRequest_Fields(t *testing.T) {
 	req := &CreateTableRequest{
-		Table:  "features",
-		Schema: "public",
+		Table: "features",
 		Features: []domain.FeatureSpec{
 			{Name: "click_count", DataType: domain.DataTypeInt64},
 		},
@@ -297,6 +304,7 @@ func TestCreateTableRequest_Fields(t *testing.T) {
 		IfNotExists: true,
 	}
 
+	_ = req.PartitionBy
 	assert.Equal(t, "features", req.Table)
 	assert.Len(t, req.Features, 1)
 	assert.True(t, req.IfNotExists)
@@ -312,6 +320,7 @@ func TestExportResult_Fields(t *testing.T) {
 		Checksum:         "abc123",
 	}
 
+	_ = result.Checksum
 	assert.Equal(t, int64(1000), result.RowsExported)
 	assert.Equal(t, int64(1024*100), result.BytesExported)
 	assert.Equal(t, int64(500), result.EntitiesExported)

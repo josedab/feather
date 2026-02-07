@@ -138,7 +138,7 @@ func (c *SnowflakeConnector) Connect(ctx context.Context) error {
 	if err != nil {
 		c.state = ConnectionStateFailed
 		atomic.AddInt64(&c.metrics.ConnectionFailures, 1)
-		return fmt.Errorf("%w: %v", ErrConnectionFailed, err)
+		return fmt.Errorf("%w: %w", ErrConnectionFailed, err)
 	}
 
 	// Configure connection pool
@@ -151,10 +151,12 @@ func (c *SnowflakeConnector) Connect(ctx context.Context) error {
 	defer cancel()
 
 	if err := db.PingContext(pingCtx); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			c.logger.Warn("failed to close Snowflake connection after ping failure", "error", closeErr)
+		}
 		c.state = ConnectionStateFailed
 		atomic.AddInt64(&c.metrics.ConnectionFailures, 1)
-		return fmt.Errorf("%w: %v", ErrConnectionFailed, err)
+		return fmt.Errorf("%w: %w", ErrConnectionFailed, err)
 	}
 
 	c.db = db
@@ -410,7 +412,7 @@ func (c *SnowflakeConnector) exportBatch(ctx context.Context, db *sql.DB, schema
 	}
 	sb.WriteString(") VALUES ")
 
-	var values []interface{}
+	values := make([]interface{}, 0, len(entities)*(len(features)+2))
 	var rowsExported int64
 	var bytesExported int64
 
@@ -513,9 +515,13 @@ func (c *SnowflakeConnector) Import(ctx context.Context, req *ImportRequest) (*I
 	// Execute query
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			c.logger.Warn("failed to close Snowflake rows", "error", closeErr)
+		}
+	}()
 
 	// Get column names
 	columns, err := rows.Columns()
@@ -684,7 +690,7 @@ func (c *SnowflakeConnector) ListTables(ctx context.Context, schema string) ([]T
 		schema = c.config.Schema
 	}
 
-	query := fmt.Sprintf(`
+	query := `
 		SELECT
 			TABLE_NAME,
 			TABLE_SCHEMA,
@@ -693,15 +699,19 @@ func (c *SnowflakeConnector) ListTables(ctx context.Context, schema string) ([]T
 			CREATED,
 			LAST_ALTERED
 		FROM INFORMATION_SCHEMA.TABLES
-		WHERE TABLE_SCHEMA = '%s'
+		WHERE TABLE_SCHEMA = ?
 		ORDER BY TABLE_NAME
-	`, schema)
+	`
 
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.QueryContext(ctx, query, schema)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			c.logger.Warn("failed to close Snowflake rows", "error", closeErr)
+		}
+	}()
 
 	var tables []TableInfo
 	for rows.Next() {
@@ -752,21 +762,25 @@ func (c *SnowflakeConnector) GetTableSchema(ctx context.Context, table string) (
 		tableName = parts[1]
 	}
 
-	query := fmt.Sprintf(`
+	query := `
 		SELECT
 			COLUMN_NAME,
 			DATA_TYPE,
 			IS_NULLABLE
 		FROM INFORMATION_SCHEMA.COLUMNS
-		WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'
+		WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
 		ORDER BY ORDINAL_POSITION
-	`, schemaName, tableName)
+	`
 
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := db.QueryContext(ctx, query, schemaName, tableName)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			c.logger.Warn("failed to close Snowflake rows", "error", closeErr)
+		}
+	}()
 
 	schema := &TableSchema{
 		Table:  tableName,
@@ -882,9 +896,13 @@ func (c *SnowflakeConnector) ExecuteQuery(ctx context.Context, query string) (*Q
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		atomic.AddInt64(&c.metrics.QueryErrors, 1)
-		return nil, fmt.Errorf("%w: %v", ErrQueryFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrQueryFailed, err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			c.logger.Warn("failed to close Snowflake rows", "error", closeErr)
+		}
+	}()
 
 	columns, err := rows.Columns()
 	if err != nil {

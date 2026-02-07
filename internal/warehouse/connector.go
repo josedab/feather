@@ -52,52 +52,69 @@ var (
 	ErrRateLimited           = errors.New("rate limited by warehouse")
 	ErrTimeout               = errors.New("operation timed out")
 	ErrInvalidConfig         = errors.New("invalid configuration")
+	ErrIteratorDone          = errors.New("iterator done")
 )
 
 // ConnectorType identifies the warehouse type.
 type ConnectorType string
 
 const (
+	// ConnectorTypeSnowflake identifies the Snowflake connector.
 	ConnectorTypeSnowflake ConnectorType = "snowflake"
-	ConnectorTypeBigQuery  ConnectorType = "bigquery"
+	// ConnectorTypeBigQuery identifies the BigQuery connector.
+	ConnectorTypeBigQuery ConnectorType = "bigquery"
 )
 
 // ConnectionState represents the current state of a warehouse connection.
 type ConnectionState string
 
 const (
+	// ConnectionStateDisconnected indicates no active connection.
 	ConnectionStateDisconnected ConnectionState = "disconnected"
-	ConnectionStateConnecting   ConnectionState = "connecting"
-	ConnectionStateConnected    ConnectionState = "connected"
-	ConnectionStateFailed       ConnectionState = "failed"
+	// ConnectionStateConnecting indicates an in-progress connection attempt.
+	ConnectionStateConnecting ConnectionState = "connecting"
+	// ConnectionStateConnected indicates an active connection.
+	ConnectionStateConnected ConnectionState = "connected"
+	// ConnectionStateFailed indicates a failed connection attempt.
+	ConnectionStateFailed ConnectionState = "failed"
 )
 
 // SyncDirection indicates the direction of data synchronization.
 type SyncDirection string
 
 const (
-	SyncDirectionExport SyncDirection = "export" // Feather -> Warehouse
-	SyncDirectionImport SyncDirection = "import" // Warehouse -> Feather
-	SyncDirectionBidir  SyncDirection = "bidirectional"
+	// SyncDirectionExport sends data from Feather to the warehouse.
+	SyncDirectionExport SyncDirection = "export"
+	// SyncDirectionImport pulls data from the warehouse into Feather.
+	SyncDirectionImport SyncDirection = "import"
+	// SyncDirectionBidir allows bidirectional sync.
+	SyncDirectionBidir SyncDirection = "bidirectional"
 )
 
 // SyncMode determines how synchronization handles existing data.
 type SyncMode string
 
 const (
-	SyncModeFull        SyncMode = "full"        // Replace all data
-	SyncModeIncremental SyncMode = "incremental" // Only sync changes since last sync
-	SyncModeMerge       SyncMode = "merge"       // Merge with conflict resolution
+	// SyncModeFull replaces all data.
+	SyncModeFull SyncMode = "full"
+	// SyncModeIncremental syncs only changes since last sync.
+	SyncModeIncremental SyncMode = "incremental"
+	// SyncModeMerge merges with conflict resolution.
+	SyncModeMerge SyncMode = "merge"
 )
 
 // ConflictResolution determines how to resolve conflicts during merge sync.
 type ConflictResolution string
 
 const (
-	ConflictResolutionLatest    ConflictResolution = "latest"     // Keep newest timestamp
-	ConflictResolutionSource    ConflictResolution = "source"     // Prefer source (Feather)
-	ConflictResolutionTarget    ConflictResolution = "target"     // Prefer target (Warehouse)
-	ConflictResolutionHigherVer ConflictResolution = "higher_ver" // Prefer higher version
+	// ConflictResolutionLatest keeps the newest timestamp.
+	ConflictResolutionLatest ConflictResolution = "latest"
+	// ConflictResolutionSource prefers the Feather source.
+	ConflictResolutionSource ConflictResolution = "source"
+	// ConflictResolutionTarget prefers the warehouse target.
+	ConflictResolutionTarget ConflictResolution = "target"
+	// ConflictResolutionHigherVer prefers the higher version.
+	ConflictResolutionHigherVer ConflictResolution = "higher_ver"
 )
 
 // Connector defines the interface for warehouse connectors.

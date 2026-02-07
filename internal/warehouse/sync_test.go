@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/storage"
 )
 
 func TestDefaultSyncConfig(t *testing.T) {
@@ -28,7 +29,7 @@ func TestSyncStatus_Values(t *testing.T) {
 	assert.Equal(t, SyncStatus("running"), SyncStatusRunning)
 	assert.Equal(t, SyncStatus("completed"), SyncStatusCompleted)
 	assert.Equal(t, SyncStatus("failed"), SyncStatusFailed)
-	assert.Equal(t, SyncStatus("cancelled"), SyncStatusCancelled)
+	assert.Equal(t, SyncStatus("canceled"), SyncStatusCanceled)
 }
 
 func TestNewSyncEngine(t *testing.T) {
@@ -255,7 +256,7 @@ func TestSyncEngine_ExecuteJob_Export(t *testing.T) {
 		},
 	}
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, schemaReg)
@@ -310,7 +311,7 @@ func TestSyncEngine_ExecuteJob_Import(t *testing.T) {
 		},
 	}
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024,
 		WarmInMemory: true,
 	}, schemaReg)
@@ -521,6 +522,17 @@ func TestSyncJob_Fields(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
+	_ = job.Name
+	_ = job.Mode
+	_ = job.Source
+	_ = job.Target
+	_ = job.EntityColumn
+	_ = job.TimestampColumn
+	_ = job.FeatureMapping
+	_ = job.Filter
+	_ = job.Schedule
+	_ = job.CreatedAt
+	_ = job.UpdatedAt
 	assert.Equal(t, "job-1", job.ID)
 	assert.Equal(t, SyncDirectionExport, job.Direction)
 	assert.Len(t, job.Features, 2)
@@ -541,6 +553,10 @@ func TestSyncExecution_Fields(t *testing.T) {
 		Checkpoint:       "offset=1000",
 	}
 
+	_ = execution.JobID
+	_ = execution.StartedAt
+	_ = execution.BytesTransferred
+	_ = execution.Checkpoint
 	assert.Equal(t, "exec-1", execution.ID)
 	assert.Equal(t, SyncStatusCompleted, execution.Status)
 	assert.Equal(t, int64(1000), execution.RowsSynced)

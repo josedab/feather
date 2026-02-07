@@ -444,17 +444,17 @@ const ConflictResolutionCustom ConflictResolution = "custom"
 
 // BatchConflictResolver handles multiple conflicts efficiently.
 type BatchConflictResolver struct {
-	resolver   *ConflictResolver
-	conflicts  []*Conflict
+	resolver    *ConflictResolver
+	conflicts   []*Conflict
 	resolutions []*Resolution
-	mu         sync.Mutex
+	mu          sync.Mutex
 }
 
 // NewBatchConflictResolver creates a batch resolver.
 func NewBatchConflictResolver(resolver *ConflictResolver) *BatchConflictResolver {
 	return &BatchConflictResolver{
-		resolver:   resolver,
-		conflicts:  make([]*Conflict, 0),
+		resolver:    resolver,
+		conflicts:   make([]*Conflict, 0),
 		resolutions: make([]*Resolution, 0),
 	}
 }
@@ -507,9 +507,9 @@ func (b *BatchConflictResolver) GetConflicts() []*Conflict {
 
 // ConflictLog records conflicts for auditing.
 type ConflictLog struct {
-	mu       sync.Mutex
-	entries  []ConflictLogEntry
-	maxSize  int
+	mu      sync.Mutex
+	entries []ConflictLogEntry
+	maxSize int
 }
 
 // ConflictLogEntry is a single conflict log entry.
