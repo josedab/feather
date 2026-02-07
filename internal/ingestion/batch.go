@@ -89,7 +89,9 @@ func (b *BatchImporter) ImportCSV(ctx context.Context, path string, config Impor
 	if err != nil {
 		return nil, fmt.Errorf("opening file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	return b.ImportCSVReader(ctx, file, config)
 }
@@ -152,11 +154,6 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 	timestampFormat := config.TimestampFormat
 	if timestampFormat == "" {
 		timestampFormat = time.RFC3339
-	}
-
-	batchSize := config.BatchSize
-	if batchSize == 0 {
-		batchSize = 1000
 	}
 
 	// Process rows
@@ -236,8 +233,10 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 
 			// Update aggregations
 			if b.agg.GetSpec(featureName) != nil {
-				if floatVal, ok := toFloat64(parsedValue); ok {
-					b.agg.Update(entityKey, featureName, floatVal, time.Unix(0, timestamp))
+				if floatVal, ok := domain.ToFloat64(parsedValue); ok {
+					if err := b.agg.Update(entityKey, featureName, floatVal, time.Unix(0, timestamp)); err != nil {
+						return nil, fmt.Errorf("updating aggregation: %w", err)
+					}
 				}
 			}
 
@@ -273,7 +272,9 @@ func (b *BatchImporter) ImportJSON(ctx context.Context, path string, config Impo
 	if err != nil {
 		return nil, fmt.Errorf("opening file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	return b.ImportJSONReader(ctx, file, config)
 }
@@ -340,8 +341,10 @@ func (b *BatchImporter) ImportJSONReader(ctx context.Context, r io.Reader, confi
 			}
 
 			if b.agg.GetSpec(featureName) != nil {
-				if floatVal, ok := toFloat64(value); ok {
-					b.agg.Update(entityKey, featureName, floatVal, time.Unix(0, timestamp))
+				if floatVal, ok := domain.ToFloat64(value); ok {
+					if err := b.agg.Update(entityKey, featureName, floatVal, time.Unix(0, timestamp)); err != nil {
+						return nil, fmt.Errorf("updating aggregation: %w", err)
+					}
 				}
 			}
 
@@ -372,7 +375,9 @@ func (b *BatchImporter) ImportJSONL(ctx context.Context, path string, config Imp
 	if err != nil {
 		return nil, fmt.Errorf("opening file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	return b.ImportJSONLReader(ctx, file, config)
 }
@@ -448,8 +453,10 @@ func (b *BatchImporter) ImportJSONLReader(ctx context.Context, r io.Reader, conf
 			}
 
 			if b.agg.GetSpec(featureName) != nil {
-				if floatVal, ok := toFloat64(value); ok {
-					b.agg.Update(entityKey, featureName, floatVal, time.Unix(0, timestamp))
+				if floatVal, ok := domain.ToFloat64(value); ok {
+					if err := b.agg.Update(entityKey, featureName, floatVal, time.Unix(0, timestamp)); err != nil {
+						return nil, fmt.Errorf("updating aggregation: %w", err)
+					}
 				}
 			}
 

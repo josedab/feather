@@ -31,7 +31,7 @@ func NewExporter(store *storage.Store, schema *storage.Registry) *Exporter {
 }
 
 // ExportRequest defines what to export.
-type ExportRequest struct {
+type ExportRequest struct { //nolint:revive
 	// Entities to export (if empty, exports all)
 	Entities []string
 
@@ -50,8 +50,9 @@ type ExportRequest struct {
 }
 
 // ExportFormat defines the output format.
-type ExportFormat string
+type ExportFormat string //nolint:revive
 
+// ExportFormat constants.
 const (
 	FormatCSV     ExportFormat = "csv"
 	FormatJSON    ExportFormat = "json"
@@ -60,7 +61,7 @@ const (
 )
 
 // ExportResult contains export statistics.
-type ExportResult struct {
+type ExportResult struct { //nolint:revive
 	EntitiesExported int
 	FeaturesExported int
 	RowsWritten      int
@@ -84,7 +85,7 @@ func (e *Exporter) Export(ctx context.Context, req ExportRequest) (*ExportResult
 
 	// Create output directory if needed
 	dir := filepath.Dir(req.OutputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, fmt.Errorf("creating output directory: %w", err)
 	}
 
@@ -93,7 +94,9 @@ func (e *Exporter) Export(ctx context.Context, req ExportRequest) (*ExportResult
 	if err != nil {
 		return nil, fmt.Errorf("creating output file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	var result *ExportResult
 
@@ -416,7 +419,9 @@ func (e *Exporter) ExportPointInTime(ctx context.Context, req PointInTimeRequest
 	if err != nil {
 		return nil, fmt.Errorf("creating output file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
