@@ -87,7 +87,7 @@ func TestLocalCompute(t *testing.T) {
 	// Test aggregation - sum
 	t.Run("aggregation_sum", func(t *testing.T) {
 		result, err := lc.Compute(ctx, "aggregation", map[string]interface{}{
-			"values":               []float64{1, 2, 3, 4, 5},
+			"values":              []float64{1, 2, 3, 4, 5},
 			"_config_aggregation": "sum",
 		})
 		if err != nil {
@@ -101,7 +101,7 @@ func TestLocalCompute(t *testing.T) {
 	// Test aggregation - avg
 	t.Run("aggregation_avg", func(t *testing.T) {
 		result, err := lc.Compute(ctx, "aggregation", map[string]interface{}{
-			"values":               []float64{2, 4, 6, 8, 10},
+			"values":              []float64{2, 4, 6, 8, 10},
 			"_config_aggregation": "avg",
 		})
 		if err != nil {
@@ -115,7 +115,7 @@ func TestLocalCompute(t *testing.T) {
 	// Test aggregation - count
 	t.Run("aggregation_count", func(t *testing.T) {
 		result, err := lc.Compute(ctx, "aggregation", map[string]interface{}{
-			"values":               []float64{1, 2, 3},
+			"values":              []float64{1, 2, 3},
 			"_config_aggregation": "count",
 		})
 		if err != nil {
@@ -129,7 +129,7 @@ func TestLocalCompute(t *testing.T) {
 	// Test aggregation - min
 	t.Run("aggregation_min", func(t *testing.T) {
 		result, err := lc.Compute(ctx, "aggregation", map[string]interface{}{
-			"values":               []float64{5, 2, 8, 1, 9},
+			"values":              []float64{5, 2, 8, 1, 9},
 			"_config_aggregation": "min",
 		})
 		if err != nil {
@@ -143,7 +143,7 @@ func TestLocalCompute(t *testing.T) {
 	// Test aggregation - max
 	t.Run("aggregation_max", func(t *testing.T) {
 		result, err := lc.Compute(ctx, "aggregation", map[string]interface{}{
-			"values":               []float64{5, 2, 8, 1, 9},
+			"values":              []float64{5, 2, 8, 1, 9},
 			"_config_aggregation": "max",
 		})
 		if err != nil {
@@ -273,7 +273,7 @@ func TestLocalComputeUnknownAggregation(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := lc.Compute(ctx, "aggregation", map[string]interface{}{
-		"values":               []float64{1, 2, 3},
+		"values":              []float64{1, 2, 3},
 		"_config_aggregation": "unknown_agg",
 	})
 	if err == nil {

@@ -2,6 +2,7 @@ package feather
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 )
@@ -52,10 +53,10 @@ func (bc *BatchClient) Put(ctx context.Context, entityID string, features map[st
 
 	if len(bc.pending) >= bc.batchSize {
 		bc.wg.Add(1)
-		go func() {
+		go func(ctx context.Context) {
 			defer bc.wg.Done()
-			bc.flush()
-		}()
+			bc.flush(ctx)
+		}(ctx)
 	}
 	bc.mu.Unlock()
 
@@ -76,15 +77,15 @@ func (bc *BatchClient) flushLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			bc.flush()
+			bc.flush(context.Background())
 		case <-bc.stopCh:
-			bc.flush() // Final flush
+			bc.flush(context.Background()) // Final flush
 			return
 		}
 	}
 }
 
-func (bc *BatchClient) flush() {
+func (bc *BatchClient) flush(ctx context.Context) {
 	bc.mu.Lock()
 	if len(bc.pending) == 0 {
 		bc.mu.Unlock()
@@ -110,8 +111,13 @@ func (bc *BatchClient) flush() {
 	}
 
 	// Send batched requests
-	ctx := context.Background()
 	for entityID, features := range byEntity {
+		if ctx.Err() != nil {
+			for _, item := range itemsByEntity[entityID] {
+				item.done <- ctx.Err()
+			}
+			continue
+		}
 		err := bc.client.Features.Put(ctx, &PutRequest{
 			EntityID: entityID,
 			Features: features,
@@ -253,7 +259,8 @@ func WithRetry[T any](ctx context.Context, config *RetryConfig, fn func() (T, er
 		}
 
 		// Don't retry on non-retryable errors
-		if apiErr, ok := lastErr.(*APIError); ok {
+		var apiErr *APIError
+		if errors.As(lastErr, &apiErr) {
 			if apiErr.StatusCode >= 400 && apiErr.StatusCode < 500 {
 				return result, lastErr
 			}

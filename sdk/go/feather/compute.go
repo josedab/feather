@@ -42,18 +42,30 @@ type ComputeStep struct {
 type ComputeStepType string
 
 const (
-	StepTypeAggregation  ComputeStepType = "aggregation"
-	StepTypeTransform    ComputeStepType = "transform"
-	StepTypeJoin         ComputeStepType = "join"
-	StepTypeFilter       ComputeStepType = "filter"
-	StepTypeWindow       ComputeStepType = "window"
-	StepTypeExpression   ComputeStepType = "expression"
-	StepTypeLookup       ComputeStepType = "lookup"
-	StepTypeEmbedding    ComputeStepType = "embedding"
-	StepTypeNormalize    ComputeStepType = "normalize"
-	StepTypeBucketize    ComputeStepType = "bucketize"
+	// StepTypeAggregation performs aggregations.
+	StepTypeAggregation ComputeStepType = "aggregation"
+	// StepTypeTransform applies a transformation.
+	StepTypeTransform ComputeStepType = "transform"
+	// StepTypeJoin joins inputs.
+	StepTypeJoin ComputeStepType = "join"
+	// StepTypeFilter filters inputs.
+	StepTypeFilter ComputeStepType = "filter"
+	// StepTypeWindow applies a window function.
+	StepTypeWindow ComputeStepType = "window"
+	// StepTypeExpression evaluates an expression.
+	StepTypeExpression ComputeStepType = "expression"
+	// StepTypeLookup performs a lookup.
+	StepTypeLookup ComputeStepType = "lookup"
+	// StepTypeEmbedding generates embeddings.
+	StepTypeEmbedding ComputeStepType = "embedding"
+	// StepTypeNormalize normalizes values.
+	StepTypeNormalize ComputeStepType = "normalize"
+	// StepTypeBucketize bucketizes values.
+	StepTypeBucketize ComputeStepType = "bucketize"
+	// StepTypeOneHotEncode one-hot encodes values.
 	StepTypeOneHotEncode ComputeStepType = "one_hot_encode"
-	StepTypeCustom       ComputeStepType = "custom"
+	// StepTypeCustom runs a custom step.
+	StepTypeCustom ComputeStepType = "custom"
 )
 
 // CreatePipeline creates a feature computation pipeline.
@@ -516,21 +528,21 @@ func (lc *LocalCompute) registerBuiltins() {
 		case "count":
 			return len(values), nil
 		case "min":
-			min := values[0]
+			minValue := values[0]
 			for _, v := range values[1:] {
-				if v < min {
-					min = v
+				if v < minValue {
+					minValue = v
 				}
 			}
-			return min, nil
+			return minValue, nil
 		case "max":
-			max := values[0]
+			maxValue := values[0]
 			for _, v := range values[1:] {
-				if v > max {
-					max = v
+				if v > maxValue {
+					maxValue = v
 				}
 			}
-			return max, nil
+			return maxValue, nil
 		default:
 			return nil, fmt.Errorf("unknown aggregation type: %s", aggType)
 		}
