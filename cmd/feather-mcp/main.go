@@ -19,11 +19,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/feather-store/feather/internal/aggregation"
-	"github.com/feather-store/feather/internal/config"
-	"github.com/feather-store/feather/internal/mcp"
-	"github.com/feather-store/feather/internal/storage"
-	"github.com/feather-store/feather/internal/vector"
+	"github.com/feather-store/feather/internal/core/aggregation"
+	"github.com/feather-store/feather/internal/core/config"
+	"github.com/feather-store/feather/internal/tools/mcp"
+	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/core/vector"
 )
 
 func main() {

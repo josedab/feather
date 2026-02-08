@@ -15,18 +15,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/feather-store/feather/internal/aggregation"
-	"github.com/feather-store/feather/internal/config"
-	"github.com/feather-store/feather/internal/dbt"
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/ingestion"
-	"github.com/feather-store/feather/internal/logging"
-	"github.com/feather-store/feather/internal/metrics"
-	"github.com/feather-store/feather/internal/server"
-	"github.com/feather-store/feather/internal/storage"
-	"github.com/feather-store/feather/internal/tracing"
-	"github.com/feather-store/feather/internal/vector"
+	"github.com/feather-store/feather/internal/core/aggregation"
+	"github.com/feather-store/feather/internal/core/config"
+	"github.com/feather-store/feather/internal/integrations/dbt"
+	"github.com/feather-store/feather/internal/core/domain"
+	"github.com/feather-store/feather/internal/core/ingestion"
+	"github.com/feather-store/feather/internal/core/logging"
+	"github.com/feather-store/feather/internal/core/metrics"
+	"github.com/feather-store/feather/internal/core/server"
+	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/core/tracing"
+	"github.com/feather-store/feather/internal/core/vector"
 )
+
+// version is set at build time via -ldflags "-X main.version=<value>".
+var version = "dev"
 
 func main() {
 	configPath := flag.String("config", "", "Path to configuration file")
@@ -123,7 +126,7 @@ func (m *serverManager) shutdownAll(ctx context.Context) {
 
 func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	logger.Info("starting Feather Feature Store",
-		"version", "1.0.0",
+		"version", version,
 		"http_port", cfg.Serving.HTTP.Port,
 		"grpc_port", cfg.Serving.GRPC.Port,
 	)
@@ -177,9 +180,14 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		}
 
 		for _, featureCfg := range groupCfg.Features {
+			dataType, err := domain.ParseDataType(featureCfg.DataType)
+			if err != nil {
+				return fmt.Errorf("parsing data type for feature %s: %w", featureCfg.Name, err)
+			}
+
 			spec := domain.FeatureSpec{
 				Name:       featureCfg.Name,
-				DataType:   domain.ParseDataType(featureCfg.DataType),
+				DataType:   dataType,
 				Dimensions: featureCfg.Dimensions,
 				Default:    featureCfg.Default,
 			}
@@ -299,20 +307,22 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				Tracer:        tracer,
 			},
 			Features: server.HTTPServerFeatureConfig{
-				EnableGroups:        true,
-				EnableBackfill:      true,
-				EnableStreaming:     true,
-				EnableCatalog:       true,
-				EnableAuth:          true,
-				EnableML:            true,
-				EnableTransform:     true,
-				EnableCache:         true,
-				EnableConsistency:   true,
-				EnableImpact:        true,
-				EnableObservability: true,
-				EnableBenchmark:     true,
-				EnableUI:            cfg.UI.Enabled,
-				EnableDBT:           cfg.DBT.Enabled,
+				EnabledFeatures: map[string]bool{
+					"groups":        true,
+					"backfill":      true,
+					"streaming":     true,
+					"catalog":       true,
+					"auth":          true,
+					"ml":            true,
+					"transform":     true,
+					"cache":         true,
+					"consistency":   true,
+					"impact":        true,
+					"observability": true,
+					"benchmark":     true,
+					"ui":            cfg.UI.Enabled,
+					"dbt":           cfg.DBT.Enabled,
+				},
 			},
 			Dependencies: server.HTTPServerDependencies{
 				DBTOptions: &dbt.SyncOptions{

@@ -1,3 +1,5 @@
+//go:build integration
+
 package test
 
 import (
@@ -10,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/aggregation"
-	"github.com/feather-store/feather/internal/domain"
-	"github.com/feather-store/feather/internal/export"
-	"github.com/feather-store/feather/internal/ingestion"
-	"github.com/feather-store/feather/internal/server"
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/aggregation"
+	"github.com/feather-store/feather/internal/core/domain"
+	"github.com/feather-store/feather/internal/core/export"
+	"github.com/feather-store/feather/internal/core/ingestion"
+	"github.com/feather-store/feather/internal/core/server"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // TestIntegration_EndToEnd tests the full feature store workflow.
