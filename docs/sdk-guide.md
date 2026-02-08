@@ -43,7 +43,7 @@ Feather provides official client SDKs for seamless integration with your applica
 ### Installation
 
 ```bash
-go get github.com/your-org/feather/sdk/go/feather
+go get github.com/feather-store/feather/sdk/go/feather
 ```
 
 ### Basic Usage
@@ -56,7 +56,7 @@ import (
     "log"
     "time"
 
-    "github.com/your-org/feather/sdk/go/feather"
+    "github.com/feather-store/feather/sdk/go/feather"
 )
 
 func main() {
@@ -734,7 +734,7 @@ except CircuitBreakerError:
 ### Go Error Handling
 
 ```go
-import "github.com/your-org/feather/sdk/go/feather/errors"
+import "github.com/feather-store/feather/sdk/go/feather/errors"
 
 features, err := client.Features.Get(ctx, "user:123", []string{"score"})
 if err != nil {

@@ -986,6 +986,22 @@ tracing:
 
 ---
 
+## Binary Size
+
+The default Feather binary is ~40MB because it statically links all extension,
+platform, and integration packages. This is intentional — a single binary
+simplifies deployment (see [ADR-0017](./adr/0017-single-binary-deployment.md)).
+
+To inspect what contributes to binary size:
+
+```bash
+go build -o bin/feather ./cmd/feather
+go tool nm -size bin/feather | sort -k2 -rn | head -20
+```
+
+Stripping debug symbols (the default in `make build`) reduces size by ~30%.
+The `-ldflags "-s -w"` flags are already set in the Makefile.
+
 ## Next Steps
 
 - Review the [Architecture Overview](./architecture.md) for system design details

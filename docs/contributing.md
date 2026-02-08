@@ -19,17 +19,14 @@ Thank you for your interest in contributing to Feather! This guide will help you
 
 ### Prerequisites
 
-- **Go 1.22+**: [Download Go](https://golang.org/dl/)
+- **Go 1.24+**: [Download Go](https://golang.org/dl/)
 - **Make**: Build automation
 - **Docker**: For integration tests (optional)
 - **golangci-lint**: For code linting
 
 ```bash
-# Install golangci-lint
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-# Verify installation
-golangci-lint --version
+# Install development tools (golangci-lint, goimports)
+make install-tools
 ```
 
 ### Fork and Clone
@@ -76,13 +73,16 @@ make run-config
 ### Running Tests
 
 ```bash
-# Run all tests with race detector
+# Quick tests — start here for fast feedback (~30s)
+make test-quick
+
+# All tests with race detector
 make test
 
-# Run short tests only (skip integration tests)
+# Short tests only (skip integration tests)
 make test-short
 
-# Run with coverage report
+# With coverage report
 make test-coverage
 
 # Run benchmarks
@@ -92,13 +92,16 @@ make bench
 ### Linting
 
 ```bash
+# Install tools if you haven't already
+make install-tools
+
 # Run all linters
 make lint
 
 # Format code
 make fmt
 
-# Run all checks (fmt, vet, lint, test)
+# Run all checks (format check, vet, lint, test)
 make check
 ```
 
@@ -561,7 +564,7 @@ git push origin v1.2.3
 
 ## License
 
-By contributing to Feather, you agree that your contributions will be licensed under the MIT License.
+By contributing to Feather, you agree that your contributions will be licensed under the Apache 2.0 License.
 
 ---
 

@@ -77,8 +77,8 @@ The [ADR directory](./adr/) contains records of significant architectural decisi
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/your-org/feather/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/feather/discussions)
+- **Issues**: [GitHub Issues](https://github.com/feather-store/feather/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/feather-store/feather/discussions)
 - **Contributing**: See the [Contributing Guide](./contributing.md)
 
 ## Document Conventions

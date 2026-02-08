@@ -9,8 +9,14 @@ Feather is a high-performance, real-time feature store written in Go. It provide
 ## Build & Test Commands
 
 ```bash
+# Install development tools (golangci-lint, goimports)
+make install-tools
+
 # Build the binary
 make build
+
+# Run quick tests (fast feedback, ~30s)
+make test-quick
 
 # Run tests with race detector
 make test
@@ -27,11 +33,17 @@ make lint
 # Format code
 make fmt
 
-# Run all checks (fmt, vet, lint, test)
+# Check formatting without modifying files
+make fmt-check
+
+# Run all checks (fmt-check, vet, lint, test)
 make check
 
 # Build and run
 make run
+
+# Run with minimal dev config (no external deps)
+make run-dev
 
 # Run with config file
 make run-config
@@ -42,6 +54,9 @@ make bench
 # Docker build and run
 make docker-build
 make docker-run
+
+# See all targets
+make help
 ```
 
 ## Project Structure
@@ -51,16 +66,30 @@ feather/
 ├── cmd/feather/          # Application entrypoint
 │   └── main.go           # Server initialization, graceful shutdown
 ├── internal/
-│   ├── aggregation/      # Real-time aggregation engine (count, sum, avg, min, max)
-│   ├── config/           # YAML/env configuration loading and validation
-│   ├── domain/           # Domain types (FeatureValue, FeatureGroup, errors)
-│   ├── export/           # Training data export (CSV, JSON, JSONL, Parquet)
-│   ├── ingestion/        # Data ingestion (Kafka consumer, HTTP push)
-│   ├── logging/          # Structured logging with slog
-│   ├── metrics/          # Prometheus metrics
-│   ├── server/           # HTTP and gRPC servers, health checks
-│   ├── storage/          # Tiered storage (hot=memory, warm=BadgerDB)
-│   └── tracing/          # OpenTelemetry tracing
+│   ├── core/             # Essential packages
+│   │   ├── aggregation/  # Real-time aggregation engine (count, sum, avg, min, max)
+│   │   ├── config/       # YAML/env configuration loading and validation
+│   │   ├── domain/       # Domain types (FeatureValue, FeatureGroup, errors)
+│   │   ├── export/       # Training data export (CSV, JSON, JSONL, Parquet)
+│   │   ├── ingestion/    # Data ingestion (Kafka consumer, HTTP push)
+│   │   ├── logging/      # Structured logging with slog
+│   │   ├── metrics/      # Prometheus metrics
+│   │   ├── server/       # HTTP and gRPC servers, health checks
+│   │   ├── storage/      # Tiered storage (hot=memory, warm=BadgerDB)
+│   │   ├── tracing/      # OpenTelemetry tracing
+│   │   └── vector/       # Vector similarity search (HNSW)
+│   ├── extensions/       # Optional feature modules
+│   │   ├── sharding/     # Distributed sharding with consistent hashing
+│   │   ├── marketplace/  # Feature marketplace (publish, discover, subscribe)
+│   │   ├── featherql/    # SQL-like DSL for declarative feature pipelines
+│   │   ├── llmcache/     # Semantic LLM prompt/response caching
+│   │   ├── autofe/       # Automated feature engineering
+│   │   ├── georouting/   # Multi-cloud geo-routing with data residency
+│   │   ├── abrollout/    # Feature versioning with A/B canary rollouts
+│   │   └── edgeruntime/  # Lightweight edge runtime with offline-first sync
+│   ├── integrations/     # External system connectors (dbt, Spark, Flink, etc.)
+│   ├── platform/         # Cross-cutting concerns (auth, cluster, governance, etc.)
+│   └── tools/            # Developer tools (benchmark, dashboard, playground)
 ├── test/                 # Integration and benchmark tests
 ├── configs/              # Example configuration files
 ├── api/                  # API definitions (proto files)
@@ -69,22 +98,23 @@ feather/
 
 ## Key Packages
 
-### `internal/storage`
+### `internal/core/storage`
 - **Store**: Unified interface to hot and warm tiers
 - **HotTier**: LRU-based in-memory cache with TTL support
 - **WarmTier**: BadgerDB-backed persistent storage with historical versions
 - **Registry**: Schema registry for feature groups and validation
 
-### `internal/server`
+### `internal/core/server`
 - **HTTPServer**: REST API at `/v1/features`, `/v1/schema/groups`, health endpoints
 - **GRPCServer**: gRPC serving with streaming support
 - **HealthChecker**: Deep health checks for Kubernetes probes
+- **features.go**: Handler factory registry for toggling optional features
 
-### `internal/ingestion`
+### `internal/core/ingestion`
 - **KafkaConsumer**: Kafka consumer with circuit breaker pattern
 - **HTTPIngestion**: HTTP push endpoint with rate limiting
 
-### `internal/aggregation`
+### `internal/core/aggregation`
 - **Engine**: Sliding window aggregations (count, sum, avg, min, max)
 - Window-based computation with configurable slide intervals
 
@@ -175,20 +205,77 @@ Key environment variables:
 - **OpenTelemetry**: OTLP export for distributed tracing
 - **Prometheus Metrics**: Full observability (port 9090)
 
+### Next-Gen Feature APIs (port 8080)
+
+#### Sharding & Replication
+- `GET /v1/sharding/stats` - Get shard routing statistics
+- `GET /v1/sharding/partition?key=X` - Get partition for a key
+- `GET /v1/sharding/owners?key=X` - Get replica owners for a key
+- `POST /v1/sharding/recompute` - Recompute partition map
+
+#### Feature Marketplace
+- `GET /v1/marketplace/features` - List published features
+- `POST /v1/marketplace/features` - Publish a feature
+- `GET /v1/marketplace/features/{id}` - Get feature details
+- `POST /v1/marketplace/features/{id}/subscribe` - Subscribe to a feature
+- `POST /v1/marketplace/features/{id}/deprecate` - Deprecate a feature
+- `GET /v1/marketplace/search` - Search marketplace
+- `GET /v1/marketplace/stats` - Marketplace statistics
+
+#### Cloud Service
+- `GET /v1/cloud/instances` - List managed instances
+- `POST /v1/cloud/instances` - Provision a new instance
+- `POST /v1/cloud/instances/{id}/scale` - Scale an instance
+- `DELETE /v1/cloud/instances/{id}` - Terminate an instance
+
+#### FeatherQL (Declarative Pipelines)
+- `POST /v1/featherql/parse` - Parse a FeatherQL query
+- `POST /v1/featherql/compile` - Compile a FeatherQL pipeline
+- `POST /v1/featherql/execute` - Execute a FeatherQL query
+- `GET /v1/featherql/pipelines` - List compiled pipelines
+
+#### LLM Cache
+- `POST /v1/llm/cache/lookup` - Lookup cached LLM response
+- `POST /v1/llm/cache/store` - Store LLM response
+- `GET /v1/llm/cache/stats` - Cache hit/miss statistics
+- `GET /v1/llm/cache/costs` - Cost savings by provider
+
+#### AutoFE (Automated Feature Engineering)
+- `POST /v1/autofe/generate` - Generate candidate features
+- `GET /v1/autofe/candidates/top` - Get top candidates by score
+
+#### Geo-Routing
+- `GET /v1/georouting/regions` - List registered regions
+- `POST /v1/georouting/regions` - Add a cloud region
+- `GET /v1/georouting/route?entity=X` - Route request to best region
+
+#### A/B Rollout
+- `GET /v1/rollouts` - List rollouts
+- `POST /v1/rollouts` - Start a canary rollout
+- `POST /v1/rollouts/{id}/advance` - Advance to next traffic step
+- `POST /v1/rollouts/{id}/rollback` - Rollback to base version
+- `GET /v1/rollouts/{id}/quality` - Evaluate quality gates
+- `GET /v1/rollouts/resolve?feature=X&entity=Y` - Resolve version for entity
+
+#### Edge Runtime
+- `GET /v1/edge/devices` - List edge devices
+- `POST /v1/edge/devices/{id}/sync` - Trigger sync for device
+- `GET /v1/edge/devices/{id}/stats` - Get device statistics
+
 ## Common Tasks
 
 ### Adding a New Feature Type
-1. Add to `domain.DataType` enum in `internal/domain/types.go`
+1. Add to `domain.DataType` enum in `internal/core/domain/types.go`
 2. Update `storage.Registry.Validate()` for type validation
 3. Add serialization in `storage.WarmTier` if needed
 
 ### Adding a New API Endpoint
-1. Add handler method to `HTTPServer` in `internal/server/http.go`
+1. Add handler method to `HTTPServer` in `internal/core/server/http.go`
 2. Register route in `registerRoutes()`
 3. Add metrics recording in the handler
 
 ### Adding a New Aggregation Function
-1. Add to `domain.AggFunction` in `internal/domain/types.go`
+1. Add to `domain.AggFunction` in `internal/core/domain/types.go`
 2. Implement in `aggregation.Engine.Compute()`
 
 ## Dependencies

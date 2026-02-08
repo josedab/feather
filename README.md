@@ -17,8 +17,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/go-%3E%3D1.22-blue.svg" alt="Go Version">
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+  <img src="https://img.shields.io/badge/go-%3E%3D1.24-blue.svg" alt="Go Version">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-green.svg" alt="License">
+  <img src="https://img.shields.io/codecov/c/github/feather-store/feather.svg" alt="Coverage">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
 </p>
 
@@ -65,7 +66,7 @@ Feather is a production-ready feature store designed for **sub-millisecond P99 l
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/feather.git
+git clone https://github.com/feather-store/feather.git
 cd feather
 
 # Build the binary
@@ -223,7 +224,7 @@ curl -X POST http://localhost:8080/v1/vectors/product_embeddings/search \
 ### Go Client
 
 ```go
-import "github.com/your-org/feather/sdk/go/feather"
+import "github.com/feather-store/feather/sdk/go/feather"
 
 client, err := feather.NewClient("localhost:8080")
 if err != nil {
@@ -443,6 +444,7 @@ For complete deployment instructions, see [Deployment Guide](./docs/deployment.m
 | Document | Description |
 |----------|-------------|
 | [Architecture Overview](./docs/architecture.md) | System design, data flow, components |
+| [Package Guide](./docs/package-guide.md) | Maturity matrix for all internal packages |
 | [API Reference](./docs/api-reference.md) | Complete HTTP and gRPC API documentation |
 | [Client SDK Guide](./docs/sdk-guide.md) | Go, Python, Rust, TypeScript, and Java SDKs |
 | [Deployment Guide](./docs/deployment.md) | Docker, Kubernetes, Helm installation |
@@ -462,17 +464,24 @@ For complete deployment instructions, see [Deployment Guide](./docs/deployment.m
 
 ### Prerequisites
 
-- Go 1.22+
+- Go 1.24+
 - Make
 - Docker (optional)
+- golangci-lint (for linting — install via `make install-tools`)
 
 ### Commands
 
 ```bash
+# Install development tools
+make install-tools
+
 # Build
 make build
 
-# Run tests with race detector
+# Run quick tests (recommended first)
+make test-quick
+
+# Run full tests with race detector
 make test
 
 # Run short tests only
@@ -501,27 +510,48 @@ make docker-build
 
 ```
 feather/
-├── cmd/feather/          # Application entrypoint
+├── cmd/
+│   ├── feather/          # Main server binary
+│   ├── feather-cli/      # Command-line client for interacting with a Feather server
+│   ├── feather-tui/      # Terminal UI for monitoring and exploring features
+│   └── feather-mcp/      # Model Context Protocol server for AI tool integration
 ├── internal/
-│   ├── aggregation/      # Real-time aggregation engine
-│   ├── cluster/          # Distributed cluster membership and gossip
-│   ├── config/           # Configuration loading
-│   ├── dashboard/        # Web UI backend for monitoring
-│   ├── domain/           # Core domain types
-│   ├── drift/            # Drift detection and monitoring
-│   ├── freshness/        # Feature freshness SLAs and TTL management
-│   ├── ingestion/        # Kafka and HTTP ingestion
-│   ├── llm/              # LLM-powered embeddings (OpenAI, Ollama, HuggingFace)
-│   ├── metrics/          # Prometheus metrics
-│   ├── offline/          # Spark and Flink connectors
-│   ├── operator/         # Kubernetes operator and CRDs
-│   ├── semantic/         # AI-powered discovery and search
-│   ├── server/           # HTTP and gRPC servers
-│   ├── storage/          # Hot/warm tiered storage
-│   │   └── cloud/        # Cloud backends (DynamoDB, S3, GCS, Bigtable)
-│   ├── streaming/        # Real-time streaming pipelines and CEP
-│   ├── tracing/          # OpenTelemetry tracing
-│   └── vector/           # Vector similarity search (HNSW)
+│   ├── core/             # Essential packages (stable)
+│   │   ├── aggregation/  # Real-time aggregation engine
+│   │   ├── config/       # Configuration loading
+│   │   ├── domain/       # Core domain types
+│   │   ├── export/       # Training data export
+│   │   ├── ingestion/    # Kafka and HTTP ingestion
+│   │   ├── logging/      # Structured logging
+│   │   ├── metrics/      # Prometheus metrics
+│   │   ├── server/       # HTTP and gRPC servers
+│   │   ├── storage/      # Hot/warm tiered storage
+│   │   ├── tracing/      # OpenTelemetry tracing
+│   │   └── vector/       # Vector similarity search (HNSW)
+│   ├── extensions/       # Optional feature modules (see docs/package-guide.md)
+│   │   ├── drift/        # Drift detection and monitoring
+│   │   ├── featherql/    # Declarative query language
+│   │   ├── freshness/    # Feature freshness SLAs
+│   │   ├── llmcache/     # LLM prompt/response caching
+│   │   ├── marketplace/  # Feature marketplace
+│   │   ├── semantic/     # AI-powered discovery
+│   │   └── ...           # 27 extension packages
+│   ├── integrations/     # External system connectors
+│   │   ├── dbt/          # dbt integration
+│   │   ├── spark/        # Apache Spark connector
+│   │   ├── streaming/    # Real-time streaming pipelines
+│   │   └── warehouse/    # Cloud data warehouse connectors
+│   ├── platform/         # Cross-cutting concerns
+│   │   ├── auth/         # Authentication and RBAC
+│   │   ├── cluster/      # Distributed cluster membership
+│   │   ├── governance/   # Enterprise data governance
+│   │   ├── operator/     # Kubernetes operator
+│   │   └── ...           # 29 platform packages
+│   └── tools/            # Developer and operational tools
+│       ├── benchmark/    # Benchmarking utilities
+│       ├── compute/      # Feature computation engine
+│       ├── dashboard/    # Admin dashboard
+│       └── playground/   # Interactive playground
 ├── sdk/
 │   ├── go/               # Go client SDK
 │   ├── python/           # Python client SDK
@@ -546,10 +576,18 @@ feather/
 - [x] Real-time streaming with CEP
 - [x] Cloud storage backends (DynamoDB, S3, GCS, Bigtable)
 - [x] Web dashboard for monitoring and exploration
-- [ ] Feature lineage tracking
-- [ ] A/B testing support for feature experimentation
-- [ ] Multi-tenant isolation
-- [ ] Distributed mode with automatic sharding
+- [x] Feature lineage tracking
+- [x] A/B testing support for feature experimentation
+- [x] Multi-tenant isolation
+- [x] Distributed sharding and replication
+- [x] Feature marketplace for cross-team sharing
+- [x] Managed cloud service control plane
+- [x] Declarative feature pipelines (FeatherQL)
+- [x] Native LLM prompt and response caching
+- [x] Automated feature engineering (AutoFE)
+- [x] Multi-cloud geo-routing with data residency
+- [x] Feature versioning with A/B canary rollouts
+- [x] Edge deployment runtime with offline sync
 - [ ] BigQuery integration for data warehouse sync
 
 ## Contributing
@@ -563,7 +601,7 @@ We welcome contributions! Please see our [Contributing Guide](./docs/contributin
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
 
