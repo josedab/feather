@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // AccessPattern represents the access pattern for a feature.

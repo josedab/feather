@@ -937,3 +937,195 @@ func matchesRegex(value, pattern interface{}) bool {
 	// Simplified regex matching - real implementation would use regexp package
 	return containsValue(value, pattern)
 }
+
+// AutoDecisionConfig configures automatic experiment decisioning.
+type AutoDecisionConfig struct {
+	Enabled           bool    `json:"enabled"`
+	MinSampleSize     int     `json:"min_sample_size"`
+	MaxPValue         float64 `json:"max_p_value"`
+	MinRunDuration    time.Duration `json:"min_run_duration"`
+	StopOnSignificant bool    `json:"stop_on_significant"`
+}
+
+// DefaultAutoDecisionConfig returns sensible defaults.
+func DefaultAutoDecisionConfig() AutoDecisionConfig {
+	return AutoDecisionConfig{
+		Enabled:           true,
+		MinSampleSize:     100,
+		MaxPValue:         0.05,
+		MinRunDuration:    24 * time.Hour,
+		StopOnSignificant: true,
+	}
+}
+
+// AutoDecisionResult holds the result of an auto-decision check.
+type AutoDecisionResult struct {
+	ExperimentID    string  `json:"experiment_id"`
+	ShouldComplete  bool    `json:"should_complete"`
+	Winner          *string `json:"winner,omitempty"`
+	Confidence      float64 `json:"confidence"`
+	Reason          string  `json:"reason"`
+	SampleSize      int     `json:"sample_size"`
+	RunningDuration string  `json:"running_duration"`
+}
+
+// CheckAutoDecision evaluates whether an experiment should be auto-completed
+// based on statistical significance and minimum sample size requirements.
+func (e *Engine) CheckAutoDecision(experimentID string, config AutoDecisionConfig) (*AutoDecisionResult, error) {
+	e.mu.RLock()
+	exp, exists := e.experiments[experimentID]
+	if !exists {
+		e.mu.RUnlock()
+		return nil, errors.New("experiment not found")
+	}
+	if exp.Status != StatusRunning {
+		e.mu.RUnlock()
+		return &AutoDecisionResult{
+			ExperimentID:   experimentID,
+			ShouldComplete: false,
+			Reason:         "experiment is not running",
+		}, nil
+	}
+	if exp.StartedAt == nil {
+		e.mu.RUnlock()
+		return &AutoDecisionResult{
+			ExperimentID:   experimentID,
+			ShouldComplete: false,
+			Reason:         "experiment has no start time",
+		}, nil
+	}
+	e.mu.RUnlock()
+
+	runDuration := time.Since(*exp.StartedAt)
+	result := &AutoDecisionResult{
+		ExperimentID:    experimentID,
+		RunningDuration: runDuration.String(),
+	}
+
+	if runDuration < config.MinRunDuration {
+		result.Reason = fmt.Sprintf("minimum run duration not met (%.0fh < %.0fh)", runDuration.Hours(), config.MinRunDuration.Hours())
+		return result, nil
+	}
+
+	analysis, err := e.AnalyzeExperiment(experimentID)
+	if err != nil {
+		return nil, fmt.Errorf("analyzing experiment: %w", err)
+	}
+
+	result.SampleSize = analysis.SampleSize
+	if analysis.SampleSize < config.MinSampleSize {
+		result.Reason = fmt.Sprintf("minimum sample size not met (%d < %d)", analysis.SampleSize, config.MinSampleSize)
+		return result, nil
+	}
+
+	if analysis.Winner != nil && analysis.Confidence >= (1-config.MaxPValue)*100 {
+		result.ShouldComplete = true
+		result.Winner = analysis.Winner
+		result.Confidence = analysis.Confidence
+		result.Reason = "statistical significance reached"
+	} else {
+		result.Reason = "no statistically significant winner yet"
+	}
+
+	return result, nil
+}
+
+// FeatureImpact tracks the cumulative impact of experiments on a feature.
+type FeatureImpact struct {
+	FeatureID        string             `json:"feature_id"`
+	TotalExperiments int                `json:"total_experiments"`
+	CompletedCount   int                `json:"completed_count"`
+	ActiveCount      int                `json:"active_count"`
+	CumulativeLift   float64            `json:"cumulative_lift"`
+	ExperimentImpacts []ExperimentImpact `json:"experiment_impacts"`
+}
+
+// ExperimentImpact records the impact of one experiment on a feature.
+type ExperimentImpact struct {
+	ExperimentID string    `json:"experiment_id"`
+	Name         string    `json:"name"`
+	Status       string    `json:"status"`
+	Winner       *string   `json:"winner,omitempty"`
+	Lift         float64   `json:"lift"`
+	Confidence   float64   `json:"confidence"`
+	CompletedAt  time.Time `json:"completed_at,omitempty"`
+}
+
+// GetFeatureImpact returns the cumulative experiment impact for a feature.
+func (e *Engine) GetFeatureImpact(featureID string) (*FeatureImpact, error) {
+	experiments := e.GetExperimentsByFeature(featureID)
+	if len(experiments) == 0 {
+		return nil, fmt.Errorf("no experiments found for feature %q", featureID)
+	}
+
+	impact := &FeatureImpact{
+		FeatureID:         featureID,
+		TotalExperiments:  len(experiments),
+		ExperimentImpacts: make([]ExperimentImpact, 0, len(experiments)),
+	}
+
+	for _, exp := range experiments {
+		ei := ExperimentImpact{
+			ExperimentID: exp.ID,
+			Name:         exp.Name,
+			Status:       string(exp.Status),
+		}
+
+		switch exp.Status {
+		case StatusRunning:
+			impact.ActiveCount++
+		case StatusCompleted:
+			impact.CompletedCount++
+			if exp.EndedAt != nil {
+				ei.CompletedAt = *exp.EndedAt
+			}
+		}
+
+		analysis, err := e.AnalyzeExperiment(exp.ID)
+		if err == nil && analysis.Winner != nil {
+			ei.Winner = analysis.Winner
+			ei.Confidence = analysis.Confidence
+			for _, vr := range analysis.VariantResults {
+				if vr.VariantID == *analysis.Winner {
+					for _, mr := range vr.MetricResults {
+						if mr.Significant {
+							ei.Lift = mr.Lift
+							impact.CumulativeLift += mr.Lift
+							break
+						}
+					}
+					break
+				}
+			}
+		}
+
+		impact.ExperimentImpacts = append(impact.ExperimentImpacts, ei)
+	}
+
+	return impact, nil
+}
+
+// GetExperimentSummary returns a high-level summary of all experiments.
+func (e *Engine) GetExperimentSummary() map[string]interface{} {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	total := len(e.experiments)
+	byStatus := make(map[string]int)
+	features := make(map[string]bool)
+
+	for _, exp := range e.experiments {
+		byStatus[string(exp.Status)]++
+		if exp.FeatureID != "" {
+			features[exp.FeatureID] = true
+		}
+	}
+
+	return map[string]interface{}{
+		"total_experiments":  total,
+		"by_status":          byStatus,
+		"features_tested":    len(features),
+		"total_exposures":    len(e.exposures),
+		"total_metric_events": len(e.metrics),
+	}
+}
