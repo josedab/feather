@@ -605,3 +605,97 @@ func TestManager_Concurrency(t *testing.T) {
 		<-done
 	}
 }
+
+func TestAutoBackfiller_AddRule(t *testing.T) {
+	manager := NewManager(nil)
+	ab := NewAutoBackfiller(DefaultAutoBackfillConfig(), manager)
+
+	err := ab.AddRule(&BackfillRule{
+		Feature:      "clicks",
+		MaxStaleness: 1 * time.Hour,
+		Enabled:      true,
+		Source:       DataSource{Type: "http", URI: "http://pipeline/clicks"},
+	})
+	if err != nil {
+		t.Fatalf("AddRule failed: %v", err)
+	}
+
+	rules := ab.ListRules()
+	if len(rules) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(rules))
+	}
+	if rules[0].Feature != "clicks" {
+		t.Errorf("expected feature 'clicks', got %s", rules[0].Feature)
+	}
+}
+
+func TestAutoBackfiller_CheckAndTrigger(t *testing.T) {
+	manager := NewManager(nil)
+	ab := NewAutoBackfiller(AutoBackfillConfig{
+		CheckInterval:     1 * time.Minute,
+		MaxConcurrentJobs: 3,
+		DefaultRetryLimit: 3,
+		CooldownPeriod:    0, // Disable cooldown for testing
+	}, manager)
+
+	_ = ab.AddRule(&BackfillRule{
+		Feature:      "stale_feature",
+		MaxStaleness: 30 * time.Minute,
+		Enabled:      true,
+		Source:       DataSource{Type: "http", URI: "http://pipeline/refresh"},
+	})
+
+	// Feature was last updated 1 hour ago -> should trigger
+	lastUpdated := map[string]time.Time{
+		"stale_feature": time.Now().Add(-1 * time.Hour),
+	}
+
+	triggered := ab.CheckAndTrigger(context.Background(), lastUpdated)
+	if len(triggered) != 1 {
+		t.Fatalf("expected 1 trigger, got %d", len(triggered))
+	}
+	if triggered[0].Feature != "stale_feature" {
+		t.Errorf("expected 'stale_feature', got %s", triggered[0].Feature)
+	}
+	if triggered[0].Status != "triggered" {
+		t.Errorf("expected 'triggered', got %s", triggered[0].Status)
+	}
+}
+
+func TestAutoBackfiller_NoTriggerWhenFresh(t *testing.T) {
+	manager := NewManager(nil)
+	ab := NewAutoBackfiller(DefaultAutoBackfillConfig(), manager)
+
+	_ = ab.AddRule(&BackfillRule{
+		Feature:      "fresh_feature",
+		MaxStaleness: 1 * time.Hour,
+		Enabled:      true,
+		Source:       DataSource{Type: "http", URI: "http://pipeline/refresh"},
+	})
+
+	// Feature was just updated -> should NOT trigger
+	lastUpdated := map[string]time.Time{
+		"fresh_feature": time.Now(),
+	}
+
+	triggered := ab.CheckAndTrigger(context.Background(), lastUpdated)
+	if len(triggered) != 0 {
+		t.Fatalf("expected 0 triggers, got %d", len(triggered))
+	}
+}
+
+func TestAutoBackfiller_Stats(t *testing.T) {
+	manager := NewManager(nil)
+	ab := NewAutoBackfiller(DefaultAutoBackfillConfig(), manager)
+
+	_ = ab.AddRule(&BackfillRule{Feature: "f1", Enabled: true, MaxStaleness: time.Hour})
+	_ = ab.AddRule(&BackfillRule{Feature: "f2", Enabled: false, MaxStaleness: time.Hour})
+
+	stats := ab.GetStats()
+	if stats.TotalRules != 2 {
+		t.Errorf("expected 2 rules, got %d", stats.TotalRules)
+	}
+	if stats.EnabledRules != 1 {
+		t.Errorf("expected 1 enabled rule, got %d", stats.EnabledRules)
+	}
+}

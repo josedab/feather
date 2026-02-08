@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 func createTestStore(t testing.TB) *storage.Store {

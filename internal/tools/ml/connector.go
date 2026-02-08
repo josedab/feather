@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // Connector-specific errors.
