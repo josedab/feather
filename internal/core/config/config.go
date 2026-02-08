@@ -202,12 +202,17 @@ func LoadFromFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("reading config file: %w", err)
 	}
 
+	return LoadFromBytes(data)
+}
+
+// LoadFromBytes parses YAML configuration from raw bytes.
+func LoadFromBytes(data []byte) (*Config, error) {
 	// Expand environment variables
 	data = []byte(os.ExpandEnv(string(data)))
 
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing config file: %w", err)
+		return nil, fmt.Errorf("parsing config: %w", err)
 	}
 
 	return &cfg, nil
@@ -222,11 +227,11 @@ func LoadFromEnv() *Config {
 				EvictionPolicy: getEnv("FEATHER_HOT_EVICTION", "lru"),
 			},
 			Warm: WarmStorageConfig{
-				Path:         getEnv("FEATHER_WARM_PATH", "/var/lib/feather/data"),
+				Path:         getEnv("FEATHER_WARM_PATH", ""),
 				SyncInterval: getEnvAsDuration("FEATHER_WARM_SYNC_INTERVAL", time.Second),
 			},
 			Historical: HistoricalConfig{
-				Enabled:   getEnvAsBool("FEATHER_HISTORICAL_ENABLED", true),
+				Enabled:   getEnvAsBool("FEATHER_HISTORICAL_ENABLED", false),
 				Retention: getEnvAsDuration("FEATHER_HISTORICAL_RETENTION", 30*24*time.Hour),
 			},
 		},

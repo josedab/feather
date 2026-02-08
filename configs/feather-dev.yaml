@@ -2,11 +2,25 @@
 #
 # Use this config for local development with zero external dependencies.
 # No Kafka, no tracing, no TLS — just the core feature store.
+# Includes the quickstart schema so README API examples work out of the box.
 #
 # Usage:
 #   make run-dev
 #   # or
 #   ./bin/feather -config configs/feather-dev.yaml
+
+schema:
+  groups:
+    - name: user_features
+      entity_type: user
+      ttl: 24h
+      features:
+        - name: click_count
+          data_type: int64
+        - name: purchase_total
+          data_type: float64
+        - name: last_activity
+          data_type: timestamp
 
 storage:
   hot:
