@@ -35,7 +35,7 @@ storage:
 
 ingestion:
   kafka:
-    enabled: true
+    enabled: false
     brokers:
       - kafka-1:9092
       - kafka-2:9092
