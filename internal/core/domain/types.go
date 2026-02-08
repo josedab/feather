@@ -40,6 +40,8 @@ package domain
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -93,25 +95,28 @@ func (d DataType) String() string {
 	}
 }
 
+// ErrUnknownDataType indicates an unsupported feature data type.
+var ErrUnknownDataType = errors.New("unknown data type")
+
 // ParseDataType parses a data type string to DataType.
-func ParseDataType(s string) DataType {
+func ParseDataType(s string) (DataType, error) {
 	switch s {
 	case "int64":
-		return DataTypeInt64
+		return DataTypeInt64, nil
 	case "float64":
-		return DataTypeFloat64
+		return DataTypeFloat64, nil
 	case "string":
-		return DataTypeString
+		return DataTypeString, nil
 	case "bool":
-		return DataTypeBool
+		return DataTypeBool, nil
 	case "bytes":
-		return DataTypeBytes
+		return DataTypeBytes, nil
 	case "vector":
-		return DataTypeVector
+		return DataTypeVector, nil
 	case "timestamp":
-		return DataTypeTimestamp
+		return DataTypeTimestamp, nil
 	default:
-		return DataTypeString
+		return DataTypeString, fmt.Errorf("%w: %q", ErrUnknownDataType, s)
 	}
 }
 
@@ -126,7 +131,11 @@ func (d *DataType) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	*d = ParseDataType(s)
+	parsed, err := ParseDataType(s)
+	if err != nil {
+		return err
+	}
+	*d = parsed
 	return nil
 }
 
