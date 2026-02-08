@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check
+.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check test-changed lint-config changelog
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -136,6 +136,18 @@ test-watch:
 		exit 1; \
 	fi
 
+## test-changed: Run tests only for packages with uncommitted changes
+test-changed:
+	@PKGS=$$(git diff --name-only HEAD -- '*.go' | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | grep -v '^\./$$' || true); \
+	if [ -z "$$PKGS" ]; then \
+		echo "No changed Go packages detected."; \
+	else \
+		echo "Testing changed packages:"; \
+		echo "$$PKGS" | sed 's/^/  /'; \
+		echo ""; \
+		$(GO) test -v -count=1 -timeout 120s $$PKGS; \
+	fi
+
 ### Code Quality
 
 ## lint: Run golangci-lint (auto-installs if missing)
@@ -159,8 +171,13 @@ run-config:
 	$(GO) run $(MAIN_PATH) -config configs/feather.yaml
 
 ## run-dev: Run the server with the minimal dev config (then: make smoke-test to verify)
-run-dev:
+run-dev: validate-dev-config
 	$(GO) run $(MAIN_PATH) -config configs/feather-dev.yaml
+
+# Quick config validation for dev workflow (doesn't require a full build)
+validate-dev-config:
+	@$(GO) run $(MAIN_PATH) -config configs/feather-dev.yaml -validate 2>&1 || \
+		{ echo "❌ Config validation failed. Fix configs/feather-dev.yaml and retry."; exit 1; }
 
 ## run-cli: Run the CLI client
 run-cli:
@@ -205,6 +222,14 @@ vet:
 validate-config: build
 	@./bin/feather -config $(CONFIG) -validate
 CONFIG ?= configs/feather.yaml
+
+## lint-config: Validate all YAML config files against the config struct
+lint-config: build
+	@./scripts/lint-config.sh ./bin/feather configs
+
+## generate: Run all code generation (protobuf, mocks, etc.)
+generate: proto
+	@echo "✅ All code generation complete."
 
 # Generate protobuf (requires protoc, protoc-gen-go, and protoc-gen-go-grpc)
 # Install plugins: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -419,3 +444,28 @@ deps-check:
 	else \
 		echo "⚠️  govulncheck not installed. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
 	fi
+
+### Release
+
+## changelog: Preview upcoming release notes from conventional commits
+changelog:
+	@LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo ""); \
+	if [ -z "$$LAST_TAG" ]; then \
+		echo "Changelog (all commits):"; \
+		RANGE="HEAD"; \
+	else \
+		echo "Changelog since $$LAST_TAG:"; \
+		RANGE="$$LAST_TAG..HEAD"; \
+	fi; \
+	echo ""; \
+	FEATS=$$(git log $$RANGE --pretty=format:'- %s (%h)' --grep='^feat' 2>/dev/null); \
+	FIXES=$$(git log $$RANGE --pretty=format:'- %s (%h)' --grep='^fix' 2>/dev/null); \
+	DOCS=$$(git log $$RANGE --pretty=format:'- %s (%h)' --grep='^docs' 2>/dev/null); \
+	CHORES=$$(git log $$RANGE --pretty=format:'- %s (%h)' --grep='^chore\|^refactor\|^build\|^ci\|^perf\|^test\|^style' 2>/dev/null); \
+	if [ -n "$$FEATS" ]; then echo "### 🚀 Features"; echo "$$FEATS"; echo ""; fi; \
+	if [ -n "$$FIXES" ]; then echo "### 🐛 Bug Fixes"; echo "$$FIXES"; echo ""; fi; \
+	if [ -n "$$DOCS" ]; then echo "### 📚 Documentation"; echo "$$DOCS"; echo ""; fi; \
+	if [ -n "$$CHORES" ]; then echo "### 🔧 Maintenance"; echo "$$CHORES"; echo ""; fi; \
+	TOTAL=$$(git log $$RANGE --oneline 2>/dev/null | wc -l | tr -d ' '); \
+	echo "---"; \
+	echo "Total commits: $$TOTAL"
