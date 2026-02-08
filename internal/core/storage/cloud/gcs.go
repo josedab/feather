@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 // GCSConfig configures the Google Cloud Storage backend.

@@ -9,7 +9,7 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 // Object pools for reducing allocations in warm tier operations.

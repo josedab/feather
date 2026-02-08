@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 // Common errors.

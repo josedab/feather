@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 func newTestWarmTier(t *testing.T) *WarmTier {

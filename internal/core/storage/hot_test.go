@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/feather-store/feather/internal/domain"
+	"github.com/feather-store/feather/internal/core/domain"
 )
 
 func TestHotTier_PutAndGet(t *testing.T) {
