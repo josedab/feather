@@ -112,7 +112,7 @@ func init() {
 	featuresBatchCmd.Flags().StringArrayVarP(&featureNames, "feature", "f", nil, "feature names to retrieve (can be repeated)")
 	featuresHistoryCmd.Flags().StringArrayVarP(&featureNames, "feature", "f", nil, "feature names to retrieve (can be repeated)")
 	featuresHistoryCmd.Flags().StringVar(&asOfTime, "as-of", "", "point-in-time timestamp (RFC3339 format)")
-	featuresHistoryCmd.MarkFlagRequired("as-of")
+	cobra.CheckErr(featuresHistoryCmd.MarkFlagRequired("as-of"))
 }
 
 func runFeaturesGet(cmd *cobra.Command, args []string) error {

@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -14,11 +15,11 @@ import (
 
 var (
 	// Global flags
-	cfgFile    string
-	serverURL  string
-	outputFmt  string
-	apiKey     string
-	verbose    bool
+	cfgFile   string
+	serverURL string
+	outputFmt string
+	apiKey    string
+	verbose   bool
 
 	// Global configuration and formatter
 	cfg       *config.Config
@@ -96,10 +97,10 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose output")
 
 	// Bind flags to viper
-	viper.BindPFlag("server_url", rootCmd.PersistentFlags().Lookup("server"))
-	viper.BindPFlag("output_format", rootCmd.PersistentFlags().Lookup("output"))
-	viper.BindPFlag("api_key", rootCmd.PersistentFlags().Lookup("api-key"))
-	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	cobra.CheckErr(viper.BindPFlag("server_url", rootCmd.PersistentFlags().Lookup("server")))
+	cobra.CheckErr(viper.BindPFlag("output_format", rootCmd.PersistentFlags().Lookup("output")))
+	cobra.CheckErr(viper.BindPFlag("api_key", rootCmd.PersistentFlags().Lookup("api-key")))
+	cobra.CheckErr(viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose")))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -124,5 +125,11 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	// If a config file is found, read it in
-	viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		// Config is optional; ignore not found errors.
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
+			cobra.CheckErr(err)
+		}
+	}
 }

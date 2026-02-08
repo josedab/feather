@@ -1,3 +1,4 @@
+// feather-tui is a terminal UI for the Feather feature store.
 package main
 
 import (
@@ -32,11 +33,6 @@ var (
 			Foreground(secondaryColor).
 			Padding(0, 1)
 
-	selectedStyle = lipgloss.NewStyle().
-			Bold(true).
-			Background(primaryColor).
-			Foreground(lipgloss.Color("#FFFFFF"))
-
 	statusStyle = lipgloss.NewStyle().
 			Foreground(subtleColor).
 			Padding(1, 0)
@@ -61,15 +57,21 @@ var (
 			Bold(true)
 )
 
-// View represents different screens
+// View represents different screens.
 type View int
 
 const (
+	// ViewDashboard shows summary stats and navigation.
 	ViewDashboard View = iota
+	// ViewFeatureGroups lists feature groups.
 	ViewFeatureGroups
+	// ViewFeatures lists features in a group.
 	ViewFeatures
+	// ViewQuery shows the query interface.
 	ViewQuery
+	// ViewVectors lists vector indexes.
 	ViewVectors
+	// ViewHealth shows health status.
 	ViewHealth
 )
 
@@ -153,7 +155,7 @@ var keys = keyMap{
 	),
 }
 
-// Model represents the application state
+// Model represents the application state.
 type Model struct {
 	serverURL string
 	view      View
@@ -177,12 +179,10 @@ type Model struct {
 	// State
 	width    int
 	height   int
-	loading  bool
-	err      error
 	showHelp bool
 }
 
-// Placeholder types (would be populated from API)
+// FeatureGroup represents a feature group entry.
 type FeatureGroup struct {
 	Name        string
 	EntityType  string
@@ -191,12 +191,14 @@ type FeatureGroup struct {
 	Features    int
 }
 
+// Feature represents a feature in a group.
 type Feature struct {
 	Name     string
 	DataType string
 	Default  string
 }
 
+// VectorIndex represents a vector index entry.
 type VectorIndex struct {
 	Name         string
 	Dimension    int
@@ -204,6 +206,7 @@ type VectorIndex struct {
 	Size         int
 }
 
+// HealthStatus represents health status data.
 type HealthStatus struct {
 	Status     string
 	Hot        string
@@ -308,10 +311,12 @@ func initialModel(serverURL string) Model {
 	}
 }
 
+// Init initializes the Bubble Tea model.
 func (m Model) Init() tea.Cmd {
 	return nil
 }
 
+// Update handles a Bubble Tea message.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -392,6 +397,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.queryInput, cmd = m.queryInput.Update(msg)
 			return m, cmd
+		case ViewHealth:
+			if key.Matches(msg, keys.Refresh) {
+				m.healthStatus = HealthStatus{
+					Status:     "healthy",
+					Hot:        "OK (256 MB used)",
+					Warm:       "OK (1.2 GB used)",
+					Aggregator: "OK (15 windows)",
+				}
+				return m, nil
+			}
+			return m, cmd
 		}
 
 	}
@@ -467,6 +483,7 @@ func (m *Model) executeQuery() {
 	}
 }
 
+// View renders the current screen.
 func (m Model) View() string {
 	if m.showHelp {
 		return m.renderHelp()
@@ -487,6 +504,8 @@ func (m Model) View() string {
 		content = m.renderVectors()
 	case ViewHealth:
 		content = m.renderHealth()
+	default:
+		content = m.renderDashboard()
 	}
 
 	return content

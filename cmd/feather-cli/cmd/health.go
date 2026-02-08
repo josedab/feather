@@ -61,7 +61,9 @@ func runHealth(cmd *cobra.Command, args []string) error {
 		formatter.PrintError(fmt.Errorf("server unreachable: %w", err))
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

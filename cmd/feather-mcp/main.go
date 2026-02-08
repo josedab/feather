@@ -84,7 +84,7 @@ func main() {
 	}
 
 	// Initialize storage
-	store, err = storage.NewStore(storage.StoreOptions{
+	store, err = storage.NewStore(ctx, storage.StoreOptions{
 		HotMaxSize:       maxMemory,
 		WarmPath:         cfg.Storage.Warm.Path,
 		WarmSyncInterval: cfg.Storage.Warm.SyncInterval,
@@ -95,7 +95,11 @@ func main() {
 		logger.Error("failed to create store", "error", err)
 		os.Exit(1)
 	}
-	defer store.Close()
+	defer func() {
+		if err := store.Close(); err != nil {
+			logger.Error("store close error", "error", err)
+		}
+	}()
 
 	// Initialize aggregation engine
 	agg = aggregation.NewEngine()

@@ -120,12 +120,12 @@ func init() {
 	// Index create flags
 	vectorsIndexCreateCmd.Flags().IntVarP(&dimensions, "dimensions", "d", 0, "number of dimensions for vectors")
 	vectorsIndexCreateCmd.Flags().StringVarP(&metric, "metric", "m", "cosine", "distance metric: cosine, euclidean, dot")
-	vectorsIndexCreateCmd.MarkFlagRequired("dimensions")
+	cobra.CheckErr(vectorsIndexCreateCmd.MarkFlagRequired("dimensions"))
 
 	// Search flags
 	vectorsSearchCmd.Flags().StringVarP(&vectorValues, "vector", "V", "", "query vector as comma-separated values")
 	vectorsSearchCmd.Flags().IntVarP(&topK, "top-k", "k", 10, "number of results to return")
-	vectorsSearchCmd.MarkFlagRequired("vector")
+	cobra.CheckErr(vectorsSearchCmd.MarkFlagRequired("vector"))
 }
 
 func runVectorsIndexList(cmd *cobra.Command, args []string) error {
@@ -134,20 +134,19 @@ func runVectorsIndexList(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	// Use HTTP client directly since the SDK may not have ListIndexes
-	var indexes []struct {
+	indexes := make([]struct {
 		Name       string `json:"name"`
 		Dimensions int    `json:"dimensions"`
 		Metric     string `json:"metric"`
-	}
+	}, 0)
 
 	// For now, print a placeholder - the actual implementation would need the API
-	_, err := client.Features.Get(ctx, "_indexes", nil)
-	if err != nil {
-		// Expected - just list what we know
+	if _, err := client.Features.Get(ctx, "_indexes", nil); err != nil {
+		formatter.PrintMessage("Note: index listing is not yet available via API")
 	}
 
 	headers := []string{"NAME", "DIMENSIONS", "METRIC"}
-	var rows []output.TableRow
+	rows := make([]output.TableRow, 0, len(indexes))
 	for _, idx := range indexes {
 		rows = append(rows, output.TableRow{
 			idx.Name,

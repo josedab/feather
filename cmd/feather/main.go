@@ -1,3 +1,4 @@
+// feather starts the Feather feature store server.
 package main
 
 import (
@@ -148,7 +149,11 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 				"endpoint", cfg.Tracing.Endpoint,
 				"sample_rate", cfg.Tracing.SampleRate,
 			)
-			defer tracer.Shutdown(ctx)
+			defer func() {
+				if err := tracer.Shutdown(ctx); err != nil {
+					logger.Error("tracing shutdown error", "error", err)
+				}
+			}()
 		}
 	}
 
@@ -205,7 +210,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	}
 
 	// Initialize storage
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(ctx, storage.StoreOptions{
 		HotMaxSize:       maxMemory,
 		WarmPath:         cfg.Storage.Warm.Path,
 		WarmSyncInterval: cfg.Storage.Warm.SyncInterval,
@@ -215,7 +220,11 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("creating store: %w", err)
 	}
-	defer store.Close()
+	defer func() {
+		if err := store.Close(); err != nil {
+			logger.Error("store close error", "error", err)
+		}
+	}()
 
 	// Initialize aggregation engine
 	agg := aggregation.NewEngine()
@@ -278,40 +287,47 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	// Start HTTP server with health checker
 	healthChecker := server.NewHealthChecker(store, agg, schema)
 	httpServer := server.NewHTTPServer(
-		store, agg, schema, m,
+		ctx, store, agg, schema, m,
 		server.HTTPServerConfig{
-			Port:                cfg.Serving.HTTP.Port,
-			ReadTimeout:         cfg.Serving.HTTP.ReadTimeout,
-			WriteTimeout:        cfg.Serving.HTTP.WriteTimeout,
-			HealthChecker:       healthChecker,
-			VectorStore:         vectorStore,
-			TLS:                 &cfg.TLS,
-			EnableGroups:        true,
-			EnableBackfill:      true,
-			EnableStreaming:     true,
-			EnableCatalog:       true,
-			EnableAuth:          true,
-			EnableML:            true,
-			EnableTransform:     true,
-			EnableCache:         true,
-			EnableConsistency:   true,
-			EnableImpact:        true,
-			EnableObservability: true,
-			EnableBenchmark:     true,
-			EnableUI:            cfg.UI.Enabled,
-			EnableDBT:           cfg.DBT.Enabled,
-			DBTOptions: &dbt.SyncOptions{
-				DefaultEntityType: cfg.DBT.DefaultEntityType,
-				Owner:             cfg.DBT.Owner,
-				Team:              cfg.DBT.Team,
-				IncludeSources:    cfg.DBT.IncludeSources,
-				IncludeMetrics:    cfg.DBT.IncludeMetrics,
-				EntityTypeMapping: cfg.DBT.EntityTypeMapping,
+			Core: server.HTTPServerCoreConfig{
+				Port:          cfg.Serving.HTTP.Port,
+				ReadTimeout:   cfg.Serving.HTTP.ReadTimeout,
+				WriteTimeout:  cfg.Serving.HTTP.WriteTimeout,
+				HealthChecker: healthChecker,
+				VectorStore:   vectorStore,
+				TLS:           &cfg.TLS,
+				Tracer:        tracer,
 			},
-			// Handlers below require external dependencies not yet initialized
-			// EnableDrift, EnableLineage, EnableSemantic, EnableWASM,
-			// EnableFederation, EnableQuality, EnableGraphQL, EnableAutogen,
-			// EnableExperiment can be enabled when their dependencies are provided
+			Features: server.HTTPServerFeatureConfig{
+				EnableGroups:        true,
+				EnableBackfill:      true,
+				EnableStreaming:     true,
+				EnableCatalog:       true,
+				EnableAuth:          true,
+				EnableML:            true,
+				EnableTransform:     true,
+				EnableCache:         true,
+				EnableConsistency:   true,
+				EnableImpact:        true,
+				EnableObservability: true,
+				EnableBenchmark:     true,
+				EnableUI:            cfg.UI.Enabled,
+				EnableDBT:           cfg.DBT.Enabled,
+			},
+			Dependencies: server.HTTPServerDependencies{
+				DBTOptions: &dbt.SyncOptions{
+					DefaultEntityType: cfg.DBT.DefaultEntityType,
+					Owner:             cfg.DBT.Owner,
+					Team:              cfg.DBT.Team,
+					IncludeSources:    cfg.DBT.IncludeSources,
+					IncludeMetrics:    cfg.DBT.IncludeMetrics,
+					EntityTypeMapping: cfg.DBT.EntityTypeMapping,
+				},
+				// Handlers below require external dependencies not yet initialized
+				// EnableDrift, EnableLineage, EnableSemantic, EnableWASM,
+				// EnableFederation, EnableQuality, EnableGraphQL, EnableAutogen,
+				// EnableExperiment can be enabled when their dependencies are provided
+			},
 		},
 	)
 	serverMgr.register("http", httpServer)
@@ -332,6 +348,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			MaxConcurrent: cfg.Serving.GRPC.MaxConcurrent,
 			HealthChecker: healthChecker,
 			TLS:           &cfg.TLS,
+			Tracer:        tracer,
 		},
 	)
 
@@ -430,7 +447,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	logger.Info("received shutdown signal, initiating graceful shutdown")
 
 	// Graceful shutdown with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer shutdownCancel()
 
 	// Shutdown all managed servers in parallel
