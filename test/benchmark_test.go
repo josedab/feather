@@ -21,7 +21,7 @@ import (
 // BenchmarkStore_Put benchmarks feature write operations.
 func BenchmarkStore_Put(b *testing.B) {
 	schema := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -59,7 +59,7 @@ func BenchmarkStore_Put(b *testing.B) {
 // BenchmarkStore_Get benchmarks feature read operations.
 func BenchmarkStore_Get(b *testing.B) {
 	schema := storage.NewRegistry()
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -109,7 +109,7 @@ func BenchmarkHTTP_GetFeatures(b *testing.B) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -128,10 +128,12 @@ func BenchmarkHTTP_GetFeatures(b *testing.B) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(store, agg, schema, nil, server.HTTPServerConfig{
-		Port:         0,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+		Core: server.HTTPServerCoreConfig{
+			Port:         0,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		},
 	})
 
 	b.ResetTimer()
@@ -157,7 +159,7 @@ func BenchmarkHTTP_PostFeatures(b *testing.B) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -166,10 +168,12 @@ func BenchmarkHTTP_PostFeatures(b *testing.B) {
 	}
 	defer store.Close()
 
-	httpServer := server.NewHTTPServer(store, agg, schema, nil, server.HTTPServerConfig{
-		Port:         0,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+		Core: server.HTTPServerCoreConfig{
+			Port:         0,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		},
 	})
 
 	b.ResetTimer()
@@ -234,7 +238,7 @@ func TestLatencyP99(t *testing.T) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -256,10 +260,12 @@ func TestLatencyP99(t *testing.T) {
 		}
 	}
 
-	httpServer := server.NewHTTPServer(store, agg, schema, nil, server.HTTPServerConfig{
-		Port:         0,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+		Core: server.HTTPServerCoreConfig{
+			Port:         0,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		},
 	})
 
 	const numRequests = 10000
@@ -298,14 +304,14 @@ func TestLatencyP99(t *testing.T) {
 	p90 := latencies[len(latencies)*90/100]
 	p95 := latencies[len(latencies)*95/100]
 	p99 := latencies[len(latencies)*99/100]
-	max := latencies[len(latencies)-1]
+	maxLatency := latencies[len(latencies)-1]
 
 	t.Logf("Latency Distribution (n=%d):", numRequests)
 	t.Logf("  P50: %v", p50)
 	t.Logf("  P90: %v", p90)
 	t.Logf("  P95: %v", p95)
 	t.Logf("  P99: %v", p99)
-	t.Logf("  Max: %v", max)
+	t.Logf("  Max: %v", maxLatency)
 
 	// PRD requirement: <1ms P99 latency for hot tier
 	// Note: In a real benchmark, we'd use a more controlled environment
@@ -320,7 +326,7 @@ func TestLatencyP99_Concurrent(t *testing.T) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -339,10 +345,12 @@ func TestLatencyP99_Concurrent(t *testing.T) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(store, agg, schema, nil, server.HTTPServerConfig{
-		Port:         0,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+		Core: server.HTTPServerCoreConfig{
+			Port:         0,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		},
 	})
 
 	const (
@@ -399,7 +407,7 @@ func TestLatencyP99_Concurrent(t *testing.T) {
 	p90 := latencies[len(latencies)*90/100]
 	p95 := latencies[len(latencies)*95/100]
 	p99 := latencies[len(latencies)*99/100]
-	max := latencies[len(latencies)-1]
+	maxLatency := latencies[len(latencies)-1]
 
 	t.Logf("Concurrent Latency Distribution (workers=%d, requests=%d, total=%d):",
 		numWorkers, numRequests, len(latencies))
@@ -407,7 +415,7 @@ func TestLatencyP99_Concurrent(t *testing.T) {
 	t.Logf("  P90: %v", p90)
 	t.Logf("  P95: %v", p95)
 	t.Logf("  P99: %v", p99)
-	t.Logf("  Max: %v", max)
+	t.Logf("  Max: %v", maxLatency)
 
 	// More lenient threshold for concurrent test
 	if p99 > 50*time.Millisecond {
@@ -419,7 +427,7 @@ func TestLatencyP99_Concurrent(t *testing.T) {
 func TestLatencyP99_StoreDirect(t *testing.T) {
 	schema := storage.NewRegistry()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -467,14 +475,14 @@ func TestLatencyP99_StoreDirect(t *testing.T) {
 	p90 := latencies[len(latencies)*90/100]
 	p95 := latencies[len(latencies)*95/100]
 	p99 := latencies[len(latencies)*99/100]
-	max := latencies[len(latencies)-1]
+	maxLatency := latencies[len(latencies)-1]
 
 	t.Logf("Direct Store Latency Distribution (n=%d):", numRequests)
 	t.Logf("  P50: %v", p50)
 	t.Logf("  P90: %v", p90)
 	t.Logf("  P95: %v", p95)
 	t.Logf("  P99: %v", p99)
-	t.Logf("  Max: %v", max)
+	t.Logf("  Max: %v", maxLatency)
 
 	// PRD requirement: <1ms P99 latency for hot tier
 	// Direct store access should be faster than HTTP
@@ -489,7 +497,7 @@ func BenchmarkBatchGet(b *testing.B) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -508,10 +516,12 @@ func BenchmarkBatchGet(b *testing.B) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(store, agg, schema, nil, server.HTTPServerConfig{
-		Port:         0,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+		Core: server.HTTPServerCoreConfig{
+			Port:         0,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		},
 	})
 
 	// Create batch request
@@ -546,7 +556,7 @@ func TestThroughput(t *testing.T) {
 	schema := storage.NewRegistry()
 	agg := aggregation.NewEngine()
 
-	store, err := storage.NewStore(storage.StoreOptions{
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
 		WarmInMemory: true,
 	}, schema)
@@ -565,10 +575,12 @@ func TestThroughput(t *testing.T) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(store, agg, schema, nil, server.HTTPServerConfig{
-		Port:         0,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+		Core: server.HTTPServerCoreConfig{
+			Port:         0,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		},
 	})
 
 	const (
