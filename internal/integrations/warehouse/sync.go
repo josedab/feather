@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/feather-store/feather/internal/storage"
+	"github.com/feather-store/feather/internal/core/storage"
 )
 
 // SyncConfig configures the synchronization engine.
