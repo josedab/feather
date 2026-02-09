@@ -27,7 +27,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 # Final stage - minimal image
 # Images are pinned with sha256 digest for reproducible builds
 # To update: check https://hub.docker.com/_/alpine/tags for latest digests
-FROM alpine:3.19@sha256:45eeb55d6698849eb12a02d3e9a323e3d8e656882ef4ca542d1dda0274231e84
+FROM alpine:3.23@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
 
 # Install ca-certificates for HTTPS and tzdata for timezones
 RUN apk --no-cache add ca-certificates tzdata
