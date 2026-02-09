@@ -28,9 +28,13 @@ func (h *ConsistencyValidatorHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/consistency/record/offline", h.handleRecordOffline)
 	mux.HandleFunc("POST /v1/consistency/check", h.handleCheckAll)
 	mux.HandleFunc("GET /v1/consistency/check/{feature}", h.handleCheckFeature)
+	mux.HandleFunc("GET /v1/consistency/check-extended/{feature}", h.handleCheckExtended)
 	mux.HandleFunc("GET /v1/consistency/reports", h.handleGetReports)
 	mux.HandleFunc("GET /v1/consistency/alerts", h.handleGetAlerts)
 	mux.HandleFunc("GET /v1/consistency/stats", h.handleGetStats)
+	mux.HandleFunc("GET /v1/consistency/snapshots", h.handleSnapshots)
+	mux.HandleFunc("POST /v1/consistency/config/{feature}", h.handleSetFeatureConfig)
+	mux.HandleFunc("GET /v1/consistency/config/{feature}", h.handleGetFeatureConfig)
 }
 
 func (h *ConsistencyValidatorHandler) handleListFeatures(w http.ResponseWriter, r *http.Request) {
@@ -142,4 +146,46 @@ func (h *ConsistencyValidatorHandler) writeJSON(ctx context.Context, w http.Resp
 
 func (h *ConsistencyValidatorHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	writeJSONError(ctx, w, status, message)
+}
+
+func (h *ConsistencyValidatorHandler) handleCheckExtended(w http.ResponseWriter, r *http.Request) {
+	feature := r.PathValue("feature")
+	report, err := h.validator.CheckExtended(feature)
+	if err != nil {
+		if errors.Is(err, consistencyvalidator.ErrFeatureNotRegistered) {
+			h.writeError(r.Context(), w, http.StatusNotFound, "feature not registered")
+			return
+		}
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusOK, report)
+}
+
+func (h *ConsistencyValidatorHandler) handleSnapshots(w http.ResponseWriter, r *http.Request) {
+	snapshots := h.validator.Snapshot()
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"snapshots": snapshots,
+		"count":     len(snapshots),
+	})
+}
+
+func (h *ConsistencyValidatorHandler) handleSetFeatureConfig(w http.ResponseWriter, r *http.Request) {
+	feature := r.PathValue("feature")
+	var cfg consistencyvalidator.PerFeatureConfig
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	h.validator.SetFeatureConfig(feature, cfg)
+	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"feature": feature,
+	})
+}
+
+func (h *ConsistencyValidatorHandler) handleGetFeatureConfig(w http.ResponseWriter, r *http.Request) {
+	feature := r.PathValue("feature")
+	cfg := h.validator.GetFeatureConfig(feature)
+	h.writeJSON(r.Context(), w, http.StatusOK, cfg)
 }

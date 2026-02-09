@@ -77,11 +77,12 @@ type ConsistencyAlert struct {
 
 // Validator continuously validates online vs offline feature consistency.
 type Validator struct {
-	mu       sync.RWMutex
-	config   ValidatorConfig
-	features map[string]*FeatureConsistency
-	reports  []ConsistencyReport
-	alerts   []ConsistencyAlert
+	mu             sync.RWMutex
+	config         ValidatorConfig
+	features       map[string]*FeatureConsistency
+	featureConfigs map[string]PerFeatureConfig
+	reports        []ConsistencyReport
+	alerts         []ConsistencyAlert
 }
 
 // NewValidator creates a new consistency validator.
@@ -291,6 +292,99 @@ func (v *Validator) GetReports(feature string, limit int) []ConsistencyReport {
 		result = result[len(result)-limit:]
 	}
 	return result
+}
+
+// SetFeatureConfig sets per-feature thresholds for statistical tests.
+func (v *Validator) SetFeatureConfig(name string, cfg PerFeatureConfig) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	if v.featureConfigs == nil {
+		v.featureConfigs = make(map[string]PerFeatureConfig)
+	}
+	v.featureConfigs[name] = cfg
+}
+
+// GetFeatureConfig returns the per-feature config, falling back to defaults.
+func (v *Validator) GetFeatureConfig(name string) PerFeatureConfig {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	if cfg, ok := v.featureConfigs[name]; ok {
+		return cfg
+	}
+	return DefaultPerFeatureConfig()
+}
+
+// CheckExtended performs all statistical tests for a feature with per-feature config.
+func (v *Validator) CheckExtended(name string) (*ExtendedReport, error) {
+	v.mu.RLock()
+	fc, exists := v.features[name]
+	if !exists {
+		v.mu.RUnlock()
+		return nil, ErrFeatureNotRegistered
+	}
+
+	online := make([]float64, len(fc.OnlineValues))
+	copy(online, fc.OnlineValues)
+	offline := make([]float64, len(fc.OfflineValues))
+	copy(offline, fc.OfflineValues)
+
+	cfg := DefaultPerFeatureConfig()
+	if c, ok := v.featureConfigs[name]; ok {
+		cfg = c
+	}
+	v.mu.RUnlock()
+
+	if len(online) < 50 || len(offline) < 50 {
+		return &ExtendedReport{
+			Feature: name,
+			Message: "insufficient data",
+		}, nil
+	}
+
+	tests := RunAllTests(online, offline, cfg)
+	onlineSnap := TakeSnapshot(name, "online", online)
+	offlineSnap := TakeSnapshot(name, "offline", offline)
+
+	allPassed := true
+	for _, t := range tests {
+		if !t.Passed {
+			allPassed = false
+			break
+		}
+	}
+
+	return &ExtendedReport{
+		Feature:    name,
+		Consistent: allPassed,
+		Tests:      tests,
+		Online:     onlineSnap,
+		Offline:    offlineSnap,
+	}, nil
+}
+
+// ExtendedReport contains results from all statistical tests plus distribution snapshots.
+type ExtendedReport struct {
+	Feature    string               `json:"feature"`
+	Consistent bool                 `json:"consistent"`
+	Tests      []StatResult         `json:"tests,omitempty"`
+	Online     DistributionSnapshot `json:"online_snapshot"`
+	Offline    DistributionSnapshot `json:"offline_snapshot"`
+	Message    string               `json:"message,omitempty"`
+}
+
+// Snapshot takes distribution snapshots for all registered features.
+func (v *Validator) Snapshot() []DistributionSnapshot {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	var snapshots []DistributionSnapshot
+	for name, fc := range v.features {
+		snapshots = append(snapshots, TakeSnapshot(name, "online", fc.OnlineValues))
+		snapshots = append(snapshots, TakeSnapshot(name, "offline", fc.OfflineValues))
+	}
+	return snapshots
 }
 
 // ListFeatures returns the names of all monitored features.
