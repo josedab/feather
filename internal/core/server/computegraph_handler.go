@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/computegraph"
@@ -9,12 +10,16 @@ import (
 
 // ComputeGraphHandler provides HTTP endpoints for the feature compute graph.
 type ComputeGraphHandler struct {
-	engine *computegraph.Engine
+	engine      *computegraph.Engine
+	incremental *computegraph.IncrementalEngine
 }
 
 // NewComputeGraphHandler creates a new compute graph handler.
 func NewComputeGraphHandler(engine *computegraph.Engine) *ComputeGraphHandler {
-	return &ComputeGraphHandler{engine: engine}
+	return &ComputeGraphHandler{
+		engine:      engine,
+		incremental: computegraph.NewIncrementalEngine(engine, computegraph.DefaultIncrementalConfig()),
+	}
 }
 
 // RegisterRoutes registers compute graph API routes.
@@ -26,11 +31,17 @@ func (h *ComputeGraphHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/graph/nodes/{name}/upstream", h.handleGetUpstream)
 	mux.HandleFunc("GET /v1/graph/nodes/{name}/downstream", h.handleGetDownstream)
 	mux.HandleFunc("POST /v1/graph/compute/{name}", h.handleCompute)
+	mux.HandleFunc("POST /v1/graph/compute-parallel", h.handleComputeParallel)
 	mux.HandleFunc("POST /v1/graph/invalidate/{name}", h.handleInvalidate)
 	mux.HandleFunc("GET /v1/graph/topology", h.handleTopologicalSort)
 	mux.HandleFunc("GET /v1/graph/dag", h.handleGetDAG)
 	mux.HandleFunc("GET /v1/graph/validate", h.handleValidate)
 	mux.HandleFunc("GET /v1/graph/stats", h.handleStats)
+	mux.HandleFunc("POST /v1/graph/dsl/parse", h.handleParseDSL)
+	mux.HandleFunc("POST /v1/graph/dsl/apply", h.handleApplyDSL)
+	mux.HandleFunc("POST /v1/graph/definition/apply", h.handleApplyDefinition)
+	mux.HandleFunc("POST /v1/graph/propagate/{name}", h.handlePropagate)
+	mux.HandleFunc("GET /v1/graph/changelog", h.handleGetChangelog)
 }
 
 func (h *ComputeGraphHandler) handleAddNode(w http.ResponseWriter, r *http.Request) {
@@ -151,6 +162,123 @@ func (h *ComputeGraphHandler) handleValidate(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *ComputeGraphHandler) handleStats(w http.ResponseWriter, r *http.Request) {
-	stats := h.engine.Stats()
+	stats := h.incremental.Stats()
 	writeJSONResponse(r.Context(), w, http.StatusOK, stats)
+}
+
+func (h *ComputeGraphHandler) handleComputeParallel(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Nodes  []string               `json:"nodes"`
+		Inputs map[string]interface{} `json:"inputs"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+	if len(req.Nodes) == 0 {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "nodes list must not be empty")
+		return
+	}
+
+	results, err := h.engine.ComputeParallel(req.Nodes, req.Inputs)
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusOK, results)
+}
+
+func (h *ComputeGraphHandler) handleParseDSL(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "failed to read body: "+err.Error())
+		return
+	}
+
+	def, err := computegraph.ParseDSL(string(body))
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusOK, def)
+}
+
+func (h *ComputeGraphHandler) handleApplyDSL(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "failed to read body: "+err.Error())
+		return
+	}
+
+	def, err := computegraph.ParseDSL(string(body))
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := h.engine.ApplyDefinition(def)
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	status := http.StatusOK
+	if !result.Success {
+		status = http.StatusMultiStatus
+	}
+	writeJSONResponse(r.Context(), w, status, result)
+}
+
+func (h *ComputeGraphHandler) handleApplyDefinition(w http.ResponseWriter, r *http.Request) {
+	var def computegraph.GraphDefinition
+	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+
+	result, err := h.engine.ApplyDefinition(&def)
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	status := http.StatusOK
+	if !result.Success {
+		status = http.StatusMultiStatus
+	}
+	writeJSONResponse(r.Context(), w, status, result)
+}
+
+func (h *ComputeGraphHandler) handlePropagate(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	var req struct {
+		Value  interface{}            `json:"value"`
+		Inputs map[string]interface{} `json:"inputs"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+	if req.Inputs == nil {
+		req.Inputs = make(map[string]interface{})
+	}
+
+	recomputed, err := h.incremental.PropagateChange(name, req.Value, req.Inputs)
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"source":     name,
+		"recomputed": recomputed,
+	})
+}
+
+func (h *ComputeGraphHandler) handleGetChangelog(w http.ResponseWriter, r *http.Request) {
+	nodeName := r.URL.Query().Get("node")
+	log := h.incremental.GetChangeLog(nodeName, 100)
+	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
+		"changes": log,
+		"total":   len(log),
+	})
 }
