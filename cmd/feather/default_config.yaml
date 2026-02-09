@@ -1,0 +1,49 @@
+# Built-in development configuration (embedded in the binary).
+# Used when no -config flag is provided and configs/feather-dev.yaml is not found.
+# Override with: feather -config <path/to/config.yaml>
+
+schema:
+  groups:
+    - name: user_features
+      entity_type: user
+      ttl: 24h
+      features:
+        - name: click_count
+          data_type: int64
+        - name: purchase_total
+          data_type: float64
+        - name: last_activity
+          data_type: timestamp
+
+storage:
+  hot:
+    max_memory: 512MB
+    eviction_policy: lru
+  warm:
+    path: ""          # empty = in-memory (no disk persistence)
+    sync_interval: 1s
+
+ingestion:
+  kafka:
+    enabled: false
+  http:
+    enabled: true
+    port: 8081
+
+serving:
+  grpc:
+    port: 50051
+    max_concurrent: 100
+  http:
+    port: 8080
+    read_timeout: 10s
+    write_timeout: 10s
+
+metrics:
+  prometheus:
+    enabled: true
+    port: 9090
+
+logging:
+  level: debug
+  format: text
