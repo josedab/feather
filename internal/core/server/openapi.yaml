@@ -22,8 +22,8 @@ info:
     name: Feather Support
     url: https://github.com/feather-store/feather
   license:
-    name: Apache 2.0
-    url: https://www.apache.org/licenses/LICENSE-2.0
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
   - url: http://localhost:8080

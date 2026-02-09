@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/feather-store/feather/internal/core/aggregation"
@@ -213,6 +214,9 @@ func (s *HTTPServer) registerRoutes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /ready", s.handleReady)
 	s.mux.HandleFunc("GET /live", s.handleLive)
+
+	// API documentation
+	s.registerDocsRoutes()
 }
 
 // Start starts the HTTP server.
@@ -390,6 +394,34 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 	if req.EntityKey == "" {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity_key required")
 		return
+	}
+
+	// Validate entity type against schema and provide hints for unknown features
+	if s.schema != nil {
+		entityType := req.EntityKey
+		if idx := strings.Index(entityType, ":"); idx > 0 {
+			entityType = entityType[:idx]
+		}
+
+		registeredTypes := s.schema.ListEntityTypes()
+		if len(registeredTypes) > 0 {
+			knownFeatures := s.schema.ListFeaturesForEntityType(entityType)
+			for name := range req.Features {
+				if _, err := s.schema.GetFeatureSpec(name); err != nil && domain.IsNotFound(err) {
+					var hint string
+					if len(knownFeatures) == 0 {
+						hint = fmt.Sprintf("Entity type '%s' is not defined. Available types: %s. See GET /v1/schema/groups",
+							entityType, strings.Join(registeredTypes, ", "))
+					} else {
+						hint = fmt.Sprintf("Feature '%s' is not defined for entity type '%s'. Available features: %s. See GET /v1/schema/groups",
+							name, entityType, strings.Join(knownFeatures, ", "))
+					}
+					s.writeErrorWithHint(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed,
+						fmt.Sprintf("unknown feature: %s", name), hint)
+					return
+				}
+			}
+		}
 	}
 
 	timestamp := req.Timestamp
@@ -585,7 +617,16 @@ func (s *HTTPServer) writeAPIResponse(w http.ResponseWriter, r *http.Request, st
 
 // writeErrorWithCode writes a standardized error response with error code and request ID.
 func (s *HTTPServer) writeErrorWithCode(ctx context.Context, w http.ResponseWriter, status int, code, message string) {
+	s.writeErrorWithHint(ctx, w, status, code, message, "")
+}
+
+// writeErrorWithHint writes an error response with an optional hint for developers.
+func (s *HTTPServer) writeErrorWithHint(ctx context.Context, w http.ResponseWriter, status int, code, message, hint string) {
 	resp := domain.NewErrorResponse(code, message)
+
+	if hint != "" {
+		resp.WithErrorDetails(map[string]string{"hint": hint})
+	}
 
 	// Add request ID from response header (set by middleware)
 	if requestID := w.Header().Get("X-Request-ID"); requestID != "" {

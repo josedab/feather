@@ -177,6 +177,38 @@ func (r *Registry) ListFeatures() []string {
 	return features
 }
 
+// ListEntityTypes returns all registered entity types.
+func (r *Registry) ListEntityTypes() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	seen := make(map[string]bool)
+	types := make([]string, 0)
+	for _, group := range r.groups {
+		if !seen[group.EntityType] {
+			seen[group.EntityType] = true
+			types = append(types, group.EntityType)
+		}
+	}
+	return types
+}
+
+// ListFeaturesForEntityType returns feature names available for a given entity type.
+func (r *Registry) ListFeaturesForEntityType(entityType string) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var features []string
+	for _, group := range r.groups {
+		if group.EntityType == entityType {
+			for _, f := range group.Features {
+				features = append(features, f.Name)
+			}
+		}
+	}
+	return features
+}
+
 // Validate validates a feature value against its schema.
 func (r *Registry) Validate(featureName string, value interface{}) error {
 	spec, err := r.GetFeatureSpec(featureName)
