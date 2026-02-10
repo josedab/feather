@@ -5,10 +5,28 @@ package dev.feather.quickstart
 
 import dev.feather.client.FeatherClient
 import dev.feather.client.PutFeaturesRequest
+import java.net.HttpURLConnection
+import java.net.URI
+import kotlin.system.exitProcess
 
 suspend fun main() {
+    val featherUrl = "http://localhost:8080"
+
+    // Preflight: ensure the Feather server is reachable
+    try {
+        val conn = URI("$featherUrl/health").toURL().openConnection() as HttpURLConnection
+        conn.connectTimeout = 3000
+        conn.readTimeout = 3000
+        conn.responseCode
+        conn.disconnect()
+    } catch (e: Exception) {
+        System.err.println("❌ Cannot connect to Feather at $featherUrl")
+        System.err.println("   Start the server first:  make run-dev")
+        exitProcess(1)
+    }
+
     // 1. Connect to Feather
-    val client = FeatherClient("http://localhost:8080")
+    val client = FeatherClient(featherUrl)
 
     // 2. Store features for an entity
     client.putFeatures(

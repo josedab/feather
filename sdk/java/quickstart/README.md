@@ -11,6 +11,10 @@ Get started with Feather in 30 seconds.
 ## Step 1: Start Feather
 
 ```bash
+# From source (no Docker needed)
+cd /path/to/feather && make run-dev
+
+# Or with Docker
 docker run -d --name feather -p 8080:8080 ghcr.io/feather-store/feather:latest
 ```
 
