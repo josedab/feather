@@ -411,6 +411,12 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 					"query_planner":  true,
 					"fed_learning":   true,
 					"playground_v2":  true,
+				// Next-gen v5 features
+				"starlark_udf": true,
+				"model_gateway": true,
+				"semantic_catalog": true,
+				"federation_cross_org": true,
+				"lifecycle_manager": true,
 				},
 			},
 			Dependencies: server.HTTPServerDependencies{
