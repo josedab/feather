@@ -19,6 +19,7 @@ coverage.html
 
 # Dependency directories
 vendor/
+node_modules/
 
 # IDE
 .idea/
@@ -31,6 +32,11 @@ vendor/
 .DS_Store
 Thumbs.db
 
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
 # Local data
 /data/
 *.db
@@ -39,9 +45,14 @@ Thumbs.db
 .env
 .env.local
 
+# Server PID file
+.feather.pid
+.feather-quickstart.log
+
 # Build artifacts
 dist/
 **/target/
+website/build/
 
 # Logs
 *.log

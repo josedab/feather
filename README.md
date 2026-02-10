@@ -27,6 +27,24 @@
 
 Feather is a production-ready feature store designed for **sub-millisecond P99 latency** at scale. It enables ML teams to serve features in real-time through a tiered storage architecture, real-time aggregations, and multiple serving APIs.
 
+## Try It in 30 Seconds
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/feather-store/feather?quickstart=1)
+
+```bash
+git clone https://github.com/feather-store/feather.git && cd feather
+make quickstart        # builds, starts, seeds demo data, and verifies
+```
+
+That's it — `make quickstart` auto-detects Docker or Go and does the right thing.
+It prints copy-paste curl commands when ready. [More options ↓](#quick-start)
+
+Once running, walk through every feature interactively:
+
+```bash
+make explore           # guided tour: features, batch, point-in-time, vectors
+```
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                             FEATHER                                      │
@@ -62,35 +80,47 @@ Feather is a production-ready feature store designed for **sub-millisecond P99 l
 
 ## Quick Start
 
-### Installation
+### From source (recommended)
+
+Requires only Go 1.24+ and Make.
 
 ```bash
-# Clone the repository
 git clone https://github.com/feather-store/feather.git
 cd feather
 
-# Build the binary
-make build
+# One command: build, start, seed demo data, verify
+make quickstart
 
-# Run with defaults
-./bin/feather
+# Or for interactive development (foreground, text logs)
+make run-dev
+```
 
-# Or with a config file
-./bin/feather -config configs/feather.yaml
+### Go install (no clone needed)
+
+```bash
+go install github.com/feather-store/feather/cmd/feather@latest
+feather   # starts with built-in dev config, demo schema loaded
 ```
 
 ### Docker
 
 ```bash
-# Build and run with Docker
-make docker-build
+# Pull and run the prebuilt image
+make quickstart-docker
+
+# Or explicitly
 docker run -d \
   --name feather \
   -p 8080:8080 \
   -p 50051:50051 \
   -p 9090:9090 \
-  -v feather-data:/var/lib/feather/data \
-  feather:latest
+  ghcr.io/feather-store/feather:latest
+
+# Minimal compose (uses configs/feather-dev.yaml)
+docker compose -f docker-compose.dev.yml up
+
+# Full stack (Kafka + Prometheus + Grafana)
+docker compose -f docker-compose.yml up --build
 ```
 
 ### Verify Installation
@@ -103,7 +133,18 @@ curl http://localhost:8080/health
 # {"status":"healthy","components":{"hot_tier":"healthy","warm_tier":"healthy"}}
 ```
 
+### Seed Demo Data
+
+```bash
+# Requires the quickstart schema (configs/feather-dev.yaml)
+make demo
+```
+
 ## API Examples
+
+> These examples assume Feather is running (`make quickstart` or `make run-dev`).
+>
+> **Full API spec:** [`api/openapi/feather.yaml`](./api/openapi/feather.yaml) — import into Postman, Bruno, or any OpenAPI-compatible tool.
 
 ### Store Features
 
@@ -221,6 +262,25 @@ curl -X POST http://localhost:8080/v1/vectors/product_embeddings/search \
 
 ## Client SDKs
 
+> **Note:** SDKs are included in this repository. Install them locally as shown below.
+> Start Feather first with `make run-dev` before running any quickstart.
+
+### End-to-End Example
+
+Run a complete ML feature pipeline (no dependencies beyond Python 3.9+):
+
+```bash
+python examples/ml-pipeline.py
+```
+
+### SDK Quickstarts
+
+- [Go](./sdk/go/feather/quickstart/README.md): `cd sdk/go/feather/quickstart && go run main.go`
+- [Python](./sdk/python/quickstart/README.md): `pip install -e sdk/python/ && python sdk/python/quickstart/quickstart.py`
+- [TypeScript](./sdk/typescript/quickstart/README.md): `cd sdk/typescript/quickstart && npm install && npx ts-node quickstart.ts`
+- [Java](./sdk/java/quickstart/README.md): `cd sdk/java/quickstart && ./gradlew run`
+- [Rust](./sdk/rust/quickstart/README.md): `cd sdk/rust/quickstart && cargo run`
+
 ### Go Client
 
 ```go
@@ -243,8 +303,12 @@ err = client.PutFeatures(ctx, "user:123", map[string]interface{}{
 
 ### Python Client
 
+```bash
+pip install -e sdk/python/   # install from the repository
+```
+
 ```python
-from feather import FeatherClient
+from feather_client import FeatherClient
 
 client = FeatherClient("localhost:8080")
 
@@ -269,6 +333,12 @@ historical = client.get_features_as_of(
 
 Feather can be configured via **YAML file** or **environment variables**.
 
+### Configuration Files
+
+- `configs/feather-dev.yaml`: local development, zero external dependencies — **start here**
+- `configs/feather-local.yaml`: local development with disk persistence at `./data`
+- `configs/feather.yaml`: production reference config with all features
+
 ### Environment Variables
 
 | Variable | Default | Description |
@@ -286,53 +356,59 @@ Feather can be configured via **YAML file** or **environment variables**.
 ### Configuration File
 
 ```yaml
-# configs/feather.yaml
-server:
+# configs/feather.yaml — production reference
+# See configs/feather-dev.yaml for a minimal local config.
+serving:
   http:
     port: 8080
-    read_timeout: 30s
-    write_timeout: 30s
+    read_timeout: 10s
+    write_timeout: 10s
   grpc:
     port: 50051
     max_concurrent: 1000
 
 storage:
   hot:
-    max_memory: "8GB"
-    ttl: "2h"
-    num_shards: 256
+    max_memory: 4GB
+    eviction_policy: lru
   warm:
-    path: "/var/lib/feather/data"
-    sync_writes: false
+    path: /var/lib/feather/data
+    sync_interval: 1s
+  historical:
+    enabled: true
+    retention: 720h  # 30 days
 
 ingestion:
   kafka:
-    enabled: true
-    brokers: ["kafka1:9092", "kafka2:9092"]
-    topic: "feature-updates"
-    consumer_group: "feather"
+    enabled: false
+    brokers:
+      - kafka-1:9092
+      - kafka-2:9092
+    topic: feature-updates
+    consumer_group: feather
   http:
     enabled: true
     port: 8081
-    rate_limit: 10000  # requests per second
 
-observability:
-  metrics:
+metrics:
+  prometheus:
     enabled: true
     port: 9090
-  tracing:
-    enabled: true
-    endpoint: "jaeger:4317"
-    sample_rate: 0.1
-  logging:
-    level: "info"
-    format: "json"
+
+tracing:
+  enabled: false
+  endpoint: "jaeger:4317"
+  sample_rate: 0.1
+
+logging:
+  level: info
+  format: json
 
 schema:
   groups:
     - name: user_features
       entity_type: user
-      ttl: 30d
+      ttl: 24h
       features:
         - name: click_count
           data_type: int64
@@ -460,6 +536,8 @@ For complete deployment instructions, see [Deployment Guide](./docs/deployment.m
 | [Performance Guide](./docs/performance.md) | Optimization tips and benchmarking |
 | [Contributing Guide](./docs/contributing.md) | Development setup, coding standards |
 
+Run `make docs` to start the full documentation site locally (requires Node.js). The source is in `website/`.
+
 ## Development
 
 ### Prerequisites
@@ -469,23 +547,31 @@ For complete deployment instructions, see [Deployment Guide](./docs/deployment.m
 - Docker (optional)
 - golangci-lint (for linting — install via `make install-tools`)
 
+> **Note:** The default build uses `CGO_ENABLED=0` — no C compiler needed. To enable Kafka ingestion with librdkafka, use `make build-cgo`.
+
 ### Commands
 
 ```bash
-# Install development tools
-make install-tools
+# One-command contributor setup (recommended first time)
+make setup
 
-# Build
+# Check prerequisites
+make doctor
+
+# Build (~5s cached, ~30s cold)
 make build
 
-# Run quick tests (recommended first)
+# Run with minimal dev config
+make run-dev
+
+# Run core tests (~10s, fast feedback)
+make test-core
+
+# Run quick tests
 make test-quick
 
 # Run full tests with race detector
 make test
-
-# Run short tests only
-make test-short
 
 # Run with coverage report
 make test-coverage
@@ -499,11 +585,30 @@ make fmt
 # Run all checks (fmt, vet, lint, test)
 make check
 
+# Fast pre-commit checks (~20s)
+make check-quick
+
 # Run benchmarks
 make bench
 
 # Build Docker image
 make docker-build
+```
+
+### CLI & TUI
+
+```bash
+# Build binaries
+make build-cli
+make build-tui
+
+# Run binaries
+./bin/feather-cli --help
+./bin/feather-tui
+
+# Or run from source
+make run-cli
+make run-tui
 ```
 
 ### Project Structure
@@ -589,6 +694,20 @@ feather/
 - [x] Feature versioning with A/B canary rollouts
 - [x] Edge deployment runtime with offline sync
 - [ ] BigQuery integration for data warehouse sync
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `bind: address already in use` | Port 8080, 50051, or 9090 is taken | Run `make doctor` to check ports, or `lsof -i :8080` |
+| `golangci-lint not found` | Dev tools not installed | `make install-tools` |
+| Build fails with C compiler / `librdkafka` errors | CGO enabled but no C toolchain | Default build uses `CGO_ENABLED=0`. Use `make build-cgo` only if you need Kafka |
+| `make test` takes 5+ minutes | Full suite includes race detector | Use `make test-core` (~10s) for fast feedback |
+| `feature group not found` on API calls | Server started without a schema config | Run `make run-dev` (loads dev config with demo schema) |
+| `make quickstart` hangs | Docker installed but daemon not running | Start Docker Desktop, or run `make quickstart-local` to skip Docker |
+| Connection refused during smoke tests | Server not running | Start with `make run-dev` first, then `make smoke-test` |
+
+Run `make doctor` to check your environment for common issues.
 
 ## Contributing
 

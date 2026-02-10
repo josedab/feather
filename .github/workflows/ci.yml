@@ -107,11 +107,16 @@ jobs:
           go build -o bin/feather ./cmd/feather
           bin/feather &
           SERVER_PID=$!
-          sleep 3
-          curl --fail --silent http://localhost:8080/health || (kill $SERVER_PID; exit 1)
-          curl --fail --silent http://localhost:8080/live || (kill $SERVER_PID; exit 1)
-          curl --fail --silent http://localhost:8080/ready || (kill $SERVER_PID; exit 1)
-          kill $SERVER_PID
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/health >/dev/null 2>&1 && break
+            sleep 1
+          done
+          # Run full API smoke tests
+          ./scripts/smoke-test.sh
+          RESULT=$?
+          kill $SERVER_PID || true
+          exit $RESULT
 
   python-sdk:
     name: Python SDK Tests
