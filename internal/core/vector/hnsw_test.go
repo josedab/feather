@@ -318,3 +318,154 @@ func TestEuclideanDistance(t *testing.T) {
 		})
 	}
 }
+
+func TestHNSW_SelectNeighbors_FewerCandidatesThanM(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          3,
+		M:            16,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	// Insert a few vectors
+	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}))
+	require.NoError(t, hnsw.Insert("v2", []float32{0.0, 1.0, 0.0}))
+
+	// selectNeighbors with m > len(candidates) should return all candidates
+	query := []float32{0.5, 0.5, 0.0}
+	result := hnsw.selectNeighbors(query, []string{"v1", "v2"}, 10)
+	if len(result) != 2 {
+		t.Errorf("selectNeighbors returned %d neighbors, want 2 (all candidates)", len(result))
+	}
+}
+
+func TestHNSW_SelectNeighbors_ExactM(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          3,
+		M:            2,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}))
+	require.NoError(t, hnsw.Insert("v2", []float32{0.0, 1.0, 0.0}))
+
+	query := []float32{0.5, 0.5, 0.0}
+	result := hnsw.selectNeighbors(query, []string{"v1", "v2"}, 2)
+	if len(result) != 2 {
+		t.Errorf("selectNeighbors returned %d neighbors, want 2", len(result))
+	}
+}
+
+func TestHNSW_SelectNeighbors_SelectsClosest(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          2,
+		M:            16,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	// Insert vectors at known positions
+	require.NoError(t, hnsw.Insert("close", []float32{1.0, 0.0}))
+	require.NoError(t, hnsw.Insert("medium", []float32{3.0, 0.0}))
+	require.NoError(t, hnsw.Insert("far", []float32{10.0, 0.0}))
+
+	query := []float32{0.0, 0.0}
+	result := hnsw.selectNeighbors(query, []string{"close", "medium", "far"}, 2)
+	if len(result) != 2 {
+		t.Fatalf("selectNeighbors returned %d neighbors, want 2", len(result))
+	}
+
+	// The two closest should be "close" and "medium"
+	resultSet := map[string]bool{result[0]: true, result[1]: true}
+	if !resultSet["close"] {
+		t.Error("expected 'close' in results")
+	}
+	if !resultSet["medium"] {
+		t.Error("expected 'medium' in results")
+	}
+}
+
+func TestHNSW_SelectNeighbors_SingleCandidate(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          2,
+		M:            16,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0}))
+
+	query := []float32{0.0, 0.0}
+	result := hnsw.selectNeighbors(query, []string{"v1"}, 5)
+	if len(result) != 1 {
+		t.Errorf("selectNeighbors returned %d neighbors, want 1", len(result))
+	}
+	if result[0] != "v1" {
+		t.Errorf("result[0] = %q, want %q", result[0], "v1")
+	}
+}
+
+func TestHNSW_SelectNeighbors_DuplicateDistances(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          2,
+		M:            16,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	// Insert vectors at equal distances from origin
+	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0}))
+	require.NoError(t, hnsw.Insert("v2", []float32{0.0, 1.0}))
+	require.NoError(t, hnsw.Insert("v3", []float32{-1.0, 0.0}))
+	require.NoError(t, hnsw.Insert("v4", []float32{0.0, -1.0}))
+
+	query := []float32{0.0, 0.0}
+	result := hnsw.selectNeighbors(query, []string{"v1", "v2", "v3", "v4"}, 2)
+	if len(result) != 2 {
+		t.Errorf("selectNeighbors returned %d neighbors, want 2", len(result))
+	}
+}
+
+func TestHNSW_SelectNeighbors_EmptyCandidates(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          2,
+		M:            16,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	query := []float32{0.0, 0.0}
+	result := hnsw.selectNeighbors(query, []string{}, 5)
+	if len(result) != 0 {
+		t.Errorf("selectNeighbors returned %d neighbors, want 0", len(result))
+	}
+}
+
+func TestHNSW_SelectNeighbors_LargerSet(t *testing.T) {
+	hnsw := NewHNSW(HNSWConfig{
+		Dim:          2,
+		M:            16,
+		EfConstruct:  200,
+		DistanceType: DistanceEuclidean,
+	})
+
+	// Insert 10 vectors at increasing distances
+	for i := 0; i < 10; i++ {
+		id := string(rune('A' + i))
+		require.NoError(t, hnsw.Insert(id, []float32{float32(i + 1), 0.0}))
+	}
+
+	query := []float32{0.0, 0.0}
+	candidates := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+	result := hnsw.selectNeighbors(query, candidates, 3)
+	if len(result) != 3 {
+		t.Fatalf("selectNeighbors returned %d, want 3", len(result))
+	}
+
+	// Should be the 3 closest: A(1,0), B(2,0), C(3,0)
+	resultSet := map[string]bool{result[0]: true, result[1]: true, result[2]: true}
+	if !resultSet["A"] || !resultSet["B"] || !resultSet["C"] {
+		t.Errorf("expected A, B, C in results, got %v", result)
+	}
+}
