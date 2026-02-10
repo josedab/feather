@@ -29,6 +29,11 @@ func (h *GitOpsDefsHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/gitops/diff", h.handleGetDiff)
 	mux.HandleFunc("GET /v1/gitops/history", h.handleGetHistory)
 	mux.HandleFunc("GET /v1/gitops/stats", h.handleGetStats)
+	mux.HandleFunc("POST /v1/gitops/plan", h.handlePlan)
+	mux.HandleFunc("POST /v1/gitops/apply", h.handleApply)
+	mux.HandleFunc("POST /v1/gitops/validate", h.handleValidate)
+	mux.HandleFunc("POST /v1/gitops/rollback/{name}", h.handleRollback)
+	mux.HandleFunc("POST /v1/gitops/load-spec", h.handleLoadSpec)
 }
 
 // handleListDefinitions handles GET /v1/gitops/definitions
@@ -179,4 +184,74 @@ func (h *GitOpsDefsHandler) writeJSON(ctx context.Context, w http.ResponseWriter
 
 func (h *GitOpsDefsHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	writeJSONError(ctx, w, status, message)
+}
+
+func (h *GitOpsDefsHandler) handlePlan(w http.ResponseWriter, r *http.Request) {
+	if h.reconciler == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "gitops reconciler not configured")
+		return
+	}
+	plan := h.reconciler.Plan()
+	h.writeJSON(r.Context(), w, http.StatusOK, plan)
+}
+
+func (h *GitOpsDefsHandler) handleApply(w http.ResponseWriter, r *http.Request) {
+	if h.reconciler == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "gitops reconciler not configured")
+		return
+	}
+	result := h.reconciler.Apply()
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
+}
+
+func (h *GitOpsDefsHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
+	var spec gitopsdefs.DeclarativeSpec
+	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+	result := gitopsdefs.ValidateSpec(&spec)
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
+}
+
+func (h *GitOpsDefsHandler) handleRollback(w http.ResponseWriter, r *http.Request) {
+	if h.reconciler == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "gitops reconciler not configured")
+		return
+	}
+	name := r.PathValue("name")
+	result, err := h.reconciler.Rollback(name)
+	if err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.writeJSON(r.Context(), w, http.StatusOK, result)
+}
+
+func (h *GitOpsDefsHandler) handleLoadSpec(w http.ResponseWriter, r *http.Request) {
+	if h.reconciler == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "gitops reconciler not configured")
+		return
+	}
+
+	var body json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+
+	spec, validation, err := h.reconciler.LoadSpecJSON(body)
+	if err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	status := http.StatusCreated
+	if !validation.Valid {
+		status = http.StatusBadRequest
+	}
+	h.writeJSON(r.Context(), w, status, map[string]interface{}{
+		"spec":       spec,
+		"validation": validation,
+	})
 }
