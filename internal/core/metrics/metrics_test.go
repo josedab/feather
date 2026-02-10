@@ -1,10 +1,14 @@
 package metrics
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 func TestNewMetrics(t *testing.T) {
@@ -188,6 +192,31 @@ func TestMetrics_UnaryServerInterceptor(t *testing.T) {
 	if interceptor == nil {
 		t.Fatal("UnaryServerInterceptor() returned nil")
 	}
+
+	// Test successful call
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "ok", nil
+	}
+	info := &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}
+	resp, err := interceptor(context.Background(), "request", info, handler)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if resp != "ok" {
+		t.Errorf("response = %v, want 'ok'", resp)
+	}
+
+	// Test error call
+	handlerErr := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return nil, fmt.Errorf("test error")
+	}
+	resp, err = interceptor(context.Background(), "request", info, handlerErr)
+	if err == nil {
+		t.Error("expected error")
+	}
+	if resp != nil {
+		t.Errorf("response = %v, want nil", resp)
+	}
 }
 
 func TestMetrics_StreamServerInterceptor(t *testing.T) {
@@ -196,5 +225,24 @@ func TestMetrics_StreamServerInterceptor(t *testing.T) {
 	interceptor := m.StreamServerInterceptor()
 	if interceptor == nil {
 		t.Fatal("StreamServerInterceptor() returned nil")
+	}
+
+	// Test successful stream
+	handler := func(srv interface{}, ss grpc.ServerStream) error {
+		return nil
+	}
+	info := &grpc.StreamServerInfo{FullMethod: "/test.Service/StreamMethod"}
+	err := interceptor(nil, nil, info, handler)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// Test error stream
+	handlerErr := func(srv interface{}, ss grpc.ServerStream) error {
+		return fmt.Errorf("stream error")
+	}
+	err = interceptor(nil, nil, info, handlerErr)
+	if err == nil {
+		t.Error("expected error")
 	}
 }
