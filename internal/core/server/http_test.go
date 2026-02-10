@@ -432,3 +432,34 @@ func TestPanicRecoveryMiddleware(t *testing.T) {
 		t.Error("expected non-empty response body")
 	}
 }
+
+func TestErrorCodeToStatus(t *testing.T) {
+	tests := []struct {
+		code       string
+		wantStatus int
+	}{
+		{"BAD_REQUEST", http.StatusBadRequest},
+		{"VALIDATION_FAILED", http.StatusBadRequest},
+		{"UNAUTHORIZED", http.StatusUnauthorized},
+		{"FORBIDDEN", http.StatusForbidden},
+		{"NOT_FOUND", http.StatusNotFound},
+		{"CONFLICT", http.StatusConflict},
+		{"RATE_LIMITED", http.StatusTooManyRequests},
+		{"REQUEST_TOO_LARGE", http.StatusRequestEntityTooLarge},
+		{"SERVICE_UNAVAILABLE", http.StatusServiceUnavailable},
+		{"STORAGE_FULL", http.StatusInsufficientStorage},
+		{"TIMEOUT", http.StatusGatewayTimeout},
+		{"INTERNAL_ERROR", http.StatusInternalServerError},
+		{"UNKNOWN_CODE", http.StatusInternalServerError},
+		{"", http.StatusInternalServerError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.code, func(t *testing.T) {
+			got := errorCodeToStatus(tt.code)
+			if got != tt.wantStatus {
+				t.Errorf("errorCodeToStatus(%q) = %d, want %d", tt.code, got, tt.wantStatus)
+			}
+		})
+	}
+}
