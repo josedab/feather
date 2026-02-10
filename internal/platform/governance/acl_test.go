@@ -882,3 +882,242 @@ func TestACLDecision_Fields(t *testing.T) {
 	assert.Equal(t, ACLEffectAllow, decision.Effect)
 	assert.NotNil(t, decision.MatchedACL)
 }
+
+func TestColumnACLController_Evaluate_UnknownConditionType(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead},
+		Conditions: []ACLCondition{
+			{Type: "unknown_type", Operator: "equals", Value: "anything"},
+		},
+		Enabled: true,
+	})
+
+	ctx := context.Background()
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionRead,
+	}
+	decision := controller.Evaluate(ctx, req)
+	// Unknown condition type passes (returns true)
+	assert.True(t, decision.Allowed)
+}
+
+func TestColumnACLController_Evaluate_IPCondition_Equals(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	config.DefaultEffect = ACLEffectDeny
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead},
+		Conditions: []ACLCondition{
+			{Type: "ip", Operator: "equals", Value: "10.0.0.1"},
+		},
+		Enabled: true,
+	})
+
+	ctx := context.Background()
+
+	// Matching IP
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionRead,
+		Context:     ACLEvaluationContext{SourceIP: "10.0.0.1"},
+	}
+	assert.True(t, controller.Evaluate(ctx, req).Allowed)
+
+	// Non-matching IP
+	req.Context.SourceIP = "10.0.0.2"
+	assert.False(t, controller.Evaluate(ctx, req).Allowed)
+}
+
+func TestColumnACLController_Evaluate_IPCondition_InvalidValue(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	config.DefaultEffect = ACLEffectDeny
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead},
+		Conditions: []ACLCondition{
+			{Type: "ip", Operator: "equals", Value: 12345}, // wrong type
+		},
+		Enabled: true,
+	})
+
+	ctx := context.Background()
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionRead,
+		Context:     ACLEvaluationContext{SourceIP: "10.0.0.1"},
+	}
+	// Should not match because value is wrong type
+	assert.False(t, controller.Evaluate(ctx, req).Allowed)
+}
+
+func TestColumnACLController_Evaluate_PurposeCondition_In(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	config.DefaultEffect = ACLEffectDeny
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead},
+		Conditions: []ACLCondition{
+			{Type: "purpose", Operator: "in", Value: []interface{}{"analytics", "ml"}},
+		},
+		Enabled: true,
+	})
+
+	ctx := context.Background()
+
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionRead,
+		Context:     ACLEvaluationContext{Purpose: "analytics"},
+	}
+	assert.True(t, controller.Evaluate(ctx, req).Allowed)
+
+	req.Context.Purpose = "marketing"
+	assert.False(t, controller.Evaluate(ctx, req).Allowed)
+}
+
+func TestColumnACLController_Evaluate_SensitivityCondition_AllOperators(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	config.DefaultEffect = ACLEffectDeny
+
+	tests := []struct {
+		name        string
+		operator    string
+		condValue   string
+		reqSens     PIISensitivity
+		wantAllowed bool
+	}{
+		{"lte-allowed", "lte", "medium", SensitivityLow, true},
+		{"lte-equal", "lte", "medium", SensitivityMedium, true},
+		{"lte-denied", "lte", "medium", SensitivityHigh, false},
+		{"gt-allowed", "gt", "low", SensitivityMedium, true},
+		{"gt-denied", "gt", "medium", SensitivityLow, false},
+		{"gte-allowed", "gte", "medium", SensitivityMedium, true},
+		{"gte-denied", "gte", "high", SensitivityMedium, false},
+		{"equals-match", "equals", "high", SensitivityHigh, true},
+		{"equals-no-match", "equals", "high", SensitivityLow, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear ACLs for fresh test
+			ctrl := NewColumnACLController(config, nil)
+			_ = ctrl.AddACL(&ColumnACL{
+				ID:          "acl-1",
+				FeatureName: "feature",
+				Effect:      ACLEffectAllow,
+				Permissions: []ACLPermission{ACLPermissionRead},
+				Conditions: []ACLCondition{
+					{Type: "sensitivity", Operator: tt.operator, Value: tt.condValue},
+				},
+				Enabled: true,
+			})
+
+			ctx := context.Background()
+			req := &ACLRequest{
+				FeatureName: "feature",
+				Permission:  ACLPermissionRead,
+				Context:     ACLEvaluationContext{Sensitivity: tt.reqSens},
+			}
+			decision := ctrl.Evaluate(ctx, req)
+			assert.Equal(t, tt.wantAllowed, decision.Allowed, "operator=%s condValue=%s reqSens=%s", tt.operator, tt.condValue, tt.reqSens)
+		})
+	}
+}
+
+func TestColumnACLController_Evaluate_PermissionMismatch(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	config.DefaultEffect = ACLEffectDeny
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead}, // Only read
+		Enabled:     true,
+	})
+
+	ctx := context.Background()
+	// Request write permission - should not match
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionWrite,
+	}
+	decision := controller.Evaluate(ctx, req)
+	assert.False(t, decision.Allowed)
+}
+
+func TestColumnACLController_Evaluate_NoPrincipalRestriction(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead},
+		Principals:  []ACLPrincipal{}, // No restrictions
+		Enabled:     true,
+	})
+
+	ctx := context.Background()
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionRead,
+		Principal:   ACLPrincipal{Type: "user", ID: "anyone"},
+	}
+	decision := controller.Evaluate(ctx, req)
+	assert.True(t, decision.Allowed)
+}
+
+func TestColumnACLController_Evaluate_TimeCondition_InvalidFormat(t *testing.T) {
+	config := DefaultACLConfig()
+	config.CacheEnabled = false
+	controller := NewColumnACLController(config, nil)
+
+	_ = controller.AddACL(&ColumnACL{
+		ID:          "acl-1",
+		FeatureName: "feature",
+		Effect:      ACLEffectAllow,
+		Permissions: []ACLPermission{ACLPermissionRead},
+		Conditions: []ACLCondition{
+			{Type: "time", Value: "not a map"}, // Invalid format
+		},
+		Enabled: true,
+	})
+
+	ctx := context.Background()
+	req := &ACLRequest{
+		FeatureName: "feature",
+		Permission:  ACLPermissionRead,
+	}
+	// Should pass because invalid format returns true
+	decision := controller.Evaluate(ctx, req)
+	assert.True(t, decision.Allowed)
+}
