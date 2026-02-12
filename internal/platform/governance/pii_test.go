@@ -531,4 +531,133 @@ func TestValueToString(t *testing.T) {
 	// Unknown type
 	result = valueToString(12345)
 	assert.Equal(t, "", result)
+
+	// Boolean type
+	result = valueToString(true)
+	assert.Equal(t, "", result)
+
+	// Float type
+	result = valueToString(3.14)
+	assert.Equal(t, "", result)
+}
+
+func TestPIIDetector_Scan_NonStringValue(t *testing.T) {
+	config := DefaultPIIConfig()
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Integer value - should not be scanned
+	detections, err := detector.Scan(ctx, "feature", 12345)
+	require.NoError(t, err)
+	assert.Empty(t, detections)
+
+	// Bool value - should not be scanned
+	detections, err = detector.Scan(ctx, "feature", true)
+	require.NoError(t, err)
+	assert.Empty(t, detections)
+}
+
+func TestPIIDetector_Scan_Geolocation(t *testing.T) {
+	config := DefaultPIIConfig()
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	// Geolocation requires keyword match
+	detections, err := detector.Scan(ctx, "user_lat_lng", "37.7749, -122.4194")
+	require.NoError(t, err)
+	assert.NotEmpty(t, detections)
+}
+
+func TestPIIDetector_Scan_DateOfBirth(t *testing.T) {
+	config := DefaultPIIConfig()
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	// DOB requires keyword match
+	detections, err := detector.Scan(ctx, "user_dob", "01/15/1990")
+	require.NoError(t, err)
+	assert.NotEmpty(t, detections)
+	assert.Equal(t, PIICategoryDateOfBirth, detections[0].Category)
+}
+
+func TestPIIDetector_AddPattern_InvalidRegex(t *testing.T) {
+	config := DefaultPIIConfig()
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	pattern := &PIIPattern{
+		Name:        "bad",
+		Category:    PIICategoryCustom,
+		Sensitivity: SensitivityMedium,
+		Regex:       `[invalid(regex`,
+		Enabled:     true,
+	}
+	err = detector.AddPattern(pattern)
+	assert.Error(t, err)
+}
+
+func TestPIIDetector_ShouldBlock_EmptyDetections(t *testing.T) {
+	config := PIIConfig{
+		Enabled:               true,
+		BlockOnDetection:      true,
+		MinSensitivityToBlock: SensitivityLow,
+	}
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	assert.False(t, detector.ShouldBlock(nil))
+	assert.False(t, detector.ShouldBlock([]*PIIDetection{}))
+}
+
+func TestPIIDetector_MultipleCallbacks(t *testing.T) {
+	config := DefaultPIIConfig()
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	callCount := 0
+	detector.OnDetection(func(d *PIIDetection) { callCount++ })
+	detector.OnDetection(func(d *PIIDetection) { callCount++ })
+
+	ctx := context.Background()
+	_, _ = detector.Scan(ctx, "email", "test@example.com")
+
+	assert.Equal(t, 2, callCount, "both callbacks should fire")
+}
+
+func TestPIIDetector_TrackDetection_Increments(t *testing.T) {
+	config := DefaultPIIConfig()
+	detector, err := NewPIIDetector(config)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Scan same feature twice
+	_, _ = detector.Scan(ctx, "user_email", "a@example.com")
+	_, _ = detector.Scan(ctx, "user_email", "b@example.com")
+
+	detections := detector.GetDetectionsByFeature("user_email")
+	assert.Len(t, detections, 1) // Should be tracked as one detection
+	assert.Equal(t, int64(2), detections[0].Count)
+}
+
+func TestMaskSample_EdgeCases(t *testing.T) {
+	// Length exactly 4
+	result := maskSample("abcd")
+	assert.Equal(t, "****", result)
+
+	// Length 5
+	result = maskSample("abcde")
+	assert.Equal(t, "ab*de", result)
+
+	// Length 1
+	result = maskSample("a")
+	assert.Equal(t, "****", result)
+
+	// Empty string
+	result = maskSample("")
+	assert.Equal(t, "****", result)
 }
