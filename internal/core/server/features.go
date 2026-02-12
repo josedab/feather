@@ -32,11 +32,15 @@ import (
 "github.com/feather-store/feather/internal/extensions/drift"
 "github.com/feather-store/feather/internal/extensions/experiment"
 "github.com/feather-store/feather/internal/extensions/freshness"
+"github.com/feather-store/feather/internal/extensions/ftl"
 "github.com/feather-store/feather/internal/extensions/graphql"
 "github.com/feather-store/feather/internal/extensions/lineage"
 "github.com/feather-store/feather/internal/extensions/llmfeature"
+"github.com/feather-store/feather/internal/extensions/marketplace"
 "github.com/feather-store/feather/internal/extensions/llmgateway"
 "github.com/feather-store/feather/internal/extensions/materialization"
+"github.com/feather-store/feather/internal/extensions/mobilesync"
+"github.com/feather-store/feather/internal/extensions/qualityscore"
 "github.com/feather-store/feather/internal/extensions/rag"
 "github.com/feather-store/feather/internal/extensions/semantic"
 "github.com/feather-store/feather/internal/extensions/skewdetect"
@@ -44,6 +48,9 @@ import (
 "github.com/feather-store/feather/internal/extensions/timetravel"
 "github.com/feather-store/feather/internal/extensions/versioning"
 "github.com/feather-store/feather/internal/extensions/wasm"
+"github.com/feather-store/feather/internal/integrations/airflow"
+"github.com/feather-store/feather/internal/integrations/kubeflow"
+"github.com/feather-store/feather/internal/integrations/mlflow"
 "github.com/feather-store/feather/internal/integrations/streamsql"
 "github.com/feather-store/feather/internal/integrations/warehouse"
 "github.com/feather-store/feather/internal/platform/autoscaler"
@@ -68,6 +75,7 @@ import (
 "github.com/feather-store/feather/internal/platform/validation"
 "github.com/feather-store/feather/internal/tools/benchsuite"
 "github.com/feather-store/feather/internal/tools/catalog"
+"github.com/feather-store/feather/internal/tools/dashboard"
 "github.com/feather-store/feather/internal/tools/compute"
 "github.com/feather-store/feather/internal/tools/playground"
 "github.com/feather-store/feather/internal/tools/ui"
@@ -317,6 +325,9 @@ return nil
 registerHandler("marketplace", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 return NewMarketplaceHandler()
 })
+registerHandler("billing", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewBillingHandler(marketplace.NewBillingEngine(marketplace.DefaultBillingConfig()))
+})
 registerHandler("cloud_service", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewCloudServiceHandler()
 })
@@ -394,6 +405,31 @@ return NewMultiRegionHandler(multiregion.NewFederation(multiregion.DefaultFedera
 })
 registerHandler("bench_suite", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 return NewBenchSuiteHandler(benchsuite.NewSuite(benchsuite.DefaultSuiteConfig()))
+})
+registerHandler("ftl", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewFTLHandler(ftl.NewCompiler(ftl.DefaultCompilerConfig()))
+})
+registerHandler("quality_score", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewQualityScoreHandler(qualityscore.NewScorer(qualityscore.DefaultScoringConfig()))
+})
+registerHandler("explorer", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewExplorerHandler(dashboard.NewExplorer(dashboard.DefaultExplorerConfig()))
+})
+registerHandler("orchestrator", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewOrchestratorHandler(nil)
+})
+registerHandler("mobile_sync", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewMobileSyncHandler(mobilesync.NewSyncManager(mobilesync.DefaultSyncConfig()))
+})
+registerHandler("ml_integrations", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+return NewMLIntegrationsHandler(
+mlflow.NewTracker(mlflow.DefaultConfig()),
+kubeflow.NewManager(kubeflow.DefaultConfig()),
+airflow.NewProvider(airflow.DefaultConfig()),
+)
+})
+registerHandler("smpc", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
+return NewSMPCHandler(federation.NewSMPCEngine(federation.DefaultSMPCConfig()))
 })
 }
 
