@@ -262,161 +262,59 @@ curl -X POST http://localhost:8080/v1/vectors/product_embeddings/search \
 
 ## Client SDKs
 
-> **Note:** SDKs are included in this repository. Install them locally as shown below.
-> Start Feather first with `make run-dev` before running any quickstart.
+> Install from this repository. Start Feather first with `make run-dev`.
 
-### End-to-End Example
+**End-to-end example:** `python examples/ml-pipeline.py`
 
-Run a complete ML feature pipeline (no dependencies beyond Python 3.9+):
+| Language | Install | Quickstart |
+|----------|---------|------------|
+| **Go** | `import "github.com/feather-store/feather/sdk/go/feather"` | [Quickstart](./sdk/go/feather/quickstart/README.md) |
+| **Python** | `pip install -e sdk/python/` | [Quickstart](./sdk/python/quickstart/README.md) |
+| **TypeScript** | `cd sdk/typescript && npm install` | [Quickstart](./sdk/typescript/quickstart/README.md) |
+| **Java** | Maven/Gradle from `sdk/java/` | [Quickstart](./sdk/java/quickstart/README.md) |
+| **Rust** | Cargo from `sdk/rust/` | [Quickstart](./sdk/rust/quickstart/README.md) |
+| **Swift** | SPM from `sdk/swift/` | [Source](./sdk/swift/) |
+| **Kotlin** | Gradle from `sdk/kotlin/` | [Source](./sdk/kotlin/) |
 
-```bash
-python examples/ml-pipeline.py
-```
+<details>
+<summary>Quick code examples</summary>
 
-### SDK Quickstarts
-
-- [Go](./sdk/go/feather/quickstart/README.md): `cd sdk/go/feather/quickstart && go run main.go`
-- [Python](./sdk/python/quickstart/README.md): `pip install -e sdk/python/ && python sdk/python/quickstart/quickstart.py`
-- [TypeScript](./sdk/typescript/quickstart/README.md): `cd sdk/typescript/quickstart && npm install && npx ts-node quickstart.ts`
-- [Java](./sdk/java/quickstart/README.md): `cd sdk/java/quickstart && ./gradlew run`
-- [Rust](./sdk/rust/quickstart/README.md): `cd sdk/rust/quickstart && cargo run`
-
-### Go Client
-
+**Go:**
 ```go
-import "github.com/feather-store/feather/sdk/go/feather"
-
-client, err := feather.NewClient("localhost:8080")
-if err != nil {
-    log.Fatal(err)
-}
-
-// Get features
-features, err := client.GetFeatures(ctx, "user:123", []string{"click_count", "purchase_total"})
-
-// Store features
-err = client.PutFeatures(ctx, "user:123", map[string]interface{}{
-    "click_count": 15,
-    "purchase_total": 245.50,
-})
+client, _ := feather.NewClient("localhost:8080")
+features, _ := client.GetFeatures(ctx, "user:123", []string{"click_count"})
 ```
 
-### Python Client
-
-```bash
-pip install -e sdk/python/   # install from the repository
-```
-
+**Python:**
 ```python
 from feather_client import FeatherClient
-
 client = FeatherClient("localhost:8080")
-
-# Get features
-features = client.get_features("user:123", ["click_count", "purchase_total"])
-
-# Store features
-client.put_features("user:123", {
-    "click_count": 15,
-    "purchase_total": 245.50
-})
-
-# Point-in-time retrieval
-historical = client.get_features_as_of(
-    "user:123",
-    ["click_count"],
-    as_of="2024-01-15T00:00:00Z"
-)
+features = client.get_features("user:123", ["click_count"])
 ```
+</details>
 
 ## Configuration
 
 Feather can be configured via **YAML file** or **environment variables**.
 
-### Configuration Files
+| Config File | Use Case |
+|-------------|----------|
+| `configs/feather-dev.yaml` | Local development, zero external dependencies — **start here** |
+| `configs/feather-local.yaml` | Local development with disk persistence |
+| `configs/feather.yaml` | Production reference with all features |
 
-- `configs/feather-dev.yaml`: local development, zero external dependencies — **start here**
-- `configs/feather-local.yaml`: local development with disk persistence at `./data`
-- `configs/feather.yaml`: production reference config with all features
-
-### Environment Variables
+### Key Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `FEATHER_HTTP_PORT` | `8080` | HTTP API port |
 | `FEATHER_GRPC_PORT` | `50051` | gRPC API port |
-| `FEATHER_PROMETHEUS_PORT` | `9090` | Prometheus metrics port |
 | `FEATHER_HOT_MAX_MEMORY` | `4GB` | Maximum hot tier memory |
-| `FEATHER_HOT_TTL` | `1h` | Hot tier entry TTL |
 | `FEATHER_WARM_PATH` | `/var/lib/feather/data` | Warm tier storage path |
 | `FEATHER_KAFKA_ENABLED` | `false` | Enable Kafka ingestion |
-| `FEATHER_KAFKA_BROKERS` | `localhost:9092` | Kafka broker addresses |
 | `FEATHER_TRACING_ENABLED` | `false` | Enable OpenTelemetry tracing |
 
-### Configuration File
-
-```yaml
-# configs/feather.yaml — production reference
-# See configs/feather-dev.yaml for a minimal local config.
-serving:
-  http:
-    port: 8080
-    read_timeout: 10s
-    write_timeout: 10s
-  grpc:
-    port: 50051
-    max_concurrent: 1000
-
-storage:
-  hot:
-    max_memory: 4GB
-    eviction_policy: lru
-  warm:
-    path: /var/lib/feather/data
-    sync_interval: 1s
-  historical:
-    enabled: true
-    retention: 720h  # 30 days
-
-ingestion:
-  kafka:
-    enabled: false
-    brokers:
-      - kafka-1:9092
-      - kafka-2:9092
-    topic: feature-updates
-    consumer_group: feather
-  http:
-    enabled: true
-    port: 8081
-
-metrics:
-  prometheus:
-    enabled: true
-    port: 9090
-
-tracing:
-  enabled: false
-  endpoint: "jaeger:4317"
-  sample_rate: 0.1
-
-logging:
-  level: info
-  format: json
-
-schema:
-  groups:
-    - name: user_features
-      entity_type: user
-      ttl: 24h
-      features:
-        - name: click_count
-          data_type: int64
-        - name: purchase_total
-          data_type: float64
-        - name: last_activity
-          data_type: timestamp
-```
+See the [full configuration reference](./configs/feather.yaml) for all options.
 
 ## Benchmarks
 
@@ -491,29 +389,24 @@ For detailed architecture documentation with Mermaid diagrams, see [Architecture
 
 ## Deployment
 
-### Kubernetes
+Feather supports Docker, Kubernetes (Helm), and raw binary deployment.
 
 ```bash
-# Using Helm
+# Kubernetes with Helm
 helm install feather ./deploy/helm/feather \
-  --namespace feather-system \
-  --create-namespace \
-  --set replicaCount=3 \
-  --set storage.hot.maxMemory="8GB"
+  --namespace feather-system --create-namespace
 
-# Using raw manifests
-kubectl apply -k deploy/kubernetes/
+# Docker
+docker compose -f docker-compose.dev.yml up
 ```
 
-### Health Probes
+| Health Endpoint | Purpose |
+|----------------|---------|
+| `GET /live` | K8s liveness probe |
+| `GET /ready` | K8s readiness probe |
+| `GET /health` | Deep health check |
 
-| Endpoint | Purpose | Use Case |
-|----------|---------|----------|
-| `GET /live` | Liveness probe | K8s restart trigger |
-| `GET /ready` | Readiness probe | K8s traffic routing |
-| `GET /health` | Deep health check | Debugging, monitoring |
-
-For complete deployment instructions, see [Deployment Guide](./docs/deployment.md).
+See [Deployment Guide](./docs/deployment.md) for full instructions.
 
 ## Documentation
 
@@ -540,159 +433,53 @@ Run `make docs` to start the full documentation site locally (requires Node.js).
 
 ## Development
 
-### Prerequisites
-
-- Go 1.24+
-- Make
-- Docker (optional)
-- golangci-lint (for linting — install via `make install-tools`)
-
-> **Note:** The default build uses `CGO_ENABLED=0` — no C compiler needed. To enable Kafka ingestion with librdkafka, use `make build-cgo`.
-
-### Commands
+**Prerequisites:** Go 1.24+, Make. Docker optional. Default build uses `CGO_ENABLED=0` — no C compiler needed.
 
 ```bash
-# One-command contributor setup (recommended first time)
-make setup
-
-# Check prerequisites
-make doctor
-
-# Build (~5s cached, ~30s cold)
-make build
-
-# Run with minimal dev config
-make run-dev
-
-# Run core tests (~10s, fast feedback)
-make test-core
-
-# Run quick tests
-make test-quick
-
-# Run full tests with race detector
-make test
-
-# Run with coverage report
-make test-coverage
-
-# Lint code
-make lint
-
-# Format code
-make fmt
-
-# Run all checks (fmt, vet, lint, test)
-make check
-
-# Fast pre-commit checks (~20s)
-make check-quick
-
-# Run benchmarks
-make bench
-
-# Build Docker image
-make docker-build
+make setup          # One-command contributor setup (first time)
+make doctor         # Check prerequisites
+make build          # Build binary (~5s cached)
+make run-dev        # Run with minimal dev config
+make test-core      # Core tests (~10s, fast feedback)
+make test-quick     # All tests, short mode (~60s)
+make check-quick    # Pre-commit checks: fmt + vet + lint + tests (~20s)
+make api-routes     # List all API handlers with maturity levels
+make list-extensions # Show enabled vs available features
+make help           # All available targets
 ```
 
 ### CLI & TUI
 
 ```bash
-# Build binaries
-make build-cli
-make build-tui
-
-# Run binaries
-./bin/feather-cli --help
-./bin/feather-tui
-
-# Or run from source
-make run-cli
-make run-tui
+make build-cli && ./bin/feather-cli --help
+make build-tui && ./bin/feather-tui
 ```
 
 ### Project Structure
 
 ```
 feather/
-├── cmd/
-│   ├── feather/          # Main server binary
-│   ├── feather-cli/      # Command-line client for interacting with a Feather server
-│   ├── feather-tui/      # Terminal UI for monitoring and exploring features
-│   └── feather-mcp/      # Model Context Protocol server for AI tool integration
+├── cmd/                  # Server, CLI, TUI, MCP binaries
 ├── internal/
-│   ├── core/             # Essential packages (stable)
-│   │   ├── aggregation/  # Real-time aggregation engine
-│   │   ├── config/       # Configuration loading
-│   │   ├── domain/       # Core domain types
-│   │   ├── export/       # Training data export
-│   │   ├── ingestion/    # Kafka and HTTP ingestion
-│   │   ├── logging/      # Structured logging
-│   │   ├── metrics/      # Prometheus metrics
-│   │   ├── server/       # HTTP and gRPC servers
-│   │   ├── storage/      # Hot/warm tiered storage
-│   │   ├── tracing/      # OpenTelemetry tracing
-│   │   └── vector/       # Vector similarity search (HNSW)
-│   ├── extensions/       # Optional feature modules (see docs/package-guide.md)
-│   │   ├── drift/        # Drift detection and monitoring
-│   │   ├── featherql/    # Declarative query language
-│   │   ├── freshness/    # Feature freshness SLAs
-│   │   ├── llmcache/     # LLM prompt/response caching
-│   │   ├── marketplace/  # Feature marketplace
-│   │   ├── semantic/     # AI-powered discovery
-│   │   └── ...           # 27 extension packages
-│   ├── integrations/     # External system connectors
-│   │   ├── dbt/          # dbt integration
-│   │   ├── spark/        # Apache Spark connector
-│   │   ├── streaming/    # Real-time streaming pipelines
-│   │   └── warehouse/    # Cloud data warehouse connectors
-│   ├── platform/         # Cross-cutting concerns
-│   │   ├── auth/         # Authentication and RBAC
-│   │   ├── cluster/      # Distributed cluster membership
-│   │   ├── governance/   # Enterprise data governance
-│   │   ├── operator/     # Kubernetes operator
-│   │   └── ...           # 29 platform packages
-│   └── tools/            # Developer and operational tools
-│       ├── benchmark/    # Benchmarking utilities
-│       ├── compute/      # Feature computation engine
-│       ├── dashboard/    # Admin dashboard
-│       └── playground/   # Interactive playground
-├── sdk/
-│   ├── go/               # Go client SDK
-│   ├── python/           # Python client SDK
-│   ├── java/             # Java/Kotlin client SDK
-│   ├── rust/             # Rust client SDK
-│   └── typescript/       # TypeScript client SDK
+│   ├── core/             # Essential packages (stable) — storage, server, ingestion, etc.
+│   ├── extensions/       # Optional feature modules — 38 packages (see docs/package-guide.md)
+│   ├── integrations/     # External connectors — dbt, Spark, Flink, MLflow, etc.
+│   ├── platform/         # Infrastructure — auth, cluster, governance, operator, etc.
+│   └── tools/            # Developer tools — benchmark, dashboard, playground
+├── sdk/                  # Client SDKs: Go, Python, TypeScript, Java, Rust, Swift, Kotlin
 ├── api/                  # Protocol buffer and OpenAPI definitions
 ├── configs/              # Example configurations
-├── deploy/               # Kubernetes manifests, Helm charts, observability
-├── docs/                 # Documentation
+├── deploy/               # Kubernetes manifests, Helm charts
+├── docs/                 # Documentation (see docs/package-guide.md for full package matrix)
 └── test/                 # Integration and benchmark tests
 ```
 
+Run `make api-routes` to see all registered handlers with maturity levels.
+
 ## Roadmap
 
-- [x] Offline feature store integration (Apache Spark, Flink)
-- [x] Drift detection and monitoring
-- [x] Feature freshness SLAs with auto-remediation
-- [x] AI-powered feature discovery and recommendations
-- [x] Kubernetes operator with custom resources
-- [x] LLM-powered embeddings (OpenAI, Ollama, HuggingFace)
-- [x] Real-time streaming with CEP
-- [x] Cloud storage backends (DynamoDB, S3, GCS, Bigtable)
-- [x] Web dashboard for monitoring and exploration
-- [x] Feature lineage tracking
-- [x] A/B testing support for feature experimentation
-- [x] Multi-tenant isolation
-- [x] Distributed sharding and replication
-- [x] Feature marketplace for cross-team sharing
-- [x] Managed cloud service control plane
-- [x] Declarative feature pipelines (FeatherQL)
-- [x] Native LLM prompt and response caching
-- [x] Automated feature engineering (AutoFE)
-- [x] Multi-cloud geo-routing with data residency
-- [x] Feature versioning with A/B canary rollouts
-- [x] Edge deployment runtime with offline sync
+See [GitHub Issues](https://github.com/feather-store/feather/issues) for current priorities. Next up:
+
 - [ ] BigQuery integration for data warehouse sync
 
 ## Troubleshooting

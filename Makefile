@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core lint run run-config run-dev run-cli run-tui clean generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs
+.PHONY: build test test-quick test-short test-core lint run run-config run-dev run-cli run-tui clean generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -74,10 +74,10 @@ test-quick:
 	if [ $$EXIT -eq 0 ]; then echo ""; echo "✅ All tests passed ($$ELAPSED""s)"; \
 	else echo ""; echo "❌ Some tests failed ($$ELAPSED""s)"; exit 1; fi
 
-## test-core: Run core package tests only (~10s)
+## test-core: Run core package tests only (~10s) with coverage summary
 test-core:
 	@START=$$(date +%s); \
-	$(GO) test -short -count=1 -timeout 60s ./internal/core/... 2>&1 | grep -E '(^ok|FAIL|---)'; \
+	$(GO) test -short -count=1 -cover -timeout 60s ./internal/core/... 2>&1 | grep -E '(^ok|FAIL|coverage|---)'; \
 	EXIT=$$?; \
 	ELAPSED=$$(( $$(date +%s) - $$START )); \
 	if [ $$EXIT -eq 0 ]; then echo ""; echo "✅ Core tests passed ($$ELAPSED""s)"; \
@@ -257,6 +257,35 @@ examples:
 	cd examples/go-basic && go run main.go
 	@echo ""
 	@echo "✅ All examples completed."
+
+# Developer Experience
+## api-routes: List all registered API handlers with maturity levels
+api-routes:
+	@echo "Registered API handlers (from internal/core/server/features.go):"
+	@echo ""
+	@echo "STABLE (production-ready):"
+	@grep 'registerHandler(' internal/core/server/features.go | grep 'MaturityStable' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
+	@echo ""
+	@echo "BETA (functional, API may change):"
+	@grep 'registerHandler(' internal/core/server/features.go | grep 'MaturityBeta' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
+	@echo ""
+	@echo "EXPERIMENTAL (may be incomplete):"
+	@grep 'registerHandler(' internal/core/server/features.go | grep 'MaturityExperimental' | sed 's/.*registerHandler("\([^"]*\)".*/  \1/' | sort
+	@echo ""
+	@echo "OpenAPI spec: api/openapi/feather.yaml"
+	@echo "Handler registry: internal/core/server/features.go"
+
+## list-extensions: Show enabled features vs available features
+list-extensions:
+	@echo "ENABLED features (in cmd/feather/main.go EnabledFeatures map):"
+	@grep -E '"[a-z_]+":[[:space:]]*true' cmd/feather/main.go | sed 's/.*"\([a-z_]*\)".*/  ✅ \1/' | sort
+	@echo ""
+	@echo "CONDITIONALLY ENABLED:"
+	@grep -E '"[a-z_]+":[[:space:]]*cfg\.' cmd/feather/main.go | sed 's/.*"\([a-z_]*\)".*/  ⚙️  \1/' | sort
+	@echo ""
+	@TOTAL=$$(grep -c 'registerHandler(' internal/core/server/features.go); \
+	ENABLED=$$(grep -cE '"[a-z_]+":[[:space:]]*true' cmd/feather/main.go); \
+	echo "Total available: $$TOTAL | Enabled by default: $$ENABLED"
 
 # Docker
 ## docker-build: Build the Docker image

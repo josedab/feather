@@ -55,6 +55,75 @@ make help
 
 ## Development Guidelines
 
+### How to Add a New API Endpoint
+
+Feather uses a pluggable handler registry (see [ADR-0008](./docs/adr/0008-pluggable-http-handlers.md)).
+Follow these four steps:
+
+**Step 1 — Create your package** under the appropriate directory:
+
+| Directory | Purpose |
+|-----------|---------|
+| `internal/extensions/` | Optional feature modules |
+| `internal/integrations/` | External system connectors |
+| `internal/platform/` | Cross-cutting infrastructure |
+| `internal/tools/` | Developer and operational utilities |
+
+```go
+// internal/extensions/myfeature/engine.go
+package myfeature
+
+type EngineConfig struct { /* ... */ }
+func DefaultEngineConfig() EngineConfig { /* ... */ }
+type Engine struct { /* ... */ }
+func NewEngine(cfg EngineConfig) *Engine { /* ... */ }
+```
+
+**Step 2 — Create a handler** in `internal/core/server/`:
+
+```go
+// internal/core/server/myfeature_handler.go
+package server
+
+type MyFeatureHandler struct {
+    engine *myfeature.Engine
+}
+
+func NewMyFeatureHandler(engine *myfeature.Engine) *MyFeatureHandler {
+    return &MyFeatureHandler{engine: engine}
+}
+
+func (h *MyFeatureHandler) RegisterRoutes(mux *http.ServeMux) {
+    mux.HandleFunc("GET /v1/myfeature/items", h.handleList)
+    mux.HandleFunc("POST /v1/myfeature/items", h.handleCreate)
+}
+
+func (h *MyFeatureHandler) handleList(w http.ResponseWriter, r *http.Request) {
+    items := h.engine.List()
+    writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
+        "items": items,
+        "count": len(items),
+    })
+}
+```
+
+**Step 3 — Register** in `internal/core/server/features.go` `init()`:
+
+```go
+registerHandler("myfeature", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
+    return NewMyFeatureHandler(myfeature.NewEngine(myfeature.DefaultEngineConfig()))
+})
+```
+
+**Step 4 — Enable** in `cmd/feather/main.go` `EnabledFeatures` map:
+
+```go
+"myfeature": true,
+```
+
+Then update `docs/package-guide.md` with your new package. Run `make api-routes` to verify
+your handler appears, and `make check-quick` before committing.
+
 For detailed development guidelines, including:
 
 - Project structure and architecture

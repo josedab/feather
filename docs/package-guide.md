@@ -53,6 +53,7 @@ Enable or disable via the feature flag map in `HTTPServerFeatureConfig.EnabledFe
 | Package | Description |
 |---------|-------------|
 | `abrollout` | Feature versioning with A/B canary rollout traffic management |
+| `activeactive` | CRDT-based active-active replication with gossip protocol |
 | `autofe` | Automated feature engineering with candidate scoring |
 | `cache` | Advanced caching strategies (write-through, write-behind) |
 | `cloudservice` | Managed cloud control plane with auto-scaling |
@@ -61,10 +62,16 @@ Enable or disable via the feature flag map in `HTTPServerFeatureConfig.EnabledFe
 | `embedding` | Batch embedding processing for feature vectors |
 | `experiment` | A/B testing and experimentation framework |
 | `featherql` | SQL-like DSL for declarative feature pipelines |
+| `ftl` | Feature Transformation Language — SQL-like DSL compiled to in-memory transforms |
 | `georouting` | Multi-cloud geo-routing with data residency compliance |
+| `joins` | Feature join engine for combining features across entities |
 | `lineage` | Feature lineage tracking and visualization |
 | `llmcache` | Semantic LLM prompt/response caching with cost tracking |
 | `materialization` | DAG-based pipeline engine for feature materialization |
+| `mesh` | Service mesh for distributed feature serving |
+| `mobilesync` | Mobile SDK sync protocol with delta sync and conflict resolution |
+| `multimodal` | Multi-modal feature storage and embedding index |
+| `qualityscore` | Automated multi-signal feature quality scoring engine |
 | `versioning` | Git-like versioning for feature definitions and values |
 
 ### Experimental Extensions
@@ -72,11 +79,15 @@ Enable or disable via the feature flag map in `HTTPServerFeatureConfig.EnabledFe
 | Package | Description |
 |---------|-------------|
 | `autogen` | Automatic feature generation and schema inference |
+| `computegraph` | Computation graph engine for complex feature DAGs |
 | `graphql` | GraphQL API for the feature store |
 | `llm` | LLM-powered feature generation pipelines |
 | `llmfeature` | First-class LLM-specific feature types and storage |
+| `llmgateway` | Multi-provider LLM gateway with routing and rate limiting |
 | `modelserving` | Multi-model feature serving with model registry |
 | `rag` | Native RAG pipeline for retrieval-augmented generation |
+| `skewdetect` | Online/offline feature skew detection |
+| `streamdsl` | Stream processing DSL with pipeline compiler |
 | `timetravel` | Time-travel debugging for feature values |
 | `wasm` | WebAssembly runtime for custom transformations |
 
@@ -88,8 +99,11 @@ External system connectors for batch and streaming workloads.
 
 | Package | Description |
 |---------|-------------|
+| `airflow` | Apache Airflow provider with DAG operators and freshness sensors |
 | `dbt` | Converts dbt models to Feather feature groups |
 | `flink` | Apache Flink integration for streaming feature computation |
+| `kubeflow` | Kubeflow Pipelines components for feature retrieval |
+| `mlflow` | MLflow tracking integration with feature lineage |
 | `offlinesync` | Offline/online synchronization for batch training data |
 | `spark` | Apache Spark connector for batch feature export |
 | `streaming` | Real-time streaming pipelines with windowing and CEP |
@@ -139,6 +153,9 @@ Cross-cutting infrastructure for enterprise deployments.
 
 | Package | Description |
 |---------|-------------|
+| `autoscaler` | Kubernetes-aware auto-scaling for feature serving |
+| `cloud` | Multi-cloud control plane for managed deployments |
+| `costopt` | Cost optimization with forecasting and recommendations |
 | `gitops` | Git-based declarative feature governance |
 | `parity` | Online/offline feature parity validation |
 | `plugin` | Plugin and extension framework |
@@ -153,12 +170,15 @@ Developer and operational utilities.
 
 | Package | Description |
 |---------|-------------|
-| `backfill` | Historical feature data backfilling |
+| `backfill` | Historical feature data backfilling with DAG orchestration |
 | `benchmark` | Performance benchmarking harness |
+| `benchsuite` | Extended benchmark suite with configurable workloads |
+| `catalog` | Feature catalog UI service |
 | `compute` | Feature Computation Engine (FCE) with expression evaluator |
-| `dashboard` | Feature monitoring dashboard backend |
+| `dashboard` | Feature monitoring dashboard backend with explorer |
 | `mcp` | Model Context Protocol server for AI agent integration |
 | `ml` | Machine learning model integration |
+| `pipelinebuilder` | Code generation and templates for feature pipelines |
 | `playground` | Feature exploration and interactive query builder |
 | `ui` | Embedded web UI for browsing and managing features |
 
