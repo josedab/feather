@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -279,7 +280,9 @@ func (m *Manager) handleMetrics(w http.ResponseWriter, r *http.Request) {
 
 func (m *Manager) handleHealthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ok"))
+	if _, err := w.Write([]byte("ok")); err != nil {
+		slog.Debug("healthz write failed", "error", err)
+	}
 }
 
 func (m *Manager) handleReadyz(w http.ResponseWriter, r *http.Request) {
@@ -290,18 +293,24 @@ func (m *Manager) handleReadyz(w http.ResponseWriter, r *http.Request) {
 
 	if !started {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte("not started"))
+		if _, err := w.Write([]byte("not started")); err != nil {
+			slog.Debug("readyz write failed", "error", err)
+		}
 		return
 	}
 
 	if m.config.LeaderElect && !isLeader {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write([]byte("not leader"))
+		if _, err := w.Write([]byte("not leader")); err != nil {
+			slog.Debug("readyz write failed", "error", err)
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ok"))
+	if _, err := w.Write([]byte("ok")); err != nil {
+		slog.Debug("readyz write failed", "error", err)
+	}
 }
 
 func (m *Manager) runLeaderElection(ctx context.Context) {

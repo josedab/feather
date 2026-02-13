@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -140,7 +141,7 @@ func (sm *ShardManager) AssignShards(ctx context.Context, nodeIDs []string) erro
 		}
 		if _, err := sm.raftNode.Propose(ctx, cmd); err != nil {
 			// Non-fatal: local assignment still applied
-			_ = err
+			slog.Debug("raft propose failed for shard assignment", "error", err)
 		}
 	}
 
