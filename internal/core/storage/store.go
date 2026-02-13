@@ -43,6 +43,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -265,7 +266,7 @@ func (s *Store) GetAsOf(entityKey string, features []string, asOf time.Time) (ma
 func (s *Store) Put(entityKey string, features map[string]*domain.FeatureValue) error {
 	// Write to hot tier first
 	if err := s.hot.Put(entityKey, features); err != nil {
-		return err
+		return fmt.Errorf("putting features to hot tier: %w", err)
 	}
 
 	// Write to warm tier asynchronously with tracking
@@ -277,7 +278,7 @@ func (s *Store) Put(entityKey string, features map[string]*domain.FeatureValue) 
 // Delete removes an entity from both tiers.
 func (s *Store) Delete(entityKey string) error {
 	if err := s.hot.Delete(entityKey); err != nil {
-		return err
+		return fmt.Errorf("deleting entity from hot tier: %w", err)
 	}
 	// Note: We don't delete from warm tier to preserve history
 	return nil

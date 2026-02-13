@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"sync"
 	"sync/atomic"
@@ -159,6 +160,7 @@ func (b *GCSBackend) Put(ctx context.Context, entityKey string, features map[str
 		histPath := b.historyPath(entityKey, time.Now())
 		if err := b.client.Write(ctx, b.config.BucketName, histPath, data); err != nil {
 			atomic.AddInt64(&b.stats.errors, 1)
+			slog.Error("failed to write feature history", "entity", entityKey, "path", histPath, "error", err)
 		}
 	}
 
