@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/feather-store/feather/internal/core/domain"
@@ -17,8 +18,7 @@ import (
 
 // requestIDMiddleware adds a unique request ID to each request.
 func requestIDMiddleware(next http.Handler) http.Handler {
-	var counter uint64
-	var mu sync.Mutex
+	var counter atomic.Uint64
 	hostname, _ := os.Hostname()
 	pid := os.Getpid()
 
@@ -26,10 +26,8 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		// Check for existing request ID header
 		requestID := r.Header.Get("X-Request-ID")
 		if requestID == "" {
-			mu.Lock()
-			counter++
-			requestID = fmt.Sprintf("%s-%d-%d-%d", hostname, pid, time.Now().UnixNano(), counter)
-			mu.Unlock()
+			c := counter.Add(1)
+			requestID = fmt.Sprintf("%s-%d-%d-%d", hostname, pid, time.Now().UnixNano(), c)
 		}
 
 		// Add request ID to response header
@@ -49,6 +47,16 @@ type gzipResponseWriter struct {
 
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
+}
+
+// Flush implements http.Flusher for streaming/SSE compatibility.
+func (w *gzipResponseWriter) Flush() {
+	if f, ok := w.Writer.(interface{ Flush() error }); ok {
+		_ = f.Flush()
+	}
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 // compressionMiddleware adds gzip compression to responses.
@@ -204,6 +212,7 @@ func corsMiddleware(config *CORSConfig) func(http.Handler) http.Handler {
 	// Prevent wildcard origin with credentials - this combination is a browser
 	// security violation and would be rejected by browsers anyway.
 	if allowAll && config.AllowCredentials {
+		slog.Warn("CORS: disabling AllowCredentials because AllowedOrigins contains wildcard '*' — this combination is a browser security violation")
 		config.AllowCredentials = false
 	}
 
