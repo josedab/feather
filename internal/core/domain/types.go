@@ -368,9 +368,3 @@ func (r *APIResponse) WithErrorDetails(details map[string]string) *APIResponse {
 	}
 	return r
 }
-
-// PaginatedRequest contains pagination parameters.
-type PaginatedRequest struct {
-	PageSize  int    `json:"page_size"`
-	PageToken string `json:"page_token"`
-}
