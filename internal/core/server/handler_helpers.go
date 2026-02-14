@@ -6,6 +6,9 @@ import (
 )
 
 // decodeJSONBody decodes a JSON request body into dst.
+// It rejects unknown fields to catch client typos and malformed requests early.
 func decodeJSONBody(r *http.Request, dst interface{}) error {
-	return json.NewDecoder(r.Body).Decode(dst)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(dst)
 }
