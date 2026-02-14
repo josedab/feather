@@ -79,7 +79,7 @@ func (h *ReplicationHandler) handleRemoveRegion(w http.ResponseWriter, r *http.R
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "region removed"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "region removed"})
 }
 
 func (h *ReplicationHandler) handleDrainRegion(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +91,7 @@ func (h *ReplicationHandler) handleDrainRegion(w http.ResponseWriter, r *http.Re
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "region draining"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "region draining"})
 }
 
 func (h *ReplicationHandler) handleActivateRegion(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +103,7 @@ func (h *ReplicationHandler) handleActivateRegion(w http.ResponseWriter, r *http
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "region activated"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "region activated"})
 }
 
 func (h *ReplicationHandler) handleStats(w http.ResponseWriter, r *http.Request) {

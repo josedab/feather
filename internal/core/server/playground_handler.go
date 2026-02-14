@@ -108,7 +108,7 @@ func (h *PlaygroundHandler) handleDeleteQuery(w http.ResponseWriter, r *http.Req
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "query deleted"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "query deleted"})
 }
 
 func (h *PlaygroundHandler) handleListDatasets(w http.ResponseWriter, r *http.Request) {

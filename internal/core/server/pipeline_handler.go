@@ -103,7 +103,7 @@ func (h *PipelineHandler) handleDeletePipeline(w http.ResponseWriter, r *http.Re
 	}
 	delete(h.pipelines, id)
 	h.mu.Unlock()
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "pipeline deleted"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "pipeline deleted"})
 }
 
 func (h *PipelineHandler) handleAddNode(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +138,7 @@ func (h *PipelineHandler) handleRemoveNode(w http.ResponseWriter, r *http.Reques
 		writeJSONError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "node removed"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "node removed"})
 }
 
 func (h *PipelineHandler) handleConnect(w http.ResponseWriter, r *http.Request) {
@@ -161,7 +161,7 @@ func (h *PipelineHandler) handleConnect(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "nodes connected"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "nodes connected"})
 }
 
 func (h *PipelineHandler) handleValidate(w http.ResponseWriter, r *http.Request) {

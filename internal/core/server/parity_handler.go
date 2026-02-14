@@ -91,7 +91,7 @@ func (h *ParityHandler) handleRecordPair(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.checker.RecordPair(req.Feature, req.EntityKey, req.OnlineValue, req.OfflineValue)
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 type recordBatchRequest struct {
@@ -124,7 +124,7 @@ func (h *ParityHandler) handleReset(w http.ResponseWriter, r *http.Request) {
 		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 func (h *ParityHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {

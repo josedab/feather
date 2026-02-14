@@ -71,7 +71,7 @@ func (h *PluginHandler) handleUnregisterPlugin(w http.ResponseWriter, r *http.Re
 		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}
-	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true})
+	h.writeJSON(r.Context(), w, http.StatusOK, SuccessResponse{Success: true})
 }
 
 func (h *PluginHandler) handleEnable(w http.ResponseWriter, r *http.Request) {

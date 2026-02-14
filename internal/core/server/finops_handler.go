@@ -123,7 +123,7 @@ func (h *FinOpsHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	h.manager.RecordUsage(record)
-	writeJSONResponse(r.Context(), w, http.StatusCreated, map[string]interface{}{"success": true, "message": "usage recorded"})
+	writeJSONResponse(r.Context(), w, http.StatusCreated, SuccessResponse{Success: true, Message: "usage recorded"})
 }
 
 func (h *FinOpsHandler) handleGetGroupCost(w http.ResponseWriter, r *http.Request) {

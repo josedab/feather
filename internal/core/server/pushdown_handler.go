@@ -76,7 +76,7 @@ func (h *PushdownHandler) handleUnregisterDerived(w http.ResponseWriter, r *http
 		return
 	}
 	h.evaluator.UnregisterDerived(r.PathValue("name"))
-	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{"success": true, "message": "derived feature removed"})
+	writeJSONResponse(r.Context(), w, http.StatusOK, SuccessResponse{Success: true, Message: "derived feature removed"})
 }
 
 func (h *PushdownHandler) handleEvaluate(w http.ResponseWriter, r *http.Request) {
