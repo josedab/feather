@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"math"
 	"net"
 	"time"
@@ -67,13 +68,17 @@ func NewGRPCServer(
 	// Configure TLS if enabled
 	if cfg.TLS != nil && cfg.TLS.Enabled {
 		cert, err := cfg.TLS.LoadCertificate()
-		if err == nil {
-			tlsConfig, _ := cfg.TLS.BuildTLSConfig()
-			if tlsConfig != nil {
+		if err != nil {
+			slog.Error("gRPC TLS: failed to load certificate, server will NOT use TLS", "error", err)
+		} else {
+			tlsConfig, err := cfg.TLS.BuildTLSConfig()
+			if err != nil {
+				slog.Error("gRPC TLS: failed to build TLS config, server will NOT use TLS", "error", err)
+			} else if tlsConfig != nil {
 				tlsConfig.Certificates = []tls.Certificate{cert}
+				creds := credentials.NewTLS(tlsConfig)
+				opts = append(opts, grpc.Creds(creds))
 			}
-			creds := credentials.NewTLS(tlsConfig)
-			opts = append(opts, grpc.Creds(creds))
 		}
 	}
 
