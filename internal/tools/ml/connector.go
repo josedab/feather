@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -20,6 +21,13 @@ var (
 	ErrConnectorNotFound = errors.New("connector not found")
 	ErrConnectorExists   = errors.New("connector already exists")
 )
+
+// closeBody closes an HTTP response body and logs any error at debug level.
+func closeBody(resp *http.Response) {
+	if err := resp.Body.Close(); err != nil {
+		slog.Debug("failed to close response body", "error", err)
+	}
+}
 
 // Connector represents a connection to an ML serving system.
 type Connector interface {
@@ -207,7 +215,7 @@ func (c *BaseConnector) doRequest(ctx context.Context, method, url string, body 
 		}
 
 		if resp.StatusCode >= 500 {
-			_ = resp.Body.Close()
+			closeBody(resp)
 			lastErr = fmt.Errorf("server error: %d", resp.StatusCode)
 			continue
 		}
@@ -252,9 +260,7 @@ func (c *TensorFlowConnector) Connect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("connecting to TensorFlow Serving: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -313,9 +319,7 @@ func (c *TensorFlowConnector) Predict(ctx context.Context, req *PredictRequest) 
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -375,9 +379,7 @@ func (c *TensorFlowConnector) BatchPredict(ctx context.Context, req *BatchPredic
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -436,9 +438,7 @@ func (c *MLflowConnector) Connect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("connecting to MLflow: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
@@ -484,9 +484,7 @@ func (c *MLflowConnector) Predict(ctx context.Context, req *PredictRequest) (*Pr
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -538,9 +536,7 @@ func (c *MLflowConnector) BatchPredict(ctx context.Context, req *BatchPredictReq
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -632,9 +628,7 @@ func (c *SageMakerConnector) Predict(ctx context.Context, req *PredictRequest) (
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
@@ -673,9 +667,7 @@ func (c *SageMakerConnector) BatchPredict(ctx context.Context, req *BatchPredict
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer closeBody(resp)
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {

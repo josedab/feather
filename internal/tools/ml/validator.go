@@ -3,6 +3,7 @@ package ml
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -242,7 +243,9 @@ func (v *ServingValidator) Validate(ctx context.Context, modelID string, feature
 // ValidateAsync performs validation asynchronously without blocking.
 func (v *ServingValidator) ValidateAsync(ctx context.Context, modelID string, features map[string]interface{}) {
 	if !v.config.AsyncValidation {
-		_, _ = v.Validate(ctx, modelID, features)
+		if _, err := v.Validate(ctx, modelID, features); err != nil {
+			slog.Debug("sync validation failed in async path", "model", modelID, "error", err)
+		}
 		return
 	}
 
@@ -255,7 +258,9 @@ func (v *ServingValidator) ValidateAsync(ctx context.Context, modelID string, fe
 	}
 
 	go func() {
-		_, _ = v.Validate(ctx, modelID, features)
+		if _, err := v.Validate(ctx, modelID, features); err != nil {
+			slog.Debug("async validation failed", "model", modelID, "error", err)
+		}
 	}()
 }
 
