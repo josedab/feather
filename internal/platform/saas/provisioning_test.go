@@ -1,6 +1,7 @@
 package saas
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -275,7 +276,7 @@ func TestProvisioningManager_StopInstance(t *testing.T) {
 	// Wait for provisioning
 	time.Sleep(200 * time.Millisecond)
 
-	err := pm.StopInstance(instance.ID)
+	err := pm.StopInstance(context.Background(), instance.ID)
 	if err != nil {
 		t.Fatalf("StopInstance failed: %v", err)
 	}
@@ -303,7 +304,7 @@ func TestProvisioningManager_StartInstance(t *testing.T) {
 
 	// Wait for provisioning then stop
 	time.Sleep(200 * time.Millisecond)
-	pm.StopInstance(instance.ID)
+	pm.StopInstance(context.Background(), instance.ID)
 	time.Sleep(100 * time.Millisecond)
 
 	err := pm.StartInstance(instance.ID)
@@ -329,7 +330,7 @@ func TestProvisioningManager_TerminateInstance(t *testing.T) {
 
 	instance, _ := pm.CreateInstance(req)
 
-	err := pm.TerminateInstance(instance.ID)
+	err := pm.TerminateInstance(context.Background(), instance.ID)
 	if err != nil {
 		t.Fatalf("TerminateInstance failed: %v", err)
 	}
@@ -347,7 +348,7 @@ func TestProvisioningManager_TerminateInstance(t *testing.T) {
 func TestProvisioningManager_TerminateInstance_NotFound(t *testing.T) {
 	pm := setupProvisioningManager()
 
-	err := pm.TerminateInstance("nonexistent")
+	err := pm.TerminateInstance(context.Background(), "nonexistent")
 	if !errors.Is(err, ErrInstanceNotFound) {
 		t.Errorf("Expected ErrInstanceNotFound, got %v", err)
 	}
@@ -368,7 +369,7 @@ func TestProvisioningManager_RestartInstance(t *testing.T) {
 	// Wait for provisioning
 	time.Sleep(200 * time.Millisecond)
 
-	err := pm.RestartInstance(instance.ID)
+	err := pm.RestartInstance(context.Background(), instance.ID)
 	if err != nil {
 		t.Fatalf("RestartInstance failed: %v", err)
 	}

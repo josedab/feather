@@ -343,7 +343,7 @@ func (h *SaaSHandler) handleStartInstance(w http.ResponseWriter, r *http.Request
 func (h *SaaSHandler) handleStopInstance(w http.ResponseWriter, r *http.Request) {
 	instanceID := r.PathValue("id")
 
-	if err := h.provisioningManager.StopInstance(instanceID); err != nil {
+	if err := h.provisioningManager.StopInstance(r.Context(), instanceID); err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, saas.ErrInstanceNotFound) {
 			status = http.StatusNotFound
@@ -359,7 +359,7 @@ func (h *SaaSHandler) handleStopInstance(w http.ResponseWriter, r *http.Request)
 func (h *SaaSHandler) handleRestartInstance(w http.ResponseWriter, r *http.Request) {
 	instanceID := r.PathValue("id")
 
-	if err := h.provisioningManager.RestartInstance(instanceID); err != nil {
+	if err := h.provisioningManager.RestartInstance(r.Context(), instanceID); err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, saas.ErrInstanceNotFound) {
 			status = http.StatusNotFound
@@ -375,7 +375,7 @@ func (h *SaaSHandler) handleRestartInstance(w http.ResponseWriter, r *http.Reque
 func (h *SaaSHandler) handleTerminateInstance(w http.ResponseWriter, r *http.Request) {
 	instanceID := r.PathValue("id")
 
-	if err := h.provisioningManager.TerminateInstance(instanceID); err != nil {
+	if err := h.provisioningManager.TerminateInstance(r.Context(), instanceID); err != nil {
 		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
 		return
 	}

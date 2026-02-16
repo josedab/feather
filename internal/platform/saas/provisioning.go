@@ -1,6 +1,7 @@
 package saas
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -361,7 +362,7 @@ func (pm *ProvisioningManager) StartInstance(id string) error {
 }
 
 // StopInstance stops a running instance.
-func (pm *ProvisioningManager) StopInstance(id string) error {
+func (pm *ProvisioningManager) StopInstance(ctx context.Context, id string) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -382,6 +383,8 @@ func (pm *ProvisioningManager) StopInstance(id string) error {
 	go func() {
 		select {
 		case <-time.After(50 * time.Millisecond):
+		case <-ctx.Done():
+			return
 		case <-pm.stopCh:
 			return
 		}
@@ -397,7 +400,7 @@ func (pm *ProvisioningManager) StopInstance(id string) error {
 }
 
 // TerminateInstance permanently terminates an instance.
-func (pm *ProvisioningManager) TerminateInstance(id string) error {
+func (pm *ProvisioningManager) TerminateInstance(ctx context.Context, id string) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -413,6 +416,8 @@ func (pm *ProvisioningManager) TerminateInstance(id string) error {
 	go func() {
 		select {
 		case <-time.After(50 * time.Millisecond):
+		case <-ctx.Done():
+			return
 		case <-pm.stopCh:
 			return
 		}
@@ -426,7 +431,7 @@ func (pm *ProvisioningManager) TerminateInstance(id string) error {
 }
 
 // RestartInstance restarts an instance.
-func (pm *ProvisioningManager) RestartInstance(id string) error {
+func (pm *ProvisioningManager) RestartInstance(ctx context.Context, id string) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -446,6 +451,8 @@ func (pm *ProvisioningManager) RestartInstance(id string) error {
 	go func() {
 		select {
 		case <-time.After(100 * time.Millisecond):
+		case <-ctx.Done():
+			return
 		case <-pm.stopCh:
 			return
 		}
