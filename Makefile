@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check test-changed lint-config changelog
+.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all clean-data generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check test-changed lint-config changelog test-coverage-report bench-save bench-compare
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -41,10 +41,28 @@ setup: doctor install-tools
 	@echo "   Run 'make run-dev' to start the server."
 	@echo "   Run 'make check-quick' before committing."
 
+# Minimum Go version required (parsed from go.mod)
+REQUIRED_GO_VERSION := $(shell grep '^go ' go.mod | awk '{print $$2}')
+
+# check-go-version validates that the installed Go meets the minimum version from go.mod.
+check-go-version:
+	@CURRENT=$$($(GO) version | grep -oE 'go[0-9]+\.[0-9]+(\.[0-9]+)?' | sed 's/^go//'); \
+	REQUIRED=$(REQUIRED_GO_VERSION); \
+	REQUIRED_MAJOR=$$(echo $$REQUIRED | cut -d. -f1); \
+	REQUIRED_MINOR=$$(echo $$REQUIRED | cut -d. -f2); \
+	CURRENT_MAJOR=$$(echo $$CURRENT | cut -d. -f1); \
+	CURRENT_MINOR=$$(echo $$CURRENT | cut -d. -f2); \
+	if [ "$$CURRENT_MAJOR" -lt "$$REQUIRED_MAJOR" ] || \
+	   ([ "$$CURRENT_MAJOR" -eq "$$REQUIRED_MAJOR" ] && [ "$$CURRENT_MINOR" -lt "$$REQUIRED_MINOR" ]); then \
+		echo "❌ Go $$REQUIRED+ is required, but you have Go $$CURRENT"; \
+		echo "   Download: https://golang.org/dl/"; \
+		exit 1; \
+	fi
+
 ### Building
 
 ## build: Build the feather server binary (CGO disabled; use build-cgo for Kafka)
-build:
+build: check-go-version
 	CGO_ENABLED=0 $(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
 
 ## build-cgo: Build with CGO enabled (required for Kafka/librdkafka support)
@@ -105,6 +123,18 @@ test-coverage:
 	@if command -v open >/dev/null 2>&1; then open coverage.html; \
 	elif command -v xdg-open >/dev/null 2>&1; then xdg-open coverage.html; \
 	else echo "Open coverage.html in your browser to view the report."; fi
+
+## test-coverage-report: Print per-package coverage summary in the terminal
+test-coverage-report:
+	@if [ ! -f coverage.out ]; then \
+		echo "Generating coverage.out..."; \
+		$(GO) test -count=1 -coverprofile=coverage.out ./... 2>&1 | grep -E '(^ok|FAIL|---)'; \
+	fi
+	@echo ""
+	@echo "Per-package coverage:"
+	@$(GO) tool cover -func=coverage.out | grep -v '^total:' | awk '{print $$1, $$3}' | column -t
+	@echo ""
+	@$(GO) tool cover -func=coverage.out | tail -1
 
 ## test-integration: Run integration tests (requires Docker for some tests)
 test-integration:
@@ -192,10 +222,14 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -f coverage.out coverage.html
 
-## clean-all: Full reset — remove build artifacts, data, logs, and caches
-clean-all: clean
+## clean-data: Remove data and temp directories only (resets BadgerDB, keeps builds)
+clean-data:
 	rm -rf data/
 	rm -rf tmp/
+	@echo "✅ Data directories cleaned (data/, tmp/)."
+
+## clean-all: Full reset — remove build artifacts, data, logs, and caches
+clean-all: clean clean-data
 	rm -f .feather.pid
 	rm -f .feather-quickstart.log
 	rm -rf website/node_modules website/build website/.docusaurus
@@ -375,14 +409,14 @@ api-routes:
 
 ## list-extensions: Show enabled features vs available features
 list-extensions:
-	@echo "ENABLED features (in cmd/feather/main.go EnabledFeatures map):"
-	@grep -E '"[a-z_]+":[[:space:]]*true' cmd/feather/main.go | sed 's/.*"\([a-z_]*\)".*/  ✅ \1/' | sort
+	@echo "ENABLED features (in cmd/feather/features_enabled.go):"
+	@grep -E '"[a-z_]+":[[:space:]]*true' cmd/feather/features_enabled.go | sed 's/.*"\([a-z_]*\)".*/  ✅ \1/' | sort
 	@echo ""
 	@echo "CONDITIONALLY ENABLED:"
-	@grep -E '"[a-z_]+":[[:space:]]*cfg\.' cmd/feather/main.go | sed 's/.*"\([a-z_]*\)".*/  ⚙️  \1/' | sort
+	@grep -E '"[a-z_]+":[[:space:]]*cfg\.' cmd/feather/features_enabled.go | sed 's/.*"\([a-z_]*\)".*/  ⚙️  \1/' | sort
 	@echo ""
 	@TOTAL=$$(grep -c 'registerHandler(' internal/core/server/features_*.go); \
-	ENABLED=$$(grep -cE '"[a-z_]+":[[:space:]]*true' cmd/feather/main.go); \
+	ENABLED=$$(grep -cE '"[a-z_]+":[[:space:]]*true' cmd/feather/features_enabled.go); \
 	echo "Total available: $$TOTAL | Enabled by default: $$ENABLED"
 
 ### Docker
@@ -400,6 +434,27 @@ docker-run:
 ## bench: Run all benchmarks
 bench:
 	$(GO) test -bench=. -benchmem ./...
+
+## bench-save: Run benchmarks and save results for later comparison
+bench-save:
+	@mkdir -p tmp
+	$(GO) test -bench=. -benchmem -count=6 ./... | tee tmp/bench-$$(date +%Y%m%d-%H%M%S).txt
+	@echo ""
+	@echo "Results saved to tmp/bench-*.txt"
+	@echo "After making changes, run 'make bench-save' again, then 'make bench-compare'."
+
+## bench-compare: Compare the two most recent benchmark results using benchstat
+bench-compare:
+	@command -v benchstat >/dev/null 2>&1 || { echo "Installing benchstat..."; go install golang.org/x/perf/cmd/benchstat@latest; }
+	@OLD=$$(ls -t tmp/bench-*.txt 2>/dev/null | sed -n '2p'); \
+	NEW=$$(ls -t tmp/bench-*.txt 2>/dev/null | sed -n '1p'); \
+	if [ -z "$$OLD" ] || [ -z "$$NEW" ]; then \
+		echo "❌ Need at least two benchmark files in tmp/. Run 'make bench-save' twice."; \
+		exit 1; \
+	fi; \
+	echo "Comparing: $$OLD → $$NEW"; \
+	echo ""; \
+	benchstat $$OLD $$NEW
 
 ## check: Run all checks (format check, vet, lint, test)
 check: fmt-check vet lint test
