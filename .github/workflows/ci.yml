@@ -147,6 +147,23 @@ jobs:
           kill $SERVER_PID || true
           exit $RESULT
 
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run integration tests
+        run: make test-integration
+
   python-sdk:
     name: Python SDK Tests
     runs-on: ubuntu-latest
