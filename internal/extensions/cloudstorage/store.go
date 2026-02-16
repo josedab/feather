@@ -1,7 +1,7 @@
 package cloudstorage
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 	"sync"
@@ -102,7 +102,7 @@ func (s *ObjectStore) Put(key string, data []byte, contentType string, metadata 
 		}
 	}
 
-	hash := md5.Sum(data)
+	hash := sha256.Sum256(data)
 	etag := fmt.Sprintf("%x", hash)
 
 	s.objects[key] = &storedObject{
@@ -205,7 +205,7 @@ func (s *ObjectStore) Copy(srcKey, dstKey string) error {
 		meta[k] = v
 	}
 
-	hash := md5.Sum(data)
+	hash := sha256.Sum256(data)
 	s.objects[dstKey] = &storedObject{
 		info: ObjectInfo{
 			Key:          dstKey,
