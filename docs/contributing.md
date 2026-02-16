@@ -106,6 +106,9 @@ make install-tools
 # Run all linters
 make lint
 
+# Auto-fix lint issues where possible
+make lint-fix
+
 # Format code
 make fmt
 
@@ -126,44 +129,36 @@ feather/
 │   └── main.go           # Server initialization, graceful shutdown
 │
 ├── internal/             # Private application packages
-│   ├── aggregation/      # Real-time aggregation engine
-│   │   ├── engine.go     # Window management and computation
-│   │   └── ring_buffer.go
-│   │
-│   ├── config/           # Configuration loading and validation
-│   │   └── config.go     # YAML and environment variable parsing
-│   │
-│   ├── domain/           # Core domain types (no external dependencies)
-│   │   ├── types.go      # FeatureValue, FeatureGroup, etc.
-│   │   └── errors.go     # Sentinel errors and error codes
-│   │
-│   ├── ingestion/        # Data ingestion pipelines
-│   │   ├── kafka.go      # Kafka consumer with circuit breaker
-│   │   ├── http.go       # HTTP push endpoint
-│   │   └── batch.go      # CSV/JSON file import
-│   │
-│   ├── server/           # HTTP and gRPC servers
-│   │   ├── http.go       # REST API handlers
-│   │   ├── grpc.go       # gRPC service implementation
-│   │   └── health.go     # Health check endpoints
-│   │
-│   ├── storage/          # Tiered storage engine
-│   │   ├── store.go      # Unified store interface
-│   │   ├── hot.go        # In-memory LRU cache (256 shards)
-│   │   ├── warm.go       # BadgerDB persistent storage
-│   │   └── registry.go   # Schema registry
-│   │
-│   ├── metrics/          # Prometheus metrics
-│   ├── tracing/          # OpenTelemetry integration
-│   ├── logging/          # Structured logging (slog)
-│   └── vector/           # Vector similarity search (HNSW)
+│   ├── app/              # Application lifecycle (server manager, panic recovery)
+│   ├── core/             # Essential packages
+│   │   ├── aggregation/  # Real-time aggregation engine
+│   │   ├── config/       # YAML/env configuration loading and validation
+│   │   ├── domain/       # Core domain types (FeatureValue, FeatureGroup, errors)
+│   │   ├── export/       # Training data export (CSV, JSON, JSONL, Parquet)
+│   │   ├── ingestion/    # Data ingestion (Kafka consumer, HTTP push)
+│   │   ├── logging/      # Structured logging with slog
+│   │   ├── metrics/      # Prometheus metrics
+│   │   ├── server/       # HTTP and gRPC servers, health checks
+│   │   ├── storage/      # Tiered storage (hot=memory, warm=BadgerDB)
+│   │   ├── tracing/      # OpenTelemetry tracing
+│   │   └── vector/       # Vector similarity search (HNSW)
+│   ├── extensions/       # Optional feature modules (sharding, marketplace, etc.)
+│   ├── integrations/     # External system connectors (dbt, Spark, Flink, etc.)
+│   ├── platform/         # Cross-cutting concerns (auth, cluster, governance, etc.)
+│   ├── testutil/         # Shared test utilities
+│   └── tools/            # Developer tools (benchmark, dashboard, playground)
 │
 ├── api/                  # Protocol buffer definitions
 │   └── proto/v1/         # gRPC service definitions
 │
 ├── sdk/                  # Client SDKs
 │   ├── go/               # Go client library
-│   └── python/           # Python client library
+│   ├── java/             # Java client library
+│   ├── kotlin/           # Kotlin client library
+│   ├── python/           # Python client library
+│   ├── rust/             # Rust client library
+│   ├── swift/            # Swift client library
+│   └── typescript/       # TypeScript client library
 │
 ├── test/                 # Integration and benchmark tests
 ├── configs/              # Example configuration files
@@ -505,6 +500,8 @@ Then create a pull request on GitHub with:
 - Description of what and why
 - Link to any related issues
 - Screenshots for UI changes (if applicable)
+
+> **Note:** PRs are automatically labeled based on which files you change (e.g., `area: core`, `documentation`, `tests`). This is configured in `.github/labeler.yml` — no action needed on your part.
 
 ### 6. Address Review Feedback
 
