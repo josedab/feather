@@ -72,7 +72,11 @@ func (h *PipelineHandler) handleCreatePipeline(w http.ResponseWriter, r *http.Re
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
-	p := pipelinebuilder.NewPipeline(req.Name, req.Description)
+	p, err := pipelinebuilder.NewPipeline(req.Name, req.Description)
+	if err != nil {
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, "failed to create pipeline: "+err.Error())
+		return
+	}
 	h.mu.Lock()
 	h.pipelines[p.ID] = p
 	h.mu.Unlock()
@@ -266,7 +270,11 @@ func (h *PipelineHandler) handleGetTemplate(w http.ResponseWriter, r *http.Reque
 	}
 	h.templates.IncrementUsage(t.ID)
 	// Instantiate a new pipeline from the template.
-	p := pipelinebuilder.NewPipeline(t.Pipeline.Name, t.Pipeline.Description)
+	p, err2 := pipelinebuilder.NewPipeline(t.Pipeline.Name, t.Pipeline.Description)
+	if err2 != nil {
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, "failed to create pipeline: "+err2.Error())
+		return
+	}
 	for id, node := range t.Pipeline.Nodes {
 		clone := *node
 		p.Nodes[id] = &clone

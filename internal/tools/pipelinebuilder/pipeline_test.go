@@ -8,7 +8,7 @@ import (
 // --- Pipeline tests ---
 
 func TestNewPipeline(t *testing.T) {
-	p := NewPipeline("test", "desc")
+	p, _ := NewPipeline("test", "desc")
 	if p.Name != "test" || p.Description != "desc" {
 		t.Fatal("unexpected pipeline fields")
 	}
@@ -21,7 +21,7 @@ func TestNewPipeline(t *testing.T) {
 }
 
 func TestAddRemoveNode(t *testing.T) {
-	p := NewPipeline("p", "")
+	p, _ := NewPipeline("p", "")
 	n := &PipelineNode{ID: "n1", Type: NodeSource, Name: "src"}
 	if err := p.AddNode(n); err != nil {
 		t.Fatalf("AddNode: %v", err)
@@ -50,7 +50,7 @@ func TestAddRemoveNode(t *testing.T) {
 }
 
 func TestConnect(t *testing.T) {
-	p := NewPipeline("p", "")
+	p, _ := NewPipeline("p", "")
 	_ = p.AddNode(&PipelineNode{ID: "a", Type: NodeSource, Name: "A"})
 	_ = p.AddNode(&PipelineNode{ID: "b", Type: NodeTransform, Name: "B"})
 
@@ -73,7 +73,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestConnectCycleDetection(t *testing.T) {
-	p := NewPipeline("p", "")
+	p, _ := NewPipeline("p", "")
 	_ = p.AddNode(&PipelineNode{ID: "a", Type: NodeSource, Name: "A"})
 	_ = p.AddNode(&PipelineNode{ID: "b", Type: NodeTransform, Name: "B"})
 	_ = p.AddNode(&PipelineNode{ID: "c", Type: NodeTransform, Name: "C"})
@@ -86,7 +86,7 @@ func TestConnectCycleDetection(t *testing.T) {
 }
 
 func TestValidate(t *testing.T) {
-	p := NewPipeline("", "")
+	p, _ := NewPipeline("", "")
 	errs := p.Validate()
 	hasNameErr := false
 	for _, e := range errs {
@@ -98,7 +98,7 @@ func TestValidate(t *testing.T) {
 		t.Fatal("expected name validation error")
 	}
 
-	p2 := NewPipeline("valid", "desc")
+	p2, _ := NewPipeline("valid", "desc")
 	_ = p2.AddNode(&PipelineNode{ID: "a", Type: NodeSource, Name: "A"})
 	_ = p2.AddNode(&PipelineNode{ID: "b", Type: NodeTransform, Name: "B"})
 	_ = p2.Connect("a", "b")
@@ -111,7 +111,7 @@ func TestValidate(t *testing.T) {
 }
 
 func TestTopologicalSort(t *testing.T) {
-	p := NewPipeline("p", "")
+	p, _ := NewPipeline("p", "")
 	_ = p.AddNode(&PipelineNode{ID: "a", Type: NodeSource, Name: "A"})
 	_ = p.AddNode(&PipelineNode{ID: "b", Type: NodeTransform, Name: "B"})
 	_ = p.AddNode(&PipelineNode{ID: "c", Type: NodeSink, Name: "C"})
@@ -136,7 +136,7 @@ func TestTopologicalSort(t *testing.T) {
 }
 
 func TestRemoveNodeCleansEdges(t *testing.T) {
-	p := NewPipeline("p", "")
+	p, _ := NewPipeline("p", "")
 	_ = p.AddNode(&PipelineNode{ID: "a", Type: NodeSource, Name: "A"})
 	_ = p.AddNode(&PipelineNode{ID: "b", Type: NodeTransform, Name: "B"})
 	_ = p.AddNode(&PipelineNode{ID: "c", Type: NodeSink, Name: "C"})
@@ -201,7 +201,7 @@ func TestTransformRegistryRegister(t *testing.T) {
 // --- CodeGenerator tests ---
 
 func TestCodeGeneratorGo(t *testing.T) {
-	p := NewPipeline("TestPipeline", "A test pipeline")
+	p, _ := NewPipeline("TestPipeline", "A test pipeline")
 	_ = p.AddNode(&PipelineNode{ID: "src", Type: NodeSource, Name: "Source"})
 	_ = p.AddNode(&PipelineNode{ID: "xform", Type: NodeTransform, Name: "Transform"})
 	_ = p.Connect("src", "xform")
@@ -221,7 +221,7 @@ func TestCodeGeneratorGo(t *testing.T) {
 }
 
 func TestCodeGeneratorPython(t *testing.T) {
-	p := NewPipeline("TestPipeline", "desc")
+	p, _ := NewPipeline("TestPipeline", "desc")
 	_ = p.AddNode(&PipelineNode{ID: "src", Type: NodeSource, Name: "Source"})
 	reg := NewTransformRegistry()
 	gen := NewCodeGenerator(CodeGenConfig{Language: "python", IncludeComments: true})
@@ -235,7 +235,7 @@ func TestCodeGeneratorPython(t *testing.T) {
 }
 
 func TestCodeGeneratorFeatherQL(t *testing.T) {
-	p := NewPipeline("TestPipeline", "desc")
+	p, _ := NewPipeline("TestPipeline", "desc")
 	_ = p.AddNode(&PipelineNode{ID: "src", Type: NodeSource, Name: "Source"})
 	reg := NewTransformRegistry()
 	gen := NewCodeGenerator(CodeGenConfig{Language: "featherql"})
@@ -249,7 +249,7 @@ func TestCodeGeneratorFeatherQL(t *testing.T) {
 }
 
 func TestCodeGeneratorUnsupported(t *testing.T) {
-	p := NewPipeline("p", "")
+	p, _ := NewPipeline("p", "")
 	_ = p.AddNode(&PipelineNode{ID: "src", Type: NodeSource, Name: "Source"})
 	gen := NewCodeGenerator(CodeGenConfig{Language: "ruby"})
 	_, err := gen.Generate(p, NewTransformRegistry())

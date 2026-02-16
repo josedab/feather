@@ -91,10 +91,14 @@ type Pipeline struct {
 }
 
 // NewPipeline creates a new draft pipeline.
-func NewPipeline(name, description string) *Pipeline {
+func NewPipeline(name, description string) (*Pipeline, error) {
+	id, err := generateID()
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now()
 	return &Pipeline{
-		ID:          generateID(),
+		ID:          id,
 		Name:        name,
 		Description: description,
 		Nodes:       make(map[string]*PipelineNode),
@@ -103,7 +107,7 @@ func NewPipeline(name, description string) *Pipeline {
 		UpdatedAt:   now,
 		Version:     1,
 		config:      DefaultPipelineConfig(),
-	}
+	}, nil
 }
 
 // AddNode adds a node to the pipeline.
@@ -318,8 +322,10 @@ func (p *Pipeline) hasCycle() bool {
 	return false
 }
 
-func generateID() string {
+func generateID() (string, error) {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generating pipeline ID: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }

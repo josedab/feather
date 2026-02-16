@@ -97,7 +97,7 @@ func (s *TemplateStore) registerBuiltins() {
 	now := time.Now()
 
 	// 1. Fraud Detection
-	fraud := NewPipeline("Fraud Detection", "Real-time fraud detection feature pipeline")
+	fraud, _ := NewPipeline("Fraud Detection", "Real-time fraud detection feature pipeline")
 	fraud.Tags = []string{"fraud", "real-time"}
 	src := &PipelineNode{ID: "txn_source", Type: NodeSource, Name: "Transactions", Config: map[string]interface{}{"entity": "transaction"}, Position: Position{X: 0, Y: 0}}
 	agg := &PipelineNode{ID: "txn_agg", Type: NodeAggregate, Name: "TxnAggregates", Config: map[string]interface{}{"window": "1h", "functions": []string{"count", "sum", "avg"}}, Inputs: []string{"txn_source"}, Position: Position{X: 200, Y: 0}}
@@ -110,7 +110,7 @@ func (s *TemplateStore) registerBuiltins() {
 	s.templates["fraud-detection"] = &Template{ID: "fraud-detection", Name: "Fraud Detection", Description: "Real-time transaction fraud detection features", Category: "fraud", Pipeline: fraud, Rating: 4.8, Author: "feather", CreatedAt: now, Tags: []string{"fraud", "real-time"}}
 
 	// 2. Recommendation Features
-	rec := NewPipeline("Recommendation Features", "User-item interaction feature pipeline")
+	rec, _ := NewPipeline("Recommendation Features", "User-item interaction feature pipeline")
 	rec.Tags = []string{"recommendation", "ml"}
 	uSrc := &PipelineNode{ID: "user_src", Type: NodeSource, Name: "UserEvents", Position: Position{X: 0, Y: 0}}
 	iSrc := &PipelineNode{ID: "item_src", Type: NodeSource, Name: "ItemCatalog", Position: Position{X: 0, Y: 100}}
@@ -123,7 +123,7 @@ func (s *TemplateStore) registerBuiltins() {
 	s.templates["recommendation-features"] = &Template{ID: "recommendation-features", Name: "Recommendation Features", Description: "User-item interaction features for recommendation systems", Category: "recommendation", Pipeline: rec, Rating: 4.5, Author: "feather", CreatedAt: now, Tags: []string{"recommendation", "ml"}}
 
 	// 3. User Activity
-	ua := NewPipeline("User Activity", "User behaviour aggregation pipeline")
+	ua, _ := NewPipeline("User Activity", "User behaviour aggregation pipeline")
 	ua.Tags = []string{"user", "activity"}
 	eSrc := &PipelineNode{ID: "event_src", Type: NodeSource, Name: "Events", Position: Position{X: 0, Y: 0}}
 	eAgg := &PipelineNode{ID: "event_agg", Type: NodeAggregate, Name: "ActivityAggregates", Inputs: []string{"event_src"}, Config: map[string]interface{}{"window": "24h"}, Position: Position{X: 200, Y: 0}}
@@ -134,7 +134,7 @@ func (s *TemplateStore) registerBuiltins() {
 	s.templates["user-activity"] = &Template{ID: "user-activity", Name: "User Activity", Description: "User behaviour and engagement aggregation features", Category: "user", Pipeline: ua, Rating: 4.3, Author: "feather", CreatedAt: now, Tags: []string{"user", "activity"}}
 
 	// 4. Time Series Features
-	ts := NewPipeline("Time Series Features", "Time series feature extraction pipeline")
+	ts, _ := NewPipeline("Time Series Features", "Time series feature extraction pipeline")
 	ts.Tags = []string{"time-series"}
 	tSrc := &PipelineNode{ID: "ts_source", Type: NodeSource, Name: "TimeSeries", Position: Position{X: 0, Y: 0}}
 	tTrans := &PipelineNode{ID: "ts_transform", Type: NodeTransform, Name: "WindowFeatures", Inputs: []string{"ts_source"}, Config: map[string]interface{}{"windows": []string{"1h", "24h", "7d"}}, Position: Position{X: 200, Y: 0}}
@@ -145,7 +145,7 @@ func (s *TemplateStore) registerBuiltins() {
 	s.templates["time-series-features"] = &Template{ID: "time-series-features", Name: "Time Series Features", Description: "Rolling window and lag features for time series data", Category: "time-series", Pipeline: ts, Rating: 4.6, Author: "feather", CreatedAt: now, Tags: []string{"time-series"}}
 
 	// 5. Text Features
-	tf := NewPipeline("Text Features", "NLP text feature extraction pipeline")
+	tf, _ := NewPipeline("Text Features", "NLP text feature extraction pipeline")
 	tf.Tags = []string{"text", "nlp"}
 	txtSrc := &PipelineNode{ID: "text_source", Type: NodeSource, Name: "TextData", Position: Position{X: 0, Y: 0}}
 	txtTrans := &PipelineNode{ID: "text_transform", Type: NodeTransform, Name: "Tokenize", Inputs: []string{"text_source"}, Position: Position{X: 200, Y: 0}}
