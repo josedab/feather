@@ -370,11 +370,77 @@ go test -v ./internal/aggregation/...
 go test -race ./...
 ```
 
+### Integration & E2E Tests
+
+Integration and end-to-end tests validate Feather with real dependencies (storage, Kafka, etc.).
+
+#### Prerequisites
+
+- **Docker** and **Docker Compose** (for running dependencies)
+- **Go 1.24+**
+
+#### Running Integration Tests
+
+Integration tests are in `test/` and use the `integration` build tag:
+
+```bash
+# Run integration tests (some may need Docker services running)
+make test-integration
+```
+
+This runs:
+```bash
+go test -v -tags=integration -count=1 ./test/...
+```
+
+#### Running E2E Tests
+
+E2E tests use Docker Compose to spin up a full Feather instance with dependencies:
+
+```bash
+# Start the test environment
+cd test/e2e
+docker compose up -d --build
+
+# Wait for health check to pass
+docker compose ps
+
+# Run E2E tests
+FEATHER_E2E_URL=http://localhost:8080 go test -tags e2e -v ./test/e2e/
+
+# Tear down
+docker compose down -v
+```
+
+To run against an existing Feather instance:
+
+```bash
+FEATHER_E2E_URL=http://your-feather-host:8080 go test -tags e2e -v ./test/e2e/
+```
+
+The E2E test suite covers health checks, feature storage/retrieval, batch operations, schema groups, drift status, FeatherQL queries, and OpenAPI spec validation. See [`test/e2e/README.md`](../test/e2e/README.md) for the full test matrix.
+
+#### Running the Full Stack Locally
+
+For development testing against the full Docker Compose stack (Feather + Kafka + Prometheus + Grafana):
+
+```bash
+# From the repository root
+docker-compose up -d
+
+# Verify Feather is healthy
+curl http://localhost:8080/health
+
+# Run tests against the local stack
+FEATHER_E2E_URL=http://localhost:8080 go test -tags e2e -v ./test/e2e/
+
+# Tear down
+docker-compose down -v
+```
+
 ### Benchmarks
 
 Write benchmarks for performance-critical code:
-
-```go
 func BenchmarkHotTier_Get(b *testing.B) {
     h := NewHotTier(1024 * 1024 * 1024) // 1GB
 
