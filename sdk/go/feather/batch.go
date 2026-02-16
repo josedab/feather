@@ -14,6 +14,8 @@ type BatchClient struct {
 	flushInterval time.Duration
 	pending       []batchItem
 	mu            sync.Mutex
+	ctx           context.Context
+	cancel        context.CancelFunc
 	stopCh        chan struct{}
 	wg            sync.WaitGroup
 }
@@ -26,11 +28,19 @@ type batchItem struct {
 
 // NewBatchClient creates a new batch client.
 func NewBatchClient(client *Client, batchSize int, flushInterval time.Duration) *BatchClient {
+	return NewBatchClientWithContext(context.Background(), client, batchSize, flushInterval)
+}
+
+// NewBatchClientWithContext creates a new batch client with a parent context.
+func NewBatchClientWithContext(ctx context.Context, client *Client, batchSize int, flushInterval time.Duration) *BatchClient {
+	ctx, cancel := context.WithCancel(ctx)
 	bc := &BatchClient{
 		client:        client,
 		batchSize:     batchSize,
 		flushInterval: flushInterval,
 		pending:       make([]batchItem, 0, batchSize),
+		ctx:           ctx,
+		cancel:        cancel,
 		stopCh:        make(chan struct{}),
 	}
 
@@ -77,9 +87,9 @@ func (bc *BatchClient) flushLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			bc.flush(context.Background())
+			bc.flush(bc.ctx)
 		case <-bc.stopCh:
-			bc.flush(context.Background()) // Final flush
+			bc.flush(bc.ctx) // Final flush
 			return
 		}
 	}
@@ -132,6 +142,12 @@ func (bc *BatchClient) flush(ctx context.Context) {
 
 // Close stops the batch client and flushes pending items.
 func (bc *BatchClient) Close() {
+	bc.CloseWithContext(bc.ctx)
+}
+
+// CloseWithContext stops the batch client using the provided context for the final flush.
+func (bc *BatchClient) CloseWithContext(ctx context.Context) {
+	bc.cancel()
 	close(bc.stopCh)
 	bc.wg.Wait()
 }
