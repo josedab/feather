@@ -1,7 +1,7 @@
 # Build stage
 # To pin with a sha256 digest for reproducible builds,
 # check https://hub.docker.com/_/golang/tags for the latest 1.24-alpine digest.
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata gcc musl-dev
