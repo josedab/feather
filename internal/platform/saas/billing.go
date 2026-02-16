@@ -3,7 +3,9 @@ package saas
 
 import (
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -513,18 +515,13 @@ func (m *BillingManager) GetPaymentMethods(orgID string) []*PaymentMethod {
 
 // Helper functions
 var idCounter int64
-var idMu sync.Mutex
 
 func generateID(prefix string) string {
-	idMu.Lock()
-	defer idMu.Unlock()
-	idCounter++
-	return prefix + "_" + time.Now().Format("20060102") + "_" + string(rune(idCounter))
+	n := atomic.AddInt64(&idCounter, 1)
+	return fmt.Sprintf("%s_%s_%06d", prefix, time.Now().Format("20060102"), n)
 }
 
 func generateInvoiceNumber() string {
-	idMu.Lock()
-	defer idMu.Unlock()
-	idCounter++
-	return "INV-" + time.Now().Format("200601") + "-" + string(rune(1000+idCounter))
+	n := atomic.AddInt64(&idCounter, 1)
+	return fmt.Sprintf("INV-%s-%06d", time.Now().Format("200601"), 1000+n)
 }
