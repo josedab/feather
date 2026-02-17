@@ -136,7 +136,9 @@ func (dp *DPMechanism) cryptoRandFloat64() float64 {
 	if err != nil {
 		// Fallback: read 8 bytes from crypto/rand
 		var buf [8]byte
-		_, _ = rand.Read(buf[:])
+		if _, readErr := rand.Read(buf[:]); readErr != nil {
+			return 0 // safe fallback for privacy noise
+		}
 		bits := binary.LittleEndian.Uint64(buf[:])
 		return float64(bits>>11) / float64(1<<53)
 	}

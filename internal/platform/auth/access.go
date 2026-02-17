@@ -523,13 +523,17 @@ func TenantFromContext(ctx context.Context) string {
 // Helper functions
 func generateAPIKey() string {
 	bytes := make([]byte, 32)
-	_, _ = rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return "fk_" + hex.EncodeToString(bytes)
 }
 
 func generateID() string {
 	bytes := make([]byte, 16)
-	_, _ = rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return hex.EncodeToString(bytes)
 }
 

@@ -457,7 +457,9 @@ func generateID() string {
 // randomHex generates a random hex string.
 func randomHex(n int) string {
 	b := make([]byte, (n+1)/2)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
 	return hex.EncodeToString(b)[:n]
 }
 
