@@ -44,7 +44,7 @@ func (h *CloudStorageHandler) handlePutObject(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	data, err := io.ReadAll(r.Body)
+	data, err := io.ReadAll(io.LimitReader(r.Body, 64<<20)) // 64MB limit for object uploads
 	if err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "failed to read request body")
 		return

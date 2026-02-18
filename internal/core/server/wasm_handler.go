@@ -303,7 +303,7 @@ func (h *WASMHandler) handleCallFunction(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req CallFunctionRequest
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1MB limit
 	if err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "failed to read request body")
 		return
