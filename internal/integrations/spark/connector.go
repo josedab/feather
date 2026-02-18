@@ -29,6 +29,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -124,6 +125,10 @@ type Config struct {
 
 	// RetryBackoff is the initial backoff between retries.
 	RetryBackoff time.Duration `json:"retry_backoff" yaml:"retry_backoff"`
+
+	// AllowedImportPaths restricts import file access to these directories.
+	// If empty, only absolute paths are required (less restrictive).
+	AllowedImportPaths []string `json:"allowed_import_paths" yaml:"allowed_import_paths"`
 }
 
 // DefaultConfig returns the default Spark connector configuration.
@@ -889,6 +894,26 @@ func (c *Connector) validateImportRequest(req *ImportRequest) error {
 	if req.InputPath == "" {
 		return fmt.Errorf("%w: input_path is required", ErrInvalidConfig)
 	}
+	// Prevent path traversal by cleaning and rejecting relative paths
+	cleanPath := filepath.Clean(req.InputPath)
+	if !filepath.IsAbs(cleanPath) {
+		return fmt.Errorf("%w: input_path must be absolute", ErrInvalidConfig)
+	}
+	// Restrict access to allowed directories if configured
+	if len(c.config.AllowedImportPaths) > 0 {
+		allowed := false
+		for _, dir := range c.config.AllowedImportPaths {
+			cleanDir := filepath.Clean(dir) + string(os.PathSeparator)
+			if strings.HasPrefix(cleanPath, cleanDir) || cleanPath == filepath.Clean(dir) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return fmt.Errorf("%w: input_path is not within allowed directories", ErrInvalidConfig)
+		}
+	}
+	req.InputPath = cleanPath
 	if req.EntityColumn == "" {
 		return fmt.Errorf("%w: entity_column is required", ErrInvalidConfig)
 	}

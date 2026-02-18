@@ -175,7 +175,11 @@ func NewSchemaLoader(basePath string) *SchemaLoader {
 
 // LoadDefinition loads a feature definition from a file.
 func (l *SchemaLoader) LoadDefinition(filePath string) (*FeatureDefinition, error) {
-	fullPath := filepath.Join(l.basePath, filePath)
+	fullPath := filepath.Clean(filepath.Join(l.basePath, filePath))
+	// Prevent path traversal outside base directory
+	if !strings.HasPrefix(fullPath, filepath.Clean(l.basePath)+string(os.PathSeparator)) {
+		return nil, fmt.Errorf("path traversal detected: %s", filePath)
+	}
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading file: %w", err)
