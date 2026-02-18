@@ -183,10 +183,16 @@ func (c *RedshiftConnector) Export(ctx context.Context, req *ExportRequest) (*Ex
 	start := time.Now()
 	result := &ExportResult{}
 
-	tableName := c.qualifiedTableName(req.Table)
+	tableName, err := c.qualifiedTableName(req.Table)
+	if err != nil {
+		return nil, fmt.Errorf("validating table name: %w", err)
+	}
 
 	if req.CreateTable {
-		createSQL := c.buildCreateTableSQL(tableName, req.Features)
+		createSQL, err := c.buildCreateTableSQL(tableName, req.Features)
+		if err != nil {
+			return nil, fmt.Errorf("building create table SQL: %w", err)
+		}
 		if c.db != nil {
 			if _, err := c.db.ExecContext(ctx, createSQL); err != nil {
 				return nil, fmt.Errorf("creating redshift table: %w", err)
@@ -219,8 +225,13 @@ func (c *RedshiftConnector) Import(ctx context.Context, req *ImportRequest) (*Im
 	start := time.Now()
 	result := &ImportResult{}
 
+	tableName, err := c.qualifiedTableName(req.Table)
+	if err != nil {
+		return nil, fmt.Errorf("validating table name: %w", err)
+	}
+
 	c.logger.Info("importing features from Redshift",
-		"table", c.qualifiedTableName(req.Table),
+		"table", tableName,
 	)
 
 	atomic.AddInt64(&c.importCount, 1)
@@ -241,14 +252,27 @@ func (c *RedshiftConnector) Stats() map[string]interface{} {
 	}
 }
 
-func (c *RedshiftConnector) qualifiedTableName(table string) string {
-	if c.config.Schema != "" {
-		return c.config.Schema + "." + table
+func (c *RedshiftConnector) qualifiedTableName(table string) (string, error) {
+	if err := validateIdentifier(table); err != nil {
+		return "", fmt.Errorf("table name: %w", err)
 	}
-	return table
+	if c.config.Schema != "" {
+		if err := validateIdentifier(c.config.Schema); err != nil {
+			return "", fmt.Errorf("schema name: %w", err)
+		}
+		return c.config.Schema + "." + table, nil
+	}
+	return table, nil
 }
 
-func (c *RedshiftConnector) buildCreateTableSQL(tableName string, features []string) string {
+func (c *RedshiftConnector) buildCreateTableSQL(qualifiedName string, features []string) (string, error) {
+	// qualifiedName is already validated by qualifiedTableName
+	for _, f := range features {
+		if err := validateIdentifier(f); err != nil {
+			return "", fmt.Errorf("buildCreateTableSQL feature: %w", err)
+		}
+	}
+
 	var cols []string
 	cols = append(cols, "entity_key VARCHAR(512) NOT NULL")
 	cols = append(cols, "feature_timestamp TIMESTAMP NOT NULL")
@@ -260,5 +284,5 @@ func (c *RedshiftConnector) buildCreateTableSQL(tableName string, features []str
 	cols = append(cols, "PRIMARY KEY (entity_key)")
 
 	return fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n  %s\n)",
-		tableName, strings.Join(cols, ",\n  "))
+		qualifiedName, strings.Join(cols, ",\n  ")), nil
 }

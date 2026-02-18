@@ -92,7 +92,10 @@ func TestRedshiftTypeMapping(t *testing.T) {
 
 func TestRedshiftConnector_BuildCreateTableSQL(t *testing.T) {
 	c := NewRedshiftConnector(DefaultRedshiftConfig(), nil, nil, slog.Default())
-	sqlStr := c.buildCreateTableSQL("public.features", nil)
+	sqlStr, err := c.buildCreateTableSQL("features", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if sqlStr == "" {
 		t.Error("expected non-empty SQL")
 	}

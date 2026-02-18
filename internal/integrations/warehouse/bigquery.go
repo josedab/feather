@@ -480,7 +480,11 @@ func (c *BigQueryConnector) Import(ctx context.Context, req *ImportRequest) (*Im
 	// Build query
 	query := req.Query
 	if query == "" {
-		query = c.buildImportQuery(req)
+		var buildErr error
+		query, buildErr = c.buildImportQuery(req)
+		if buildErr != nil {
+			return nil, fmt.Errorf("building import query: %w", buildErr)
+		}
 	}
 
 	// If no client, return simulated result
@@ -573,7 +577,36 @@ func (c *BigQueryConnector) Import(ctx context.Context, req *ImportRequest) (*Im
 }
 
 // buildImportQuery constructs the SELECT query for import.
-func (c *BigQueryConnector) buildImportQuery(req *ImportRequest) string {
+func (c *BigQueryConnector) buildImportQuery(req *ImportRequest) (string, error) {
+	if err := validateIdentifiers(req.EntityColumn, req.Table); err != nil {
+		return "", fmt.Errorf("buildImportQuery: %w", err)
+	}
+	if req.TimestampColumn != "" {
+		if err := validateIdentifier(req.TimestampColumn); err != nil {
+			return "", fmt.Errorf("buildImportQuery timestamp: %w", err)
+		}
+	}
+	for col := range req.FeatureColumns {
+		if err := validateIdentifier(col); err != nil {
+			return "", fmt.Errorf("buildImportQuery column: %w", err)
+		}
+	}
+
+	dataset := c.config.Dataset
+	if req.Schema != "" {
+		dataset = req.Schema
+	}
+	if err := validateProjectID(dataset); err != nil {
+		return "", fmt.Errorf("buildImportQuery dataset: %w", err)
+	}
+	if err := validateProjectID(c.config.ProjectID); err != nil {
+		return "", fmt.Errorf("buildImportQuery project: %w", err)
+	}
+
+	if req.Filter != "" {
+		return "", fmt.Errorf("%w: raw SQL filters are not allowed", ErrUnsafeFilter)
+	}
+
 	var sb strings.Builder
 	sb.WriteString("SELECT ")
 	sb.WriteString(req.EntityColumn)
@@ -588,25 +621,15 @@ func (c *BigQueryConnector) buildImportQuery(req *ImportRequest) string {
 		sb.WriteString(col)
 	}
 
-	dataset := c.config.Dataset
-	if req.Schema != "" {
-		dataset = req.Schema
-	}
-
 	sb.WriteString(" FROM `")
 	sb.WriteString(fmt.Sprintf("%s.%s.%s", c.config.ProjectID, dataset, req.Table))
 	sb.WriteString("`")
-
-	if req.Filter != "" {
-		sb.WriteString(" WHERE ")
-		sb.WriteString(req.Filter)
-	}
 
 	if req.Limit > 0 {
 		sb.WriteString(fmt.Sprintf(" LIMIT %d", req.Limit))
 	}
 
-	return sb.String()
+	return sb.String(), nil
 }
 
 // ListTables returns available tables in BigQuery.

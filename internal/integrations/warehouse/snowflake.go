@@ -353,6 +353,20 @@ func (c *SnowflakeConnector) ensureTable(ctx context.Context, req *ExportRequest
 		schema = req.Schema
 	}
 
+	if err := validateIdentifiers(schema, req.Table); err != nil {
+		return fmt.Errorf("ensureTable: %w", err)
+	}
+	for _, f := range req.Features {
+		if err := validateIdentifier(f); err != nil {
+			return fmt.Errorf("ensureTable feature: %w", err)
+		}
+	}
+	for _, p := range req.PartitionBy {
+		if err := validateIdentifier(p); err != nil {
+			return fmt.Errorf("ensureTable partition: %w", err)
+		}
+	}
+
 	// Build CREATE TABLE statement
 	var sb strings.Builder
 	sb.WriteString("CREATE TABLE IF NOT EXISTS ")
@@ -401,6 +415,15 @@ func (c *SnowflakeConnector) getExportEntities(ctx context.Context, req *ExportR
 func (c *SnowflakeConnector) exportBatch(ctx context.Context, db *sql.DB, schema, table string, entities []string, features []string) (int64, int64, error) {
 	if len(entities) == 0 {
 		return 0, 0, nil
+	}
+
+	if err := validateIdentifiers(schema, table); err != nil {
+		return 0, 0, fmt.Errorf("exportBatch: %w", err)
+	}
+	for _, f := range features {
+		if err := validateIdentifier(f); err != nil {
+			return 0, 0, fmt.Errorf("exportBatch feature: %w", err)
+		}
 	}
 
 	// Build INSERT statement
@@ -509,7 +532,11 @@ func (c *SnowflakeConnector) Import(ctx context.Context, req *ImportRequest) (*I
 	// Build query
 	query := req.Query
 	if query == "" {
-		query = c.buildImportQuery(req)
+		var buildErr error
+		query, buildErr = c.buildImportQuery(req)
+		if buildErr != nil {
+			return nil, fmt.Errorf("building import query: %w", buildErr)
+		}
 	}
 
 	// Execute query
@@ -640,7 +667,33 @@ func (c *SnowflakeConnector) Import(ctx context.Context, req *ImportRequest) (*I
 }
 
 // buildImportQuery constructs the SELECT query for import.
-func (c *SnowflakeConnector) buildImportQuery(req *ImportRequest) string {
+func (c *SnowflakeConnector) buildImportQuery(req *ImportRequest) (string, error) {
+	if err := validateIdentifiers(req.EntityColumn, req.Table); err != nil {
+		return "", fmt.Errorf("buildImportQuery: %w", err)
+	}
+	if req.TimestampColumn != "" {
+		if err := validateIdentifier(req.TimestampColumn); err != nil {
+			return "", fmt.Errorf("buildImportQuery timestamp: %w", err)
+		}
+	}
+	for col := range req.FeatureColumns {
+		if err := validateIdentifier(col); err != nil {
+			return "", fmt.Errorf("buildImportQuery column: %w", err)
+		}
+	}
+
+	schema := c.config.Schema
+	if req.Schema != "" {
+		schema = req.Schema
+	}
+	if err := validateIdentifier(schema); err != nil {
+		return "", fmt.Errorf("buildImportQuery schema: %w", err)
+	}
+
+	if req.Filter != "" {
+		return "", fmt.Errorf("%w: raw SQL filters are not allowed", ErrUnsafeFilter)
+	}
+
 	var sb strings.Builder
 	sb.WriteString("SELECT ")
 	sb.WriteString(req.EntityColumn)
@@ -655,24 +708,14 @@ func (c *SnowflakeConnector) buildImportQuery(req *ImportRequest) string {
 		sb.WriteString(col)
 	}
 
-	schema := c.config.Schema
-	if req.Schema != "" {
-		schema = req.Schema
-	}
-
 	sb.WriteString(" FROM ")
 	sb.WriteString(fmt.Sprintf("%s.%s", schema, req.Table))
-
-	if req.Filter != "" {
-		sb.WriteString(" WHERE ")
-		sb.WriteString(req.Filter)
-	}
 
 	if req.Limit > 0 {
 		sb.WriteString(fmt.Sprintf(" LIMIT %d", req.Limit))
 	}
 
-	return sb.String()
+	return sb.String(), nil
 }
 
 // ListTables returns available tables in Snowflake.

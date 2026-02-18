@@ -423,16 +423,41 @@ func TestSnowflakeConnector_buildImportQuery(t *testing.T) {
 			"clicks":    "click_count",
 			"purchases": "purchase_total",
 		},
-		Filter: "updated_at > '2024-01-01'",
-		Limit:  1000,
+		Limit: 1000,
 	}
 
-	query := connector.buildImportQuery(req)
+	query, err := connector.buildImportQuery(req)
+	require.NoError(t, err)
 	assert.Contains(t, query, "SELECT entity_key")
 	assert.Contains(t, query, "updated_at")
 	assert.Contains(t, query, "FROM PUBLIC.features")
-	assert.Contains(t, query, "WHERE updated_at > '2024-01-01'")
 	assert.Contains(t, query, "LIMIT 1000")
+}
+
+func TestSnowflakeConnector_buildImportQuery_RejectsFilter(t *testing.T) {
+	config := SnowflakeConfig{
+		Account:   "test-account",
+		User:      "test-user",
+		Password:  "test-password",
+		Database:  "test-db",
+		Schema:    "PUBLIC",
+		Warehouse: "test-warehouse",
+	}
+
+	connector, err := NewSnowflakeConnector(config, nil, nil, nil)
+	require.NoError(t, err)
+
+	req := &ImportRequest{
+		Table:        "features",
+		EntityColumn: "entity_key",
+		FeatureColumns: map[string]string{
+			"clicks": "click_count",
+		},
+		Filter: "updated_at > '2024-01-01'",
+	}
+
+	_, err = connector.buildImportQuery(req)
+	assert.ErrorIs(t, err, ErrUnsafeFilter)
 }
 
 func TestSnowflakeConnector_buildImportQuery_WithSchema(t *testing.T) {
@@ -457,7 +482,8 @@ func TestSnowflakeConnector_buildImportQuery_WithSchema(t *testing.T) {
 		},
 	}
 
-	query := connector.buildImportQuery(req)
+	query, err := connector.buildImportQuery(req)
+	require.NoError(t, err)
 	assert.Contains(t, query, "FROM CUSTOM_SCHEMA.features")
 }
 
