@@ -27,13 +27,13 @@ type SnowflakeConfig struct {
 	User string `json:"user" yaml:"user"`
 
 	// Password is the authentication password (use PrivateKey for key-pair auth).
-	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+	Password string `json:"-" yaml:"password,omitempty"`
 
 	// PrivateKey is the private key for key-pair authentication (PEM format).
-	PrivateKey string `json:"private_key,omitempty" yaml:"private_key,omitempty"`
+	PrivateKey string `json:"-" yaml:"private_key,omitempty"`
 
 	// PrivateKeyPassphrase is the passphrase for encrypted private keys.
-	PrivateKeyPassphrase string `json:"private_key_passphrase,omitempty" yaml:"private_key_passphrase,omitempty"`
+	PrivateKeyPassphrase string `json:"-" yaml:"private_key_passphrase,omitempty"`
 
 	// Database is the default database.
 	Database string `json:"database" yaml:"database"`

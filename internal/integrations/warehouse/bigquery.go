@@ -33,7 +33,7 @@ type BigQueryConfig struct {
 	CredentialsFile string `json:"credentials_file,omitempty" yaml:"credentials_file,omitempty"`
 
 	// CredentialsJSON is the service account credentials as JSON string.
-	CredentialsJSON string `json:"credentials_json,omitempty" yaml:"credentials_json,omitempty"`
+	CredentialsJSON string `json:"-" yaml:"credentials_json,omitempty"`
 
 	// UseDefaultCredentials uses Application Default Credentials.
 	UseDefaultCredentials bool `json:"use_default_credentials" yaml:"use_default_credentials"`

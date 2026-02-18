@@ -30,7 +30,7 @@ type RedshiftConfig struct {
 	User string `json:"user" yaml:"user"`
 
 	// Password is the authentication password.
-	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+	Password string `json:"-" yaml:"password,omitempty"`
 
 	// SSLMode controls TLS for the connection (e.g. "require", "verify-ca").
 	SSLMode string `json:"ssl_mode,omitempty" yaml:"ssl_mode,omitempty"`
