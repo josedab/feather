@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// maxFederationResponseSize limits the size of federation API response bodies.
+const maxFederationResponseSize = 10 << 20 // 10MB
+
 // Federation manages a federated feature store network.
 type Federation struct {
 	mu            sync.RWMutex
@@ -454,7 +457,7 @@ func (f *Federation) fetchFromNode(ctx context.Context, node *Node, featureID st
 		return nil, fmt.Errorf("node returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxFederationResponseSize))
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +578,7 @@ func (f *Federation) syncWithNode(ctx context.Context, node *Node) {
 		return
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxFederationResponseSize))
 	if err != nil {
 		return
 	}

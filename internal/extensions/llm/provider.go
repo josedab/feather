@@ -17,6 +17,9 @@ import (
 	"unicode"
 )
 
+// maxLLMResponseSize limits the size of response bodies read from LLM APIs.
+const maxLLMResponseSize = 10 << 20 // 10MB
+
 // Provider defines the interface for embedding generation.
 type Provider interface {
 	// Embed generates an embedding for a single text.
@@ -198,7 +201,10 @@ func (p *OpenAIProvider) embedBatchOnce(ctx context.Context, texts []string) ([]
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
 			Message:    string(body),
@@ -307,7 +313,10 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) ([]float32, err
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
 			Message:    string(body),
@@ -420,7 +429,10 @@ func (p *HuggingFaceProvider) EmbedBatch(ctx context.Context, texts []string) ([
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
 			Message:    string(body),

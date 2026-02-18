@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// maxEmbeddingResponseSize limits the size of response bodies read from embedding APIs.
+const maxEmbeddingResponseSize = 10 << 20 // 10MB
+
 // OpenAIEmbedder generates embeddings using OpenAI's API.
 type OpenAIEmbedder struct {
 	apiKey    string
@@ -102,7 +105,10 @@ func (e *OpenAIEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]fl
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxEmbeddingResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -196,7 +202,10 @@ func (e *OllamaEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxEmbeddingResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}
 

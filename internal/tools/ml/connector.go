@@ -22,6 +22,9 @@ var (
 	ErrConnectorExists   = errors.New("connector already exists")
 )
 
+// maxErrorResponseSize limits the size of error response bodies read from external services.
+const maxErrorResponseSize = 1 << 20 // 1MB
+
 // closeBody closes an HTTP response body and logs any error at debug level.
 func closeBody(resp *http.Response) {
 	if err := resp.Body.Close(); err != nil {
@@ -323,7 +326,10 @@ func (c *TensorFlowConnector) Predict(ctx context.Context, req *PredictRequest) 
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("prediction failed: %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -383,7 +389,10 @@ func (c *TensorFlowConnector) BatchPredict(ctx context.Context, req *BatchPredic
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("batch prediction failed: %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -488,7 +497,10 @@ func (c *MLflowConnector) Predict(ctx context.Context, req *PredictRequest) (*Pr
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("prediction failed: %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -540,7 +552,10 @@ func (c *MLflowConnector) BatchPredict(ctx context.Context, req *BatchPredictReq
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("batch prediction failed: %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -632,7 +647,10 @@ func (c *SageMakerConnector) Predict(ctx context.Context, req *PredictRequest) (
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("prediction failed: %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -671,7 +689,10 @@ func (c *SageMakerConnector) BatchPredict(ctx context.Context, req *BatchPredict
 	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorResponseSize))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
 		return nil, fmt.Errorf("batch prediction failed: %d: %s", resp.StatusCode, string(body))
 	}
 

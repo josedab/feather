@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+// maxLLMResponseSize limits the size of LLM response bodies.
+const maxLLMResponseSize = 10 << 20 // 10MB
+
 // LLMProvider represents an LLM provider type.
 type LLMProvider string
 
@@ -350,7 +353,7 @@ func (g *Generator) callOpenAI(ctx context.Context, prompt string) (string, int,
 		_ = resp.Body.Close()
 	}()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseSize))
 	if err != nil {
 		return "", 0, err
 	}
@@ -411,7 +414,7 @@ func (g *Generator) callAnthropic(ctx context.Context, prompt string) (string, i
 		_ = resp.Body.Close()
 	}()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseSize))
 	if err != nil {
 		return "", 0, err
 	}
@@ -470,7 +473,7 @@ func (g *Generator) callOllama(ctx context.Context, prompt string) (string, int,
 		_ = resp.Body.Close()
 	}()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseSize))
 	if err != nil {
 		return "", 0, err
 	}
