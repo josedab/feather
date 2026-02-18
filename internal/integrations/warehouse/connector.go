@@ -29,6 +29,8 @@ package warehouse
 import (
 	"context"
 	"errors"
+	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/feather-store/feather/internal/core/domain"
@@ -53,7 +55,43 @@ var (
 	ErrTimeout               = errors.New("operation timed out")
 	ErrInvalidConfig         = errors.New("invalid configuration")
 	ErrIteratorDone          = errors.New("iterator done")
+	ErrInvalidIdentifier     = errors.New("invalid SQL identifier")
+	ErrUnsafeFilter          = errors.New("unsafe SQL filter")
 )
+
+// validIdentifier matches safe SQL identifiers: starts with letter or underscore,
+// followed by letters, digits, or underscores.
+var validIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+// validProjectID matches safe cloud project IDs (allows hyphens).
+var validProjectID = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
+
+// validateIdentifier checks that a SQL identifier (table, column, schema name)
+// is safe from injection.
+func validateIdentifier(name string) error {
+	if !validIdentifier.MatchString(name) {
+		return fmt.Errorf("%w: %q", ErrInvalidIdentifier, name)
+	}
+	return nil
+}
+
+// validateProjectID checks that a cloud project ID is safe.
+func validateProjectID(name string) error {
+	if !validProjectID.MatchString(name) {
+		return fmt.Errorf("%w: %q", ErrInvalidIdentifier, name)
+	}
+	return nil
+}
+
+// validateIdentifiers checks multiple SQL identifiers.
+func validateIdentifiers(names ...string) error {
+	for _, name := range names {
+		if err := validateIdentifier(name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ConnectorType identifies the warehouse type.
 type ConnectorType string
