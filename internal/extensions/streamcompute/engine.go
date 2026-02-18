@@ -170,6 +170,7 @@ type pipeline struct {
 	// Per-key window state
 	windows   map[string]*windowState
 	watermark *Watermark
+	ctx       context.Context
 	cancel    context.CancelFunc
 }
 
@@ -259,7 +260,8 @@ func (e *Engine) StartPipeline(id string) error {
 		return ErrPipelineRunning
 	}
 
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	p.ctx = ctx
 	p.cancel = cancel
 	p.status = StatusRunning
 	p.startedAt = time.Now()
