@@ -629,7 +629,7 @@ func (b *DynamoDBBackend) decompress(data []byte) ([]byte, error) {
 	defer func() {
 		_ = gz.Close()
 	}()
-	return io.ReadAll(gz)
+	return io.ReadAll(io.LimitReader(gz, maxDecompressedSize))
 }
 
 // CreateTableSchema returns the schema for creating the DynamoDB table.

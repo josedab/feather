@@ -349,6 +349,9 @@ func compress(data []byte, compression CompressionType) ([]byte, error) {
 	}
 }
 
+// maxDecompressedSize limits decompressed data size to prevent zip bomb attacks.
+const maxDecompressedSize = 100 << 20 // 100MB
+
 func decompress(data []byte, compression CompressionType) ([]byte, error) {
 	switch compression {
 	case CompressionNone:
@@ -359,7 +362,7 @@ func decompress(data []byte, compression CompressionType) ([]byte, error) {
 			return nil, err
 		}
 		defer r.Close()
-		return io.ReadAll(r)
+		return io.ReadAll(io.LimitReader(r, maxDecompressedSize))
 	case CompressionLZ4, CompressionZstd:
 		return data, nil
 	default:

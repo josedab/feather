@@ -439,6 +439,9 @@ func (b *GCSBackend) compress(data []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// maxDecompressedSize limits decompressed data size to prevent zip bomb attacks.
+const maxDecompressedSize = 100 << 20 // 100MB
+
 func (b *GCSBackend) decompress(data []byte) ([]byte, error) {
 	gz, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -447,5 +450,5 @@ func (b *GCSBackend) decompress(data []byte) ([]byte, error) {
 	defer func() {
 		_ = gz.Close()
 	}()
-	return io.ReadAll(gz)
+	return io.ReadAll(io.LimitReader(gz, maxDecompressedSize))
 }
