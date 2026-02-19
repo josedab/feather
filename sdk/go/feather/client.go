@@ -129,7 +129,9 @@ func (c *Client) request(ctx context.Context, method, path string, body interfac
 			continue
 		}
 
-		respBody, err := io.ReadAll(resp.Body)
+		// Limit response body to 64MB to prevent memory exhaustion.
+		const maxResponseSize = 64 << 20
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 		closeErr := resp.Body.Close()
 		if err != nil {
 			lastErr = err
