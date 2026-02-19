@@ -404,7 +404,7 @@ func (s *HTTPServer) handleGetFeaturesAsOf(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	features, err := s.store.GetAsOf(entityKey, featureNames, asOf)
+	features, err := s.store.GetAsOf(r.Context(), entityKey, featureNames, asOf)
 	if err != nil {
 		s.writeErrorFromErr(r.Context(), w, err)
 		return
@@ -499,7 +499,7 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := s.store.Put(req.EntityKey, features); err != nil {
+	if err := s.store.Put(r.Context(), req.EntityKey, features); err != nil {
 		s.writeErrorFromErr(r.Context(), w, err)
 		return
 	}
@@ -598,7 +598,7 @@ func (s *HTTPServer) handleLive(w http.ResponseWriter, r *http.Request) {
 
 // getEntityFeatures retrieves features for an entity.
 func (s *HTTPServer) getEntityFeatures(entityKey string, featureNames []string) (*domain.EntityFeatures, error) {
-	features, err := s.store.Get(entityKey, featureNames)
+	features, err := s.store.Get(context.Background(), entityKey, featureNames)
 	if err != nil && !domain.IsNotFound(err) {
 		return nil, err
 	}

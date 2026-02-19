@@ -576,7 +576,7 @@ func (c *Connector) exportParquet(ctx context.Context, req *ExportRequest, resul
 		default:
 		}
 
-		featureValues, fetchErr := c.store.Get(entity, req.Features)
+		featureValues, fetchErr := c.store.Get(ctx, entity, req.Features)
 		if fetchErr != nil {
 			if errors.Is(fetchErr, domain.ErrEntityNotFound) {
 				continue
@@ -684,7 +684,7 @@ func (c *Connector) exportJSON(ctx context.Context, req *ExportRequest, result *
 		default:
 		}
 
-		featureValues, err := c.store.Get(entity, req.Features)
+		featureValues, err := c.store.Get(ctx, entity, req.Features)
 		if err != nil {
 			if errors.Is(err, domain.ErrEntityNotFound) {
 				continue
@@ -767,7 +767,7 @@ func (c *Connector) exportCSV(ctx context.Context, req *ExportRequest, result *E
 		default:
 		}
 
-		featureValues, err := c.store.Get(entity, req.Features)
+		featureValues, err := c.store.Get(ctx, entity, req.Features)
 		if err != nil {
 			if errors.Is(err, domain.ErrEntityNotFound) {
 				continue
@@ -1102,7 +1102,7 @@ func (c *Connector) writeBatch(ctx context.Context, batch []featureRecord, mode 
 
 		// Check write mode for merge handling
 		if mode == WriteModeMerge {
-			existing, err := c.store.Get(rec.entityID, nil)
+			existing, err := c.store.Get(ctx, rec.entityID, nil)
 			if err == nil && len(existing) > 0 {
 				// Merge with existing - keep newer timestamps
 				for featureName, newVal := range rec.features {
@@ -1116,7 +1116,7 @@ func (c *Connector) writeBatch(ctx context.Context, batch []featureRecord, mode 
 		}
 
 		if len(rec.features) > 0 {
-			if err := c.store.Put(rec.entityID, rec.features); err != nil {
+			if err := c.store.Put(ctx, rec.entityID, rec.features); err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("writing entity %s: %v", rec.entityID, err))
 				continue
 			}

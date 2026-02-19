@@ -44,7 +44,7 @@ func TestBaseConnector_GetFeatures(t *testing.T) {
 	store := createTestStore(t)
 
 	// Add test features
-	err := store.Put("entity:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "entity:1", map[string]*domain.FeatureValue{
 		"feature_a": {Value: 1.5, Timestamp: time.Now().UnixNano(), Version: 1},
 		"feature_b": {Value: "test", Timestamp: time.Now().UnixNano(), Version: 1},
 	})
@@ -68,7 +68,7 @@ func TestBaseConnector_BatchGetFeatures(t *testing.T) {
 
 	// Add test features
 	for i := 0; i < 3; i++ {
-		err := store.Put("entity:"+string(rune('1'+i)), map[string]*domain.FeatureValue{
+		err := store.Put(context.Background(), "entity:"+string(rune('1'+i)), map[string]*domain.FeatureValue{
 			"feature_x": {Value: float64(i), Timestamp: time.Now().UnixNano(), Version: 1},
 		})
 		require.NoError(t, err)

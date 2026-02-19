@@ -404,7 +404,7 @@ func (fs *FeatureStoreSchema) resolveFeature(ctx context.Context, parent interfa
 		return nil, fmt.Errorf("feature must be a string")
 	}
 
-	values, err := fs.store.Get(entity, []string{feature})
+	values, err := fs.store.Get(ctx, entity, []string{feature})
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +439,7 @@ func (fs *FeatureStoreSchema) resolveFeatures(ctx context.Context, parent interf
 		}
 	}
 
-	values, err := fs.store.Get(entity, features)
+	values, err := fs.store.Get(ctx, entity, features)
 	if err != nil {
 		return nil, err
 	}
@@ -476,7 +476,7 @@ func (fs *FeatureStoreSchema) resolveFeatureHistory(ctx context.Context, parent 
 	}
 
 	// Use GetAsOf for point-in-time query
-	values, err := fs.store.GetAsOf(entity, []string{feature}, asOf)
+	values, err := fs.store.GetAsOf(ctx, entity, []string{feature}, asOf)
 	if err != nil {
 		return nil, err
 	}
@@ -558,7 +558,7 @@ func (fs *FeatureStoreSchema) resolveAggregation(ctx context.Context, parent int
 	}
 
 	// Get current feature value (aggregations would be stored as features)
-	values, err := fs.store.Get(entity, []string{feature})
+	values, err := fs.store.Get(ctx, entity, []string{feature})
 	if err != nil {
 		return nil, err
 	}
@@ -608,7 +608,7 @@ func (fs *FeatureStoreSchema) resolveSetFeature(ctx context.Context, parent inte
 		Version:   1,
 	}
 
-	if err := fs.store.Put(entity, map[string]*domain.FeatureValue{feature: featureValue}); err != nil {
+	if err := fs.store.Put(ctx, entity, map[string]*domain.FeatureValue{feature: featureValue}); err != nil {
 		return nil, err
 	}
 
@@ -651,7 +651,7 @@ func (fs *FeatureStoreSchema) resolveSetFeatures(ctx context.Context, parent int
 			Version:   1,
 		}
 
-		if err := fs.store.Put(entity, map[string]*domain.FeatureValue{feature: featureValue}); err != nil {
+		if err := fs.store.Put(ctx, entity, map[string]*domain.FeatureValue{feature: featureValue}); err != nil {
 			return nil, err
 		}
 
@@ -678,7 +678,7 @@ func (fs *FeatureStoreSchema) resolveDeleteFeature(ctx context.Context, parent i
 
 	// Note: Store.Delete removes all features for an entity
 	// To delete a single feature, set its value to nil instead
-	if err := fs.store.Delete(entity); err != nil {
+	if err := fs.store.Delete(ctx, entity); err != nil {
 		return false, err
 	}
 

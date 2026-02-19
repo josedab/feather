@@ -37,7 +37,7 @@ func TestPipeline_ArithmeticTransform(t *testing.T) {
 	pipeline := NewPipeline(store)
 
 	// Add test features
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"price":    {Value: 100.0, Timestamp: time.Now().UnixNano()},
 		"quantity": {Value: 5.0, Timestamp: time.Now().UnixNano()},
 		"discount": {Value: 0.1, Timestamp: time.Now().UnixNano()},
@@ -70,7 +70,7 @@ func TestPipeline_AggregationTransform(t *testing.T) {
 	pipeline := NewPipeline(store)
 
 	// Add test features
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"score_1": {Value: 10.0, Timestamp: time.Now().UnixNano()},
 		"score_2": {Value: 20.0, Timestamp: time.Now().UnixNano()},
 		"score_3": {Value: 30.0, Timestamp: time.Now().UnixNano()},
@@ -116,12 +116,12 @@ func TestPipeline_ConditionalTransform(t *testing.T) {
 	pipeline := NewPipeline(store)
 
 	// Add test features
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"age": {Value: 25.0, Timestamp: time.Now().UnixNano()},
 	})
 	require.NoError(t, err)
 
-	err = store.Put("user:2", map[string]*domain.FeatureValue{
+	err = store.Put(context.Background(), "user:2", map[string]*domain.FeatureValue{
 		"age": {Value: 15.0, Timestamp: time.Now().UnixNano()},
 	})
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestPipeline_StringTransform(t *testing.T) {
 	store := createTestStore(t)
 	pipeline := NewPipeline(store)
 
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"name": {Value: "  John Doe  ", Timestamp: time.Now().UnixNano()},
 	})
 	require.NoError(t, err)
@@ -199,7 +199,7 @@ func TestPipeline_TimestampTransform(t *testing.T) {
 
 	testTime := time.Date(2024, 6, 15, 14, 30, 0, 0, time.UTC)
 
-	err := store.Put("event:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "event:1", map[string]*domain.FeatureValue{
 		"created_at": {Value: testTime.UnixNano(), Timestamp: time.Now().UnixNano()},
 	})
 	require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestPipeline_ExecuteAndStore(t *testing.T) {
 	store := createTestStore(t)
 	pipeline := NewPipeline(store)
 
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"a": {Value: 10.0, Timestamp: time.Now().UnixNano()},
 		"b": {Value: 20.0, Timestamp: time.Now().UnixNano()},
 	})
@@ -247,7 +247,7 @@ func TestPipeline_ExecuteAndStore(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify stored
-	values, err := store.Get("user:1", []string{"sum_ab"})
+	values, err := store.Get(context.Background(), "user:1", []string{"sum_ab"})
 	require.NoError(t, err)
 	assert.Equal(t, 30.0, values["sum_ab"].Value)
 }
@@ -257,7 +257,7 @@ func TestPipeline_DependencyChain(t *testing.T) {
 	pipeline := NewPipeline(store)
 
 	// Raw features
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"base_price": {Value: 100.0, Timestamp: time.Now().UnixNano()},
 		"tax_rate":   {Value: 0.1, Timestamp: time.Now().UnixNano()},
 		"discount":   {Value: 0.2, Timestamp: time.Now().UnixNano()},
@@ -381,7 +381,7 @@ func TestDSL_Define(t *testing.T) {
 	dsl := NewDSL(pipeline)
 
 	// Add test features
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"x": {Value: 10.0, Timestamp: time.Now().UnixNano()},
 		"y": {Value: 20.0, Timestamp: time.Now().UnixNano()},
 	})
@@ -403,7 +403,7 @@ func TestDSL_FunctionCalls(t *testing.T) {
 	dsl := NewDSL(pipeline)
 
 	// Add test features
-	err := store.Put("user:1", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"a": {Value: 10.0, Timestamp: time.Now().UnixNano()},
 		"b": {Value: 20.0, Timestamp: time.Now().UnixNano()},
 		"c": {Value: 30.0, Timestamp: time.Now().UnixNano()},

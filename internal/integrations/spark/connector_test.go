@@ -122,7 +122,7 @@ func TestConnectorExport(t *testing.T) {
 				Timestamp: time.Now().UnixNano(),
 			},
 		}
-		require.NoError(t, store.Put(entity, features))
+		require.NoError(t, store.Put(context.Background(), entity, features))
 	}
 
 	cfg := DefaultConfig()
@@ -279,7 +279,7 @@ func TestConnectorImport(t *testing.T) {
 		assert.Equal(t, int64(4), result.FeaturesUpdated)
 
 		// Verify data was written
-		features, err := store.Get("user:100", []string{"click_count", "purchase_total"})
+		features, err := store.Get(context.Background(), "user:100", []string{"click_count", "purchase_total"})
 		require.NoError(t, err)
 		assert.NotNil(t, features["click_count"])
 		assert.NotNil(t, features["purchase_total"])
@@ -337,7 +337,7 @@ user:302,50,599.99`
 		assert.Equal(t, int64(3), result.EntitiesUpdated)
 
 		// Verify data was written
-		features, err := store.Get("user:300", []string{"click_count", "purchase_total"})
+		features, err := store.Get(context.Background(), "user:300", []string{"click_count", "purchase_total"})
 		require.NoError(t, err)
 		assert.NotNil(t, features["click_count"])
 	})
@@ -352,7 +352,7 @@ user:302,50,599.99`
 				Timestamp: time.Now().Add(time.Hour).UnixNano(), // Future timestamp
 			},
 		}
-		require.NoError(t, store.Put("user:merge", existingFeatures))
+		require.NoError(t, store.Put(context.Background(), "user:merge", existingFeatures))
 
 		// Import data with older timestamp
 		testData := []map[string]interface{}{
@@ -382,7 +382,7 @@ user:302,50,599.99`
 		assert.Equal(t, int64(1), result.RowsImported)
 
 		// The newer value should be preserved in merge mode
-		features, err := store.Get("user:merge", []string{"click_count"})
+		features, err := store.Get(context.Background(), "user:merge", []string{"click_count"})
 		require.NoError(t, err)
 		assert.Equal(t, int64(999), features["click_count"].Value)
 	})
@@ -421,7 +421,7 @@ func TestConnectorMetrics(t *testing.T) {
 	defer connector.Close()
 
 	// Seed data
-	require.NoError(t, store.Put("user:1", map[string]*domain.FeatureValue{
+	require.NoError(t, store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"clicks": {Value: int64(10), Timestamp: time.Now().UnixNano()},
 	}))
 
@@ -541,6 +541,7 @@ func TestContextCancellation(t *testing.T) {
 	// Seed lots of data
 	for i := 0; i < 100; i++ {
 		store.Put(
+			context.Background(),
 			"user:"+string(rune(i)),
 			map[string]*domain.FeatureValue{
 				"clicks": {Value: int64(i), Timestamp: time.Now().UnixNano()},

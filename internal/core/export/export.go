@@ -165,9 +165,9 @@ func (e *Exporter) exportCSV(ctx context.Context, req ExportRequest, w io.Writer
 		var err error
 
 		if req.EndTime != nil {
-			features, err = e.store.GetAsOf(entityKey, req.Features, *req.EndTime)
+			features, err = e.store.GetAsOf(ctx, entityKey, req.Features, *req.EndTime)
 		} else {
-			features, err = e.store.Get(entityKey, req.Features)
+			features, err = e.store.Get(ctx, entityKey, req.Features)
 		}
 
 		if err != nil {
@@ -230,9 +230,9 @@ func (e *Exporter) exportJSON(ctx context.Context, req ExportRequest, w io.Write
 		var err error
 
 		if req.EndTime != nil {
-			features, err = e.store.GetAsOf(entityKey, req.Features, *req.EndTime)
+			features, err = e.store.GetAsOf(ctx, entityKey, req.Features, *req.EndTime)
 		} else {
-			features, err = e.store.Get(entityKey, req.Features)
+			features, err = e.store.Get(ctx, entityKey, req.Features)
 		}
 
 		if err != nil {
@@ -291,9 +291,9 @@ func (e *Exporter) exportJSONL(ctx context.Context, req ExportRequest, w io.Writ
 		var err error
 
 		if req.EndTime != nil {
-			features, err = e.store.GetAsOf(entityKey, req.Features, *req.EndTime)
+			features, err = e.store.GetAsOf(ctx, entityKey, req.Features, *req.EndTime)
 		} else {
-			features, err = e.store.Get(entityKey, req.Features)
+			features, err = e.store.Get(ctx, entityKey, req.Features)
 		}
 
 		if err != nil {
@@ -352,9 +352,9 @@ func (e *Exporter) exportParquet(ctx context.Context, req ExportRequest, w io.Wr
 		var err error
 
 		if req.EndTime != nil {
-			features, err = e.store.GetAsOf(entityKey, req.Features, *req.EndTime)
+			features, err = e.store.GetAsOf(ctx, entityKey, req.Features, *req.EndTime)
 		} else {
-			features, err = e.store.Get(entityKey, req.Features)
+			features, err = e.store.Get(ctx, entityKey, req.Features)
 		}
 
 		if err != nil {
@@ -449,7 +449,7 @@ func (e *Exporter) ExportPointInTime(ctx context.Context, req PointInTimeRequest
 			default:
 			}
 
-			features, err := e.store.GetAsOf(entityKey, req.Features, ts)
+			features, err := e.store.GetAsOf(ctx, entityKey, req.Features, ts)
 			if err != nil {
 				if domain.IsNotFound(err) {
 					continue

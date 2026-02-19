@@ -56,7 +56,7 @@ func (e *Engine) registerBuiltinFunctions() {
 			featureName = node.Name
 		}
 
-		values, err := e.store.Get(entityID, []string{featureName})
+		values, err := e.store.Get(ctx, entityID, []string{featureName})
 		if err != nil {
 			return nil, err
 		}

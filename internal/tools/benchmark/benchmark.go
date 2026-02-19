@@ -227,7 +227,7 @@ func (s *Suite) seedData(ctx context.Context) error {
 			}
 		}
 
-		if err := s.store.Put(entityKey, features); err != nil {
+		if err := s.store.Put(ctx, entityKey, features); err != nil {
 			return err
 		}
 	}
@@ -245,7 +245,7 @@ func (s *Suite) warmup(ctx context.Context) {
 
 		entityKey := fmt.Sprintf("entity:%d", s.intn(s.config.NumEntities))
 		features := []string{fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))}
-		_, _ = s.store.Get(entityKey, features)
+		_, _ = s.store.Get(ctx, entityKey, features)
 	}
 }
 
@@ -277,7 +277,7 @@ func (s *Suite) benchmarkWrite(ctx context.Context) (*Result, error) {
 				value := s.generateValue()
 
 				opStart := time.Now()
-				err := s.store.Put(entityKey, map[string]*domain.FeatureValue{
+				err := s.store.Put(ctx, entityKey, map[string]*domain.FeatureValue{
 					featureName: {
 						Value:     value,
 						Timestamp: time.Now().UnixNano(),
@@ -333,7 +333,7 @@ func (s *Suite) benchmarkRead(ctx context.Context) (*Result, error) {
 				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
 
 				opStart := time.Now()
-				values, err := s.store.Get(entityKey, []string{featureName})
+				values, err := s.store.Get(ctx, entityKey, []string{featureName})
 				latency := time.Since(opStart)
 
 				if err != nil {
@@ -389,7 +389,7 @@ func (s *Suite) benchmarkBatchRead(ctx context.Context) (*Result, error) {
 				}
 
 				opStart := time.Now()
-				values, err := s.store.Get(entityKey, features)
+				values, err := s.store.Get(ctx, entityKey, features)
 				latency := time.Since(opStart)
 
 				if err != nil {
@@ -445,12 +445,12 @@ func (s *Suite) benchmarkMixedWorkload(ctx context.Context) (*Result, error) {
 				if s.float64() < 0.8 {
 					// Read operation
 					opStart := time.Now()
-					_, err = s.store.Get(entityKey, []string{featureName})
+					_, err = s.store.Get(ctx, entityKey, []string{featureName})
 					latency = time.Since(opStart)
 				} else {
 					// Write operation
 					opStart := time.Now()
-					err = s.store.Put(entityKey, map[string]*domain.FeatureValue{
+					err = s.store.Put(ctx, entityKey, map[string]*domain.FeatureValue{
 						featureName: {
 							Value:     s.generateValue(),
 							Timestamp: time.Now().UnixNano(),
@@ -509,7 +509,7 @@ func (s *Suite) benchmarkConcurrentWrite(ctx context.Context) (*Result, error) {
 				featureName := fmt.Sprintf("feature_%d", s.intn(s.config.NumFeatures))
 
 				opStart := time.Now()
-				err := s.store.Put(entityKey, map[string]*domain.FeatureValue{
+				err := s.store.Put(ctx, entityKey, map[string]*domain.FeatureValue{
 					featureName: {
 						Value:     s.generateValue(),
 						Timestamp: time.Now().UnixNano(),
@@ -556,7 +556,7 @@ func (s *Suite) benchmarkPointInTimeRead(ctx context.Context) (*Result, error) {
 					Version:   int64(j + 1),
 				}
 			}
-			_ = s.store.Put(entityKey, features)
+			_ = s.store.Put(ctx, entityKey, features)
 			time.Sleep(time.Millisecond) // Ensure different timestamps
 		}
 	}
@@ -583,7 +583,7 @@ func (s *Suite) benchmarkPointInTimeRead(ctx context.Context) (*Result, error) {
 				asOf := time.Now().Add(-time.Duration(s.intn(10)) * time.Hour)
 
 				opStart := time.Now()
-				values, err := s.store.GetAsOf(entityKey, []string{featureName}, asOf)
+				values, err := s.store.GetAsOf(ctx, entityKey, []string{featureName}, asOf)
 				latency := time.Since(opStart)
 
 				if err != nil {

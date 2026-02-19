@@ -245,7 +245,7 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		}
 
 		if len(features) > 0 {
-			if err := b.store.Put(entityKey, features); err != nil {
+			if err := b.store.Put(ctx, entityKey, features); err != nil {
 				if config.SkipErrors {
 					result.RowsError++
 					result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
@@ -353,7 +353,7 @@ func (b *BatchImporter) ImportJSONReader(ctx context.Context, r io.Reader, confi
 		}
 
 		if len(features) > 0 {
-			if err := b.store.Put(entityKey, features); err != nil {
+			if err := b.store.Put(ctx, entityKey, features); err != nil {
 				if config.SkipErrors {
 					result.RowsError++
 					continue
@@ -465,7 +465,7 @@ func (b *BatchImporter) ImportJSONLReader(ctx context.Context, r io.Reader, conf
 		}
 
 		if len(features) > 0 {
-			if err := b.store.Put(entityKey, features); err != nil {
+			if err := b.store.Put(ctx, entityKey, features); err != nil {
 				if config.SkipErrors {
 					result.RowsError++
 					continue

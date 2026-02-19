@@ -522,7 +522,7 @@ func TestBigQueryConnector_Export_Connected(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add test data
-	err = store.Put("user:1", map[string]*domain.FeatureValue{
+	err = store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"click_count":    {Value: int64(42), Timestamp: time.Now().UnixNano()},
 		"purchase_total": {Value: 99.99, Timestamp: time.Now().UnixNano()},
 	})

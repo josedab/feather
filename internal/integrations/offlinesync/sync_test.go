@@ -367,7 +367,7 @@ func TestRunJob(t *testing.T) {
 		assert.Equal(t, int64(3), execution.RecordsSync)
 
 		// Verify data was written
-		features, err := store.Get("user:1", []string{"click_count", "purchase_total"})
+		features, err := store.Get(context.Background(), "user:1", []string{"click_count", "purchase_total"})
 		require.NoError(t, err)
 		assert.NotNil(t, features["click_count"])
 		assert.NotNil(t, features["purchase_total"])
@@ -631,7 +631,7 @@ func TestSyncStrategy(t *testing.T) {
 
 	t.Run("merge strategy", func(t *testing.T) {
 		// Pre-seed data
-		store.Put("merge:1", map[string]*domain.FeatureValue{
+		store.Put(context.Background(), "merge:1", map[string]*domain.FeatureValue{
 			"existing_feature": {Value: "existing", Timestamp: time.Now().UnixNano()},
 		})
 
@@ -659,7 +659,7 @@ func TestSyncStrategy(t *testing.T) {
 		engine.RunJob(ctx, "merge-strategy-job")
 
 		// Verify the new feature was synced
-		features, err := store.Get("merge:1", []string{"new_feature", "existing_feature"})
+		features, err := store.Get(context.Background(), "merge:1", []string{"new_feature", "existing_feature"})
 		require.NoError(t, err)
 		// The new feature should be there
 		assert.NotNil(t, features["new_feature"])

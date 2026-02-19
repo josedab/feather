@@ -562,7 +562,7 @@ func (h *ModelServingHandler) handleServeFeatures(w http.ResponseWriter, r *http
 	}
 
 	// Fetch features from store
-	featureValues, err := h.store.Get(req.EntityID, featureNames)
+	featureValues, err := h.store.Get(r.Context(), req.EntityID, featureNames)
 	if err != nil {
 		h.writeError(r.Context(), w, http.StatusInternalServerError, "failed to get features: "+err.Error())
 		return

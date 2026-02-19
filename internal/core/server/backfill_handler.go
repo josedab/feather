@@ -26,7 +26,7 @@ func (w *storeWriter) WriteFeature(ctx context.Context, entityID string, feature
 		Value:     value,
 		Timestamp: timestamp.UnixNano(),
 	}
-	return w.store.Put(entityID, map[string]*domain.FeatureValue{feature: fv})
+	return w.store.Put(ctx, entityID, map[string]*domain.FeatureValue{feature: fv})
 }
 
 func (w *storeWriter) WriteBatch(ctx context.Context, records []backfill.FeatureRecord) error {
@@ -44,7 +44,7 @@ func (w *storeWriter) WriteBatch(ctx context.Context, records []backfill.Feature
 
 	// Write each entity
 	for entityID, features := range byEntity {
-		if err := w.store.Put(entityID, features); err != nil {
+		if err := w.store.Put(ctx, entityID, features); err != nil {
 			return err
 		}
 	}

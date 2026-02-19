@@ -144,7 +144,7 @@ func SeedFeatures(t *testing.T, store *storage.Store, entityID string, features 
 			Version: 1,
 		}
 	}
-	if err := store.Put(entityID, featureValues); err != nil {
+	if err := store.Put(context.Background(), entityID, featureValues); err != nil {
 		t.Fatalf("testutil: failed to seed features: %v", err)
 	}
 }

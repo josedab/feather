@@ -318,7 +318,7 @@ func (c *BigQueryConnector) Export(ctx context.Context, req *ExportRequest) (*Ex
 	} else {
 		// Simulated export for testing
 		for _, entity := range entities {
-			featureValues, err := c.store.Get(entity, req.Features)
+			featureValues, err := c.store.Get(ctx, entity, req.Features)
 			if err != nil {
 				if errors.Is(err, domain.ErrEntityNotFound) {
 					continue
@@ -406,7 +406,7 @@ func (c *BigQueryConnector) exportBatchStreaming(ctx context.Context, client Big
 	var bytesExported int64
 
 	for _, entity := range entities {
-		featureValues, err := c.store.Get(entity, features)
+		featureValues, err := c.store.Get(ctx, entity, features)
 		if err != nil {
 			if errors.Is(err, domain.ErrEntityNotFound) {
 				continue
@@ -547,7 +547,7 @@ func (c *BigQueryConnector) Import(ctx context.Context, req *ImportRequest) (*Im
 
 		// Store in Feather
 		if len(features) > 0 {
-			if err := c.store.Put(entityKey, features); err != nil {
+			if err := c.store.Put(ctx, entityKey, features); err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("put %s: %v", entityKey, err))
 				continue
 			}

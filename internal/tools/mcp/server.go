@@ -427,7 +427,7 @@ func (s *Server) toolGetFeatures(ctx context.Context, args json.RawMessage) tool
 		return errorResult("Feature store not available")
 	}
 
-	features, err := s.store.Get(params.Entity, params.Features)
+	features, err := s.store.Get(ctx, params.Entity, params.Features)
 	if err != nil {
 		return errorResult("Failed to get features: " + err.Error())
 	}
@@ -466,7 +466,7 @@ func (s *Server) toolPutFeatures(ctx context.Context, args json.RawMessage) tool
 		}
 	}
 
-	if err := s.store.Put(params.Entity, featureValues); err != nil {
+	if err := s.store.Put(ctx, params.Entity, featureValues); err != nil {
 		return errorResult("Failed to store features: " + err.Error())
 	}
 

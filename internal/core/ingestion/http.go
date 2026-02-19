@@ -244,7 +244,7 @@ func (h *HTTPIngestion) ingestUpdate(update *domain.FeatureUpdate) error {
 		}
 	}
 
-	if err := h.store.Put(update.EntityKey, features); err != nil {
+	if err := h.store.Put(context.Background(), update.EntityKey, features); err != nil {
 		return fmt.Errorf("storing features: %w", err)
 	}
 

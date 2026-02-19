@@ -247,7 +247,7 @@ func (e *WindowExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 	asOf := time.Now()
 	startTime := asOf.Add(-window)
 
-	values, err := e.store.GetAsOf(entityID, []string{featureName}, startTime)
+	values, err := e.store.GetAsOf(ctx, entityID, []string{featureName}, startTime)
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +606,7 @@ func (e *LookupExecutor) Execute(ctx context.Context, t *Transform, inputs map[s
 
 	lookupKey := fmt.Sprintf("%s:%s", lookupEntity, keyValue)
 
-	values, err := e.store.Get(lookupKey, []string{lookupFeature})
+	values, err := e.store.Get(ctx, lookupKey, []string{lookupFeature})
 	if err != nil {
 		// Return default if configured
 		if defaultVal, ok := t.Config["default"]; ok {

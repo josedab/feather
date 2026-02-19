@@ -147,7 +147,7 @@ func TestProcessRecord(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 
 		// Verify data was written
-		features, err := store.Get("user:1", []string{"click_count", "purchase_total"})
+		features, err := store.Get(context.Background(), "user:1", []string{"click_count", "purchase_total"})
 		require.NoError(t, err)
 		assert.NotNil(t, features["click_count"])
 		assert.NotNil(t, features["purchase_total"])
@@ -212,7 +212,7 @@ func TestProcessBatch(t *testing.T) {
 
 	// Verify data was written
 	for i := 1; i <= 3; i++ {
-		features, err := store.Get("batch:"+string(rune('0'+i)), []string{"a"})
+		features, err := store.Get(context.Background(), "batch:"+string(rune('0'+i)), []string{"a"})
 		require.NoError(t, err)
 		assert.NotNil(t, features["a"])
 	}
@@ -353,7 +353,7 @@ func TestSink(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 
 		// Verify data
-		features, err := store.Get("sink:1", []string{"click_count", "purchase_total"})
+		features, err := store.Get(context.Background(), "sink:1", []string{"click_count", "purchase_total"})
 		require.NoError(t, err)
 		assert.NotNil(t, features["click_count"])
 		assert.NotNil(t, features["purchase_total"])
@@ -413,7 +413,7 @@ func TestSource(t *testing.T) {
 
 	// Seed data
 	for i := 0; i < 3; i++ {
-		store.Put("source:"+string(rune('0'+i)), map[string]*domain.FeatureValue{
+		store.Put(context.Background(), "source:"+string(rune('0'+i)), map[string]*domain.FeatureValue{
 			"clicks": {Value: int64(i * 10), Timestamp: time.Now().UnixNano()},
 		})
 	}

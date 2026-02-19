@@ -441,7 +441,7 @@ func (c *SnowflakeConnector) exportBatch(ctx context.Context, db *sql.DB, schema
 
 	for i, entity := range entities {
 		// Get features from store
-		featureValues, err := c.store.Get(entity, features)
+		featureValues, err := c.store.Get(ctx, entity, features)
 		if err != nil {
 			if errors.Is(err, domain.ErrEntityNotFound) {
 				continue
@@ -633,7 +633,7 @@ func (c *SnowflakeConnector) Import(ctx context.Context, req *ImportRequest) (*I
 
 		// Store in Feather
 		if len(features) > 0 {
-			if err := c.store.Put(entityKey, features); err != nil {
+			if err := c.store.Put(ctx, entityKey, features); err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("put %s: %v", entityKey, err))
 				continue
 			}

@@ -97,7 +97,7 @@ func TestStore_PutAndGet(t *testing.T) {
 		},
 	}
 
-	err := store.Put(entityKey, features)
+	err := store.Put(context.Background(), entityKey, features)
 	if err != nil {
 		t.Fatalf("Put failed: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestStore_PutAndGet(t *testing.T) {
 	// Wait for async warm tier write
 	time.Sleep(50 * time.Millisecond)
 
-	result, err := store.Get(entityKey, []string{"click_count", "purchase_total"})
+	result, err := store.Get(context.Background(), entityKey, []string{"click_count", "purchase_total"})
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestStore_HotTierFallbackToWarm(t *testing.T) {
 		"feature1": {Value: "hot_value", Timestamp: now, Version: 1},
 	}
 
-	err := store.Put(entityKey, features)
+	err := store.Put(context.Background(), entityKey, features)
 	if err != nil {
 		t.Fatalf("Put failed: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestStore_HotTierFallbackToWarm(t *testing.T) {
 	store.hot.Delete(entityKey)
 
 	// Get should still work via warm tier fallback
-	result, err := store.Get(entityKey, []string{"feature1"})
+	result, err := store.Get(context.Background(), entityKey, []string{"feature1"})
 	if err != nil {
 		t.Fatalf("Get failed after hot tier eviction: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestStore_GetPartialFromBothTiers(t *testing.T) {
 	now := time.Now().UnixNano()
 
 	// Put feature1
-	err := store.Put(entityKey, map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), entityKey, map[string]*domain.FeatureValue{
 		"feature1": {Value: "value1", Timestamp: now, Version: 1},
 	})
 	if err != nil {
@@ -176,7 +176,7 @@ func TestStore_GetPartialFromBothTiers(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Put feature2 only to hot tier by clearing warm entry (simulate)
-	err = store.Put(entityKey, map[string]*domain.FeatureValue{
+	err = store.Put(context.Background(), entityKey, map[string]*domain.FeatureValue{
 		"feature2": {Value: "value2", Timestamp: now, Version: 1},
 	})
 	if err != nil {
@@ -196,7 +196,7 @@ func TestStore_GetPartialFromBothTiers(t *testing.T) {
 	})
 
 	// Request both features - should get feature2 from hot, feature1 from warm
-	result, err := store.Get(entityKey, []string{"feature1", "feature2"})
+	result, err := store.Get(context.Background(), entityKey, []string{"feature1", "feature2"})
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestStore_GetPartialFromBothTiers(t *testing.T) {
 func TestStore_GetNonexistent(t *testing.T) {
 	store := newTestStore(t)
 
-	result, err := store.Get("nonexistent", []string{"feature"})
+	result, err := store.Get(context.Background(), "nonexistent", []string{"feature"})
 	if err != nil {
 		t.Fatalf("Get should not error for nonexistent entity: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestStore_GetAsOf(t *testing.T) {
 	now := time.Now()
 
 	// Store feature at different timestamps
-	err := store.Put(entityKey, map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), entityKey, map[string]*domain.FeatureValue{
 		"counter": {Value: int64(1), Timestamp: now.Add(-2 * time.Hour).UnixNano(), Version: 1},
 	})
 	if err != nil {
@@ -235,7 +235,7 @@ func TestStore_GetAsOf(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	err = store.Put(entityKey, map[string]*domain.FeatureValue{
+	err = store.Put(context.Background(), entityKey, map[string]*domain.FeatureValue{
 		"counter": {Value: int64(2), Timestamp: now.Add(-1 * time.Hour).UnixNano(), Version: 2},
 	})
 	if err != nil {
@@ -245,7 +245,7 @@ func TestStore_GetAsOf(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Get as of 90 minutes ago (should return version 1)
-	result, err := store.GetAsOf(entityKey, []string{"counter"}, now.Add(-90*time.Minute))
+	result, err := store.GetAsOf(context.Background(), entityKey, []string{"counter"}, now.Add(-90*time.Minute))
 	if err != nil {
 		t.Fatalf("GetAsOf failed: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestStore_Delete(t *testing.T) {
 	store := newTestStore(t)
 
 	entityKey := "user:delete"
-	err := store.Put(entityKey, map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), entityKey, map[string]*domain.FeatureValue{
 		"feature": {Value: "value", Timestamp: time.Now().UnixNano(), Version: 1},
 	})
 	if err != nil {
@@ -272,7 +272,7 @@ func TestStore_Delete(t *testing.T) {
 	}
 
 	// Delete from store (only deletes from hot tier)
-	err = store.Delete(entityKey)
+	err = store.Delete(context.Background(), entityKey)
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
@@ -312,15 +312,15 @@ func TestStore_Metrics(t *testing.T) {
 	store := newTestStore(t)
 
 	// Generate some operations
-	store.Put("user:1", map[string]*domain.FeatureValue{
+	store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"feature": {Value: "value", Timestamp: time.Now().UnixNano(), Version: 1},
 	})
 
 	// Hit
-	store.Get("user:1", []string{"feature"})
+	store.Get(context.Background(), "user:1", []string{"feature"})
 
 	// Miss
-	store.Get("user:nonexistent", []string{"feature"})
+	store.Get(context.Background(), "user:nonexistent", []string{"feature"})
 
 	metrics := store.Metrics()
 	// Just verify metrics struct is populated - exact values depend on implementation
@@ -358,7 +358,7 @@ func TestStore_ConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < numOperations; j++ {
 				entityKey := "user:concurrent"
-				store.Put(entityKey, map[string]*domain.FeatureValue{
+				store.Put(context.Background(), entityKey, map[string]*domain.FeatureValue{
 					"counter": {
 						Value:     int64(id*numOperations + j),
 						Timestamp: time.Now().UnixNano(),
@@ -375,7 +375,7 @@ func TestStore_ConcurrentAccess(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < numOperations; j++ {
-				store.Get("user:concurrent", []string{"counter"})
+				store.Get(context.Background(), "user:concurrent", []string{"counter"})
 			}
 		}()
 	}
@@ -383,7 +383,7 @@ func TestStore_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 
 	// Verify store is still functional
-	result, err := store.Get("user:concurrent", []string{"counter"})
+	result, err := store.Get(context.Background(), "user:concurrent", []string{"counter"})
 	if err != nil {
 		t.Fatalf("Failed to get after concurrent access: %v", err)
 	}
@@ -422,7 +422,7 @@ func TestStore_WithSchemaRegistry(t *testing.T) {
 func TestStore_Stats(t *testing.T) {
 	store := newTestStore(t)
 
-	store.Put("user:1", map[string]*domain.FeatureValue{
+	store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"f1": {Value: "v1", Timestamp: time.Now().UnixNano(), Version: 1},
 	})
 
@@ -477,7 +477,7 @@ func BenchmarkStore_Put(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Put("user:bench", features)
+		store.Put(context.Background(), "user:bench", features)
 	}
 }
 
@@ -492,7 +492,7 @@ func BenchmarkStore_Get(b *testing.B) {
 	defer store.Close()
 
 	// Setup
-	store.Put("user:bench", map[string]*domain.FeatureValue{
+	store.Put(context.Background(), "user:bench", map[string]*domain.FeatureValue{
 		"feature1": {Value: int64(1), Timestamp: time.Now().UnixNano(), Version: 1},
 		"feature2": {Value: 2.5, Timestamp: time.Now().UnixNano(), Version: 1},
 		"feature3": {Value: "string", Timestamp: time.Now().UnixNano(), Version: 1},
@@ -502,6 +502,6 @@ func BenchmarkStore_Get(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Get("user:bench", featureNames)
+		store.Get(context.Background(), "user:bench", featureNames)
 	}
 }

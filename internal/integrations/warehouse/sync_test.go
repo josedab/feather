@@ -264,7 +264,7 @@ func TestSyncEngine_ExecuteJob_Export(t *testing.T) {
 	defer store.Close()
 
 	// Add test data
-	err = store.Put("user:1", map[string]*domain.FeatureValue{
+	err = store.Put(context.Background(), "user:1", map[string]*domain.FeatureValue{
 		"click_count": {Value: int64(42), Timestamp: time.Now().UnixNano()},
 	})
 	require.NoError(t, err)

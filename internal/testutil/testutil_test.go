@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -59,7 +60,7 @@ func TestSeedFeatures(t *testing.T) {
 		"clicks": 42,
 	})
 
-	result, err := store.Get("user:1", []string{"clicks"})
+	result, err := store.Get(context.Background(), "user:1", []string{"clicks"})
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}

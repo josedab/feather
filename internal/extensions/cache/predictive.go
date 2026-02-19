@@ -279,7 +279,7 @@ func (c *PredictiveCache) warmCache(ctx context.Context) {
 			return
 		default:
 			// Access the feature to warm it in cache
-			_, _ = c.store.Get(p.EntityID, []string{p.Feature})
+			_, _ = c.store.Get(ctx, p.EntityID, []string{p.Feature})
 		}
 	}
 }

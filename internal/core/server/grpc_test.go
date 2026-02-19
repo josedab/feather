@@ -66,7 +66,7 @@ func (ts *testGRPCServer) seedFeatures(entityID string, features map[string]inte
 		}
 	}
 
-	if err := ts.store.Put(entityID, featureValues); err != nil {
+	if err := ts.store.Put(context.Background(), entityID, featureValues); err != nil {
 		ts.t.Fatalf("failed to seed features: %v", err)
 	}
 }

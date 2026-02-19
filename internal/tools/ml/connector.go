@@ -161,7 +161,7 @@ func (c *BaseConnector) GetFeatures(ctx context.Context, entityID string, featur
 		return nil, fmt.Errorf("store not configured")
 	}
 
-	values, err := c.config.Store.Get(entityID, featureNames)
+	values, err := c.config.Store.Get(ctx, entityID, featureNames)
 	if err != nil {
 		return nil, err
 	}

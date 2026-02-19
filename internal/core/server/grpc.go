@@ -222,7 +222,7 @@ func (s *GRPCServer) GetFeaturesAsOf(ctx context.Context, req *pb.GetFeaturesAsO
 	}()
 
 	asOf := time.Unix(0, req.GetAsOfTimestamp())
-	features, err := s.store.GetAsOf(req.GetEntityKey(), req.GetFeatures(), asOf)
+	features, err := s.store.GetAsOf(ctx, req.GetEntityKey(), req.GetFeatures(), asOf)
 	if err != nil {
 		if domain.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -276,7 +276,7 @@ func (s *GRPCServer) PutFeatures(ctx context.Context, req *pb.PutFeaturesRequest
 		}
 	}
 
-	if err := s.store.Put(req.GetEntityKey(), features); err != nil {
+	if err := s.store.Put(ctx, req.GetEntityKey(), features); err != nil {
 		return &pb.PutFeaturesResponse{
 			Success: false,
 			Error:   err.Error(),
@@ -291,7 +291,7 @@ func (s *GRPCServer) PutFeatures(ctx context.Context, req *pb.PutFeaturesRequest
 // getFeaturesForEntity retrieves features for a single entity.
 func (s *GRPCServer) getFeaturesForEntity(ctx context.Context, entityKey string, featureNames []string) (*pb.EntityFeatures, error) {
 	// Get from storage
-	features, err := s.store.Get(entityKey, featureNames)
+	features, err := s.store.Get(ctx, entityKey, featureNames)
 	if err != nil && !domain.IsNotFound(err) {
 		return nil, fmt.Errorf("getting features for entity %s: %w", entityKey, err)
 	}

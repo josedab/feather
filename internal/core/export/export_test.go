@@ -314,7 +314,7 @@ func seedTestData(t *testing.T, store *storage.Store) {
 		},
 	}
 	for entity, features := range entities {
-		if err := store.Put(entity, features); err != nil {
+		if err := store.Put(context.Background(), entity, features); err != nil {
 			t.Fatalf("Failed to seed data for %s: %v", entity, err)
 		}
 	}
@@ -745,7 +745,7 @@ func TestExporter_ExportPointInTime_WithStore(t *testing.T) {
 
 	now := time.Now()
 	// Store feature at two timestamps
-	err := store.Put("user:pit", map[string]*domain.FeatureValue{
+	err := store.Put(context.Background(), "user:pit", map[string]*domain.FeatureValue{
 		"score": {Value: float64(10), Timestamp: now.Add(-2 * time.Hour).UnixNano(), Version: 1},
 	})
 	if err != nil {
@@ -753,7 +753,7 @@ func TestExporter_ExportPointInTime_WithStore(t *testing.T) {
 	}
 	time.Sleep(50 * time.Millisecond)
 
-	err = store.Put("user:pit", map[string]*domain.FeatureValue{
+	err = store.Put(context.Background(), "user:pit", map[string]*domain.FeatureValue{
 		"score": {Value: float64(20), Timestamp: now.Add(-1 * time.Hour).UnixNano(), Version: 2},
 	})
 	if err != nil {

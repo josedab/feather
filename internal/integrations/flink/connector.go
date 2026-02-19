@@ -538,7 +538,7 @@ func (c *Connector) writeRecord(record StreamRecord) error {
 		}
 	}
 
-	return c.store.Put(record.EntityKey, features)
+	return c.store.Put(context.Background(), record.EntityKey, features)
 }
 
 func (c *Connector) updateWatermark(wm time.Time) {
@@ -842,7 +842,7 @@ func (s *Source) pollFeatures(ctx context.Context, output chan<- StreamRecord) e
 	}
 
 	for _, entity := range entities {
-		features, err := s.connector.store.Get(entity, s.config.Features)
+		features, err := s.connector.store.Get(ctx, entity, s.config.Features)
 		if err != nil {
 			continue
 		}

@@ -223,7 +223,7 @@ func (p *Pipeline) ExecuteAndStore(ctx context.Context, transformName string, en
 	p.mu.RUnlock()
 
 	// Store the computed feature
-	return p.store.Put(entityID, map[string]*domain.FeatureValue{
+	return p.store.Put(ctx, entityID, map[string]*domain.FeatureValue{
 		t.Output: {
 			Value:     result,
 			Timestamp: time.Now().UnixNano(),
@@ -248,7 +248,7 @@ func (p *Pipeline) ExecuteChain(ctx context.Context, outputFeature string, entit
 
 	if targetTransform == nil {
 		// Not a computed feature, try to get from store
-		values, err := p.store.Get(entityID, []string{outputFeature})
+		values, err := p.store.Get(ctx, entityID, []string{outputFeature})
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func (p *Pipeline) executeChainUnlocked(ctx context.Context, feature string, ent
 
 	if transform == nil {
 		// Raw feature, get from store
-		values, err := p.store.Get(entityID, []string{feature})
+		values, err := p.store.Get(ctx, entityID, []string{feature})
 		if err != nil {
 			return nil, err
 		}
@@ -310,7 +310,7 @@ func (p *Pipeline) executeChainUnlocked(ctx context.Context, feature string, ent
 }
 
 func (p *Pipeline) getInputs(ctx context.Context, entityID string, inputNames []string) (map[string]interface{}, error) {
-	values, err := p.store.Get(entityID, inputNames)
+	values, err := p.store.Get(ctx, entityID, inputNames)
 	if err != nil {
 		return nil, err
 	}

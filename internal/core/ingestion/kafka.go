@@ -238,7 +238,7 @@ func (k *KafkaConsumer) processMessage(msg *kafka.Message) error {
 		}
 	}
 
-	if err := k.store.Put(update.EntityKey, features); err != nil {
+	if err := k.store.Put(context.Background(), update.EntityKey, features); err != nil {
 		return fmt.Errorf("storing features: %w", err)
 	}
 

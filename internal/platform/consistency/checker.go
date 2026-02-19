@@ -133,7 +133,7 @@ func (c *Checker) CheckFeature(ctx context.Context, entityID string, featureName
 	}
 
 	// Get online value
-	onlineValues, err := c.onlineStore.Get(entityID, []string{featureName})
+	onlineValues, err := c.onlineStore.Get(ctx, entityID, []string{featureName})
 	if err != nil {
 		return nil, fmt.Errorf("getting online value: %w", err)
 	}

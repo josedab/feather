@@ -382,7 +382,7 @@ func (h *DashboardHandler) handleHealth(w http.ResponseWriter, r *http.Request) 
 	hotLatency := int64(0)
 	if h.store != nil {
 		start := time.Now()
-		_, _ = h.store.Get("__health_check__", []string{"__ping__"})
+		_, _ = h.store.Get(r.Context(), "__health_check__", []string{"__ping__"})
 		hotLatency = time.Since(start).Microseconds()
 	} else {
 		hotStatus = "unavailable"

@@ -273,7 +273,7 @@ func (m *QualityMonitor) CalculateScore(ctx context.Context, feature string, sam
 
 	// Check each entity
 	for _, entityID := range sampleEntities {
-		values, err := m.store.Get(entityID, []string{feature})
+		values, err := m.store.Get(ctx, entityID, []string{feature})
 		if err != nil {
 			continue
 		}

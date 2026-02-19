@@ -381,7 +381,7 @@ func (p *Pipeline) storeResult(ctx context.Context, entityKey, featureName strin
 
 	if p.store != nil {
 		// Store as vector feature
-		err := p.store.Put(entityKey, map[string]*domain.FeatureValue{
+		err := p.store.Put(ctx, entityKey, map[string]*domain.FeatureValue{
 			result.FeatureName: {
 				Value:     embedding,
 				Timestamp: time.Now().UnixNano(),

@@ -905,7 +905,7 @@ func (e *Engine) processBatch(ctx context.Context, job *Job, records []map[strin
 
 		// Apply sync strategy
 		if job.Spec.Strategy == SyncStrategyMerge {
-			existing, err := e.store.Get(entityKey, nil)
+			existing, err := e.store.Get(ctx, entityKey, nil)
 			if err == nil && len(existing) > 0 {
 				for name, existingVal := range existing {
 					if _, hasNew := features[name]; !hasNew {
@@ -916,7 +916,7 @@ func (e *Engine) processBatch(ctx context.Context, job *Job, records []map[strin
 		}
 
 		// Write to store
-		if err := e.store.Put(entityKey, features); err != nil {
+		if err := e.store.Put(ctx, entityKey, features); err != nil {
 			job.mu.Lock()
 			job.Progress.FailedRecords++
 			job.mu.Unlock()

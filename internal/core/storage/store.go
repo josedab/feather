@@ -59,13 +59,13 @@ import (
 // and swapping storage backends without modifying consumers.
 type FeatureStore interface {
 	// Get retrieves features for an entity, checking hot then warm tier.
-	Get(entityKey string, features []string) (map[string]*domain.FeatureValue, error)
+	Get(ctx context.Context, entityKey string, features []string) (map[string]*domain.FeatureValue, error)
 	// GetAsOf retrieves features as of a specific timestamp from the warm tier.
-	GetAsOf(entityKey string, features []string, asOf time.Time) (map[string]*domain.FeatureValue, error)
+	GetAsOf(ctx context.Context, entityKey string, features []string, asOf time.Time) (map[string]*domain.FeatureValue, error)
 	// Put stores features for an entity in both tiers.
-	Put(entityKey string, features map[string]*domain.FeatureValue) error
+	Put(ctx context.Context, entityKey string, features map[string]*domain.FeatureValue) error
 	// Delete removes an entity from the hot tier.
-	Delete(entityKey string) error
+	Delete(ctx context.Context, entityKey string) error
 	// Metrics returns current store performance metrics.
 	Metrics() StoreMetrics
 	// Close shuts down the store, flushing pending writes.
@@ -210,7 +210,7 @@ func NewStore(ctx context.Context, opts StoreOptions, schema SchemaRegistry) (*S
 }
 
 // Get retrieves features for an entity.
-func (s *Store) Get(entityKey string, features []string) (map[string]*domain.FeatureValue, error) {
+func (s *Store) Get(ctx context.Context, entityKey string, features []string) (map[string]*domain.FeatureValue, error) {
 	// Try hot tier first
 	result, err := s.hot.Get(entityKey, features)
 	if err != nil && !errors.Is(err, domain.ErrEntityNotFound) {
@@ -260,12 +260,12 @@ func (s *Store) Get(entityKey string, features []string) (map[string]*domain.Fea
 }
 
 // GetAsOf retrieves features as of a specific timestamp.
-func (s *Store) GetAsOf(entityKey string, features []string, asOf time.Time) (map[string]*domain.FeatureValue, error) {
+func (s *Store) GetAsOf(ctx context.Context, entityKey string, features []string, asOf time.Time) (map[string]*domain.FeatureValue, error) {
 	return s.warm.GetAsOf(entityKey, features, asOf)
 }
 
 // Put stores features for an entity in both tiers.
-func (s *Store) Put(entityKey string, features map[string]*domain.FeatureValue) error {
+func (s *Store) Put(ctx context.Context, entityKey string, features map[string]*domain.FeatureValue) error {
 	// Write to hot tier first
 	if err := s.hot.Put(entityKey, features); err != nil {
 		return fmt.Errorf("putting features to hot tier: %w", err)
@@ -278,7 +278,7 @@ func (s *Store) Put(entityKey string, features map[string]*domain.FeatureValue) 
 }
 
 // Delete removes an entity from both tiers.
-func (s *Store) Delete(entityKey string) error {
+func (s *Store) Delete(ctx context.Context, entityKey string) error {
 	if err := s.hot.Delete(entityKey); err != nil {
 		return fmt.Errorf("deleting entity from hot tier: %w", err)
 	}
