@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/feather-store/feather/internal/integrations/streaming"
@@ -246,10 +248,12 @@ func (h *StreamingHandler) handleStats(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
+var subCounter atomic.Uint64
+
 func generateSubscriptionID() string {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {
-		return "sub_fallback"
+		return fmt.Sprintf("sub_%d", subCounter.Add(1))
 	}
 	return "sub_" + hex.EncodeToString(bytes)
 }
