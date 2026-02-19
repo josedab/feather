@@ -2,6 +2,7 @@ package migrationcli
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -124,7 +125,14 @@ func (imp *Importer) ImportFeatureView(view FeastFeatureView) (*ImportResult, er
 	}
 
 	for _, f := range view.Features {
-		_ = MapValueType(f.ValueType)
+		mappedType := MapValueType(f.ValueType)
+		if mappedType != strings.ToUpper(f.ValueType) {
+			slog.Warn("feast value type mapped to default",
+				"feature", f.Name,
+				"feast_type", f.ValueType,
+				"mapped_type", mappedType,
+			)
+		}
 		result.FeaturesImported++
 	}
 
