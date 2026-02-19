@@ -25,30 +25,34 @@ func NewAuthHandler() *AuthHandler {
 }
 
 // RegisterRoutes registers auth API routes.
+// All auth management endpoints require authentication to prevent
+// unauthorized access to key/tenant/role management.
 func (h *AuthHandler) RegisterRoutes(mux *http.ServeMux) {
+	requireAuth := h.middleware.Authenticate
+
 	// API Keys
-	mux.HandleFunc("POST /v1/auth/keys", h.handleCreateAPIKey)
-	mux.HandleFunc("GET /v1/auth/keys", h.handleListAPIKeys)
-	mux.HandleFunc("GET /v1/auth/keys/{id}", h.handleGetAPIKey)
-	mux.HandleFunc("DELETE /v1/auth/keys/{id}", h.handleDeleteAPIKey)
-	mux.HandleFunc("POST /v1/auth/keys/{id}/revoke", h.handleRevokeAPIKey)
-	mux.HandleFunc("POST /v1/auth/validate", h.handleValidateAPIKey)
+	mux.Handle("POST /v1/auth/keys", requireAuth(http.HandlerFunc(h.handleCreateAPIKey)))
+	mux.Handle("GET /v1/auth/keys", requireAuth(http.HandlerFunc(h.handleListAPIKeys)))
+	mux.Handle("GET /v1/auth/keys/{id}", requireAuth(http.HandlerFunc(h.handleGetAPIKey)))
+	mux.Handle("DELETE /v1/auth/keys/{id}", requireAuth(http.HandlerFunc(h.handleDeleteAPIKey)))
+	mux.Handle("POST /v1/auth/keys/{id}/revoke", requireAuth(http.HandlerFunc(h.handleRevokeAPIKey)))
+	mux.Handle("POST /v1/auth/validate", requireAuth(http.HandlerFunc(h.handleValidateAPIKey)))
 
 	// Tenants
-	mux.HandleFunc("POST /v1/auth/tenants", h.handleCreateTenant)
-	mux.HandleFunc("GET /v1/auth/tenants", h.handleListTenants)
-	mux.HandleFunc("GET /v1/auth/tenants/{id}", h.handleGetTenant)
-	mux.HandleFunc("PUT /v1/auth/tenants/{id}", h.handleUpdateTenant)
-	mux.HandleFunc("DELETE /v1/auth/tenants/{id}", h.handleDeleteTenant)
+	mux.Handle("POST /v1/auth/tenants", requireAuth(http.HandlerFunc(h.handleCreateTenant)))
+	mux.Handle("GET /v1/auth/tenants", requireAuth(http.HandlerFunc(h.handleListTenants)))
+	mux.Handle("GET /v1/auth/tenants/{id}", requireAuth(http.HandlerFunc(h.handleGetTenant)))
+	mux.Handle("PUT /v1/auth/tenants/{id}", requireAuth(http.HandlerFunc(h.handleUpdateTenant)))
+	mux.Handle("DELETE /v1/auth/tenants/{id}", requireAuth(http.HandlerFunc(h.handleDeleteTenant)))
 
 	// Roles
-	mux.HandleFunc("POST /v1/auth/roles", h.handleCreateRole)
-	mux.HandleFunc("GET /v1/auth/roles", h.handleListRoles)
-	mux.HandleFunc("GET /v1/auth/roles/{name}", h.handleGetRole)
-	mux.HandleFunc("DELETE /v1/auth/roles/{name}", h.handleDeleteRole)
+	mux.Handle("POST /v1/auth/roles", requireAuth(http.HandlerFunc(h.handleCreateRole)))
+	mux.Handle("GET /v1/auth/roles", requireAuth(http.HandlerFunc(h.handleListRoles)))
+	mux.Handle("GET /v1/auth/roles/{name}", requireAuth(http.HandlerFunc(h.handleGetRole)))
+	mux.Handle("DELETE /v1/auth/roles/{name}", requireAuth(http.HandlerFunc(h.handleDeleteRole)))
 
 	// Audit logs
-	mux.HandleFunc("GET /v1/auth/audit", h.handleGetAuditLogs)
+	mux.Handle("GET /v1/auth/audit", requireAuth(http.HandlerFunc(h.handleGetAuditLogs)))
 }
 
 // GetController returns the access controller for integration.
@@ -87,9 +91,11 @@ func (h *AuthHandler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	createdBy := r.Header.Get("X-User-ID")
-	if createdBy == "" {
-		createdBy = "anonymous"
+	// Derive identity from authenticated API key context, not from
+	// spoofable X-User-ID header.
+	createdBy := "system"
+	if key := auth.APIKeyFromContext(r.Context()); key != nil {
+		createdBy = key.Name
 	}
 
 	// Parse expiration

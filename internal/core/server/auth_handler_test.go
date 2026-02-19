@@ -7,16 +7,20 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/feather-store/feather/internal/platform/auth"
 )
 
 // testAuthServer wraps an AuthHandler for testing.
 type testAuthServer struct {
 	*AuthHandler
-	mux *http.ServeMux
-	t   *testing.T
+	mux    *http.ServeMux
+	t      *testing.T
+	apiKey string // raw API key for authenticated requests
 }
 
-// newTestAuthServer creates a new test auth server.
+// newTestAuthServer creates a new test auth server with a pre-configured
+// API key so tests can authenticate against the protected endpoints.
 func newTestAuthServer(t *testing.T) *testAuthServer {
 	t.Helper()
 
@@ -24,10 +28,27 @@ func newTestAuthServer(t *testing.T) *testAuthServer {
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
 
+	// Bootstrap an admin API key for test authentication.
+	controller := handler.GetController()
+	_ = controller.CreateTenant(&auth.Tenant{
+		ID:      "test-tenant",
+		Name:    "Test Tenant",
+		Enabled: true,
+	})
+	rawKey, err := controller.CreateAPIKey(&auth.APIKey{
+		Name:        "test-admin",
+		Tenant:      "test-tenant",
+		Permissions: []auth.Permission{auth.PermAdmin},
+	}, "test-setup")
+	if err != nil {
+		t.Fatalf("failed to create test API key: %v", err)
+	}
+
 	return &testAuthServer{
 		AuthHandler: handler,
 		mux:         mux,
 		t:           t,
+		apiKey:      rawKey,
 	}
 }
 
@@ -44,6 +65,7 @@ func (ts *testAuthServer) request(method, path string, body string) *httptest.Re
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	req.Header.Set("Authorization", "Bearer "+ts.apiKey)
 
 	rr := httptest.NewRecorder()
 	ts.mux.ServeHTTP(rr, req)
