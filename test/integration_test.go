@@ -63,7 +63,7 @@ func TestIntegration_EndToEnd(t *testing.T) {
 	defer store.Close()
 
 	// Create HTTP server
-	httpServer := server.NewHTTPServer(
+	httpServer, err := server.NewHTTPServer(
 		context.Background(), store, agg, schema, nil,
 		server.HTTPServerConfig{
 			Core: server.HTTPServerCoreConfig{
@@ -73,6 +73,9 @@ func TestIntegration_EndToEnd(t *testing.T) {
 			},
 		},
 	)
+	if err != nil {
+		t.Fatalf("Failed to create HTTP server: %v", err)
+	}
 
 	// Test 1: Store features via HTTP
 	t.Run("StoreFeatures", func(t *testing.T) {

@@ -130,7 +130,7 @@ func BenchmarkHTTP_GetFeatures(b *testing.B) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+	httpServer, _ := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
 		Core: server.HTTPServerCoreConfig{
 			Port:         0,
 			ReadTimeout:  10 * time.Second,
@@ -170,7 +170,7 @@ func BenchmarkHTTP_PostFeatures(b *testing.B) {
 	}
 	defer store.Close()
 
-	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+	httpServer, _ := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
 		Core: server.HTTPServerCoreConfig{
 			Port:         0,
 			ReadTimeout:  10 * time.Second,
@@ -262,7 +262,7 @@ func TestLatencyP99(t *testing.T) {
 		}
 	}
 
-	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+	httpServer, _ := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
 		Core: server.HTTPServerCoreConfig{
 			Port:         0,
 			ReadTimeout:  10 * time.Second,
@@ -347,7 +347,7 @@ func TestLatencyP99_Concurrent(t *testing.T) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+	httpServer, _ := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
 		Core: server.HTTPServerCoreConfig{
 			Port:         0,
 			ReadTimeout:  10 * time.Second,
@@ -518,7 +518,7 @@ func BenchmarkBatchGet(b *testing.B) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+	httpServer, _ := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
 		Core: server.HTTPServerCoreConfig{
 			Port:         0,
 			ReadTimeout:  10 * time.Second,
@@ -577,7 +577,7 @@ func TestThroughput(t *testing.T) {
 		store.Put(entityKey, features)
 	}
 
-	httpServer := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
+	httpServer, _ := server.NewHTTPServer(context.Background(), store, agg, schema, nil, server.HTTPServerConfig{
 		Core: server.HTTPServerCoreConfig{
 			Port:         0,
 			ReadTimeout:  10 * time.Second,

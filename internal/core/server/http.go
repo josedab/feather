@@ -171,7 +171,7 @@ func NewHTTPServer(
 	schema *storage.Registry,
 	m *metrics.Metrics,
 	cfg HTTPServerConfig,
-) *HTTPServer {
+) (*HTTPServer, error) {
 	mux := http.NewServeMux()
 
 	s := &HTTPServer{
@@ -238,20 +238,19 @@ func NewHTTPServer(
 		MaxHeaderBytes: 1 << 20, // 1MB - prevent header bomb DoS
 	}
 
-	// Configure TLS if enabled (fail-closed: panic if TLS config is invalid
-	// to prevent accidentally serving plaintext when TLS was requested).
+	// Configure TLS if enabled
 	s.tlsConfig = cfg.Core.TLS
 	if cfg.Core.TLS != nil && cfg.Core.TLS.Enabled {
 		tlsConfig, err := cfg.Core.TLS.BuildTLSConfig()
 		if err != nil {
-			panic(fmt.Sprintf("TLS enabled but config is invalid: %v", err))
+			return nil, fmt.Errorf("TLS enabled but config is invalid: %w", err)
 		}
 		if tlsConfig != nil {
 			s.server.TLSConfig = tlsConfig
 		}
 	}
 
-	return s
+	return s, nil
 }
 
 func (s *HTTPServer) registerRoutes() {

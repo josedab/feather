@@ -195,7 +195,7 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 
 	// Start HTTP server with health checker
 	healthChecker := server.NewHealthChecker(store, agg, schema)
-	httpServer := server.NewHTTPServer(
+	httpServer, err := server.NewHTTPServer(
 		ctx, store, agg, schema, m,
 		server.HTTPServerConfig{
 			Core: server.HTTPServerCoreConfig{
@@ -226,6 +226,9 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			},
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("creating HTTP server: %w", err)
+	}
 	serverMgr.Register("http", httpServer)
 
 	go func() {

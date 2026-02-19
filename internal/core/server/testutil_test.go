@@ -38,7 +38,7 @@ func newTestServer(t *testing.T) *testServer {
 	agg := aggregation.NewEngine()
 	healthChecker := NewHealthChecker(store, agg, schema)
 
-	srv := NewHTTPServer(context.Background(), store, agg, schema, nil, HTTPServerConfig{
+	srv, err := NewHTTPServer(context.Background(), store, agg, schema, nil, HTTPServerConfig{
 		Core: HTTPServerCoreConfig{
 			Port:          0,
 			ReadTimeout:   5 * time.Second,
@@ -46,6 +46,9 @@ func newTestServer(t *testing.T) *testServer {
 			HealthChecker: healthChecker,
 		},
 	})
+	if err != nil {
+		t.Fatalf("failed to create HTTP server: %v", err)
+	}
 
 	t.Cleanup(func() {
 		store.Close()
