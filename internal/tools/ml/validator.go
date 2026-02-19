@@ -258,7 +258,12 @@ func (v *ServingValidator) ValidateAsync(ctx context.Context, modelID string, fe
 	}
 
 	go func() {
-		if _, err := v.Validate(ctx, modelID, features); err != nil {
+		// Use a detached context with timeout so this goroutine does not
+		// outlive the parent request or leak when the caller's context is
+		// cancelled.
+		asyncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if _, err := v.Validate(asyncCtx, modelID, features); err != nil {
 			slog.Debug("async validation failed", "model", modelID, "error", err)
 		}
 	}()
