@@ -11,7 +11,10 @@ func TestDPMechanism_AddNoise(t *testing.T) {
 	original := 0.5
 	noisyCount := 0
 	for i := 0; i < 100; i++ {
-		noisy := dp.AddNoise(original)
+		noisy, err := dp.AddNoise(original)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if noisy != original {
 			noisyCount++
 		}
@@ -30,7 +33,10 @@ func TestDPMechanism_AddNoiseLaplace(t *testing.T) {
 	original := 0.5
 	noisyCount := 0
 	for i := 0; i < 100; i++ {
-		noisy := dp.AddNoise(original)
+		noisy, err := dp.AddNoise(original)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if noisy != original {
 			noisyCount++
 		}
@@ -45,7 +51,10 @@ func TestDPMechanism_AddNoiseVector(t *testing.T) {
 	dp := NewDPMechanism(DefaultDPConfig())
 
 	values := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
-	noisy := dp.AddNoiseVector(values)
+	noisy, err := dp.AddNoiseVector(values)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	if len(noisy) != len(values) {
 		t.Fatalf("expected %d values, got %d", len(values), len(noisy))

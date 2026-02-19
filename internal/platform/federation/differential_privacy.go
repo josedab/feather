@@ -43,7 +43,7 @@ func NewDPMechanism(config DPConfig) *DPMechanism {
 }
 
 // AddNoise adds calibrated noise to a value based on the configured mechanism.
-func (dp *DPMechanism) AddNoise(value float64) float64 {
+func (dp *DPMechanism) AddNoise(value float64) (float64, error) {
 	sensitivity := dp.config.ClipBounds[1] - dp.config.ClipBounds[0]
 	if sensitivity <= 0 {
 		sensitivity = 1.0
@@ -51,19 +51,31 @@ func (dp *DPMechanism) AddNoise(value float64) float64 {
 
 	switch dp.config.NoiseType {
 	case "laplace":
-		return value + dp.laplaceNoise(sensitivity)
+		noise, err := dp.laplaceNoise(sensitivity)
+		if err != nil {
+			return 0, err
+		}
+		return value + noise, nil
 	default: // gaussian
-		return value + dp.gaussianNoise(sensitivity)
+		noise, err := dp.gaussianNoise(sensitivity)
+		if err != nil {
+			return 0, err
+		}
+		return value + noise, nil
 	}
 }
 
 // AddNoiseVector adds calibrated noise to each element of a vector.
-func (dp *DPMechanism) AddNoiseVector(values []float64) []float64 {
+func (dp *DPMechanism) AddNoiseVector(values []float64) ([]float64, error) {
 	result := make([]float64, len(values))
 	for i, v := range values {
-		result[i] = dp.AddNoise(v)
+		noisy, err := dp.AddNoise(v)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = noisy
 	}
-	return result
+	return result, nil
 }
 
 // ClipValue clips a value to the configured bounds.
@@ -105,44 +117,57 @@ func (dp *DPMechanism) Config() DPConfig {
 }
 
 // laplaceNoise generates Laplace noise using crypto/rand.
-func (dp *DPMechanism) laplaceNoise(sensitivity float64) float64 {
+func (dp *DPMechanism) laplaceNoise(sensitivity float64) (float64, error) {
 	scale := sensitivity / dp.config.Epsilon
-	u := dp.cryptoRandFloat64() - 0.5
+	u, err := dp.cryptoRandFloat64()
+	if err != nil {
+		return 0, fmt.Errorf("generating laplace noise: %w", err)
+	}
+	u -= 0.5
 	sign := 1.0
 	if u < 0 {
 		sign = -1.0
 	}
-	return -sign * scale * math.Log(1-2*math.Abs(u))
+	return -sign * scale * math.Log(1-2*math.Abs(u)), nil
 }
 
 // gaussianNoise generates Gaussian noise using crypto/rand via Box-Muller.
-func (dp *DPMechanism) gaussianNoise(sensitivity float64) float64 {
+func (dp *DPMechanism) gaussianNoise(sensitivity float64) (float64, error) {
 	sigma := sensitivity * math.Sqrt(2*math.Log(1.25/dp.config.Delta)) / dp.config.Epsilon
 
-	u1 := dp.cryptoRandFloat64()
-	u2 := dp.cryptoRandFloat64()
+	u1, err := dp.cryptoRandFloat64()
+	if err != nil {
+		return 0, fmt.Errorf("generating gaussian noise: %w", err)
+	}
+	u2, err := dp.cryptoRandFloat64()
+	if err != nil {
+		return 0, fmt.Errorf("generating gaussian noise: %w", err)
+	}
 	// Avoid log(0)
 	for u1 == 0 {
-		u1 = dp.cryptoRandFloat64()
+		u1, err = dp.cryptoRandFloat64()
+		if err != nil {
+			return 0, fmt.Errorf("generating gaussian noise: %w", err)
+		}
 	}
 	normal := math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2)
-	return normal * sigma
+	return normal * sigma, nil
 }
 
 // cryptoRandFloat64 returns a cryptographically random float64 in [0, 1).
-func (dp *DPMechanism) cryptoRandFloat64() float64 {
+func (dp *DPMechanism) cryptoRandFloat64() (float64, error) {
 	max := big.NewInt(1 << 53)
 	n, err := rand.Int(rand.Reader, max)
 	if err != nil {
 		// Fallback: read 8 bytes from crypto/rand
 		var buf [8]byte
 		if _, readErr := rand.Read(buf[:]); readErr != nil {
-			return 0 // safe fallback for privacy noise
+			return 0, fmt.Errorf("crypto/rand unavailable: %w", readErr)
 		}
 		bits := binary.LittleEndian.Uint64(buf[:])
-		return float64(bits>>11) / float64(1<<53)
+		return float64(bits>>11) / float64(1<<53), nil
 	}
-	return float64(n.Int64()) / float64(1<<53)
+	return float64(n.Int64()) / float64(1<<53), nil
 }
 
 // DPBudget tracks cumulative privacy spend.
