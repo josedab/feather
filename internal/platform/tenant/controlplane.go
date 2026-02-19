@@ -2,6 +2,7 @@ package tenant
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -150,7 +151,7 @@ func (cp *ControlPlane) CreateAPIKey(tenantID, name string, permissions []string
 		TenantID:    tenantID,
 		Name:        name,
 		KeyPrefix:   rawKey[:8],
-		KeyHash:     rawKey, // In production, hash with bcrypt
+		KeyHash:     hashAPIKey(rawKey),
 		Permissions: permissions,
 		CreatedAt:   time.Now(),
 	}
@@ -160,6 +161,11 @@ func (cp *ControlPlane) CreateAPIKey(tenantID, name string, permissions []string
 
 	cp.apiKeys[key.ID] = key
 	return key, rawKey, nil
+}
+
+func hashAPIKey(key string) string {
+	h := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])
 }
 
 // RevokeAPIKey revokes an API key.
