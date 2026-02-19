@@ -155,10 +155,11 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	// Start Prometheus metrics server
 	if cfg.Metrics.Prometheus.Enabled {
 		metricsServer := &http.Server{
-			Addr:         fmt.Sprintf(":%d", cfg.Metrics.Prometheus.Port),
-			Handler:      m.Handler(),
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
+			Addr:           fmt.Sprintf(":%d", cfg.Metrics.Prometheus.Port),
+			Handler:        m.Handler(),
+			ReadTimeout:    5 * time.Second,
+			WriteTimeout:   10 * time.Second,
+			MaxHeaderBytes: 1 << 20, // 1MB
 		}
 
 		// Configure TLS if enabled (fail-closed: TLS errors are fatal when TLS is enabled)
@@ -263,10 +264,11 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 		httpIngestion.RegisterRoutes(mux)
 
 		ingestionServer = &http.Server{
-			Addr:         fmt.Sprintf(":%d", cfg.Ingestion.HTTP.Port),
-			Handler:      mux,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 30 * time.Second,
+			Addr:           fmt.Sprintf(":%d", cfg.Ingestion.HTTP.Port),
+			Handler:        mux,
+			ReadTimeout:    10 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			MaxHeaderBytes: 1 << 20, // 1MB
 		}
 
 		// Configure TLS if enabled (fail-closed: TLS errors are fatal when TLS is enabled)

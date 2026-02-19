@@ -231,17 +231,22 @@ func NewHTTPServer(
 	handler = panicRecoveryMiddleware(handler)
 
 	s.server = &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Core.Port),
-		Handler:      handler,
-		ReadTimeout:  cfg.Core.ReadTimeout,
-		WriteTimeout: cfg.Core.WriteTimeout,
+		Addr:           fmt.Sprintf(":%d", cfg.Core.Port),
+		Handler:        handler,
+		ReadTimeout:    cfg.Core.ReadTimeout,
+		WriteTimeout:   cfg.Core.WriteTimeout,
+		MaxHeaderBytes: 1 << 20, // 1MB - prevent header bomb DoS
 	}
 
-	// Configure TLS if enabled
+	// Configure TLS if enabled (fail-closed: panic if TLS config is invalid
+	// to prevent accidentally serving plaintext when TLS was requested).
 	s.tlsConfig = cfg.Core.TLS
 	if cfg.Core.TLS != nil && cfg.Core.TLS.Enabled {
 		tlsConfig, err := cfg.Core.TLS.BuildTLSConfig()
-		if err == nil && tlsConfig != nil {
+		if err != nil {
+			panic(fmt.Sprintf("TLS enabled but config is invalid: %v", err))
+		}
+		if tlsConfig != nil {
 			s.server.TLSConfig = tlsConfig
 		}
 	}
