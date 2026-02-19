@@ -110,7 +110,12 @@ func (c *RedshiftConnector) Connect(ctx context.Context) error {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		c.state = ConnectionStateFailed
-		return fmt.Errorf("connecting to redshift: %w", err)
+		// Log masked DSN to prevent credential leaks
+		maskedDSN := fmt.Sprintf("host=%s port=%d dbname=%s user=%s password=***** sslmode=%s",
+			c.config.Host, c.config.Port, c.config.Database,
+			c.config.User, c.config.SSLMode,
+		)
+		return fmt.Errorf("connecting to redshift (dsn=%s): %w", maskedDSN, err)
 	}
 
 	maxConns := c.config.MaxConnections
