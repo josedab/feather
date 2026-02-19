@@ -154,7 +154,12 @@ func (h *EmbeddingMgmtHandler) handleSearch(w http.ResponseWriter, r *http.Reque
 	topK := req.TopK
 	if topK <= 0 {
 		if k := r.URL.Query().Get("top_k"); k != "" {
-			topK, _ = strconv.Atoi(k)
+			v, err := strconv.Atoi(k)
+			if err != nil {
+				h.writeError(r.Context(), w, http.StatusBadRequest, "invalid top_k parameter")
+				return
+			}
+			topK = v
 		}
 	}
 

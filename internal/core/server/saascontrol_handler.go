@@ -174,7 +174,12 @@ func (h *SaaSControlHandler) handleScaleInstance(w http.ResponseWriter, r *http.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		// Try query param
 		if rStr := r.URL.Query().Get("replicas"); rStr != "" {
-			req.Replicas, _ = strconv.Atoi(rStr)
+			v, err := strconv.Atoi(rStr)
+			if err != nil {
+				h.writeError(r.Context(), w, http.StatusBadRequest, "invalid replicas parameter")
+				return
+			}
+			req.Replicas = v
 		}
 	}
 
