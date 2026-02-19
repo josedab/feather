@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -85,7 +86,9 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 
 	pw, err := writer.NewParquetWriter(fw, new(FeatureRecord), 4)
 	if err != nil {
-		_ = fw.Close()
+		if closeErr := fw.Close(); closeErr != nil {
+			slog.Error("parquet: failed to close file writer during cleanup", "error", closeErr)
+		}
 		return fmt.Errorf("creating parquet writer: %w", err)
 	}
 
@@ -96,8 +99,12 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 		// Convert features map to JSON
 		featuresJSON, marshalErr := json.Marshal(row.Features)
 		if marshalErr != nil {
-			_ = pw.WriteStop()
-			_ = fw.Close()
+			if stopErr := pw.WriteStop(); stopErr != nil {
+				slog.Error("parquet: failed to stop writer during cleanup", "error", stopErr)
+			}
+			if closeErr := fw.Close(); closeErr != nil {
+				slog.Error("parquet: failed to close file writer during cleanup", "error", closeErr)
+			}
 			return fmt.Errorf("marshaling features: %w", marshalErr)
 		}
 
@@ -108,14 +115,20 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 		}
 
 		if err = pw.Write(record); err != nil {
-			_ = pw.WriteStop()
-			_ = fw.Close()
+			if stopErr := pw.WriteStop(); stopErr != nil {
+				slog.Error("parquet: failed to stop writer during cleanup", "error", stopErr)
+			}
+			if closeErr := fw.Close(); closeErr != nil {
+				slog.Error("parquet: failed to close file writer during cleanup", "error", closeErr)
+			}
 			return fmt.Errorf("writing record: %w", err)
 		}
 	}
 
 	if err = pw.WriteStop(); err != nil {
-		_ = fw.Close()
+		if closeErr := fw.Close(); closeErr != nil {
+			slog.Error("parquet: failed to close file writer during cleanup", "error", closeErr)
+		}
 		return fmt.Errorf("finalizing parquet: %w", err)
 	}
 	if err = fw.Close(); err != nil {
@@ -166,12 +179,16 @@ func writeEmptyParquet(w io.Writer) error {
 
 	pw, err := writer.NewParquetWriter(fw, new(FeatureRecord), 4)
 	if err != nil {
-		_ = fw.Close()
+		if closeErr := fw.Close(); closeErr != nil {
+			slog.Error("parquet: failed to close file writer during cleanup", "error", closeErr)
+		}
 		return fmt.Errorf("creating parquet writer: %w", err)
 	}
 
 	if err = pw.WriteStop(); err != nil {
-		_ = fw.Close()
+		if closeErr := fw.Close(); closeErr != nil {
+			slog.Error("parquet: failed to close file writer during cleanup", "error", closeErr)
+		}
 		return fmt.Errorf("finalizing parquet: %w", err)
 	}
 	if err = fw.Close(); err != nil {
