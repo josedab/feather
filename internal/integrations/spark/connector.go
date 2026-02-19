@@ -1141,8 +1141,9 @@ func (c *Connector) importCSV(ctx context.Context, req *ImportRequest, result *I
 		result.BytesRead = stat.Size()
 	}
 
-	// Read entire file content
-	content, err := io.ReadAll(file)
+	// Read entire file content (limited to prevent memory exhaustion)
+	const maxImportFileSize = 512 << 20 // 512MB
+	content, err := io.ReadAll(io.LimitReader(file, maxImportFileSize))
 	if err != nil {
 		return fmt.Errorf("reading file: %w", err)
 	}
