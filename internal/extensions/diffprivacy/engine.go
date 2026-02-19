@@ -1,9 +1,10 @@
 package diffprivacy
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"math"
-	"math/rand"
 	"sync"
 	"time"
 )
@@ -84,7 +85,6 @@ type featureState struct {
 type Engine struct {
 	mu       sync.RWMutex
 	cfg      Config
-	rng      *rand.Rand
 	features map[string]*featureState
 	stats    Stats
 }
@@ -93,7 +93,6 @@ type Engine struct {
 func NewEngine(cfg Config) *Engine {
 	return &Engine{
 		cfg:      cfg,
-		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
 		features: make(map[string]*featureState),
 		stats: Stats{
 			MechanismCounts: make(map[Mechanism]int64),
@@ -354,11 +353,33 @@ func (e *Engine) applyMechanism(m Mechanism, value, sensitivity, epsilon, delta 
 	}
 }
 
+// cryptoFloat64 returns a cryptographically secure random float64 in [0, 1).
+func cryptoFloat64() float64 {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	// Use 53 bits of entropy for a uniform float64 in [0, 1).
+	return float64(binary.LittleEndian.Uint64(b[:])>>11) / (1 << 53)
+}
+
+// cryptoNormFloat64 returns a cryptographically secure normally distributed
+// float64 using the Box-Muller transform.
+func cryptoNormFloat64() float64 {
+	u1 := cryptoFloat64()
+	u2 := cryptoFloat64()
+	// Avoid log(0) by clamping u1 away from zero.
+	for u1 == 0 {
+		u1 = cryptoFloat64()
+	}
+	return math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2)
+}
+
 // laplace adds Laplace noise scaled to sensitivity/epsilon.
 func (e *Engine) laplace(value, sensitivity, epsilon float64) float64 {
 	scale := sensitivity / epsilon
 	// Laplace noise via inverse CDF: L(0, scale) = -scale * sign(u) * ln(1 - 2|u|)
-	u := e.rng.Float64() - 0.5
+	u := cryptoFloat64() - 0.5
 	noise := -scale * math.Copysign(1, u) * math.Log(1-2*math.Abs(u))
 	return value + noise
 }
@@ -366,7 +387,7 @@ func (e *Engine) laplace(value, sensitivity, epsilon float64) float64 {
 // gaussian adds Gaussian noise calibrated so the mechanism satisfies (ε, δ)-DP.
 func (e *Engine) gaussian(value, sensitivity, epsilon, delta float64) float64 {
 	sigma := sensitivity * math.Sqrt(2*math.Log(1.25/delta)) / epsilon
-	noise := e.rng.NormFloat64() * sigma
+	noise := cryptoNormFloat64() * sigma
 	return value + noise
 }
 
@@ -376,7 +397,7 @@ func (e *Engine) gaussian(value, sensitivity, epsilon, delta float64) float64 {
 func (e *Engine) randomizedResponse(value, epsilon float64) float64 {
 	truthful := value > 0.5
 	p := math.Exp(epsilon) / (math.Exp(epsilon) + 1) // probability of telling truth
-	if e.rng.Float64() < p {
+	if cryptoFloat64() < p {
 		if truthful {
 			return 1.0
 		}
