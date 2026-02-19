@@ -692,10 +692,17 @@ func (s *HTTPServer) writeErrorWithHint(ctx context.Context, w http.ResponseWrit
 }
 
 // writeErrorFromErr writes an error response, deriving the error code from the error type.
+// For internal server errors, a generic message is returned to avoid leaking
+// implementation details. The original error is logged server-side.
 func (s *HTTPServer) writeErrorFromErr(ctx context.Context, w http.ResponseWriter, err error) {
 	code := domain.ErrorToCode(err)
 	status := errorCodeToStatus(code)
-	s.writeErrorWithCode(ctx, w, status, code, err.Error())
+	msg := err.Error()
+	if status == http.StatusInternalServerError {
+		logging.FromContext(ctx, nil).Error("internal error", "error", err)
+		msg = "internal server error"
+	}
+	s.writeErrorWithCode(ctx, w, status, code, msg)
 }
 
 // errorCodeToStatus maps error codes to HTTP status codes.

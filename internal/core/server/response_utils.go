@@ -42,6 +42,12 @@ func writeJSONResponse(ctx context.Context, w http.ResponseWriter, status int, d
 }
 
 // writeJSONError writes a JSON error response with proper error handling.
+// For 5xx status codes, the original message is logged server-side and a
+// generic message is returned to the client to avoid leaking internals.
 func writeJSONError(ctx context.Context, w http.ResponseWriter, status int, message string) {
+	if status >= 500 {
+		logging.FromContext(ctx, nil).Error("internal error", "status", status, "detail", message)
+		message = "internal server error"
+	}
 	writeJSONResponse(ctx, w, status, ErrorResponse{Error: message})
 }
