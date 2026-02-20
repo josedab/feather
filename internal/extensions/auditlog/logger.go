@@ -3,7 +3,7 @@ package auditlog
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -108,7 +108,7 @@ func NewLogger(config LoggerConfig) *Logger {
 	if config.FilePath != "" {
 		f, err := os.OpenFile(config.FilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Printf("auditlog: failed to open file %s, proceeding in-memory only: %v", config.FilePath, err)
+			slog.Warn("auditlog: failed to open file, proceeding in-memory only", "path", config.FilePath, "error", err)
 		} else {
 			l.file = f
 		}
@@ -153,7 +153,7 @@ func (l *Logger) Log(entry AuditEntry) error {
 		if err == nil {
 			data = append(data, '\n')
 			if _, writeErr := l.file.Write(data); writeErr != nil {
-				log.Printf("auditlog: failed to write entry to file: %v", writeErr)
+				slog.Error("auditlog: failed to write entry to file", "error", writeErr)
 			}
 		}
 	}
