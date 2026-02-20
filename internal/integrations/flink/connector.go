@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -127,9 +128,15 @@ type Config struct {
 }
 
 // DefaultConfig returns the default Flink connector configuration.
+// The JobManager address can be overridden via the FEATHER_FLINK_JOBMANAGER_ADDR
+// environment variable.
 func DefaultConfig() Config {
+	jobManagerAddr := "localhost:8081"
+	if v := os.Getenv("FEATHER_FLINK_JOBMANAGER_ADDR"); v != "" {
+		jobManagerAddr = v
+	}
 	return Config{
-		JobManagerAddress:  "localhost:8081",
+		JobManagerAddress:  jobManagerAddr,
 		TaskSlots:          4,
 		Parallelism:        4,
 		BufferSize:         10000,

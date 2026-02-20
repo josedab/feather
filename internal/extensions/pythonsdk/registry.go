@@ -2,6 +2,7 @@ package pythonsdk
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -70,10 +71,16 @@ type RegistryConfig struct {
 }
 
 // DefaultRegistryConfig returns sensible defaults.
+// The worker endpoint can be overridden via the FEATHER_PYTHON_WORKER_ENDPOINT
+// environment variable.
 func DefaultRegistryConfig() RegistryConfig {
+	endpoint := "localhost:50052"
+	if v := os.Getenv("FEATHER_PYTHON_WORKER_ENDPOINT"); v != "" {
+		endpoint = v
+	}
 	return RegistryConfig{
 		MaxTransforms:    10000,
-		WorkerEndpoint:   "localhost:50052",
+		WorkerEndpoint:   endpoint,
 		ExecutionTimeout: 30 * time.Second,
 	}
 }

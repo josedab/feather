@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -33,11 +34,17 @@ type MeshConfig struct {
 }
 
 // DefaultMeshConfig returns sensible defaults for mesh configuration.
+// The AdvertiseAddr can be overridden via the FEATHER_MESH_ADVERTISE_ADDR
+// environment variable.
 func DefaultMeshConfig() MeshConfig {
+	advertiseAddr := "127.0.0.1:7946"
+	if v := os.Getenv("FEATHER_MESH_ADVERTISE_ADDR"); v != "" {
+		advertiseAddr = v
+	}
 	return MeshConfig{
 		NodeID:                  "node-1",
 		ListenAddr:              ":7946",
-		AdvertiseAddr:           "127.0.0.1:7946",
+		AdvertiseAddr:           advertiseAddr,
 		HealthCheckInterval:     5 * time.Second,
 		CircuitBreakerThreshold: 5,
 		RetryPolicy:             "exponential",

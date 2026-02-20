@@ -3,6 +3,7 @@ package starlarkudf
 import (
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -595,9 +596,15 @@ type SidecarConfig struct {
 }
 
 // DefaultSidecarConfig returns defaults for the Python sidecar.
+// The address can be overridden via the FEATHER_STARLARK_SIDECAR_ADDR
+// environment variable.
 func DefaultSidecarConfig() SidecarConfig {
+	addr := "localhost:50060"
+	if v := os.Getenv("FEATHER_STARLARK_SIDECAR_ADDR"); v != "" {
+		addr = v
+	}
 	return SidecarConfig{
-		Address:       "localhost:50060",
+		Address:       addr,
 		TimeoutMs:     5000,
 		MaxConcurrent: 16,
 		Enabled:       false,

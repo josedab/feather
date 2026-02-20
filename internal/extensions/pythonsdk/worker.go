@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 )
@@ -49,9 +50,15 @@ type WorkerPoolConfig struct {
 }
 
 // DefaultWorkerPoolConfig returns sensible defaults for the worker pool.
+// The default endpoint can be overridden via the FEATHER_PYTHON_WORKER_ENDPOINT
+// environment variable.
 func DefaultWorkerPoolConfig() WorkerPoolConfig {
+	endpoint := "localhost:50052"
+	if v := os.Getenv("FEATHER_PYTHON_WORKER_ENDPOINT"); v != "" {
+		endpoint = v
+	}
 	return WorkerPoolConfig{
-		Endpoints:       []string{"localhost:50052"},
+		Endpoints:       []string{endpoint},
 		MaxConcurrent:   100,
 		ConnectTimeout:  5 * time.Second,
 		RequestTimeout:  30 * time.Second,
