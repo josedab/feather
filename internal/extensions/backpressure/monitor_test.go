@@ -144,3 +144,90 @@ func TestStats(t *testing.T) {
 		t.Errorf("expected 1 report, got %d", len(reports))
 	}
 }
+
+func TestLowPressure(t *testing.T) {
+	m := NewMonitor(MonitorConfig{
+		QueueHighWatermark: 0.8,
+		LatencyThresholdMs: 100,
+		ErrorRateThreshold: 0.05,
+		MaxSamples:         1000,
+		CooldownPeriod:     0,
+	})
+
+	// Record moderately elevated queue depth only
+	for i := 0; i < 20; i++ {
+		m.RecordQueueDepth(0.85)
+		m.RecordLatency(10)
+		m.RecordErrorRate(0.001)
+	}
+
+	report := m.Evaluate()
+	if report.Level == None {
+		t.Error("expected some pressure level when queue is above watermark")
+	}
+}
+
+func TestSampleCapping(t *testing.T) {
+	m := NewMonitor(MonitorConfig{
+		QueueHighWatermark: 0.8,
+		LatencyThresholdMs: 100,
+		ErrorRateThreshold: 0.05,
+		MaxSamples:         5,
+		CooldownPeriod:     0,
+	})
+
+	// Record more samples than MaxSamples
+	for i := 0; i < 10; i++ {
+		m.RecordQueueDepth(0.1)
+		m.RecordLatency(5)
+		m.RecordErrorRate(0.001)
+	}
+
+	stats := m.Stats()
+	if stats.TotalSamples != 30 {
+		t.Errorf("expected 30 total samples recorded, got %d", stats.TotalSamples)
+	}
+}
+
+func TestGetReportsLimit(t *testing.T) {
+	m := NewMonitor(MonitorConfig{
+		QueueHighWatermark: 0.8,
+		LatencyThresholdMs: 100,
+		ErrorRateThreshold: 0.05,
+		MaxSamples:         1000,
+		CooldownPeriod:     0,
+	})
+
+	// Generate multiple reports
+	for i := 0; i < 5; i++ {
+		m.RecordQueueDepth(0.5)
+		m.Evaluate()
+	}
+
+	// Get limited reports
+	reports := m.GetReports(3)
+	if len(reports) != 3 {
+		t.Errorf("expected 3 reports (limited), got %d", len(reports))
+	}
+
+	// Get all reports
+	allReports := m.GetReports(100)
+	if len(allReports) != 5 {
+		t.Errorf("expected 5 total reports, got %d", len(allReports))
+	}
+}
+
+func TestEvaluateWithNoSamples(t *testing.T) {
+	m := NewMonitor(MonitorConfig{
+		QueueHighWatermark: 0.8,
+		LatencyThresholdMs: 100,
+		ErrorRateThreshold: 0.05,
+		MaxSamples:         1000,
+		CooldownPeriod:     0,
+	})
+
+	report := m.Evaluate()
+	if report.Level != None {
+		t.Errorf("expected None level with no samples, got %s", report.Level)
+	}
+}
