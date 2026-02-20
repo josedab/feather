@@ -303,6 +303,10 @@ Feather can be configured via **YAML file** or **environment variables**.
 | `configs/feather-dev.yaml` | Local development, zero external dependencies — **start here** |
 | `configs/feather-local.yaml` | Local development with disk persistence |
 | `configs/feather.yaml` | Production reference with all features |
+| `configs/feather-ha.yaml` | High-availability production deployment with TLS, Kafka, and tuned concurrency |
+| `configs/feather-tls.yaml` | TLS/mTLS configuration with client certificate verification |
+| `configs/feather-kafka-sasl.yaml` | Kafka with SASL/SSL authentication (Confluent Cloud, AWS MSK) |
+| `configs/feather-tracing.yaml` | OpenTelemetry distributed tracing (Jaeger, Tempo, Datadog) |
 
 ### Key Environment Variables
 
@@ -314,8 +318,16 @@ Feather can be configured via **YAML file** or **environment variables**.
 | `FEATHER_WARM_PATH` | `/var/lib/feather/data` | Warm tier storage path |
 | `FEATHER_KAFKA_ENABLED` | `false` | Enable Kafka ingestion |
 | `FEATHER_TRACING_ENABLED` | `false` | Enable OpenTelemetry tracing |
+| `FEATHER_HTTP_INGESTION_PORT` | `8081` | HTTP ingestion API port |
+| `FEATHER_PROMETHEUS_PORT` | `9090` | Prometheus metrics port |
+| `FEATHER_LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warn`, `error`) |
+| `FEATHER_LOG_FORMAT` | `json` | Log format (`json`, `text`) |
+| `FEATHER_TLS_ENABLED` | `false` | Enable TLS for all servers |
+| `FEATHER_HISTORICAL_ENABLED` | `false` | Enable historical version storage |
+| `FEATHER_SYNC_ENABLED` | `false` | Enable central/edge sync |
+| `FEATHER_UI_ENABLED` | `true` | Enable feature catalog web UI |
 
-See the [full configuration reference](./configs/feather.yaml) for all options.
+Feather supports **51 environment variables** in total. See the [full configuration reference](./docs/configuration.md) for all options including Kafka security, tracing, TLS, dbt integration, and more.
 
 ## Benchmarks
 
@@ -415,6 +427,7 @@ See [Deployment Guide](./docs/deployment.md) for full instructions.
 |----------|-------------|
 | [Architecture Overview](./docs/architecture.md) | System design, data flow, components |
 | [Package Guide](./docs/package-guide.md) | Maturity matrix for all internal packages |
+| [Configuration Reference](./docs/configuration.md) | All 51 environment variables with types, defaults, and examples |
 | [API Reference](./docs/api-reference.md) | Complete HTTP and gRPC API documentation |
 | [Client SDK Guide](./docs/sdk-guide.md) | Go, Python, Rust, TypeScript, and Java SDKs |
 | [Deployment Guide](./docs/deployment.md) | Docker, Kubernetes, Helm installation |
