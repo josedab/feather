@@ -17,6 +17,8 @@ make run-dev
 | [ml-pipeline.py](./ml-pipeline.py) | Python | End-to-end ML feature pipeline: ingest, serve, batch, backtest, vector search |
 | [fraud-detection.py](./fraud-detection.py) | Python | Real-time fraud detection: store transaction features, retrieve for scoring |
 | [go-basic/](./go-basic/) | Go | Basic feature CRUD using the Go SDK |
+| [ts-basic/](./ts-basic/) | TypeScript | Basic feature operations with the TypeScript SDK (Node.js 18+) |
+| [rust-basic/](./rust-basic/) | Rust | Basic feature operations with the Rust client (Rust 1.75+) |
 
 ## Running
 
@@ -27,6 +29,12 @@ python examples/fraud-detection.py
 
 # Go example
 cd examples/go-basic && go run main.go
+
+# TypeScript example (requires Node.js 18+)
+cd examples/ts-basic && npm install && npx ts-node index.ts
+
+# Rust example (requires Rust 1.75+)
+cd examples/rust-basic && cargo run
 
 # Run all examples
 make examples
