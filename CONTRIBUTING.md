@@ -73,20 +73,34 @@ make help
 | First-time setup | `make setup` |
 | Check prerequisites | `make doctor` |
 | Build binary | `make build` |
+| Build with race detector | `make build-race` |
+| Build with CGO (Kafka) | `make build-cgo` |
+| Build all binaries | `make build-all` |
 | Run with dev config | `make run-dev` |
 | Auto-rebuild on changes | `make watch` |
 | Run a single test | `make test-one RUN=TestFoo PKG=./internal/core/storage/...` |
 | Run all tests in a package | `make test-pkg PKG=./internal/core/storage/...` |
+| Re-run tests on save (TDD) | `make test-watch` |
+| Run only changed-file tests | `make test-changed` |
 | Pre-commit check | `make check-quick` |
 | Fix formatting | `make fmt` |
 | Auto-fix lint issues | `make lint-fix` |
+| Validate config files | `make lint-config` |
 | Generate coverage report | `make test-coverage` |
+| Print coverage summary | `make test-coverage-report` |
 | Start server in background | `make dev-start` |
 | Stop background server | `make dev-stop` |
 | Full environment reset | `make clean-all` |
 | List all targets | `make help` |
 | List API handlers | `make api-routes` |
 | Show enabled features | `make list-extensions` |
+| Run benchmarks | `make bench` |
+| Save benchmark results | `make bench-save` |
+| Compare benchmark runs | `make bench-compare` |
+| CPU profile (running server) | `make profile-cpu` |
+| Memory profile (running server) | `make profile-mem` |
+| Check for outdated deps | `make deps-check` |
+| Preview release notes | `make changelog` |
 
 ### How to Add a New API Endpoint
 
