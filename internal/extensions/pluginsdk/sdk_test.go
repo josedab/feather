@@ -106,3 +106,69 @@ func TestRoute(t *testing.T) {
 		t.Error("expected error for unknown plugin")
 	}
 }
+
+func TestRegisterEmptyID(t *testing.T) {
+	reg := NewPluginRegistry()
+	plugin := &testPlugin{
+		info: PluginInfo{ID: "", Name: "NoID"},
+	}
+	err := reg.Register(plugin)
+	if err == nil {
+		t.Error("expected error for empty plugin ID")
+	}
+}
+
+func TestGetNonexistent(t *testing.T) {
+	reg := NewPluginRegistry()
+	_, err := reg.Get("does-not-exist")
+	if err == nil {
+		t.Error("expected error for nonexistent plugin")
+	}
+}
+
+func TestRouteRequest(t *testing.T) {
+	reg := NewPluginRegistry()
+
+	handler := &testPlugin{
+		info: PluginInfo{ID: "echo", Name: "Echo", Version: "1.0.0", Author: "test", Maturity: "stable"},
+	}
+	_ = reg.Register(handler)
+
+	req := PluginRequest{
+		Method:  "POST",
+		Path:    "/test",
+		Headers: map[string]string{"Content-Type": "application/json"},
+		Body:    []byte(`{"key":"value"}`),
+		Params:  map[string]string{"id": "123"},
+	}
+
+	resp, err := reg.Route("echo", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Headers["Content-Type"] != "application/json" {
+		t.Errorf("expected Content-Type header, got %v", resp.Headers)
+	}
+}
+
+func TestPluginRoutes(t *testing.T) {
+	plugin := newTestPlugin("routes-test", "Routes Test")
+	routes := plugin.Routes()
+	if len(routes) != 1 {
+		t.Fatalf("expected 1 route, got %d", len(routes))
+	}
+	if routes[0].Method != "GET" {
+		t.Errorf("expected GET method, got %s", routes[0].Method)
+	}
+	if routes[0].Path != "/test" {
+		t.Errorf("expected /test path, got %s", routes[0].Path)
+	}
+}
+
+func TestListEmpty(t *testing.T) {
+	reg := NewPluginRegistry()
+	infos := reg.List()
+	if len(infos) != 0 {
+		t.Errorf("expected 0 plugins in empty registry, got %d", len(infos))
+	}
+}
