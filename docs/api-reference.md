@@ -1,6 +1,17 @@
 # Feather API Reference
 
 > Complete reference for Feather's HTTP REST and gRPC APIs.
+>
+> **This document is also available as separate pages for easier navigation:**
+>
+> | Section | File |
+> |---------|------|
+> | Overview & Authentication | [api/overview.md](./api/overview.md) |
+> | HTTP REST API (Features, Schema, Vectors, Drift, Health) | [api/features.md](./api/features.md) |
+> | HTTP Ingestion API | [api/ingestion.md](./api/ingestion.md) |
+> | gRPC API | [api/grpc.md](./api/grpc.md) |
+> | Extension APIs (Sharding, Marketplace, FeatherQL, etc.) | [api/extensions.md](./api/extensions.md) |
+> | Error Handling, Rate Limiting & Pagination | [api/errors-and-limits.md](./api/errors-and-limits.md) |
 
 ## Table of Contents
 
