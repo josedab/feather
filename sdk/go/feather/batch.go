@@ -299,6 +299,7 @@ type CachedClient struct {
 	cache  map[string]*cacheEntry
 	config *CacheConfig
 	mu     sync.RWMutex
+	stopCh chan struct{}
 }
 
 type cacheEntry struct {
@@ -312,6 +313,7 @@ func NewCachedClient(client *Client, config *CacheConfig) *CachedClient {
 		client: client,
 		cache:  make(map[string]*cacheEntry),
 		config: config,
+		stopCh: make(chan struct{}),
 	}
 
 	// Start cleanup goroutine
@@ -377,15 +379,21 @@ func (cc *CachedClient) cacheKey(entityID string, features []string) string {
 
 func (cc *CachedClient) cleanup() {
 	ticker := time.NewTicker(time.Minute)
-	for range ticker.C {
-		cc.mu.Lock()
-		now := time.Now()
-		for k, v := range cc.cache {
-			if v.expiresAt.Before(now) {
-				delete(cc.cache, k)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			cc.mu.Lock()
+			now := time.Now()
+			for k, v := range cc.cache {
+				if v.expiresAt.Before(now) {
+					delete(cc.cache, k)
+				}
 			}
+			cc.mu.Unlock()
+		case <-cc.stopCh:
+			return
 		}
-		cc.mu.Unlock()
 	}
 }
 
@@ -399,4 +407,9 @@ func (cc *CachedClient) Invalidate(entityID string) {
 			delete(cc.cache, k)
 		}
 	}
+}
+
+// Close stops the background cleanup goroutine and releases resources.
+func (cc *CachedClient) Close() {
+	close(cc.stopCh)
 }
