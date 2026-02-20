@@ -113,3 +113,87 @@ func TestRecoveryManager_ExportImport(t *testing.T) {
 		t.Errorf("expected LSN 42, got %d", cp.LSN)
 	}
 }
+
+func TestRecoveryManager_RecoverFromMissing(t *testing.T) {
+	engine := NewEngine(DefaultEngineConfig())
+	cdcMgr := NewCDCManager(engine, 1000)
+	rm := NewRecoveryManager(cdcMgr, DefaultRecoveryConfig())
+
+	_, err := rm.RecoverFrom("nonexistent-source")
+	if err == nil {
+		t.Fatal("expected error for missing checkpoint")
+	}
+}
+
+func TestRecoveryManager_CheckpointHistory(t *testing.T) {
+	engine := NewEngine(DefaultEngineConfig())
+	cdcMgr := NewCDCManager(engine, 1000)
+
+	err := cdcMgr.RegisterSource(CDCSourceConfig{
+		ID:           "hist-source",
+		Name:         "history-test",
+		Type:         CDCPostgreSQL,
+		FeatureGroup: "users",
+		Enabled:      true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rm := NewRecoveryManager(cdcMgr, RecoveryConfig{MaxHistory: 3})
+
+	// Create multiple checkpoints
+	for i := 0; i < 5; i++ {
+		_, err := rm.Checkpoint("hist-source")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// History should be capped at MaxHistory
+	history := rm.GetCheckpointHistory("hist-source")
+	if len(history) != 3 {
+		t.Errorf("expected 3 history entries (MaxHistory), got %d", len(history))
+	}
+}
+
+func TestRecoveryManager_ListAllCheckpoints(t *testing.T) {
+	engine := NewEngine(DefaultEngineConfig())
+	cdcMgr := NewCDCManager(engine, 1000)
+	rm := NewRecoveryManager(cdcMgr, DefaultRecoveryConfig())
+
+	rm.mu.Lock()
+	rm.checkpoints["src-a"] = &OffsetCheckpoint{SourceID: "src-a", LSN: 10}
+	rm.checkpoints["src-b"] = &OffsetCheckpoint{SourceID: "src-b", LSN: 20}
+	rm.mu.Unlock()
+
+	all := rm.ListAllCheckpoints()
+	if len(all) != 2 {
+		t.Errorf("expected 2 checkpoints, got %d", len(all))
+	}
+	if all["src-a"].LSN != 10 {
+		t.Errorf("expected LSN 10, got %d", all["src-a"].LSN)
+	}
+}
+
+func TestRecoveryManager_ImportInvalidJSON(t *testing.T) {
+	engine := NewEngine(DefaultEngineConfig())
+	cdcMgr := NewCDCManager(engine, 1000)
+	rm := NewRecoveryManager(cdcMgr, DefaultRecoveryConfig())
+
+	err := rm.ImportCheckpoints([]byte("not valid json"))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestRecoveryManager_EmptyHistory(t *testing.T) {
+	engine := NewEngine(DefaultEngineConfig())
+	cdcMgr := NewCDCManager(engine, 1000)
+	rm := NewRecoveryManager(cdcMgr, DefaultRecoveryConfig())
+
+	history := rm.GetCheckpointHistory("nonexistent")
+	if history != nil {
+		t.Errorf("expected nil history for unknown source, got %v", history)
+	}
+}
