@@ -521,6 +521,9 @@ func TenantFromContext(ctx context.Context) string {
 }
 
 // Helper functions
+// generateAPIKey creates a new API key with cryptographic randomness.
+// Panics on crypto/rand failure because a predictable API key would be
+// a critical security vulnerability.
 func generateAPIKey() string {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -529,6 +532,9 @@ func generateAPIKey() string {
 	return "fk_" + hex.EncodeToString(bytes)
 }
 
+// generateID creates a random identifier.
+// Panics on crypto/rand failure because falling back to a predictable ID
+// could cause collisions or security issues in authentication contexts.
 func generateID() string {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {

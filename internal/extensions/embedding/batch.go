@@ -455,6 +455,8 @@ func generateID() string {
 }
 
 // randomHex generates a random hex string.
+// Panics on crypto/rand failure because batch IDs must be unpredictable
+// to prevent enumeration attacks.
 func randomHex(n int) string {
 	b := make([]byte, (n+1)/2)
 	if _, err := rand.Read(b); err != nil {

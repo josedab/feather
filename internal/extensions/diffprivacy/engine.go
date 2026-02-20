@@ -354,6 +354,9 @@ func (e *Engine) applyMechanism(m Mechanism, value, sensitivity, epsilon, delta 
 }
 
 // cryptoFloat64 returns a cryptographically secure random float64 in [0, 1).
+// Panics on crypto/rand failure because a broken CSPRNG means the differential
+// privacy guarantees cannot be met, and silently falling back would be worse
+// than crashing.
 func cryptoFloat64() float64 {
 	var b [8]byte
 	if _, err := rand.Read(b[:]); err != nil {

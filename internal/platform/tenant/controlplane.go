@@ -170,6 +170,8 @@ func hashAPIKey(key string) string {
 
 // generateKeyID creates a cryptographically random key ID to prevent
 // enumeration attacks (replaces predictable time-based IDs).
+// Panics on crypto/rand failure because a predictable key ID would
+// defeat the purpose of using crypto/rand.
 func generateKeyID() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
