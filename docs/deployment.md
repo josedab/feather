@@ -23,7 +23,7 @@ This guide covers deploying Feather in various environments from development to 
 | CPU | 2 cores | 4+ cores |
 | Memory | 4GB | 16GB+ |
 | Disk | 10GB SSD | 100GB+ SSD |
-| Go | 1.22+ | Latest |
+| Go | 1.24+ | Latest |
 
 ### Network Ports
 
