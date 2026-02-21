@@ -1,0 +1,40 @@
+app = "feather-demo"
+primary_region = "iad"
+kill_signal = "SIGINT"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "../../Dockerfile"
+
+[env]
+  FEATHER_HTTP_PORT = "8080"
+  FEATHER_LOG_LEVEL = "info"
+  FEATHER_LOG_FORMAT = "json"
+  FEATHER_HOT_MAX_MEMORY = "128MB"
+  FEATHER_PROMETHEUS_ENABLED = "false"
+  FEATHER_KAFKA_ENABLED = "false"
+  FEATHER_TRACING_ENABLED = "false"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  path = "/health"
+  timeout = "5s"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
