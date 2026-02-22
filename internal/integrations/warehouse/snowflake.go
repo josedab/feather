@@ -138,7 +138,9 @@ func (c *SnowflakeConnector) Connect(ctx context.Context) error {
 	if err != nil {
 		c.state = ConnectionStateFailed
 		atomic.AddInt64(&c.metrics.ConnectionFailures, 1)
-		return fmt.Errorf("%w: %w", ErrConnectionFailed, err)
+		// Log masked DSN to prevent credential leaks
+		maskedDSN := c.buildMaskedConnectionString()
+		return fmt.Errorf("%w (dsn=%s): %w", ErrConnectionFailed, maskedDSN, err)
 	}
 
 	// Configure connection pool
@@ -180,6 +182,39 @@ func (c *SnowflakeConnector) buildConnectionString() string {
 	if c.config.Password != "" {
 		sb.WriteString(":")
 		sb.WriteString(c.config.Password)
+	}
+	sb.WriteString("@")
+	sb.WriteString(c.config.Account)
+
+	if c.config.Region != "" {
+		sb.WriteString(".")
+		sb.WriteString(c.config.Region)
+	}
+
+	sb.WriteString("/")
+	sb.WriteString(c.config.Database)
+	sb.WriteString("/")
+	sb.WriteString(c.config.Schema)
+
+	sb.WriteString("?warehouse=")
+	sb.WriteString(c.config.Warehouse)
+
+	if c.config.Role != "" {
+		sb.WriteString("&role=")
+		sb.WriteString(c.config.Role)
+	}
+
+	return sb.String()
+}
+
+// buildMaskedConnectionString constructs a DSN with the password replaced
+// by asterisks, safe for logging and error messages.
+func (c *SnowflakeConnector) buildMaskedConnectionString() string {
+	var sb strings.Builder
+
+	sb.WriteString(c.config.User)
+	if c.config.Password != "" {
+		sb.WriteString(":*****")
 	}
 	sb.WriteString("@")
 	sb.WriteString(c.config.Account)
