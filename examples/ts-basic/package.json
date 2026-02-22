@@ -1,0 +1,14 @@
+{
+  "name": "feather-ts-example",
+  "version": "1.0.0",
+  "description": "Feather Feature Store TypeScript example",
+  "main": "index.ts",
+  "scripts": {
+    "start": "npx ts-node index.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  }
+}
