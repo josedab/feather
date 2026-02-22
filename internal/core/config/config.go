@@ -65,32 +65,46 @@ type TracingConfig struct {
 
 // SchemaConfig defines feature schema configuration.
 type SchemaConfig struct {
+	// Groups defines the list of feature groups with their schemas.
 	Groups []FeatureGroupConfig `yaml:"groups"`
 }
 
 // FeatureGroupConfig defines a feature group.
 type FeatureGroupConfig struct {
-	Name        string          `yaml:"name"`
-	EntityType  string          `yaml:"entity_type"`
-	TTL         time.Duration   `yaml:"ttl"`
-	Features    []FeatureConfig `yaml:"features"`
-	Description string          `yaml:"description,omitempty"`
+	// Name is the unique identifier for this feature group.
+	Name string `yaml:"name"`
+	// EntityType is the entity this group is keyed on (e.g., "user", "product").
+	EntityType string `yaml:"entity_type"`
+	// TTL is the time-to-live for features in this group.
+	TTL time.Duration `yaml:"ttl"`
+	// Features is the list of features belonging to this group.
+	Features []FeatureConfig `yaml:"features"`
+	// Description is an optional human-readable description of the group.
+	Description string `yaml:"description,omitempty"`
 }
 
 // FeatureConfig defines a feature.
 type FeatureConfig struct {
-	Name        string             `yaml:"name"`
-	DataType    string             `yaml:"data_type"`
-	Dimensions  []int              `yaml:"dimensions,omitempty"`
-	Default     interface{}        `yaml:"default,omitempty"`
+	// Name is the unique feature name within its group.
+	Name string `yaml:"name"`
+	// DataType is the feature value type: "int64", "float64", "string", "bool", "bytes", "vector", "timestamp".
+	DataType string `yaml:"data_type"`
+	// Dimensions specifies the shape for vector-typed features (e.g., [128] for a 128-dim embedding).
+	Dimensions []int `yaml:"dimensions,omitempty"`
+	// Default is the fallback value returned when a feature has no stored value.
+	Default interface{} `yaml:"default,omitempty"`
+	// Aggregation defines optional sliding-window aggregation settings.
 	Aggregation *AggregationConfig `yaml:"aggregation,omitempty"`
 }
 
 // AggregationConfig defines aggregation settings.
 type AggregationConfig struct {
-	Function string        `yaml:"function"`
-	Window   time.Duration `yaml:"window"`
-	SlideBy  time.Duration `yaml:"slide_by,omitempty"`
+	// Function is the aggregation function: "count", "sum", "avg", "min", "max".
+	Function string `yaml:"function"`
+	// Window is the aggregation time window (e.g., 1h, 24h).
+	Window time.Duration `yaml:"window"`
+	// SlideBy is the slide interval for the window. Defaults to the window size if unset.
+	SlideBy time.Duration `yaml:"slide_by,omitempty"`
 }
 
 // StorageConfig defines storage configuration.
@@ -135,13 +149,20 @@ type KafkaIngestionConfig struct {
 
 // KafkaSecurityConfig defines Kafka authentication settings.
 type KafkaSecurityConfig struct {
-	Protocol      string `yaml:"protocol,omitempty"`       // "PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"
-	SASLMechanism string `yaml:"sasl_mechanism,omitempty"` // "PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"
-	SASLUsername  string `yaml:"sasl_username,omitempty"`
-	SASLPassword  string `yaml:"sasl_password,omitempty"`
-	SSLCAFile     string `yaml:"ssl_ca_file,omitempty"`
-	SSLCertFile   string `yaml:"ssl_cert_file,omitempty"`
-	SSLKeyFile    string `yaml:"ssl_key_file,omitempty"`
+	// Protocol is the security protocol: "PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL".
+	Protocol string `yaml:"protocol,omitempty"`
+	// SASLMechanism is the SASL authentication mechanism: "PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512".
+	SASLMechanism string `yaml:"sasl_mechanism,omitempty"`
+	// SASLUsername is the username for SASL authentication. Sensitive: use env var FEATHER_KAFKA_SASL_USERNAME.
+	SASLUsername string `yaml:"sasl_username,omitempty"`
+	// SASLPassword is the password for SASL authentication. Sensitive: use env var FEATHER_KAFKA_SASL_PASSWORD.
+	SASLPassword string `yaml:"sasl_password,omitempty"`
+	// SSLCAFile is the path to the CA certificate for SSL verification.
+	SSLCAFile string `yaml:"ssl_ca_file,omitempty"`
+	// SSLCertFile is the path to the client certificate for mutual TLS.
+	SSLCertFile string `yaml:"ssl_cert_file,omitempty"`
+	// SSLKeyFile is the path to the client private key for mutual TLS.
+	SSLKeyFile string `yaml:"ssl_key_file,omitempty"`
 }
 
 // HTTPIngestionConfig defines HTTP ingestion settings.
@@ -164,10 +185,14 @@ type GRPCServingConfig struct {
 
 // HTTPServingConfig defines HTTP server settings.
 type HTTPServingConfig struct {
-	Port           int           `yaml:"port"`
-	ReadTimeout    time.Duration `yaml:"read_timeout"`
-	WriteTimeout   time.Duration `yaml:"write_timeout"`
-	TrustedProxies []string      `yaml:"trusted_proxies,omitempty"`
+	// Port is the HTTP server listen port (default: 8080).
+	Port int `yaml:"port"`
+	// ReadTimeout is the maximum duration for reading the entire request.
+	ReadTimeout time.Duration `yaml:"read_timeout"`
+	// WriteTimeout is the maximum duration for writing the response.
+	WriteTimeout time.Duration `yaml:"write_timeout"`
+	// TrustedProxies is a list of CIDR ranges or IPs whose X-Forwarded-For headers are trusted.
+	TrustedProxies []string `yaml:"trusted_proxies,omitempty"`
 }
 
 // SyncConfig defines sync configuration.
