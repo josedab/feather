@@ -156,13 +156,22 @@ The application can be configured via:
 1. **YAML file**: `./feather -config configs/feather.yaml`
 2. **Environment variables**: `FEATHER_*` prefix
 
-Key environment variables:
+Key environment variables (6 of 51 — see `docs/configuration.md` for the full reference):
 - `FEATHER_HTTP_PORT` (default: 8080)
 - `FEATHER_GRPC_PORT` (default: 50051)
 - `FEATHER_HOT_MAX_MEMORY` (default: 4GB)
 - `FEATHER_WARM_PATH` (default: /var/lib/feather/data)
 - `FEATHER_KAFKA_ENABLED` (default: false)
 - `FEATHER_TRACING_ENABLED` (default: false)
+
+All 51 environment variables are defined in `internal/core/config/config.go` (`LoadFromEnv` function)
+and documented in `docs/configuration.md`. Additional extension env vars are read via `os.Getenv`
+in their respective packages:
+- `FEATHER_MESH_ADVERTISE_ADDR` — mesh cluster membership
+- `FEATHER_STARLARK_SIDECAR_ADDR` — Starlark UDF sidecar
+- `FEATHER_PYTHON_WORKER_ENDPOINT` — Python worker process
+- `FEATHER_FLINK_JOBMANAGER_ADDR` — Apache Flink integration
+- `FEATHER_E2E_URL` — end-to-end test target URL
 
 ## API Endpoints
 
