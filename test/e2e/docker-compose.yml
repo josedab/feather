@@ -1,0 +1,16 @@
+services:
+  feather:
+    build: ../..
+    ports: ["8080:8080", "50051:50051", "9090:9090"]
+    environment:
+      FEATHER_HTTP_PORT: "8080"
+      FEATHER_GRPC_PORT: "50051"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports: ["9091:9090"]
+    volumes: ["../../configs/prometheus.yml:/etc/prometheus/prometheus.yml"]
