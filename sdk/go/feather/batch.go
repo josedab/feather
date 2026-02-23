@@ -232,10 +232,14 @@ func (ac *AsyncClient) ParallelGet(ctx context.Context, requests []GetRequest) m
 
 // RetryConfig configures retry behavior.
 type RetryConfig struct {
-	MaxRetries     int
+	// MaxRetries is the maximum number of retry attempts before giving up. Default: 3.
+	MaxRetries int
+	// InitialBackoff is the delay before the first retry. Default: 100ms.
 	InitialBackoff time.Duration
-	MaxBackoff     time.Duration
-	Multiplier     float64
+	// MaxBackoff is the upper bound on backoff delay. Default: 10s.
+	MaxBackoff time.Duration
+	// Multiplier is the exponential backoff factor applied after each retry. Default: 2.0.
+	Multiplier float64
 }
 
 // DefaultRetryConfig returns default retry configuration.
@@ -288,8 +292,11 @@ func WithRetry[T any](ctx context.Context, config *RetryConfig, fn func() (T, er
 
 // CacheConfig configures the client-side cache.
 type CacheConfig struct {
+	// MaxSize is the maximum number of entries in the cache. Default: 1000.
 	MaxSize int
-	TTL     time.Duration
+	// TTL is how long cached entries remain valid before eviction. Default: 5m.
+	TTL time.Duration
+	// Enabled controls whether client-side caching is active.
 	Enabled bool
 }
 
