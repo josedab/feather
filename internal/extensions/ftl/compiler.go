@@ -1,5 +1,3 @@
-// Package ftl provides a Feature Transformation Language (FTL) compiler
-// for in-memory feature transformations using a SQL-like DSL.
 package ftl
 
 import (
