@@ -1,7 +1,3 @@
-// Package mobilesync provides the sync protocol for mobile SDKs (iOS, Android).
-//
-// It supports offline-first architectures with delta sync, conflict resolution,
-// and bandwidth-aware synchronization for feature store data.
 package mobilesync
 
 import (
