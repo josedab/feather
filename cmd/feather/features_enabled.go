@@ -102,5 +102,16 @@ func buildEnabledFeatures(cfg *config.Config) map[string]bool {
 		"semantic_catalog":      true,
 		"federation_cross_org":  true,
 		"lifecycle_manager":     true,
+		// Next-gen v6 features
+		"python_runtime":        true,
+		"compute_graph_v2":      true,
+		"consistency_advanced":  true,
+		"gitops_manifests":      true,
+		"arrow_batch":           true,
+		"stream_advanced":       true,
+		"feast_enhanced":        true,
+		"embedding_lifecycle":   true,
+		"sdk_languages":         true,
+		"predictive_warming":    true,
 	}
 }
