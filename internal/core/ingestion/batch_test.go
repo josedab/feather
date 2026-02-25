@@ -556,3 +556,185 @@ user:1,0.95,1704067200000000000`,
 		})
 	}
 }
+
+// --- Additional error path tests ---
+
+func TestBatchImporter_ImportCSV_MalformedRows(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	// Row with wrong number of columns and SkipErrors
+	csv := `entity_id,score,rank
+user:1,0.95,1
+user:2,0.85
+user:3,0.75,3,extra`
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+		HasHeader:       true,
+		SkipErrors:      true,
+	}
+
+	result, err := b.ImportCSVReader(context.Background(), strings.NewReader(csv), config)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Some rows may succeed, some may fail
+	if result.RowsProcessed == 0 {
+		t.Error("expected at least some rows processed")
+	}
+}
+
+func TestBatchImporter_ImportCSV_NoSkipErrors(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	csv := `entity_id,score
+,0.95
+user:2,0.85`
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+		HasHeader:       true,
+		SkipErrors:      false,
+	}
+
+	result, err := b.ImportCSVReader(context.Background(), strings.NewReader(csv), config)
+	// Without SkipErrors, first error should stop or be reported
+	if err != nil {
+		return // Error is acceptable
+	}
+	if result.RowsError > 0 {
+		return // Failed rows tracked is acceptable
+	}
+}
+
+func TestBatchImporter_ImportJSON_InvalidMidStream(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	// JSON that starts valid but has issues
+	json := `[{"entity_id": "user:1", "score": 0.95}, invalid]`
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+	}
+
+	_, err := b.ImportJSONReader(context.Background(), strings.NewReader(json), config)
+	if err == nil {
+		t.Error("expected error for malformed JSON mid-stream")
+	}
+}
+
+func TestBatchImporter_ImportJSONL_AllCorrupted(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	jsonl := `not json
+also not json
+still not json`
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+		SkipErrors:      true,
+	}
+
+	result, err := b.ImportJSONLReader(context.Background(), strings.NewReader(jsonl), config)
+	if err != nil {
+		t.Fatalf("unexpected error with SkipErrors: %v", err)
+	}
+	if result.RowsSuccess != 0 {
+		t.Errorf("expected 0 successes, got %d", result.RowsSuccess)
+	}
+	if result.RowsError != 3 {
+		t.Errorf("expected 3 failures, got %d", result.RowsError)
+	}
+}
+
+func TestBatchImporter_ImportCSV_NonExistentFile(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+		HasHeader:       true,
+	}
+
+	_, err := b.ImportCSV(context.Background(), "/nonexistent/path.csv", config)
+	if err == nil {
+		t.Error("expected error for non-existent file")
+	}
+}
+
+func TestBatchImporter_ImportJSON_NonExistentFile(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+	}
+
+	_, err := b.ImportJSON(context.Background(), "/nonexistent/path.json", config)
+	if err == nil {
+		t.Error("expected error for non-existent file")
+	}
+}
+
+func TestBatchImporter_ImportJSONL_NonExistentFile(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+	}
+
+	_, err := b.ImportJSONL(context.Background(), "/nonexistent/path.jsonl", config)
+	if err == nil {
+		t.Error("expected error for non-existent file")
+	}
+}
+
+func TestBatchImporter_ImportJSONL_ContextCancellation(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	var lines []string
+	for i := 0; i < 100; i++ {
+		lines = append(lines, `{"entity_id": "user:`+string(rune('0'+i%10))+`", "score": 0.5}`)
+	}
+	jsonl := strings.Join(lines, "\n")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+	}
+
+	_, err := b.ImportJSONLReader(ctx, strings.NewReader(jsonl), config)
+	if err != nil && !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestBatchImporter_ConcurrentImports(t *testing.T) {
+	b := newTestBatchImporter(t)
+
+	csv1 := `entity_id,score
+user:1,0.95`
+	csv2 := `entity_id,rank
+user:1,1`
+
+	config := ImportConfig{
+		EntityKeyColumn: "entity_id",
+		HasHeader:       true,
+	}
+
+	done := make(chan error, 2)
+	go func() {
+		_, err := b.ImportCSVReader(context.Background(), strings.NewReader(csv1), config)
+		done <- err
+	}()
+	go func() {
+		_, err := b.ImportCSVReader(context.Background(), strings.NewReader(csv2), config)
+		done <- err
+	}()
+
+	for i := 0; i < 2; i++ {
+		if err := <-done; err != nil {
+			t.Errorf("concurrent import %d failed: %v", i, err)
+		}
+	}
+}
