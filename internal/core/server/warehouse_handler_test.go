@@ -1,12 +1,16 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/feather-store/feather/internal/core/storage"
+	"github.com/feather-store/feather/internal/integrations/warehouse"
 )
 
 // testWarehouseServer wraps a WarehouseHandler for testing.
@@ -226,5 +230,175 @@ func TestWarehouseHandler_GetStats(t *testing.T) {
 	// Without engine configured, returns 503
 	if rr.Code != http.StatusOK && rr.Code != http.StatusServiceUnavailable {
 		t.Errorf("Expected status %d or %d, got %d", http.StatusOK, http.StatusServiceUnavailable, rr.Code)
+	}
+}
+
+// --- Tests with configured engine ---
+
+func newConfiguredWarehouseServer(t *testing.T) *testWarehouseServer {
+	t.Helper()
+
+	schema := storage.NewRegistry()
+	store, err := storage.NewStore(context.Background(), storage.StoreOptions{
+		HotMaxSize:   1 << 20,
+		WarmInMemory: true,
+	}, schema)
+	if err != nil {
+		t.Fatalf("failed to create store: %v", err)
+	}
+	t.Cleanup(func() { store.Close() })
+
+	engine := warehouse.NewSyncEngine(warehouse.SyncConfig{
+		BatchSize:      100,
+		MaxConcurrency: 2,
+	}, store, schema, nil)
+
+	handler := NewWarehouseHandler(WarehouseHandlerConfig{
+		Engine: engine,
+		Store:  store,
+		Schema: schema,
+	})
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	return &testWarehouseServer{handler: handler, mux: mux, t: t}
+}
+
+func TestWarehouseHandler_RegisterConnector_Snowflake(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	body := map[string]interface{}{
+		"id":   "sf-1",
+		"type": "snowflake",
+		"config": map[string]interface{}{
+			"account":   "test.snowflakecomputing.com",
+			"user":      "feather_user",
+			"password":  "test_pass",
+			"database":  "FEATHER_DB",
+			"schema":    "PUBLIC",
+			"warehouse": "COMPUTE_WH",
+			"role":      "FEATHER_ROLE",
+		},
+	}
+
+	rr := ts.postJSON("/v1/warehouse/connectors", body)
+	if rr.Code != http.StatusCreated && rr.Code != http.StatusOK {
+		t.Errorf("Expected 201 or 200, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestWarehouseHandler_RegisterConnector_BigQuery(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	body := map[string]interface{}{
+		"id":   "bq-1",
+		"type": "bigquery",
+		"config": map[string]interface{}{
+			"project_id":      "my-project",
+			"dataset":         "feather_dataset",
+			"credentials_json": `{"type":"service_account"}`,
+		},
+	}
+
+	rr := ts.postJSON("/v1/warehouse/connectors", body)
+	if rr.Code != http.StatusCreated && rr.Code != http.StatusOK {
+		t.Errorf("Expected 201 or 200, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestWarehouseHandler_RegisterConnector_Unsupported(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	body := map[string]interface{}{
+		"id":     "bad-1",
+		"type":   "unsupported_db",
+		"config": map[string]interface{}{},
+	}
+
+	rr := ts.postJSON("/v1/warehouse/connectors", body)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestWarehouseHandler_GetConnector_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.get("/v1/warehouse/connectors/nonexistent")
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected 404, got %d", rr.Code)
+	}
+}
+
+func TestWarehouseHandler_ListConnectors_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.get("/v1/warehouse/connectors")
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", rr.Code)
+	}
+}
+
+func TestWarehouseHandler_RemoveConnector_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.delete("/v1/warehouse/connectors/nonexistent")
+	if rr.Code != http.StatusNotFound && rr.Code != http.StatusOK {
+		t.Errorf("Expected 404 or 200, got %d", rr.Code)
+	}
+}
+
+func TestWarehouseHandler_CreateJob_InvalidBody_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.request(http.MethodPost, "/v1/warehouse/jobs", "not json")
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", rr.Code)
+	}
+}
+
+func TestWarehouseHandler_CreateJob_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	body := map[string]interface{}{
+		"name":         "daily-sync",
+		"connector_id": "sf-1",
+		"query":        "SELECT * FROM features",
+		"schedule":     "0 */6 * * *",
+	}
+
+	rr := ts.postJSON("/v1/warehouse/jobs", body)
+	// May fail because connector doesn't exist yet
+	if rr.Code == http.StatusCreated || rr.Code == http.StatusOK || rr.Code == http.StatusBadRequest || rr.Code == http.StatusNotFound {
+		// All acceptable
+	} else {
+		t.Errorf("Unexpected status %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestWarehouseHandler_ListJobs_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.get("/v1/warehouse/jobs")
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", rr.Code)
+	}
+}
+
+func TestWarehouseHandler_GetJob_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.get("/v1/warehouse/jobs/nonexistent")
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected 404, got %d", rr.Code)
+	}
+}
+
+func TestWarehouseHandler_GetStats_WithEngine(t *testing.T) {
+	ts := newConfiguredWarehouseServer(t)
+
+	rr := ts.get("/v1/warehouse/stats")
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", rr.Code)
 	}
 }
