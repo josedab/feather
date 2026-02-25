@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/feather-store/feather/internal/extensions/embedding"
 )
 
 // testEmbeddingServer wraps an EmbeddingHandler for testing.
@@ -372,5 +374,180 @@ func TestEmbeddingHandler_GetByModel(t *testing.T) {
 	// Without store configured, returns 503
 	if rr.Code != http.StatusOK && rr.Code != http.StatusServiceUnavailable {
 		t.Errorf("Expected status %d or %d, got %d", http.StatusOK, http.StatusServiceUnavailable, rr.Code)
+	}
+}
+
+// --- Tests with configured components ---
+
+func newConfiguredEmbeddingServer(t *testing.T) *testEmbeddingServer {
+	t.Helper()
+
+	store := embedding.NewStore(embedding.StoreConfig{MaxCapacity: 1000})
+	dedup := embedding.NewDeduplicator(embedding.DeduplicationConfig{Enabled: true}, store)
+	version := embedding.NewVersionManager(embedding.VersionConfig{})
+	batch := embedding.NewBatchProcessor(embedding.BatchConfig{MaxBatchSize: 100}, store, dedup, nil)
+
+	handler := NewEmbeddingHandler(EmbeddingHandlerConfig{
+		Store:   store,
+		Dedup:   dedup,
+		Version: version,
+		Batch:   batch,
+	})
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux)
+
+	return &testEmbeddingServer{handler: handler, mux: mux, t: t}
+}
+
+func TestEmbeddingHandler_StoreAndRetrieve(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	body := map[string]interface{}{
+		"id":        "emb-store-1",
+		"content":   "Hello world",
+		"vector":    []float64{0.1, 0.2, 0.3, 0.4},
+		"model_id":  "test-model",
+		"dimension": 4,
+	}
+
+	rr := ts.postJSON("/v1/embeddings", body)
+	if rr.Code != http.StatusCreated && rr.Code != http.StatusOK {
+		t.Errorf("Store: expected 201 or 200, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+
+	// Retrieve
+	getRr := ts.get("/v1/embeddings/emb-store-1")
+	if getRr.Code != http.StatusOK {
+		t.Errorf("Get: expected 200, got %d; body: %s", getRr.Code, getRr.Body.String())
+	}
+}
+
+func TestEmbeddingHandler_StoreEmbedding_DuplicateID(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	body := map[string]interface{}{
+		"id":        "emb-dup",
+		"content":   "First",
+		"vector":    []float64{0.1, 0.2, 0.3},
+		"model_id":  "test-model",
+		"dimension": 3,
+	}
+
+	ts.postJSON("/v1/embeddings", body)
+
+	// Store again with same ID
+	body["content"] = "Second"
+	rr := ts.postJSON("/v1/embeddings", body)
+
+	// May return 200 (update) or 409 (conflict) depending on impl
+	if rr.Code != http.StatusCreated && rr.Code != http.StatusOK && rr.Code != http.StatusConflict {
+		t.Errorf("Expected 201, 200, or 409 for duplicate, got %d", rr.Code)
+	}
+}
+
+func TestEmbeddingHandler_Generate_WithConfiguredStore(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	body := map[string]interface{}{
+		"content":  "Some text to embed",
+		"model_id": "test-model",
+	}
+
+	rr := ts.postJSON("/v1/embeddings/generate", body)
+	// Without a configured provider, may fail with appropriate error
+	if rr.Code == http.StatusInternalServerError || rr.Code == http.StatusServiceUnavailable || rr.Code == http.StatusOK {
+		// Expected behaviors
+	} else {
+		t.Errorf("Unexpected status %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestEmbeddingHandler_Lookup_WithStore(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	// Store an embedding first
+	ts.postJSON("/v1/embeddings", map[string]interface{}{
+		"id": "lookup-1", "content": "test", "vector": []float64{0.1}, "model_id": "m", "dimension": 1,
+	})
+
+	// Lookup - the lookup endpoint expects contents and model_id
+	body := map[string]interface{}{"contents": []string{"test"}, "model_id": "m"}
+	rr := ts.postJSON("/v1/embeddings/lookup", body)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestEmbeddingHandler_Batch_Empty(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	body := map[string]interface{}{
+		"embeddings": []map[string]interface{}{},
+	}
+
+	rr := ts.postJSON("/v1/embeddings/batch", body)
+	// Empty batch may return 200 or 400
+	if rr.Code != http.StatusOK && rr.Code != http.StatusCreated && rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected 200, 201, or 400, got %d", rr.Code)
+	}
+}
+
+func TestEmbeddingHandler_RegisterModel_WithManager(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	body := map[string]interface{}{
+		"id":        "custom-model-v1",
+		"model_id":  "custom-model-v1",
+		"provider":  "openai",
+		"dimension": 1536,
+	}
+
+	rr := ts.postJSON("/v1/embeddings/models", body)
+	if rr.Code != http.StatusCreated && rr.Code != http.StatusOK && rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected 201, 200, or 400, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestEmbeddingHandler_CheckCompatibility_WithManager(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	body := map[string]interface{}{
+		"model_id":     "text-embedding-ada-002",
+		"from_version": "1.0.0",
+		"to_version":   "2.0.0",
+	}
+
+	rr := ts.postJSON("/v1/embeddings/compatibility", body)
+	if rr.Code != http.StatusOK && rr.Code != http.StatusNotFound {
+		t.Errorf("Expected 200 or 404, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestEmbeddingHandler_ListEmbeddings_WithStore(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	rr := ts.get("/v1/embeddings")
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", rr.Code)
+	}
+}
+
+func TestEmbeddingHandler_Delete_WithStore(t *testing.T) {
+	ts := newConfiguredEmbeddingServer(t)
+
+	// Store an embedding
+	ts.postJSON("/v1/embeddings", map[string]interface{}{
+		"id": "del-1", "content": "test", "vector": []float64{0.1}, "model_id": "m", "dimension": 1,
+	})
+
+	rr := ts.delete("/v1/embeddings/del-1")
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d; body: %s", rr.Code, rr.Body.String())
+	}
+
+	// Verify deletion
+	getRr := ts.get("/v1/embeddings/del-1")
+	if getRr.Code != http.StatusNotFound {
+		t.Errorf("Expected 404 after delete, got %d", getRr.Code)
 	}
 }
