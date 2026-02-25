@@ -459,6 +459,134 @@ func TestStore_NewStore_DefaultWorkers(t *testing.T) {
 	defer store.Close()
 }
 
+// --- CheckWarmHealth tests ---
+
+func TestStore_CheckWarmHealth_Healthy(t *testing.T) {
+	store := newTestStore(t)
+
+	latency, err := store.CheckWarmHealth()
+	if err != nil {
+		t.Fatalf("CheckWarmHealth() error = %v", err)
+	}
+	if latency <= 0 {
+		t.Error("expected positive latency")
+	}
+}
+
+func TestStore_CheckWarmHealth_NilWarm(t *testing.T) {
+	// Manually create a minimal store to test nil warm path
+	hot := NewHotTier(1024 * 1024)
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &Store{
+		hot:        hot,
+		warm:       nil,
+		metrics:    &StoreMetrics{},
+		ctx:        ctx,
+		cancel:     cancel,
+		warmWrites: make(chan warmWriteRequest, 1),
+	}
+	defer cancel()
+
+	_, err := s.CheckWarmHealth()
+	if err == nil {
+		t.Fatal("expected error for nil warm tier")
+	}
+}
+
+// --- processWarmWrite tests ---
+
+func TestStore_ProcessWarmWrite_Success(t *testing.T) {
+	store := newTestStore(t)
+
+	req := warmWriteRequest{
+		entityKey: "user:warmtest",
+		features: map[string]*domain.FeatureValue{
+			"clicks": {Value: int64(42), Timestamp: 12345, Version: 1},
+		},
+	}
+	store.processWarmWrite(req)
+
+	// Verify it was written to warm tier
+	result, err := store.warm.Get("user:warmtest", []string{"clicks"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["clicks"] == nil {
+		t.Error("expected clicks feature in warm tier")
+	}
+}
+
+func TestStore_ProcessWarmWrite_MultipleFeatures(t *testing.T) {
+	store := newTestStore(t)
+
+	req := warmWriteRequest{
+		entityKey: "user:multi",
+		features: map[string]*domain.FeatureValue{
+			"feat_a": {Value: "a", Timestamp: 1, Version: 1},
+			"feat_b": {Value: "b", Timestamp: 2, Version: 1},
+			"feat_c": {Value: "c", Timestamp: 3, Version: 1},
+		},
+	}
+	store.processWarmWrite(req)
+
+	result, _ := store.warm.Get("user:multi", []string{"feat_a", "feat_b", "feat_c"})
+	if len(result) != 3 {
+		t.Errorf("expected 3 features in warm tier, got %d", len(result))
+	}
+}
+
+// --- enqueueWarmWrite tests ---
+
+func TestStore_EnqueueWarmWrite_ChannelFull(t *testing.T) {
+	// Create store with tiny buffer
+	store, err := NewStore(context.Background(), StoreOptions{
+		HotMaxSize:       1024 * 1024,
+		WarmInMemory:     true,
+		WarmWriteBuffer:  1,
+		WarmWriteWorkers: 0, // minimal workers
+		TTLCheckInterval: time.Hour,
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	// Fill the channel
+	features := map[string]*domain.FeatureValue{
+		"f": {Value: 1, Timestamp: 1},
+	}
+
+	// Enqueue many writes; some should be dropped without panic
+	for i := 0; i < 100; i++ {
+		store.enqueueWarmWrite("entity:"+string(rune('a'+i%26)), features)
+	}
+
+	// Should not panic; drops are tracked
+	metrics := store.Metrics()
+	_ = metrics.WarmWriteDrops // Just verify it's accessible
+}
+
+func TestStore_EnqueueWarmWrite_AfterClose(t *testing.T) {
+	store, err := NewStore(context.Background(), StoreOptions{
+		HotMaxSize:   1024 * 1024,
+		WarmInMemory: true,
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Close()
+
+	// Should not panic; write should be dropped
+	store.enqueueWarmWrite("entity:after-close", map[string]*domain.FeatureValue{
+		"f": {Value: 1, Timestamp: 1},
+	})
+
+	drops := store.Metrics().WarmWriteDrops
+	if drops == 0 {
+		t.Error("expected drops after close")
+	}
+}
+
 func BenchmarkStore_Put(b *testing.B) {
 	store, err := NewStore(context.Background(), StoreOptions{
 		HotMaxSize:   1024 * 1024 * 100,
