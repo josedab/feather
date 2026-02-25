@@ -664,3 +664,192 @@ func TestParseDuration(t *testing.T) {
 		})
 	}
 }
+
+// --- Untested handler paths ---
+
+func TestAuthHandler_UpdateTenant(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	// Create tenant first
+	ts.createTenant("update-tenant", "Original Name")
+
+	// Update
+	rr := ts.request(http.MethodPut, "/v1/auth/tenants/update-tenant", `{"name":"Updated Name","description":"new desc"}`)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &result); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if result["success"] != true {
+		t.Error("Expected success=true")
+	}
+}
+
+func TestAuthHandler_UpdateTenant_NotFound(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	rr := ts.request(http.MethodPut, "/v1/auth/tenants/nonexistent", `{"name":"X"}`)
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, rr.Code)
+	}
+}
+
+func TestAuthHandler_UpdateTenant_InvalidBody(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	rr := ts.request(http.MethodPut, "/v1/auth/tenants/some-id", "invalid json")
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestAuthHandler_DeleteTenant(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	ts.createTenant("delete-me", "To Delete")
+
+	rr := ts.delete("/v1/auth/tenants/delete-me")
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	// Verify deletion
+	getRr := ts.get("/v1/auth/tenants/delete-me")
+	if getRr.Code != http.StatusNotFound {
+		t.Errorf("Expected deleted tenant to return 404, got %d", getRr.Code)
+	}
+}
+
+func TestAuthHandler_DeleteTenant_NotFound(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	rr := ts.delete("/v1/auth/tenants/nonexistent")
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, rr.Code)
+	}
+}
+
+func TestAuthHandler_CreateRole(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	body := CreateRoleRequest{
+		Name:        "custom-role",
+		Description: "A custom role",
+		Permissions: []string{"read", "write"},
+	}
+
+	rr := ts.postJSON("/v1/auth/roles", body)
+
+	if rr.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &result); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if result["success"] != true {
+		t.Error("Expected success=true")
+	}
+}
+
+func TestAuthHandler_CreateRole_MissingName(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	body := CreateRoleRequest{
+		Description: "No name role",
+	}
+
+	rr := ts.postJSON("/v1/auth/roles", body)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestAuthHandler_CreateRole_InvalidBody(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	rr := ts.request(http.MethodPost, "/v1/auth/roles", "invalid json")
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestAuthHandler_GetRole(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	// Create role first
+	ts.postJSON("/v1/auth/roles", CreateRoleRequest{
+		Name:        "get-role",
+		Description: "A role to get",
+		Permissions: []string{"read"},
+	})
+
+	rr := ts.get("/v1/auth/roles/get-role")
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &result); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if result["name"] != "get-role" {
+		t.Errorf("Expected name 'get-role', got %v", result["name"])
+	}
+}
+
+func TestAuthHandler_GetRole_NotFound(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	rr := ts.get("/v1/auth/roles/nonexistent-role")
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, rr.Code)
+	}
+}
+
+func TestAuthHandler_DeleteRole(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	// Create role first
+	ts.postJSON("/v1/auth/roles", CreateRoleRequest{
+		Name:        "delete-role",
+		Description: "Will be deleted",
+		Permissions: []string{"read"},
+	})
+
+	rr := ts.delete("/v1/auth/roles/delete-role")
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	// Verify deletion
+	getRr := ts.get("/v1/auth/roles/delete-role")
+	if getRr.Code != http.StatusNotFound {
+		t.Errorf("Expected deleted role to return 404, got %d", getRr.Code)
+	}
+}
+
+func TestAuthHandler_DeleteRole_NotFound(t *testing.T) {
+	ts := newTestAuthServer(t)
+
+	rr := ts.delete("/v1/auth/roles/nonexistent-role")
+
+	// DeleteRole calls controller.DeleteRole which returns error for non-default roles
+	if rr.Code != http.StatusBadRequest && rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d or %d, got %d", http.StatusBadRequest, http.StatusNotFound, rr.Code)
+	}
+}
