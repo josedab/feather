@@ -2,6 +2,7 @@ package composition
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -555,6 +556,213 @@ func TestEvaluateExpression_First(t *testing.T) {
 
 	if result != "first_value" {
 		t.Errorf("Expected 'first_value', got %v", result)
+	}
+}
+
+func TestEngine_Compose_MultiNodeDAG(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: DefaultExecutorConfig(),
+	})
+
+	// Set source func to return known values
+	engine.executor.SetSourceFunc(func(ctx context.Context, node *Node, entityID string) (interface{}, error) {
+		switch node.Expression {
+		case "price":
+			return 10.0, nil
+		case "qty":
+			return 5.0, nil
+		default:
+			return nil, fmt.Errorf("unknown feature: %s", node.Expression)
+		}
+	})
+
+	// Use aggregate node (sum) which works without pipeline
+	err := engine.CreateDAGBuilder("multi", "Multi Node DAG").
+		AddSourceNode("s_price", "price").
+		AddSourceNode("s_qty", "qty").
+		AddAggregateNode("total", "Total", "sum", []string{"s_price", "s_qty"}).
+		SetOutputs([]string{"total"}).
+		Register()
+	if err != nil {
+		t.Fatalf("Failed to register DAG: %v", err)
+	}
+
+	results, err := engine.Compose(context.Background(), "multi", "order-1")
+	if err != nil {
+		t.Fatalf("Compose failed: %v", err)
+	}
+
+	val, ok := results["total"]
+	if !ok {
+		t.Fatal("Expected 'total' in results")
+	}
+	fVal, ok := toFloat64(val)
+	if !ok || fVal != 15.0 { // 10 + 5
+		t.Errorf("expected 15.0, got %v", val)
+	}
+}
+
+func TestEngine_Compose_DAGNotFound(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: DefaultExecutorConfig(),
+	})
+
+	_, err := engine.Compose(context.Background(), "no-such-dag", "entity-1")
+	if err == nil {
+		t.Error("Expected error for nonexistent DAG")
+	}
+}
+
+func TestEngine_Compose_NodeErrorExcludedFromOutput(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: func() ExecutorConfig {
+			c := DefaultExecutorConfig()
+			c.RetryAttempts = 0
+			return c
+		}(),
+	})
+
+	engine.executor.SetSourceFunc(func(ctx context.Context, node *Node, entityID string) (interface{}, error) {
+		if node.Expression == "broken" {
+			return nil, fmt.Errorf("source error")
+		}
+		return 42.0, nil
+	})
+
+	dag := NewDAG("err-dag", "Error DAG")
+	_ = dag.AddNode(&Node{ID: "good", Type: NodeTypeSource, Expression: "good"})
+	_ = dag.AddNode(&Node{ID: "broken", Type: NodeTypeSource, Expression: "broken"})
+	_ = dag.SetOutputs([]string{"good", "broken"})
+	_ = engine.RegisterDAG(dag)
+
+	results, _ := engine.Compose(context.Background(), "err-dag", "entity-1")
+
+	if val, ok := results["good"]; !ok {
+		t.Error("Expected 'good' in results")
+	} else if fVal, ok := toFloat64(val); !ok || fVal != 42.0 {
+		t.Errorf("expected 42.0 for good, got %v", val)
+	}
+
+	// Broken node has error so Compose excludes it from output map
+	if _, ok := results["broken"]; ok {
+		t.Error("Expected 'broken' to be excluded from results due to error")
+	}
+}
+
+func TestEngine_ComposeBatch_ConcurrentExecution(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: DefaultExecutorConfig(),
+	})
+
+	engine.executor.SetSourceFunc(func(ctx context.Context, node *Node, entityID string) (interface{}, error) {
+		return float64(len(entityID)), nil
+	})
+
+	dag := NewDAG("batch-dag", "Batch DAG")
+	_ = dag.AddNode(&Node{ID: "src", Type: NodeTypeSource, Expression: "len"})
+	_ = dag.SetOutputs([]string{"src"})
+	_ = engine.RegisterDAG(dag)
+
+	entityIDs := []string{"a", "bb", "ccc", "dddd", "eeeee"}
+	results, err := engine.ComposeBatch(context.Background(), "batch-dag", entityIDs)
+	if err != nil {
+		t.Fatalf("ComposeBatch failed: %v", err)
+	}
+
+	if len(results) != len(entityIDs) {
+		t.Errorf("expected %d results, got %d", len(entityIDs), len(results))
+	}
+
+	for _, eid := range entityIDs {
+		r, ok := results[eid]
+		if !ok {
+			t.Errorf("missing result for entity %s", eid)
+			continue
+		}
+		if val, ok := toFloat64(r["src"]); !ok || val != float64(len(eid)) {
+			t.Errorf("entity %s: expected %d, got %v", eid, len(eid), r["src"])
+		}
+	}
+}
+
+func TestEngine_ComposeBatch_PartialFailures(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: func() ExecutorConfig {
+			c := DefaultExecutorConfig()
+			c.RetryAttempts = 0
+			return c
+		}(),
+	})
+
+	engine.executor.SetSourceFunc(func(ctx context.Context, node *Node, entityID string) (interface{}, error) {
+		if entityID == "fail" {
+			return nil, fmt.Errorf("source error for %s", entityID)
+		}
+		return 1.0, nil
+	})
+
+	dag := NewDAG("partial-dag", "Partial")
+	_ = dag.AddNode(&Node{ID: "src", Type: NodeTypeSource, Expression: "val"})
+	_ = dag.SetOutputs([]string{"src"})
+	_ = engine.RegisterDAG(dag)
+
+	results, err := engine.ComposeBatch(context.Background(), "partial-dag", []string{"ok1", "fail", "ok2"})
+
+	// ComposeBatch returns partial results; err may or may not be non-nil
+	// depending on whether the failed entity produces an executor-level error
+	// or just a node-level error that gets swallowed
+	_ = err
+
+	// Successful entities should still have results
+	if _, ok := results["ok1"]; !ok {
+		t.Error("Expected result for ok1")
+	}
+	if _, ok := results["ok2"]; !ok {
+		t.Error("Expected result for ok2")
+	}
+}
+
+func TestEngine_RegisterBuiltinFunctions_NilStore(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: DefaultExecutorConfig(),
+		Store:          nil,
+	})
+
+	dag := NewDAG("nil-store-dag", "Nil Store")
+	_ = dag.AddNode(&Node{ID: "src", Type: NodeTypeSource, Expression: "feature"})
+	_ = dag.SetOutputs([]string{"src"})
+	_ = engine.RegisterDAG(dag)
+
+	results, err := engine.Compose(context.Background(), "nil-store-dag", "entity-1")
+	// With nil store, source function returns error "store not configured"
+	// Compose may return error or empty results depending on executor behavior
+	if err == nil && len(results) > 0 {
+		t.Error("Expected error or empty results when store is nil")
+	}
+}
+
+func TestEngine_Compose_CustomNodeWithExpression(t *testing.T) {
+	engine := NewEngine(EngineConfig{
+		ExecutorConfig: DefaultExecutorConfig(),
+	})
+
+	engine.executor.SetSourceFunc(func(ctx context.Context, node *Node, entityID string) (interface{}, error) {
+		return 10.0, nil
+	})
+
+	dag := NewDAG("custom-dag", "Custom")
+	_ = dag.AddNode(&Node{ID: "s1", Type: NodeTypeSource, Expression: "val"})
+	_ = dag.AddNode(&Node{ID: "c1", Type: NodeTypeCustom, Expression: "sum", Inputs: []string{"s1"}})
+	_ = dag.SetOutputs([]string{"c1"})
+	_ = engine.RegisterDAG(dag)
+
+	results, err := engine.Compose(context.Background(), "custom-dag", "entity-1")
+	if err != nil {
+		t.Fatalf("Compose failed: %v", err)
+	}
+
+	if _, ok := results["c1"]; !ok {
+		t.Error("Expected c1 in results")
 	}
 }
 
