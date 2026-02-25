@@ -113,5 +113,16 @@ func buildEnabledFeatures(cfg *config.Config) map[string]bool {
 		"embedding_lifecycle":   true,
 		"sdk_languages":         true,
 		"predictive_warming":    true,
+		// Next-gen v7 features
+		"backfill_engine":       true,
+		"contract_cicd":         true,
+		"flight_endpoint":       true,
+		"declarative_graph":     true,
+		"multi_tenant_metering": true,
+		"python_sidecar":        true,
+		"obs_console":           true,
+		"auto_sharding":         true,
+		"feast_ga":              true,
+		"offline_store_sync":    true,
 	}
 }
