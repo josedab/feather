@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
@@ -259,5 +260,249 @@ func TestTracedServerStream_Context(t *testing.T) {
 
 	if stream.Context() != ctx {
 		t.Error("expected traced context")
+	}
+}
+
+// --- New() enabled path tests ---
+
+func TestNew_Enabled_InvalidEndpoint(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Use an unreachable endpoint; New should still succeed
+	// because the OTLP exporter creates a client but doesn't connect synchronously
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "test-service",
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	if tracer.provider == nil {
+		t.Error("expected non-nil provider when enabled")
+	}
+	if tracer.tracer == nil {
+		t.Error("expected non-nil tracer when enabled")
+	}
+}
+
+func TestNew_Enabled_AlwaysSample(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "always-sample",
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	// Should be able to create spans
+	_, span := tracer.StartSpan(ctx, "test-span")
+	if span == nil {
+		t.Error("expected non-nil span")
+	}
+	span.End()
+}
+
+func TestNew_Enabled_NeverSample(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "never-sample",
+		SampleRate:  0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	if tracer.provider == nil {
+		t.Error("expected non-nil provider")
+	}
+}
+
+func TestNew_Enabled_TraceIDRatio(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "ratio-sample",
+		SampleRate:  0.5,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	if tracer.provider == nil {
+		t.Error("expected non-nil provider for ratio sampler")
+	}
+}
+
+func TestShutdown_AfterEnabled(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "shutdown-test",
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	err = tracer.Shutdown(ctx)
+	if err != nil {
+		t.Errorf("Shutdown() error = %v", err)
+	}
+}
+
+func TestNew_Enabled_ServiceNamePropagation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	serviceName := "feather-test-service"
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: serviceName,
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	if tracer.config.ServiceName != serviceName {
+		t.Errorf("expected service name %s, got %s", serviceName, tracer.config.ServiceName)
+	}
+}
+
+func TestNew_Enabled_SpanOperations(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "span-ops",
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	// Storage span
+	ctx2, span := tracer.StartStorageSpan(ctx, "get", "hot")
+	if ctx2 == nil || span == nil {
+		t.Error("expected non-nil context and span")
+	}
+	span.End()
+
+	// Hot tier span
+	ctx3, span2 := tracer.StartHotTierSpan(ctx, "get", "user:1")
+	if ctx3 == nil || span2 == nil {
+		t.Error("expected non-nil context and span")
+	}
+	span2.End()
+
+	// Warm tier span
+	ctx4, span3 := tracer.StartWarmTierSpan(ctx, "put", "user:1")
+	if ctx4 == nil || span3 == nil {
+		t.Error("expected non-nil context and span")
+	}
+	span3.End()
+
+	// Aggregation span
+	ctx5, span4 := tracer.StartAggregationSpan(ctx, "compute", "clicks_1h", "sum")
+	if ctx5 == nil || span4 == nil {
+		t.Error("expected non-nil context and span")
+	}
+	span4.End()
+
+	// Federation span
+	ctx6, span5 := tracer.StartFederationSpan(ctx, "route", "node-2")
+	if ctx6 == nil || span5 == nil {
+		t.Error("expected non-nil context and span")
+	}
+	span5.End()
+}
+
+func TestNew_Enabled_HTTPMiddleware(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "http-middleware",
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	wrapped := tracer.HTTPMiddleware(handler)
+	req := httptest.NewRequest("GET", "/test", nil)
+	rr := httptest.NewRecorder()
+	wrapped.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rr.Code)
+	}
+}
+
+func TestNew_Enabled_InjectExtractContext(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tracer, err := New(ctx, Config{
+		Enabled:     true,
+		Endpoint:    "localhost:0",
+		ServiceName: "inject-extract",
+		SampleRate:  1.0,
+		Insecure:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tracer.Shutdown(ctx)
+
+	headers := make(http.Header)
+	tracer.InjectContext(ctx, headers)
+
+	ctx2 := tracer.ExtractContext(ctx, headers)
+	if ctx2 == nil {
+		t.Error("expected non-nil context from extract")
 	}
 }
