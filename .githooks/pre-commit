@@ -22,6 +22,10 @@ if [ -n "$UNFORMATTED" ]; then
 fi
 
 # Full check: format, vet, lint, core tests
-make check-quick
+make check-quick || {
+  echo ""
+  echo "💡 Run 'make lint-fix' to auto-fix lint issues."
+  exit 1
+}
 
 echo "✅ Pre-commit checks passed."
