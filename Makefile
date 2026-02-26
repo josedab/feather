@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core test-one test-pkg lint lint-fix run run-config run-dev run-cli run-tui clean clean-all clean-data generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check test-changed lint-config changelog test-coverage-report bench-save bench-compare
+.PHONY: build test test-quick test-short test-core test-one test-pkg test-e2e lint lint-fix run run-config run-dev run-cli run-tui clean clean-all clean-data generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check test-changed lint-config changelog test-coverage-report bench-save bench-compare
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -140,6 +140,17 @@ test-coverage-report:
 test-integration:
 	$(GO) test -v -tags=integration -count=1 ./test/...
 
+## test-e2e: Run end-to-end tests (compose up → test → compose down)
+test-e2e:
+	@echo "Starting E2E environment..."
+	cd test/e2e && docker compose up -d --build --wait
+	@echo "Running E2E tests..."
+	@FEATHER_E2E_URL=http://localhost:8080 $(GO) test -v -tags=e2e -count=1 -timeout 120s ./test/e2e/...; \
+	EXIT=$$?; \
+	echo "Tearing down E2E environment..."; \
+	cd test/e2e && docker compose down -v; \
+	exit $$EXIT
+
 ## test-one: Run a single test (usage: make test-one RUN=TestFoo [PKG=./internal/core/storage/...])
 test-one:
 	$(GO) test -v -count=1 -run $(RUN) -timeout 120s $(PKG)
@@ -220,7 +231,7 @@ run-tui:
 ## clean: Remove build artifacts and coverage files
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -f coverage.out coverage.html
+	rm -f coverage*.out coverage.html
 
 ## clean-data: Remove data and temp directories only (resets BadgerDB, keeps builds)
 clean-data:
