@@ -14,9 +14,8 @@ bin/
 *.test
 
 # Output of the go coverage tool
-coverage.out
+coverage*.out
 coverage.html
-coverage_analysis.out
 
 # Dependency directories
 vendor/
