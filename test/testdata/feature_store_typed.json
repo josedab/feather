@@ -1,0 +1,8 @@
+{
+  "entity": "user:100",
+  "features": {
+    "login_count": {"value": 42, "type": "INT64"},
+    "score": {"value": 0.95, "type": "FLOAT64"},
+    "is_premium": {"value": true, "type": "BOOL"}
+  }
+}

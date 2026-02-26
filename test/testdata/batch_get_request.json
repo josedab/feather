@@ -1,0 +1,4 @@
+{
+  "entities": ["user:1", "user:2", "user:3"],
+  "features": ["click_count", "purchase_total", "last_activity"]
+}

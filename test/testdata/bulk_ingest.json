@@ -1,0 +1,23 @@
+[
+  {
+    "entity_key": "user:1",
+    "features": {
+      "click_count": 10,
+      "purchase_total": 100.00
+    }
+  },
+  {
+    "entity_key": "user:2",
+    "features": {
+      "click_count": 25,
+      "purchase_total": 350.75
+    }
+  },
+  {
+    "entity_key": "user:3",
+    "features": {
+      "click_count": 5,
+      "purchase_total": 42.50
+    }
+  }
+]

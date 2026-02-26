@@ -1,0 +1,3 @@
+{
+  "query": "SELECT click_count, purchase_total FROM user_features WHERE entity = 'user:123'"
+}

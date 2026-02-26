@@ -1,0 +1,24 @@
+{
+  "name": "user_features",
+  "entity_type": "user",
+  "description": "Core user behavioral features",
+  "ttl": "24h",
+  "features": [
+    {
+      "name": "click_count",
+      "data_type": "INT64"
+    },
+    {
+      "name": "purchase_total",
+      "data_type": "FLOAT64"
+    },
+    {
+      "name": "last_activity",
+      "data_type": "STRING"
+    },
+    {
+      "name": "is_premium",
+      "data_type": "BOOL"
+    }
+  ]
+}

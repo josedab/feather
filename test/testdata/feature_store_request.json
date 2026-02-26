@@ -1,0 +1,8 @@
+{
+  "entity_key": "user:123",
+  "features": {
+    "click_count": 15,
+    "purchase_total": 245.50,
+    "last_activity": "2024-01-15T10:30:00Z"
+  }
+}
