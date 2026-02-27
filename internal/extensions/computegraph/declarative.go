@@ -3,6 +3,7 @@ package computegraph
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"sync"
@@ -249,8 +250,7 @@ func (g *DeclarativeGraph) recompute(name string) {
 	g.mu.Unlock()
 	g.memoizer.Invalidate(name)
 	if _, err := g.engine.Compute(name, nil); err != nil {
-		// Log but don't propagate — this is an async callback.
-		_ = err
+		slog.Debug("recompute failed", "node", name, "error", err)
 	}
 }
 
