@@ -3,6 +3,7 @@ package tenant
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -188,9 +189,11 @@ func (l *ConcurrencyLimiter) Limit(next http.Handler) http.Handler {
 		// Ensure decrement on completion
 		defer func() {
 			atomic.AddInt64(counter, -1)
-			_ = l.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
+			if err := l.registry.UpdateUsage(tenantID, func(u *TenantUsage) {
 				atomic.AddInt64(&u.ConcurrentRequests, -1)
-			})
+			}); err != nil {
+				slog.Debug("failed to update tenant usage", "tenant", tenantID, "error", err)
+			}
 		}()
 
 		next.ServeHTTP(w, r)
