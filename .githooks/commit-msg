@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# commit-msg hook: enforces conventional commit format.
+# Installed by `make setup`. To skip once: git commit --no-verify
+
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -1 "$COMMIT_MSG_FILE")
+
+# Allow merge commits
+if echo "$COMMIT_MSG" | grep -qE '^Merge '; then
+	exit 0
+fi
+
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+'
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+	echo "❌ Commit message does not follow Conventional Commits format."
+	echo ""
+	echo "   Expected: <type>(<scope>): <description>"
+	echo "   Types:    feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+	echo ""
+	echo "   Examples:"
+	echo "     feat(storage): add TTL support for hot tier"
+	echo "     fix: resolve race condition in aggregation engine"
+	echo "     docs: update API reference for vector search"
+	echo ""
+	echo "   Your message: $COMMIT_MSG"
+	exit 1
+fi
