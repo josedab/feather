@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/core/logging"
@@ -50,4 +51,11 @@ func writeJSONError(ctx context.Context, w http.ResponseWriter, status int, mess
 		message = "internal server error"
 	}
 	writeJSONResponse(ctx, w, status, ErrorResponse{Error: message})
+}
+
+// strictDecode decodes JSON from an io.Reader into v, rejecting unknown fields.
+func strictDecode(r io.Reader, v interface{}) error {
+	dec := json.NewDecoder(r)
+	dec.DisallowUnknownFields()
+	return dec.Decode(v)
 }
