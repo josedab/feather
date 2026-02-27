@@ -1,4 +1,4 @@
-.PHONY: build test test-quick test-short test-core test-one test-pkg test-e2e lint lint-fix run run-config run-dev run-cli run-tui clean clean-all clean-data generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check test-changed lint-config changelog test-coverage-report bench-save bench-compare
+.PHONY: build test test-quick test-short test-core test-one test-pkg test-e2e lint lint-fix run run-config run-dev run-cli run-tui clean clean-all clean-data generate tidy fmt fmt-check vet validate-config proto help install-tools setup quickstart quickstart-docker quickstart-local demo doctor smoke-test dev-start dev-stop stop-dev check-quick explore examples docs api-routes list-extensions watch verify test-watch hook-check profile-cpu profile-mem deps-check deps-update test-changed lint-config changelog test-coverage-report bench-save bench-compare test-failed generate-check
 
 APP_NAME := feather
 BUILD_DIR := ./bin
@@ -18,7 +18,7 @@ LDFLAGS := -s -w -X main.version=$(VERSION) -X main.gitCommit=$(GIT_COMMIT) -X m
 help:
 	@echo "Usage: make [target]"
 	@echo ""
-	@sed -n -e 's/^### \(.*\)/\n\1:/p' -e 's/^## //p' $(MAKEFILE_LIST) | column -t -s ':' | sed 's/^/  /'
+	@sed -n -e 's/^### \(.*\)/\n\x1b[1;36m\1:\x1b[0m/p' -e 's/^## \(.*\)/\1/p' $(MAKEFILE_LIST) | column -t -s ':' | sed 's/^/  /'
 
 ## install-tools: Install development tools (golangci-lint, goimports)
 install-tools:
@@ -29,7 +29,7 @@ install-tools:
 ## setup: One-command contributor setup (doctor, tools, hooks, build, test)
 setup: doctor install-tools
 	@git config core.hooksPath .githooks
-	@echo "Git hooks configured (.githooks/pre-commit)."
+	@echo "Git hooks configured (.githooks/pre-commit, .githooks/commit-msg)."
 	@if [ ! -f .env ] && [ -f .env.example ]; then \
 		cp .env.example .env; \
 		echo "Copied .env.example → .env (edit as needed; YAML config is preferred)."; \
@@ -189,6 +189,25 @@ test-changed:
 		$(GO) test -v -count=1 -timeout 120s $$PKGS; \
 	fi
 
+## test-failed: Re-run only previously failed tests (parses test output)
+test-failed:
+	@if command -v gotestsum >/dev/null 2>&1; then \
+		echo "Using gotestsum --rerun-fails..."; \
+		gotestsum --rerun-fails --rerun-fails-max-failures=10 --format short -- -count=1 -timeout 120s ./...; \
+	elif [ -f tmp/test-output.txt ]; then \
+		FAILED=$$(grep -E '^--- FAIL: ' tmp/test-output.txt | sed 's/--- FAIL: \([^ ]*\).*/\1/' | paste -sd '|' -); \
+		if [ -z "$$FAILED" ]; then \
+			echo "No failed tests found in tmp/test-output.txt."; \
+		else \
+			echo "Re-running failed tests: $$FAILED"; \
+			$(GO) test -v -count=1 -run "$$FAILED" -timeout 120s ./...; \
+		fi; \
+	else \
+		echo "No previous test output found."; \
+		echo "Run 'make test-short 2>&1 | tee tmp/test-output.txt' first,"; \
+		echo "or install gotestsum: go install gotest.tools/gotestsum@latest"; \
+	fi
+
 ### Code Quality
 
 ## lint: Run golangci-lint (auto-installs if missing)
@@ -275,6 +294,15 @@ lint-config: build
 ## generate: Run all code generation (protobuf, mocks, etc.)
 generate: proto
 	@echo "✅ All code generation complete."
+
+## generate-check: Verify generated code is up-to-date (CI use)
+generate-check: generate
+	@if ! git diff --quiet api/proto/; then \
+		echo "❌ Generated code is out of date. Run 'make generate' and commit the result."; \
+		git diff --stat api/proto/; \
+		exit 1; \
+	fi
+	@echo "✅ Generated code is up to date."
 
 # Generate protobuf (requires protoc, protoc-gen-go, and protoc-gen-go-grpc)
 # Install plugins: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -494,6 +522,24 @@ profile-mem:
 	$(GO) tool pprof -http=:6060 http://$(PPROF_HOST)/debug/pprof/heap
 
 ### Dependencies
+
+## deps-update: Update all Go module dependencies (interactive)
+deps-update:
+	@echo "This will update all Go dependencies to their latest versions."
+	@echo "Current outdated dependencies:"
+	@$(GO) list -m -u -mod=readonly all 2>/dev/null | grep '\[' || echo "  (none)"
+	@echo ""
+	@printf "Proceed? [y/N] "; read ans; \
+	case "$$ans" in \
+		[yY]*) \
+			echo "Updating dependencies..."; \
+			$(GO) get -u ./...; \
+			$(GO) mod tidy; \
+			echo ""; \
+			echo "✅ Dependencies updated. Review changes with: git diff go.mod go.sum"; \
+			;; \
+		*) echo "Aborted." ;; \
+	esac
 
 ## deps-check: Check for outdated or modified Go module dependencies
 deps-check:
