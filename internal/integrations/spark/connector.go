@@ -129,6 +129,10 @@ type Config struct {
 	// AllowedImportPaths restricts import file access to these directories.
 	// If empty, only absolute paths are required (less restrictive).
 	AllowedImportPaths []string `json:"allowed_import_paths" yaml:"allowed_import_paths"`
+
+	// AllowedExportPaths restricts export file access to these directories.
+	// If empty, only absolute paths are required (less restrictive).
+	AllowedExportPaths []string `json:"allowed_export_paths" yaml:"allowed_export_paths"`
 }
 
 // DefaultConfig returns the default Spark connector configuration.
@@ -485,6 +489,26 @@ func (c *Connector) validateExportRequest(req *ExportRequest) error {
 	if req.OutputPath == "" {
 		return fmt.Errorf("%w: output_path is required", ErrInvalidConfig)
 	}
+	// Prevent path traversal by cleaning and rejecting relative paths
+	cleanPath := filepath.Clean(req.OutputPath)
+	if !filepath.IsAbs(cleanPath) {
+		return fmt.Errorf("%w: output_path must be absolute", ErrInvalidConfig)
+	}
+	// Restrict access to allowed directories if configured
+	if len(c.config.AllowedExportPaths) > 0 {
+		allowed := false
+		for _, dir := range c.config.AllowedExportPaths {
+			cleanDir := filepath.Clean(dir) + string(os.PathSeparator)
+			if strings.HasPrefix(cleanPath, cleanDir) || cleanPath == filepath.Clean(dir) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return fmt.Errorf("%w: output_path is not within allowed directories", ErrInvalidConfig)
+		}
+	}
+	req.OutputPath = cleanPath
 	if len(req.Features) == 0 {
 		return fmt.Errorf("%w: features is required", ErrInvalidConfig)
 	}
