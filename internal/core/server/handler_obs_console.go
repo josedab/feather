@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -130,5 +131,7 @@ func (h *ObsConsoleHandler) handleGrafana(w http.ResponseWriter, r *http.Request
 	dashboard := h.console.GenerateGrafanaDashboard()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(dashboard)) //nolint:errcheck
+	if _, err := w.Write([]byte(dashboard)); err != nil {
+		slog.Debug("failed to write grafana dashboard response", "error", err)
+	}
 }
