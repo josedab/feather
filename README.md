@@ -498,6 +498,10 @@ See [GitHub Issues](https://github.com/feather-store/feather/issues) for current
 
 ## Troubleshooting
 
+For a comprehensive guide, see **[docs/troubleshooting.md](docs/troubleshooting.md)**.
+
+Common quick fixes:
+
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `bind: address already in use` | Port 8080, 50051, or 9090 is taken | Run `make doctor` to check ports, or `lsof -i :8080` |

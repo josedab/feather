@@ -31,6 +31,8 @@ make help
 
 ## How to Contribute
 
+> **Stuck?** See the [Troubleshooting Guide](docs/troubleshooting.md) for common setup and build issues.
+
 ### Reporting Bugs
 
 - Search [existing issues](https://github.com/feather-store/feather/issues) first
