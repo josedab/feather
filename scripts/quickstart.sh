@@ -40,4 +40,52 @@ docker run -d \
   "${IMAGE}" >/dev/null
 
 echo "Feather is starting..."
-echo "Health check: curl http://localhost:8080/health"
+
+# Wait for health
+printf "Waiting for server to be ready"
+HEALTHY=false
+for i in $(seq 1 30); do
+  if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+    HEALTHY=true
+    break
+  fi
+  printf "."
+  sleep 1
+done
+echo ""
+
+if [ "${HEALTHY}" != "true" ]; then
+  echo "Server did not become healthy in 30s." >&2
+  docker logs "${CONTAINER}" 2>&1 | tail -20 >&2
+  docker rm -f "${CONTAINER}" >/dev/null 2>&1
+  exit 1
+fi
+
+# Seed demo data
+echo "Seeding demo data..."
+curl -sS -X POST http://localhost:8080/v1/features \
+  -H "Content-Type: application/json" \
+  -d '{
+    "entity_key": "user:123",
+    "features": {
+      "click_count": 15,
+      "purchase_total": 245.50,
+      "last_activity": "2024-01-15T10:30:00Z"
+    }
+  }' >/dev/null
+
+# Verify
+echo "Verifying..."
+RESPONSE=$(curl -sS "http://localhost:8080/v1/features?entity=user:123&feature=click_count&feature=purchase_total")
+if command -v jq >/dev/null 2>&1; then
+  echo "${RESPONSE}" | jq .
+else
+  echo "${RESPONSE}"
+fi
+
+echo ""
+echo "✅ Feather is running!"
+echo ""
+echo "  Health check: curl http://localhost:8080/health"
+echo "  Get features: curl 'http://localhost:8080/v1/features?entity=user:123&feature=click_count'"
+echo "  Stop:         docker rm -f ${CONTAINER}"
