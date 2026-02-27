@@ -4,7 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -198,7 +198,7 @@ func demonstrateRetry(ctx context.Context, client *feather.Client) {
 			fmt.Printf("API error after retries: status=%d, message=%s, took %v\n",
 				apiErr.StatusCode, apiErr.Message, elapsed)
 		} else {
-			log.Printf("Network error after retries: %v, took %v\n", err, elapsed)
+			slog.Warn("network error after retries", "error", err, "elapsed", elapsed)
 		}
 	} else {
 		fmt.Printf("Success after retries: got %d features, took %v\n",

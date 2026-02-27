@@ -4,7 +4,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/feather-store/feather/sdk/go/feather"
@@ -26,14 +27,16 @@ func main() {
 		},
 	})
 	if err != nil {
-		log.Fatalf("Failed to store features: %v", err)
+		slog.Error("failed to store features", "error", err)
+		os.Exit(1)
 	}
 	fmt.Println("Stored features for user:123")
 
 	// 3. Retrieve features
 	resp, err := client.Features.Get(ctx, "user:123", []string{"score", "purchases"})
 	if err != nil {
-		log.Fatalf("Failed to get features: %v", err)
+		slog.Error("failed to get features", "error", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("Retrieved features for %s:\n", resp.EntityID)
@@ -44,7 +47,8 @@ func main() {
 	// 4. Batch retrieval (multiple entities)
 	results, err := client.Features.GetBatch(ctx, []string{"user:123", "user:456"}, nil)
 	if err != nil {
-		log.Fatalf("Failed to batch get: %v", err)
+		slog.Error("failed to batch get", "error", err)
+		os.Exit(1)
 	}
 	fmt.Printf("\nBatch retrieved %d entities\n", len(results))
 

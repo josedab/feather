@@ -4,7 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -55,12 +55,12 @@ func main() {
 	for err := range errChan {
 		errorCount++
 		if errorCount == 1 {
-			log.Printf("First error: %v", err)
+			slog.Warn("first batch error", "error", err)
 		}
 	}
 
 	if errorCount > 0 {
-		log.Printf("Total errors: %d", errorCount)
+		slog.Warn("batch errors", "count", errorCount)
 	} else {
 		fmt.Println("All 1000 writes completed successfully!")
 	}

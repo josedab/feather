@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -95,7 +95,8 @@ func batchGetFeatures(entities, features []string) map[string]interface{} {
 func get(path string) map[string]interface{} {
 	resp, err := http.Get(baseURL + path)
 	if err != nil {
-		log.Fatalf("GET %s failed: %v", path, err)
+		slog.Error("GET failed", "path", path, "error", err)
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 	return decodeJSON(resp.Body)
@@ -105,7 +106,8 @@ func post(path string, body interface{}) map[string]interface{} {
 	data, _ := json.Marshal(body)
 	resp, err := http.Post(baseURL+path, "application/json", bytes.NewReader(data))
 	if err != nil {
-		log.Fatalf("POST %s failed: %v", path, err)
+		slog.Error("POST failed", "path", path, "error", err)
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 	return decodeJSON(resp.Body)
@@ -114,7 +116,8 @@ func post(path string, body interface{}) map[string]interface{} {
 func decodeJSON(r io.Reader) map[string]interface{} {
 	var result map[string]interface{}
 	if err := json.NewDecoder(r).Decode(&result); err != nil {
-		log.Fatalf("JSON decode failed: %v", err)
+		slog.Error("JSON decode failed", "error", err)
+		os.Exit(1)
 	}
 	return result
 }

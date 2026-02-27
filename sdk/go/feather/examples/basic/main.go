@@ -4,7 +4,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/feather-store/feather/sdk/go/feather"
@@ -27,7 +28,8 @@ func main() {
 		},
 	})
 	if err != nil {
-		log.Fatalf("Failed to store features: %v", err)
+		slog.Error("failed to store features", "error", err)
+		os.Exit(1)
 	}
 	fmt.Println("Features stored successfully")
 
@@ -39,7 +41,8 @@ func main() {
 		"last_login",
 	})
 	if err != nil {
-		log.Fatalf("Failed to get features: %v", err)
+		slog.Error("failed to get features", "error", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("Entity: %s\n", resp.EntityID)
@@ -54,7 +57,8 @@ func main() {
 		[]string{"purchase_count", "avg_order_value"},
 	)
 	if err != nil {
-		log.Fatalf("Failed to batch get features: %v", err)
+		slog.Error("failed to batch get features", "error", err)
+		os.Exit(1)
 	}
 
 	for entityID, data := range results {
@@ -69,7 +73,7 @@ func main() {
 	asOf := time.Now().Add(-24 * time.Hour) // 24 hours ago
 	histResp, err := client.Features.GetAsOf(ctx, "user:123", []string{"purchase_count"}, asOf)
 	if err != nil {
-		log.Printf("Historical lookup failed (may not have data): %v", err)
+		slog.Warn("historical lookup failed (may not have data)", "error", err)
 	} else {
 		fmt.Printf("Features as of %s:\n", asOf.Format(time.RFC3339))
 		for name, val := range histResp.Features {

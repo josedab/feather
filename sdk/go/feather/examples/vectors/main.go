@@ -4,9 +4,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand"
+	"os"
 
 	"github.com/feather-store/feather/sdk/go/feather"
 )
@@ -25,7 +26,7 @@ func main() {
 		Metric:     "cosine",
 	})
 	if err != nil {
-		log.Printf("Index creation (may already exist): %v", err)
+		slog.Warn("index creation (may already exist)", "error", err)
 	} else {
 		fmt.Println("Index created successfully")
 	}
@@ -69,7 +70,8 @@ func main() {
 
 	err = client.Vectors.Upsert(ctx, "product-embeddings", vectors, metadata)
 	if err != nil {
-		log.Fatalf("Failed to upsert vectors: %v", err)
+		slog.Error("failed to upsert vectors", "error", err)
+		os.Exit(1)
 	}
 	fmt.Printf("Upserted %d vectors\n", len(vectors))
 
@@ -81,7 +83,8 @@ func main() {
 
 	results, err := client.Vectors.Search(ctx, "product-embeddings", queryVector, 5)
 	if err != nil {
-		log.Fatalf("Search failed: %v", err)
+		slog.Error("search failed", "error", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("\nTop 5 similar products to electronics query:")
@@ -94,7 +97,8 @@ func main() {
 
 	results, err = client.Vectors.Search(ctx, "product-embeddings", queryVector, 5)
 	if err != nil {
-		log.Fatalf("Search failed: %v", err)
+		slog.Error("search failed", "error", err)
+		os.Exit(1)
 	}
 
 	fmt.Println("\nTop 5 similar products to clothing query:")
