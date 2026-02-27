@@ -35,7 +35,9 @@ func init() {
 		return NewIncrMatHandler(incrmat.NewEngine(incrmat.DefaultEngineConfig()))
 	})
 	registerHandler("webhook_events", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
-		return NewWebhooksHandler(webhooks.NewDispatcher(webhooks.DefaultDispatcherConfig()))
+		h := NewWebhooksHandler(webhooks.NewDispatcher(webhooks.DefaultDispatcherConfig()))
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("cloud_storage", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewCloudStorageHandler(cloudstorage.NewObjectStore(cloudstorage.DefaultStoreConfig()))

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"sync"
 
@@ -10,11 +9,12 @@ import (
 
 // PipelineHandler provides HTTP endpoints for the visual pipeline builder.
 type PipelineHandler struct {
-	pipelines  map[string]*pipelinebuilder.Pipeline
-	transforms *pipelinebuilder.TransformRegistry
-	templates  *pipelinebuilder.TemplateStore
-	codegen    *pipelinebuilder.CodeGenerator
-	mu         sync.RWMutex
+	pipelines   map[string]*pipelinebuilder.Pipeline
+	transforms  *pipelinebuilder.TransformRegistry
+	templates   *pipelinebuilder.TemplateStore
+	codegen     *pipelinebuilder.CodeGenerator
+	mu          sync.RWMutex
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewPipelineHandler creates a new pipeline handler with default components.
@@ -29,20 +29,24 @@ func NewPipelineHandler() *PipelineHandler {
 
 // RegisterRoutes registers pipeline builder API routes.
 func (h *PipelineHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /v1/pipelines/transforms", h.handleListTransforms)
-	mux.HandleFunc("GET /v1/pipelines/transforms/{id}", h.handleGetTransform)
-	mux.HandleFunc("GET /v1/pipelines/templates", h.handleListTemplates)
-	mux.HandleFunc("GET /v1/pipelines/templates/{id}", h.handleGetTemplate)
-	mux.HandleFunc("GET /v1/pipelines/stats", h.handleStats)
-	mux.HandleFunc("GET /v1/pipelines", h.handleListPipelines)
-	mux.HandleFunc("POST /v1/pipelines", h.handleCreatePipeline)
-	mux.HandleFunc("GET /v1/pipelines/{id}", h.handleGetPipeline)
-	mux.HandleFunc("DELETE /v1/pipelines/{id}", h.handleDeletePipeline)
-	mux.HandleFunc("POST /v1/pipelines/{id}/nodes", h.handleAddNode)
-	mux.HandleFunc("DELETE /v1/pipelines/{id}/nodes/{nodeId}", h.handleRemoveNode)
-	mux.HandleFunc("POST /v1/pipelines/{id}/connect", h.handleConnect)
-	mux.HandleFunc("POST /v1/pipelines/{id}/validate", h.handleValidate)
-	mux.HandleFunc("POST /v1/pipelines/{id}/codegen", h.handleCodegen)
+	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
+	mux.Handle("GET /v1/pipelines/transforms", wrap(http.HandlerFunc(h.handleListTransforms)))
+	mux.Handle("GET /v1/pipelines/transforms/{id}", wrap(http.HandlerFunc(h.handleGetTransform)))
+	mux.Handle("GET /v1/pipelines/templates", wrap(http.HandlerFunc(h.handleListTemplates)))
+	mux.Handle("GET /v1/pipelines/templates/{id}", wrap(http.HandlerFunc(h.handleGetTemplate)))
+	mux.Handle("GET /v1/pipelines/stats", wrap(http.HandlerFunc(h.handleStats)))
+	mux.Handle("GET /v1/pipelines", wrap(http.HandlerFunc(h.handleListPipelines)))
+	mux.Handle("POST /v1/pipelines", wrap(http.HandlerFunc(h.handleCreatePipeline)))
+	mux.Handle("GET /v1/pipelines/{id}", wrap(http.HandlerFunc(h.handleGetPipeline)))
+	mux.Handle("DELETE /v1/pipelines/{id}", wrap(http.HandlerFunc(h.handleDeletePipeline)))
+	mux.Handle("POST /v1/pipelines/{id}/nodes", wrap(http.HandlerFunc(h.handleAddNode)))
+	mux.Handle("DELETE /v1/pipelines/{id}/nodes/{nodeId}", wrap(http.HandlerFunc(h.handleRemoveNode)))
+	mux.Handle("POST /v1/pipelines/{id}/connect", wrap(http.HandlerFunc(h.handleConnect)))
+	mux.Handle("POST /v1/pipelines/{id}/validate", wrap(http.HandlerFunc(h.handleValidate)))
+	mux.Handle("POST /v1/pipelines/{id}/codegen", wrap(http.HandlerFunc(h.handleCodegen)))
 }
 
 func (h *PipelineHandler) handleListPipelines(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +68,7 @@ func (h *PipelineHandler) handleCreatePipeline(w http.ResponseWriter, r *http.Re
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -119,7 +123,7 @@ func (h *PipelineHandler) handleAddNode(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var node pipelinebuilder.PipelineNode
-	if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
+	if err := strictDecode(r.Body, &node); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -157,7 +161,7 @@ func (h *PipelineHandler) handleConnect(w http.ResponseWriter, r *http.Request) 
 		From string `json:"from"`
 		To   string `json:"to"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

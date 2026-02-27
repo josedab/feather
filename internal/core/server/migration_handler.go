@@ -12,7 +12,8 @@ import (
 
 // MigrationHandler handles Feast to Feather migration API requests.
 type MigrationHandler struct {
-	manager *migration.Manager
+	manager     *migration.Manager
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewMigrationHandler creates a new migration handler.
@@ -24,24 +25,28 @@ func NewMigrationHandler(manager *migration.Manager) *MigrationHandler {
 
 // RegisterRoutes registers migration routes with the given mux.
 func (h *MigrationHandler) RegisterRoutes(mux *http.ServeMux) {
+	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
 	// Analysis endpoints
-	mux.HandleFunc("POST /v1/migration/analyze", h.handleAnalyze)
-	mux.HandleFunc("POST /v1/migration/convert/schema", h.handleConvertSchema)
-	mux.HandleFunc("POST /v1/migration/convert/config", h.handleConvertConfig)
-	mux.HandleFunc("POST /v1/migration/full", h.handleFullMigration)
+	mux.Handle("POST /v1/migration/analyze", wrap(http.HandlerFunc(h.handleAnalyze)))
+	mux.Handle("POST /v1/migration/convert/schema", wrap(http.HandlerFunc(h.handleConvertSchema)))
+	mux.Handle("POST /v1/migration/convert/config", wrap(http.HandlerFunc(h.handleConvertConfig)))
+	mux.Handle("POST /v1/migration/full", wrap(http.HandlerFunc(h.handleFullMigration)))
 
 	// Plan management
-	mux.HandleFunc("GET /v1/migration/plans", h.handleListPlans)
-	mux.HandleFunc("POST /v1/migration/plans", h.handleCreatePlan)
-	mux.HandleFunc("GET /v1/migration/plans/{id}", h.handleGetPlan)
-	mux.HandleFunc("DELETE /v1/migration/plans/{id}", h.handleDeletePlan)
+	mux.Handle("GET /v1/migration/plans", wrap(http.HandlerFunc(h.handleListPlans)))
+	mux.Handle("POST /v1/migration/plans", wrap(http.HandlerFunc(h.handleCreatePlan)))
+	mux.Handle("GET /v1/migration/plans/{id}", wrap(http.HandlerFunc(h.handleGetPlan)))
+	mux.Handle("DELETE /v1/migration/plans/{id}", wrap(http.HandlerFunc(h.handleDeletePlan)))
 
 	// Job management
-	mux.HandleFunc("GET /v1/migration/jobs", h.handleListJobs)
-	mux.HandleFunc("GET /v1/migration/jobs/{id}", h.handleGetJob)
+	mux.Handle("GET /v1/migration/jobs", wrap(http.HandlerFunc(h.handleListJobs)))
+	mux.Handle("GET /v1/migration/jobs/{id}", wrap(http.HandlerFunc(h.handleGetJob)))
 
 	// Stats
-	mux.HandleFunc("GET /v1/migration/stats", h.handleStats)
+	mux.Handle("GET /v1/migration/stats", wrap(http.HandlerFunc(h.handleStats)))
 }
 
 // AnalyzeRequest represents a request to analyze a Feast project.
@@ -51,7 +56,7 @@ type AnalyzeRequest struct {
 
 func (h *MigrationHandler) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
@@ -72,7 +77,7 @@ func (h *MigrationHandler) handleAnalyze(w http.ResponseWriter, r *http.Request)
 
 func (h *MigrationHandler) handleConvertSchema(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
@@ -93,7 +98,7 @@ func (h *MigrationHandler) handleConvertSchema(w http.ResponseWriter, r *http.Re
 
 func (h *MigrationHandler) handleConvertConfig(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
@@ -114,7 +119,7 @@ func (h *MigrationHandler) handleConvertConfig(w http.ResponseWriter, r *http.Re
 
 func (h *MigrationHandler) handleFullMigration(w http.ResponseWriter, r *http.Request) {
 	var req AnalyzeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}
@@ -149,7 +154,7 @@ type CreatePlanRequest struct {
 
 func (h *MigrationHandler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	var req CreatePlanRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, domain.NewErrorResponse("INVALID_REQUEST", err.Error()))
 		return
 	}

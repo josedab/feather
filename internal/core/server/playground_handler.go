@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/tools/playground"
@@ -9,7 +8,8 @@ import (
 
 // PlaygroundHandler provides HTTP endpoints for the feature playground.
 type PlaygroundHandler struct {
-	service *playground.Service
+	service     *playground.Service
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewPlaygroundHandler creates a new playground handler.
@@ -19,14 +19,18 @@ func NewPlaygroundHandler(service *playground.Service) *PlaygroundHandler {
 
 // RegisterRoutes registers playground API routes.
 func (h *PlaygroundHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /v1/playground/summary", h.handleComputeSummary)
-	mux.HandleFunc("GET /v1/playground/queries", h.handleListQueries)
-	mux.HandleFunc("POST /v1/playground/queries", h.handleSaveQuery)
-	mux.HandleFunc("GET /v1/playground/queries/{id}", h.handleGetQuery)
-	mux.HandleFunc("DELETE /v1/playground/queries/{id}", h.handleDeleteQuery)
-	mux.HandleFunc("GET /v1/playground/datasets", h.handleListDatasets)
-	mux.HandleFunc("POST /v1/playground/datasets", h.handleCreateDataset)
-	mux.HandleFunc("GET /v1/playground/datasets/{id}", h.handleGetDatasetStatus)
+	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
+	mux.Handle("POST /v1/playground/summary", wrap(http.HandlerFunc(h.handleComputeSummary)))
+	mux.Handle("GET /v1/playground/queries", wrap(http.HandlerFunc(h.handleListQueries)))
+	mux.Handle("POST /v1/playground/queries", wrap(http.HandlerFunc(h.handleSaveQuery)))
+	mux.Handle("GET /v1/playground/queries/{id}", wrap(http.HandlerFunc(h.handleGetQuery)))
+	mux.Handle("DELETE /v1/playground/queries/{id}", wrap(http.HandlerFunc(h.handleDeleteQuery)))
+	mux.Handle("GET /v1/playground/datasets", wrap(http.HandlerFunc(h.handleListDatasets)))
+	mux.Handle("POST /v1/playground/datasets", wrap(http.HandlerFunc(h.handleCreateDataset)))
+	mux.Handle("GET /v1/playground/datasets/{id}", wrap(http.HandlerFunc(h.handleGetDatasetStatus)))
 }
 
 func (h *PlaygroundHandler) handleComputeSummary(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +45,7 @@ func (h *PlaygroundHandler) handleComputeSummary(w http.ResponseWriter, r *http.
 		DataType string    `json:"data_type"`
 		Values   []float64 `json:"values"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -72,7 +76,7 @@ func (h *PlaygroundHandler) handleSaveQuery(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var q playground.SavedQuery
-	if err := json.NewDecoder(r.Body).Decode(&q); err != nil {
+	if err := strictDecode(r.Body, &q); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -130,7 +134,7 @@ func (h *PlaygroundHandler) handleCreateDataset(w http.ResponseWriter, r *http.R
 		return
 	}
 	var cfg playground.DatasetConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

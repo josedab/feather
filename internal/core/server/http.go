@@ -18,6 +18,7 @@ import (
 	"github.com/feather-store/feather/internal/core/tracing"
 	"github.com/feather-store/feather/internal/core/vector"
 	"github.com/feather-store/feather/internal/integrations/dbt"
+	"github.com/feather-store/feather/internal/platform/auth"
 )
 
 // HTTPServer provides HTTP REST API for feature serving.
@@ -193,13 +194,16 @@ func NewHTTPServer(
 	}
 
 	// Register optional feature handlers from the registry
+	authController := auth.NewAccessController()
+	authMw := auth.NewMiddleware(authController, nil)
 	deps := &handlerDeps{
-		Ctx:         ctx,
-		Store:       store,
-		Aggregation: agg,
-		Schema:      schema,
-		Metrics:     m,
-		Config:      cfg,
+		Ctx:            ctx,
+		Store:          store,
+		Aggregation:    agg,
+		Schema:         schema,
+		Metrics:        m,
+		Config:         cfg,
+		AuthMiddleware: authMw.Authenticate,
 	}
 	registerEnabledFeatures(mux, cfg.Features.EnabledFeatures, deps)
 
@@ -342,7 +346,7 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 	}()
 
 	var req domain.GetFeaturesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
 		return
 	}
@@ -441,7 +445,7 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var req domain.FeatureUpdate
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
 		return
 	}
@@ -537,7 +541,7 @@ func (s *HTTPServer) handleGetGroup(w http.ResponseWriter, r *http.Request) {
 // handleCreateGroup handles POST /v1/schema/groups
 func (s *HTTPServer) handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 	var group domain.FeatureGroup
-	if err := json.NewDecoder(r.Body).Decode(&group); err != nil {
+	if err := strictDecode(r.Body, &group); err != nil {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeBadRequest, "invalid request body")
 		return
 	}

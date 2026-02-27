@@ -57,7 +57,9 @@ func init() {
 		return NewCompositionHandler(engine)
 	})
 	registerHandler("migration", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
-		return NewMigrationHandler(migration.NewManager(migration.DefaultManagerConfig()))
+		h := NewMigrationHandler(migration.NewManager(migration.DefaultManagerConfig()))
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("saas", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		reg := saas.NewPlanRegistry()
@@ -106,7 +108,9 @@ func init() {
 		return NewVersioningHandler(versioning.NewVersionStore())
 	})
 	registerHandler("validation", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
-		return NewValidationHandler(validation.NewValidator(validation.DefaultValidatorConfig()))
+		h := NewValidationHandler(validation.NewValidator(validation.DefaultValidatorConfig()))
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("dashboard_v2", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewDashboardHandler(deps.Store, deps.Metrics)

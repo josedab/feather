@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -12,7 +11,8 @@ import (
 
 // WebhooksHandler handles webhook API requests.
 type WebhooksHandler struct {
-	dispatcher *webhooks.Dispatcher
+	dispatcher  *webhooks.Dispatcher
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewWebhooksHandler creates a new webhooks handler.
@@ -24,16 +24,20 @@ func NewWebhooksHandler(dispatcher *webhooks.Dispatcher) *WebhooksHandler {
 
 // RegisterRoutes registers webhook API routes.
 func (h *WebhooksHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /v1/webhooks", h.handleListWebhooks)
-	mux.HandleFunc("POST /v1/webhooks", h.handleRegisterWebhook)
-	mux.HandleFunc("GET /v1/webhooks/{id}", h.handleGetWebhook)
-	mux.HandleFunc("PUT /v1/webhooks/{id}", h.handleUpdateWebhook)
-	mux.HandleFunc("DELETE /v1/webhooks/{id}", h.handleDeleteWebhook)
-	mux.HandleFunc("POST /v1/webhooks/dispatch", h.handleDispatch)
-	mux.HandleFunc("GET /v1/webhooks/{id}/deliveries", h.handleGetDeliveries)
-	mux.HandleFunc("GET /v1/webhooks/dead-letter", h.handleGetDeadLetter)
-	mux.HandleFunc("POST /v1/webhooks/dead-letter/retry", h.handleRetryDeadLetter)
-	mux.HandleFunc("GET /v1/webhooks/stats", h.handleGetStats)
+	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
+	mux.Handle("GET /v1/webhooks", wrap(http.HandlerFunc(h.handleListWebhooks)))
+	mux.Handle("POST /v1/webhooks", wrap(http.HandlerFunc(h.handleRegisterWebhook)))
+	mux.Handle("GET /v1/webhooks/{id}", wrap(http.HandlerFunc(h.handleGetWebhook)))
+	mux.Handle("PUT /v1/webhooks/{id}", wrap(http.HandlerFunc(h.handleUpdateWebhook)))
+	mux.Handle("DELETE /v1/webhooks/{id}", wrap(http.HandlerFunc(h.handleDeleteWebhook)))
+	mux.Handle("POST /v1/webhooks/dispatch", wrap(http.HandlerFunc(h.handleDispatch)))
+	mux.Handle("GET /v1/webhooks/{id}/deliveries", wrap(http.HandlerFunc(h.handleGetDeliveries)))
+	mux.Handle("GET /v1/webhooks/dead-letter", wrap(http.HandlerFunc(h.handleGetDeadLetter)))
+	mux.Handle("POST /v1/webhooks/dead-letter/retry", wrap(http.HandlerFunc(h.handleRetryDeadLetter)))
+	mux.Handle("GET /v1/webhooks/stats", wrap(http.HandlerFunc(h.handleGetStats)))
 }
 
 // handleListWebhooks handles GET /v1/webhooks
@@ -47,7 +51,7 @@ func (h *WebhooksHandler) handleListWebhooks(w http.ResponseWriter, r *http.Requ
 // handleRegisterWebhook handles POST /v1/webhooks
 func (h *WebhooksHandler) handleRegisterWebhook(w http.ResponseWriter, r *http.Request) {
 	var wh webhooks.WebhookConfig
-	if err := json.NewDecoder(r.Body).Decode(&wh); err != nil {
+	if err := strictDecode(r.Body, &wh); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -94,7 +98,7 @@ func (h *WebhooksHandler) handleUpdateWebhook(w http.ResponseWriter, r *http.Req
 	}
 
 	var wh webhooks.WebhookConfig
-	if err := json.NewDecoder(r.Body).Decode(&wh); err != nil {
+	if err := strictDecode(r.Body, &wh); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -134,7 +138,7 @@ func (h *WebhooksHandler) handleDeleteWebhook(w http.ResponseWriter, r *http.Req
 // handleDispatch handles POST /v1/webhooks/dispatch
 func (h *WebhooksHandler) handleDispatch(w http.ResponseWriter, r *http.Request) {
 	var event webhooks.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

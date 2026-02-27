@@ -53,7 +53,9 @@ func init() {
 		return NewPluginHandler(plugin.NewRegistry(plugin.DefaultRegistryConfig()))
 	})
 	registerHandler("playground", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
-		return NewPlaygroundHandler(playground.NewService(nil))
+		h := NewPlaygroundHandler(playground.NewService(nil))
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("pushdown", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
 		return NewPushdownHandler(pushdown.NewEvaluator())

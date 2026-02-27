@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -11,7 +10,8 @@ import (
 
 // ValidationHandler handles online-offline consistency validation API requests.
 type ValidationHandler struct {
-	validator *validation.Validator
+	validator   *validation.Validator
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewValidationHandler creates a new validation handler.
@@ -21,13 +21,17 @@ func NewValidationHandler(validator *validation.Validator) *ValidationHandler {
 
 // RegisterRoutes registers validation API routes.
 func (h *ValidationHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /v1/validation/rules", h.handleListRules)
-	mux.HandleFunc("POST /v1/validation/rules", h.handleAddRule)
-	mux.HandleFunc("DELETE /v1/validation/rules/{name}", h.handleRemoveRule)
-	mux.HandleFunc("POST /v1/validation/validate", h.handleValidate)
-	mux.HandleFunc("GET /v1/validation/results", h.handleGetResults)
-	mux.HandleFunc("GET /v1/validation/reports", h.handleGetReports)
-	mux.HandleFunc("GET /v1/validation/stats", h.handleStats)
+	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
+	mux.Handle("GET /v1/validation/rules", wrap(http.HandlerFunc(h.handleListRules)))
+	mux.Handle("POST /v1/validation/rules", wrap(http.HandlerFunc(h.handleAddRule)))
+	mux.Handle("DELETE /v1/validation/rules/{name}", wrap(http.HandlerFunc(h.handleRemoveRule)))
+	mux.Handle("POST /v1/validation/validate", wrap(http.HandlerFunc(h.handleValidate)))
+	mux.Handle("GET /v1/validation/results", wrap(http.HandlerFunc(h.handleGetResults)))
+	mux.Handle("GET /v1/validation/reports", wrap(http.HandlerFunc(h.handleGetReports)))
+	mux.Handle("GET /v1/validation/stats", wrap(http.HandlerFunc(h.handleStats)))
 }
 
 func (h *ValidationHandler) handleListRules(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +41,7 @@ func (h *ValidationHandler) handleListRules(w http.ResponseWriter, r *http.Reque
 
 func (h *ValidationHandler) handleAddRule(w http.ResponseWriter, r *http.Request) {
 	var rule validation.ValidationRule
-	if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+	if err := strictDecode(r.Body, &rule); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -69,7 +73,7 @@ type validateRequest struct {
 
 func (h *ValidationHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var req validateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -53,12 +53,13 @@ const (
 
 // handlerDeps provides dependencies to handler factories.
 type handlerDeps struct {
-	Ctx         context.Context
-	Store       *storage.Store
-	Aggregation *aggregation.Engine
-	Schema      *storage.Registry
-	Metrics     *metrics.Metrics
-	Config      HTTPServerConfig
+	Ctx            context.Context
+	Store          *storage.Store
+	Aggregation    *aggregation.Engine
+	Schema         *storage.Registry
+	Metrics        *metrics.Metrics
+	Config         HTTPServerConfig
+	AuthMiddleware func(http.Handler) http.Handler
 }
 
 // handlerFactory creates a FeatureHandler from dependencies.
