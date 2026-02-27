@@ -284,7 +284,11 @@ func isValidDataType(dt string) bool {
 
 // SaveDefinition saves a feature definition to a file.
 func (l *SchemaLoader) SaveDefinition(def *FeatureDefinition, filePath string) error {
-	fullPath := filepath.Join(l.basePath, filePath)
+	fullPath := filepath.Clean(filepath.Join(l.basePath, filePath))
+	// Prevent path traversal outside base directory
+	if !strings.HasPrefix(fullPath, filepath.Clean(l.basePath)+string(os.PathSeparator)) {
+		return fmt.Errorf("path traversal detected: %s", filePath)
+	}
 
 	// Ensure directory exists
 	dir := filepath.Dir(fullPath)
