@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/core/storage"
@@ -71,7 +70,7 @@ func (h *MLHandler) handleListConnectors(w http.ResponseWriter, r *http.Request)
 // handleRegisterConnector handles POST /v1/ml/connectors
 func (h *MLHandler) handleRegisterConnector(w http.ResponseWriter, r *http.Request) {
 	var req ConnectorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -246,7 +245,7 @@ type PredictAPIRequest struct {
 // handlePredict handles POST /v1/ml/predict
 func (h *MLHandler) handlePredict(w http.ResponseWriter, r *http.Request) {
 	var req PredictAPIRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -309,7 +308,7 @@ type BatchPredictAPIRequest struct {
 // handleBatchPredict handles POST /v1/ml/predict/batch
 func (h *MLHandler) handleBatchPredict(w http.ResponseWriter, r *http.Request) {
 	var req BatchPredictAPIRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

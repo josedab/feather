@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -105,7 +104,7 @@ type CreateJobRequest struct {
 // handleCreateJob handles POST /v1/backfill/jobs
 func (h *BackfillHandler) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	var req CreateJobRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -335,7 +334,7 @@ func (h *BackfillHandler) handleExportJob(w http.ResponseWriter, r *http.Request
 // handleImportJob handles POST /v1/backfill/import
 func (h *BackfillHandler) handleImportJob(w http.ResponseWriter, r *http.Request) {
 	var job backfill.Job
-	if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
+	if err := strictDecode(r.Body, &job); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

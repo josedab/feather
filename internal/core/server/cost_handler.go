@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -81,7 +80,7 @@ type UsageRequest struct {
 
 func (h *CostHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) {
 	var req UsageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -160,7 +159,7 @@ type SetRateRequest struct {
 
 func (h *CostHandler) handleSetRate(w http.ResponseWriter, r *http.Request) {
 	var req SetRateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -216,7 +215,7 @@ type BudgetRequest struct {
 
 func (h *CostHandler) handleCreateBudget(w http.ResponseWriter, r *http.Request) {
 	var req BudgetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -260,7 +259,7 @@ func (h *CostHandler) handleUpdateBudget(w http.ResponseWriter, r *http.Request)
 	id := r.PathValue("id")
 
 	var req BudgetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -381,7 +380,7 @@ type AllocationRuleRequest struct {
 
 func (h *CostHandler) handleCreateRule(w http.ResponseWriter, r *http.Request) {
 	var req AllocationRuleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -420,7 +419,7 @@ func (h *CostHandler) handleUpdateRule(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	var req AllocationRuleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -490,7 +489,7 @@ type GenerateInvoiceRequest struct {
 
 func (h *CostHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Request) {
 	var req GenerateInvoiceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -534,7 +533,7 @@ func (h *CostHandler) handleUpdateInvoiceStatus(w http.ResponseWriter, r *http.R
 	id := r.PathValue("id")
 
 	var req UpdateInvoiceStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -559,7 +558,7 @@ func (h *CostHandler) handleApplyCredit(w http.ResponseWriter, r *http.Request) 
 	id := r.PathValue("id")
 
 	var req ApplyCreditRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -601,7 +600,7 @@ type ReportRequest struct {
 
 func (h *CostHandler) handleGenerateReport(w http.ResponseWriter, r *http.Request) {
 	var req ReportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -627,7 +626,7 @@ func (h *CostHandler) handleGenerateReport(w http.ResponseWriter, r *http.Reques
 
 	report, err := h.chargebackManager.GenerateReport(config, req.Start, req.End)
 	if err != nil {
-		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

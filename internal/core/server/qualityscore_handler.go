@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -43,7 +42,7 @@ type recordSignalRequest struct {
 // handleRecordSignal handles POST /v1/quality-score/signal
 func (h *QualityScoreHandler) handleRecordSignal(w http.ResponseWriter, r *http.Request) {
 	var req recordSignalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

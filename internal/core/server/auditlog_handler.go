@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -36,7 +35,7 @@ func (h *AuditLogHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleLogEntry handles POST /v1/audit/log
 func (h *AuditLogHandler) handleLogEntry(w http.ResponseWriter, r *http.Request) {
 	var entry auditlog.AuditEntry
-	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+	if err := strictDecode(r.Body, &entry); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -104,7 +103,7 @@ func (h *AuditLogHandler) handleExport(w http.ResponseWriter, r *http.Request) {
 		Filter auditlog.QueryFilter `json:"filter"`
 		Format string               `json:"format"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -131,7 +130,7 @@ func (h *AuditLogHandler) handlePurge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Before string `json:"before"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -45,7 +44,7 @@ func (h *LLMHandler) handleEmbed(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req EmbedRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
@@ -95,7 +94,7 @@ func (h *LLMHandler) handleEmbedChunks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var req EmbedChunksRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
@@ -151,7 +150,7 @@ func (h *LLMHandler) handleCreateFeature(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 
 	var req CreateFeatureRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
@@ -203,7 +202,7 @@ func (h *LLMHandler) handleCreateFeaturesBatch(w http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 
 	var req CreateFeaturesBatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/feastcompat"
@@ -38,7 +37,7 @@ func (h *FeastGAHandler) handleGetOnlineFeatures(w http.ResponseWriter, r *http.
 		EntityRows  []map[string]interface{} `json:"entity_rows"`
 		FeatureRefs []string                 `json:"feature_refs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -52,7 +51,7 @@ func (h *FeastGAHandler) handleGetOnlineFeatures(w http.ResponseWriter, r *http.
 
 func (h *FeastGAHandler) handlePush(w http.ResponseWriter, r *http.Request) {
 	var req feastcompat.PushRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -68,7 +67,7 @@ func (h *FeastGAHandler) handlePlanMigration(w http.ResponseWriter, r *http.Requ
 	var req struct {
 		FeastConfig string `json:"feast_config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -84,7 +83,7 @@ func (h *FeastGAHandler) handleExecuteMigration(w http.ResponseWriter, r *http.R
 	var req struct {
 		FeastConfig string `json:"feast_config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

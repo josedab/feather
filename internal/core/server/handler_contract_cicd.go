@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/contractcicd"
@@ -45,7 +44,7 @@ func (h *ContractCICDHandler) handleList(w http.ResponseWriter, r *http.Request)
 
 func (h *ContractCICDHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var contract contractcicd.Contract
-	if err := json.NewDecoder(r.Body).Decode(&contract); err != nil {
+	if err := strictDecode(r.Body, &contract); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -73,7 +72,7 @@ func (h *ContractCICDHandler) handleGet(w http.ResponseWriter, r *http.Request) 
 func (h *ContractCICDHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	var contract contractcicd.Contract
-	if err := json.NewDecoder(r.Body).Decode(&contract); err != nil {
+	if err := strictDecode(r.Body, &contract); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -98,7 +97,7 @@ func (h *ContractCICDHandler) handleUpdate(w http.ResponseWriter, r *http.Reques
 
 func (h *ContractCICDHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var contract contractcicd.Contract
-	if err := json.NewDecoder(r.Body).Decode(&contract); err != nil {
+	if err := strictDecode(r.Body, &contract); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -113,7 +112,7 @@ func (h *ContractCICDHandler) handlePlan(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Contracts []*contractcicd.Contract `json:"contracts"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/registry"
@@ -49,7 +48,7 @@ func (h *ModelRegistryHandler) handleListModels(w http.ResponseWriter, r *http.R
 
 func (h *ModelRegistryHandler) handleRegisterModel(w http.ResponseWriter, r *http.Request) {
 	var binding registry.ModelBinding
-	if err := json.NewDecoder(r.Body).Decode(&binding); err != nil {
+	if err := strictDecode(r.Body, &binding); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -102,7 +101,7 @@ func (h *ModelRegistryHandler) handleListDeprecations(w http.ResponseWriter, r *
 
 func (h *ModelRegistryHandler) handleDeprecateFeature(w http.ResponseWriter, r *http.Request) {
 	var notice registry.DeprecationNotice
-	if err := json.NewDecoder(r.Body).Decode(&notice); err != nil {
+	if err := strictDecode(r.Body, &notice); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -119,7 +118,7 @@ func (h *ModelRegistryHandler) handleAckDeprecation(w http.ResponseWriter, r *ht
 	var req struct {
 		Owner string `json:"owner"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

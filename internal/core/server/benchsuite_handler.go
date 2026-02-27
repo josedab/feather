@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/tools/benchsuite"
@@ -34,7 +33,7 @@ func (h *BenchSuiteHandler) handleCreateRun(w http.ResponseWriter, r *http.Reque
 		Name     string `json:"name"`
 		Workload string `json:"workload"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -99,7 +98,7 @@ func (h *BenchSuiteHandler) handleCompare(w http.ResponseWriter, r *http.Request
 	var req struct {
 		IDs []string `json:"ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -45,7 +44,7 @@ type createBranchRequest struct {
 
 func (h *VersioningHandler) handleCreateBranch(w http.ResponseWriter, r *http.Request) {
 	var req createBranchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -95,7 +94,7 @@ type createCommitRequest struct {
 
 func (h *VersioningHandler) handleCreateCommit(w http.ResponseWriter, r *http.Request) {
 	var req createCommitRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -154,7 +153,7 @@ type createTagRequest struct {
 
 func (h *VersioningHandler) handleCreateTag(w http.ResponseWriter, r *http.Request) {
 	var req createTagRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -175,7 +174,7 @@ type rollbackRequest struct {
 
 func (h *VersioningHandler) handleRollback(w http.ResponseWriter, r *http.Request) {
 	var req rollbackRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -118,7 +118,7 @@ type FreshnessThresholdRequest struct {
 // handleSetFreshnessThreshold handles POST /v1/observability/freshness/threshold
 func (h *ObservabilityHandler) handleSetFreshnessThreshold(w http.ResponseWriter, r *http.Request) {
 	var req FreshnessThresholdRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -199,7 +199,7 @@ func (h *ObservabilityHandler) handleAddQualityRule(w http.ResponseWriter, r *ht
 	}
 
 	var req QualityRuleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -290,7 +290,7 @@ type AlertRuleRequest struct {
 // handleAddAlertRule handles POST /v1/observability/alerts/rules
 func (h *ObservabilityHandler) handleAddAlertRule(w http.ResponseWriter, r *http.Request) {
 	var req AlertRuleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -357,7 +357,7 @@ func (h *ObservabilityHandler) handleAckAlert(w http.ResponseWriter, r *http.Req
 	var req struct {
 		By string `json:"by"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		req.By = "anonymous"
 	}
 

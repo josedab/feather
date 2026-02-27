@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/apigateway"
@@ -42,7 +41,7 @@ func (h *APIGatewayHandler) handleListBackends(w http.ResponseWriter, r *http.Re
 // handleAddBackend handles POST /v1/gateway/backends
 func (h *APIGatewayHandler) handleAddBackend(w http.ResponseWriter, r *http.Request) {
 	var backend apigateway.Backend
-	if err := json.NewDecoder(r.Body).Decode(&backend); err != nil {
+	if err := strictDecode(r.Body, &backend); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -83,7 +82,7 @@ func (h *APIGatewayHandler) handleUpdateStatus(w http.ResponseWriter, r *http.Re
 		Status  string  `json:"status"`
 		Latency float64 `json:"latency"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -102,7 +101,7 @@ func (h *APIGatewayHandler) handleRoute(w http.ResponseWriter, r *http.Request) 
 		TenantID  string `json:"tenant_id"`
 		EntityKey string `json:"entity_key"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

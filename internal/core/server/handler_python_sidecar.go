@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/pythonsdk"
@@ -48,10 +47,10 @@ func (h *PythonSidecarHandler) handleStop(w http.ResponseWriter, r *http.Request
 
 func (h *PythonSidecarHandler) handleDeploy(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		TransformID  string                `json:"transform_id"`
+		TransformID  string                 `json:"transform_id"`
 		Dependencies []pythonsdk.Dependency `json:"dependencies,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -68,7 +67,7 @@ func (h *PythonSidecarHandler) handleExecute(w http.ResponseWriter, r *http.Requ
 	var req struct {
 		Inputs map[string]interface{} `json:"inputs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -43,7 +42,7 @@ func (h *BillingHandler) handleListPlans(w http.ResponseWriter, r *http.Request)
 
 func (h *BillingHandler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	var plan marketplace.BillingPlan
-	if err := json.NewDecoder(r.Body).Decode(&plan); err != nil {
+	if err := strictDecode(r.Body, &plan); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -77,7 +76,7 @@ func (h *BillingHandler) handleRecordUsage(w http.ResponseWriter, r *http.Reques
 		Requests     int64  `json:"requests"`
 		Bytes        int64  `json:"bytes"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -100,7 +99,7 @@ func (h *BillingHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Re
 		PeriodStart  time.Time `json:"period_start"`
 		PeriodEnd    time.Time `json:"period_end"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

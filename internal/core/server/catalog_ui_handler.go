@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/tools/catalog"
@@ -42,7 +41,7 @@ func (h *CatalogUIHandler) handleListFeatures(w http.ResponseWriter, r *http.Req
 
 func (h *CatalogUIHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Request) {
 	var entry catalog.CatalogEntry
-	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+	if err := strictDecode(r.Body, &entry); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -77,7 +76,7 @@ func (h *CatalogUIHandler) handleDeleteFeature(w http.ResponseWriter, r *http.Re
 
 func (h *CatalogUIHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 	var query catalog.SearchQuery
-	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
+	if err := strictDecode(r.Body, &query); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -106,7 +105,7 @@ func (h *CatalogUIHandler) handleRecordUsage(w http.ResponseWriter, r *http.Requ
 	var req struct {
 		Consumer string `json:"consumer"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

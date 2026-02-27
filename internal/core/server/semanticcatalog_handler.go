@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -52,7 +51,7 @@ func (h *SemanticCatalogHandler) handleSearch(w http.ResponseWriter, r *http.Req
 
 func (h *SemanticCatalogHandler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	var entry semantic.CatalogEntry
-	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+	if err := strictDecode(r.Body, &entry); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

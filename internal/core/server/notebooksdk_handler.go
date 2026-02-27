@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/notebooksdk"
@@ -32,7 +31,7 @@ func (h *NotebookSDKHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleCreateSession handles POST /v1/notebook/sessions
 func (h *NotebookSDKHandler) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 	var cfg notebooksdk.SessionConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -93,7 +92,7 @@ func (h *NotebookSDKHandler) handleExecute(w http.ResponseWriter, r *http.Reques
 		SessionID string `json:"session_id"`
 		Command   string `json:"command"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -119,7 +118,7 @@ func (h *NotebookSDKHandler) handleVisualize(w http.ResponseWriter, r *http.Requ
 		Feature   string `json:"feature"`
 		Type      string `json:"type"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

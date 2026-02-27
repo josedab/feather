@@ -59,7 +59,7 @@ func (h *GitOpsHandler) handleListPolicies(w http.ResponseWriter, r *http.Reques
 // handleCreatePolicy registers a new policy.
 func (h *GitOpsHandler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 	var policy gitops.Policy
-	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
+	if err := strictDecode(r.Body, &policy); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -135,7 +135,7 @@ func (r *GitOpsSyncRequest) toConfig() *gitops.SyncConfig {
 // handleSync performs a sync operation.
 func (h *GitOpsHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req GitOpsSyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -164,7 +164,7 @@ func (h *GitOpsHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 // handleDiff computes differences without applying.
 func (h *GitOpsHandler) handleDiff(w http.ResponseWriter, r *http.Request) {
 	var req GitOpsSyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -177,7 +177,7 @@ func (h *GitOpsHandler) handleDiff(w http.ResponseWriter, r *http.Request) {
 	config := req.toConfig()
 	report, err := h.syncManager.Diff(r.Context(), config)
 	if err != nil {
-		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -187,7 +187,7 @@ func (h *GitOpsHandler) handleDiff(w http.ResponseWriter, r *http.Request) {
 // handleValidate validates definitions against policies.
 func (h *GitOpsHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var req GitOpsSyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -200,7 +200,7 @@ func (h *GitOpsHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	config := req.toConfig()
 	violations, err := h.syncManager.Validate(config)
 	if err != nil {
-		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -252,7 +252,7 @@ type CreateDefinitionRequest struct {
 // handleCreateDefinition creates or updates a feature definition.
 func (h *GitOpsHandler) handleCreateDefinition(w http.ResponseWriter, r *http.Request) {
 	var req CreateDefinitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeJSON(r.Context(), w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -267,7 +267,7 @@ func (h *GitOpsHandler) handleCreateDefinition(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := h.loader.SaveDefinition(req.Definition, req.Path); err != nil {
-		h.writeJSON(r.Context(), w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSONError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

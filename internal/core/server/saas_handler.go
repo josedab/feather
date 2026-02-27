@@ -93,7 +93,7 @@ func (h *SaaSHandler) handleGetPlan(w http.ResponseWriter, r *http.Request) {
 
 func (h *SaaSHandler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	var plan saas.Plan
-	if err := json.NewDecoder(r.Body).Decode(&plan); err != nil {
+	if err := strictDecode(r.Body, &plan); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -113,7 +113,7 @@ func (h *SaaSHandler) handleUpdatePlan(w http.ResponseWriter, r *http.Request) {
 	planID := r.PathValue("id")
 
 	var plan saas.Plan
-	if err := json.NewDecoder(r.Body).Decode(&plan); err != nil {
+	if err := strictDecode(r.Body, &plan); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -191,7 +191,7 @@ func (h *SaaSHandler) handleCreateSubscription(w http.ResponseWriter, r *http.Re
 		PlanID         string             `json:"plan_id"`
 		BillingPeriod  saas.BillingPeriod `json:"billing_period"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -210,7 +210,7 @@ func (h *SaaSHandler) handleChangePlan(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		PlanID string `json:"plan_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -265,7 +265,7 @@ func (h *SaaSHandler) handleGetInstance(w http.ResponseWriter, r *http.Request) 
 
 func (h *SaaSHandler) handleCreateInstance(w http.ResponseWriter, r *http.Request) {
 	var req saas.ProvisioningRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -286,7 +286,7 @@ func (h *SaaSHandler) handleUpdateInstance(w http.ResponseWriter, r *http.Reques
 	instanceID := r.PathValue("id")
 
 	var config saas.InstanceConfig
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+	if err := strictDecode(r.Body, &config); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -306,7 +306,7 @@ func (h *SaaSHandler) handleResizeInstance(w http.ResponseWriter, r *http.Reques
 	var req struct {
 		Size saas.InstanceSize `json:"size"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -397,7 +397,7 @@ func (h *SaaSHandler) handleGetInstanceMetrics(w http.ResponseWriter, r *http.Re
 
 func (h *SaaSHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) {
 	var record saas.UsageRecord
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := strictDecode(r.Body, &record); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -459,7 +459,7 @@ func (h *SaaSHandler) handleGenerateInvoice(w http.ResponseWriter, r *http.Reque
 	var req struct {
 		SubscriptionID string `json:"subscription_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -521,7 +521,7 @@ func (h *SaaSHandler) handleAddPaymentMethod(w http.ResponseWriter, r *http.Requ
 	}
 
 	var method saas.PaymentMethod
-	if err := json.NewDecoder(r.Body).Decode(&method); err != nil {
+	if err := strictDecode(r.Body, &method); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

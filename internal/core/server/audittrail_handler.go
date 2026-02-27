@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -33,7 +32,7 @@ func (h *AuditTrailHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleRecord handles POST /v1/audit/trail/record
 func (h *AuditTrailHandler) handleRecord(w http.ResponseWriter, r *http.Request) {
 	var event audittrail.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -116,7 +115,7 @@ func (h *AuditTrailHandler) handleComplianceReport(w http.ResponseWriter, r *htt
 		Start      string `json:"start"`
 		End        string `json:"end"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

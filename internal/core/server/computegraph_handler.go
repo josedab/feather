@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 
@@ -46,7 +45,7 @@ func (h *ComputeGraphHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *ComputeGraphHandler) handleAddNode(w http.ResponseWriter, r *http.Request) {
 	var node computegraph.FeatureNode
-	if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
+	if err := strictDecode(r.Body, &node); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -117,7 +116,7 @@ func (h *ComputeGraphHandler) handleCompute(w http.ResponseWriter, r *http.Reque
 	var req struct {
 		Inputs map[string]interface{} `json:"inputs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -171,7 +170,7 @@ func (h *ComputeGraphHandler) handleComputeParallel(w http.ResponseWriter, r *ht
 		Nodes  []string               `json:"nodes"`
 		Inputs map[string]interface{} `json:"inputs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -231,7 +230,7 @@ func (h *ComputeGraphHandler) handleApplyDSL(w http.ResponseWriter, r *http.Requ
 
 func (h *ComputeGraphHandler) handleApplyDefinition(w http.ResponseWriter, r *http.Request) {
 	var def computegraph.GraphDefinition
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -255,7 +254,7 @@ func (h *ComputeGraphHandler) handlePropagate(w http.ResponseWriter, r *http.Req
 		Value  interface{}            `json:"value"`
 		Inputs map[string]interface{} `json:"inputs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

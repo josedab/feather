@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -81,7 +80,7 @@ type recordPairRequest struct {
 
 func (h *ParityHandler) handleRecordPair(w http.ResponseWriter, r *http.Request) {
 	var req recordPairRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -100,7 +99,7 @@ type recordBatchRequest struct {
 
 func (h *ParityHandler) handleRecordBatch(w http.ResponseWriter, r *http.Request) {
 	var req recordBatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

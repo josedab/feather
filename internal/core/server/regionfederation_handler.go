@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -35,7 +34,7 @@ func (h *RegionFederationHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *RegionFederationHandler) handleEnqueueReplication(w http.ResponseWriter, r *http.Request) {
 	var event multiregion.ReplicationEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -49,7 +48,7 @@ func (h *RegionFederationHandler) handleEnqueueReplication(w http.ResponseWriter
 
 func (h *RegionFederationHandler) handleApplyReplication(w http.ResponseWriter, r *http.Request) {
 	var event multiregion.ReplicationEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

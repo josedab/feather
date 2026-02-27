@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,7 +52,7 @@ type HTTPSourceRequest struct {
 // handleAddHTTPSource handles POST /v1/consistency/sources/http
 func (h *ConsistencyHandler) handleAddHTTPSource(w http.ResponseWriter, r *http.Request) {
 	var req HTTPSourceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -82,7 +81,7 @@ type CheckFeatureRequest struct {
 // handleCheckFeature handles POST /v1/consistency/check
 func (h *ConsistencyHandler) handleCheckFeature(w http.ResponseWriter, r *http.Request) {
 	var req CheckFeatureRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -110,7 +109,7 @@ type CheckBatchRequest struct {
 // handleCheckBatch handles POST /v1/consistency/check/batch
 func (h *ConsistencyHandler) handleCheckBatch(w http.ResponseWriter, r *http.Request) {
 	var req CheckBatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

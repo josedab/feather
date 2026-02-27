@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -42,7 +41,7 @@ func (h *PythonSDKHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 func (h *PythonSDKHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var def pythonsdk.TransformDef
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -80,7 +79,7 @@ func (h *PythonSDKHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 func (h *PythonSDKHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var def pythonsdk.TransformDef
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -114,7 +113,7 @@ func (h *PythonSDKHandler) handleDelete(w http.ResponseWriter, r *http.Request) 
 func (h *PythonSDKHandler) handleExecute(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var inputs map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&inputs); err != nil {
+	if err := strictDecode(r.Body, &inputs); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -146,7 +145,7 @@ func (h *PythonSDKHandler) handleDeploy(w http.ResponseWriter, r *http.Request) 
 
 func (h *PythonSDKHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var def pythonsdk.TransformDef
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

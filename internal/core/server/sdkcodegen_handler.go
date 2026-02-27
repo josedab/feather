@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -50,7 +49,7 @@ func (h *SDKCodegenHandler) handleListSchemas(w http.ResponseWriter, r *http.Req
 
 func (h *SDKCodegenHandler) handleRegisterSchema(w http.ResponseWriter, r *http.Request) {
 	var req registerSchemaRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -80,7 +79,7 @@ func (h *SDKCodegenHandler) handleRegisterSchema(w http.ResponseWriter, r *http.
 
 func (h *SDKCodegenHandler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	var req generateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -111,7 +110,7 @@ func (h *SDKCodegenHandler) handleGenerateAll(w http.ResponseWriter, r *http.Req
 	var req struct {
 		Language string `json:"language"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

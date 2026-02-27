@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/plugin"
@@ -36,7 +35,7 @@ func (h *PluginHandler) handleListPlugins(w http.ResponseWriter, r *http.Request
 
 func (h *PluginHandler) handleRegisterPlugin(w http.ResponseWriter, r *http.Request) {
 	var p plugin.Plugin
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := strictDecode(r.Body, &p); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

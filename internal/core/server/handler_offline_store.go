@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/offlinestore"
@@ -41,7 +40,7 @@ func (h *OfflineStoreSyncHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *OfflineStoreSyncHandler) handleCreateDataset(w http.ResponseWriter, r *http.Request) {
 	var cfg offlinestore.DatasetConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -84,7 +83,7 @@ func (h *OfflineStoreSyncHandler) handleAppendRows(w http.ResponseWriter, r *htt
 	var req struct {
 		Rows []offlinestore.FeatureRow `json:"rows"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -123,7 +122,7 @@ func (h *OfflineStoreSyncHandler) handleImport(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Rows []offlinestore.FeatureRow `json:"rows"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -137,7 +136,7 @@ func (h *OfflineStoreSyncHandler) handleImport(w http.ResponseWriter, r *http.Re
 
 func (h *OfflineStoreSyncHandler) handlePITJoin(w http.ResponseWriter, r *http.Request) {
 	var req offlinestore.PointInTimeJoinRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

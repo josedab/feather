@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/sharding"
@@ -111,7 +110,7 @@ func (h *MarketplaceHandler) handleListFeatures(w http.ResponseWriter, r *http.R
 
 func (h *MarketplaceHandler) handlePublishFeature(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

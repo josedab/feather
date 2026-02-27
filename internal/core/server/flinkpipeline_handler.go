@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -42,7 +41,7 @@ func (h *FlinkPipelineHandler) handleList(w http.ResponseWriter, r *http.Request
 
 func (h *FlinkPipelineHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var p flinkpipeline.Pipeline
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := strictDecode(r.Body, &p); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -137,7 +136,7 @@ func (h *FlinkPipelineHandler) handleStats(w http.ResponseWriter, r *http.Reques
 func (h *FlinkPipelineHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var event map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

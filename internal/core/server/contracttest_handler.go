@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -54,7 +53,7 @@ func (h *ContractTestHandler) handleRegisterContract(w http.ResponseWriter, r *h
 	}
 
 	var contract contracttest.Contract
-	if err := json.NewDecoder(r.Body).Decode(&contract); err != nil {
+	if err := strictDecode(r.Body, &contract); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -124,7 +123,7 @@ func (h *ContractTestHandler) handleValidateSchema(w http.ResponseWriter, r *htt
 		ContractID string            `json:"contract_id"`
 		Fields     map[string]string `json:"fields"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -145,7 +144,7 @@ func (h *ContractTestHandler) handleValidateRange(w http.ResponseWriter, r *http
 		ContractID string             `json:"contract_id"`
 		Values     map[string]float64 `json:"values"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -166,7 +165,7 @@ func (h *ContractTestHandler) handleRunAll(w http.ResponseWriter, r *http.Reques
 		SchemaData map[string]string  `json:"schema_data"`
 		RangeData  map[string]float64 `json:"range_data"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

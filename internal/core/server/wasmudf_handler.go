@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/wasmudf"
@@ -51,7 +50,7 @@ func (h *WasmUDFHandler) handleRegisterModule(w http.ResponseWriter, r *http.Req
 	}
 
 	var mod wasmudf.Module
-	if err := json.NewDecoder(r.Body).Decode(&mod); err != nil {
+	if err := strictDecode(r.Body, &mod); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -103,7 +102,7 @@ func (h *WasmUDFHandler) handleUpdateModule(w http.ResponseWriter, r *http.Reque
 	}
 
 	var mod wasmudf.Module
-	if err := json.NewDecoder(r.Body).Decode(&mod); err != nil {
+	if err := strictDecode(r.Body, &mod); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -151,7 +150,7 @@ func (h *WasmUDFHandler) handleExecuteModule(w http.ResponseWriter, r *http.Requ
 	}
 
 	var input map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	if err := strictDecode(r.Body, &input); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

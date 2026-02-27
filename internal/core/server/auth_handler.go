@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -81,7 +80,7 @@ type CreateAPIKeyRequest struct {
 // handleCreateAPIKey handles POST /v1/auth/keys
 func (h *AuthHandler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	var req CreateAPIKeyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -251,7 +250,7 @@ type ValidateKeyRequest struct {
 // handleValidateAPIKey handles POST /v1/auth/validate
 func (h *AuthHandler) handleValidateAPIKey(w http.ResponseWriter, r *http.Request) {
 	var req ValidateKeyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -285,7 +284,7 @@ type CreateTenantRequest struct {
 // handleCreateTenant handles POST /v1/auth/tenants
 func (h *AuthHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	var req CreateTenantRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -353,7 +352,7 @@ func (h *AuthHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Request)
 	}
 
 	var tenant auth.Tenant
-	if err := json.NewDecoder(r.Body).Decode(&tenant); err != nil {
+	if err := strictDecode(r.Body, &tenant); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -400,7 +399,7 @@ type CreateRoleRequest struct {
 // handleCreateRole handles POST /v1/auth/roles
 func (h *AuthHandler) handleCreateRole(w http.ResponseWriter, r *http.Request) {
 	var req CreateRoleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

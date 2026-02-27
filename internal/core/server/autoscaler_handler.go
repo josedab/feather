@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -35,7 +34,7 @@ func (h *AutoscalerHandler) handleRecordMetric(w http.ResponseWriter, r *http.Re
 		Metric string  `json:"metric"`
 		Value  float64 `json:"value"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -63,7 +62,7 @@ func (h *AutoscalerHandler) handleEvaluate(w http.ResponseWriter, r *http.Reques
 
 func (h *AutoscalerHandler) handleApply(w http.ResponseWriter, r *http.Request) {
 	var rec autoscaler.ScaleRecommendation
-	if err := json.NewDecoder(r.Body).Decode(&rec); err != nil {
+	if err := strictDecode(r.Body, &rec); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

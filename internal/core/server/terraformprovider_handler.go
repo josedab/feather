@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -50,7 +49,7 @@ func (h *TerraformProviderHandler) handleCreateResource(w http.ResponseWriter, r
 		ID         string                 `json:"id"`
 		Attributes map[string]interface{} `json:"attributes"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -100,7 +99,7 @@ func (h *TerraformProviderHandler) handleUpdateResource(w http.ResponseWriter, r
 	var req struct {
 		Attributes map[string]interface{} `json:"attributes"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -143,7 +142,7 @@ func (h *TerraformProviderHandler) handlePlan(w http.ResponseWriter, r *http.Req
 	var req struct {
 		Desired []terraformprovider.ResourceState `json:"desired"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -159,7 +158,7 @@ func (h *TerraformProviderHandler) handleApply(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Plan []terraformprovider.PlanResult `json:"plan"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -176,7 +175,7 @@ func (h *TerraformProviderHandler) handleImport(w http.ResponseWriter, r *http.R
 		Type string `json:"type"`
 		ID   string `json:"id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

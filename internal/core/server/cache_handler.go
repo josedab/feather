@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -59,7 +58,7 @@ type RecordAccessRequest struct {
 // handleRecordAccess handles POST /v1/cache/access
 func (h *CacheHandler) handleRecordAccess(w http.ResponseWriter, r *http.Request) {
 	var req RecordAccessRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -179,7 +178,7 @@ type CacheConfigRequest struct {
 // handleUpdateConfig handles POST /v1/cache/config
 func (h *CacheHandler) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	var req CacheConfigRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/mobilesync"
@@ -32,7 +31,7 @@ func (h *MobileSyncHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *MobileSyncHandler) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	var device mobilesync.Device
-	if err := json.NewDecoder(r.Body).Decode(&device); err != nil {
+	if err := strictDecode(r.Body, &device); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -80,7 +79,7 @@ func (h *MobileSyncHandler) handleDeregisterDevice(w http.ResponseWriter, r *htt
 
 func (h *MobileSyncHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req mobilesync.SyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -97,7 +96,7 @@ func (h *MobileSyncHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 
 func (h *MobileSyncHandler) handleResolveConflict(w http.ResponseWriter, r *http.Request) {
 	var conflict mobilesync.SyncConflict
-	if err := json.NewDecoder(r.Body).Decode(&conflict); err != nil {
+	if err := strictDecode(r.Body, &conflict); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

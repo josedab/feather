@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -76,7 +75,7 @@ type CreateGroupRequest struct {
 // handleCreateGroup handles POST /v1/groups
 func (h *GroupsHandler) handleCreateGroup(w http.ResponseWriter, r *http.Request) {
 	var req CreateGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -159,7 +158,7 @@ func (h *GroupsHandler) handleUpdateGroup(w http.ResponseWriter, r *http.Request
 	}
 
 	var req CreateGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -225,7 +224,7 @@ func (h *GroupsHandler) handleSetStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req GroupSetStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -256,7 +255,7 @@ func (h *GroupsHandler) handleAddFeature(w http.ResponseWriter, r *http.Request)
 	}
 
 	var feature groups.GroupFeature
-	if err := json.NewDecoder(r.Body).Decode(&feature); err != nil {
+	if err := strictDecode(r.Body, &feature); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -360,7 +359,7 @@ type CreateViewRequest struct {
 // handleCreateView handles POST /v1/groups/views
 func (h *GroupsHandler) handleCreateView(w http.ResponseWriter, r *http.Request) {
 	var req CreateViewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

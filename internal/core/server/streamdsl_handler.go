@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/streamdsl"
@@ -29,7 +28,7 @@ func (h *StreamDSLHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *StreamDSLHandler) handleCompile(w http.ResponseWriter, r *http.Request) {
 	var spec streamdsl.PipelineSpec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -45,7 +44,7 @@ func (h *StreamDSLHandler) handleCompile(w http.ResponseWriter, r *http.Request)
 
 func (h *StreamDSLHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var spec streamdsl.PipelineSpec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

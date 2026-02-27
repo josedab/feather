@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -53,7 +52,7 @@ func (h *LLMStoreHandler) handleListPrompts(w http.ResponseWriter, r *http.Reque
 
 func (h *LLMStoreHandler) handleCreatePrompt(w http.ResponseWriter, r *http.Request) {
 	var p llmstore.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := strictDecode(r.Body, &p); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -87,7 +86,7 @@ func (h *LLMStoreHandler) handleGetPrompt(w http.ResponseWriter, r *http.Request
 func (h *LLMStoreHandler) handleUpdatePrompt(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var p llmstore.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := strictDecode(r.Body, &p); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -120,7 +119,7 @@ func (h *LLMStoreHandler) handleDeletePrompt(w http.ResponseWriter, r *http.Requ
 
 func (h *LLMStoreHandler) handleStoreEmbedding(w http.ResponseWriter, r *http.Request) {
 	var e llmstore.Embedding
-	if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+	if err := strictDecode(r.Body, &e); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -155,7 +154,7 @@ type searchSimilarReq struct {
 
 func (h *LLMStoreHandler) handleSearchSimilar(w http.ResponseWriter, r *http.Request) {
 	var req searchSimilarReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -177,7 +176,7 @@ func (h *LLMStoreHandler) handleListPipelines(w http.ResponseWriter, r *http.Req
 
 func (h *LLMStoreHandler) handleCreatePipeline(w http.ResponseWriter, r *http.Request) {
 	var p llmstore.RAGPipeline
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+	if err := strictDecode(r.Body, &p); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -210,7 +209,7 @@ func (h *LLMStoreHandler) handleGetPipeline(w http.ResponseWriter, r *http.Reque
 
 func (h *LLMStoreHandler) handleRAGQuery(w http.ResponseWriter, r *http.Request) {
 	var req llmstore.RAGRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -44,7 +43,7 @@ func (h *IncrMatHandler) handleListNodes(w http.ResponseWriter, r *http.Request)
 // handleRegisterNode handles POST /v1/materialization/nodes
 func (h *IncrMatHandler) handleRegisterNode(w http.ResponseWriter, r *http.Request) {
 	var node incrmat.MaterializationNode
-	if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
+	if err := strictDecode(r.Body, &node); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -76,7 +75,7 @@ func (h *IncrMatHandler) handleRemoveNode(w http.ResponseWriter, r *http.Request
 // handleRecordChange handles POST /v1/materialization/changes
 func (h *IncrMatHandler) handleRecordChange(w http.ResponseWriter, r *http.Request) {
 	var event incrmat.ChangeEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

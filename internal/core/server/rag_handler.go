@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/rag"
@@ -30,7 +29,7 @@ func (h *RAGHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *RAGHandler) handleIngestDocument(w http.ResponseWriter, r *http.Request) {
 	var doc rag.Document
-	if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
+	if err := strictDecode(r.Body, &doc); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -80,7 +79,7 @@ type retrieveRequest struct {
 
 func (h *RAGHandler) handleRetrieve(w http.ResponseWriter, r *http.Request) {
 	var req retrieveRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

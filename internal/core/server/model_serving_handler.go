@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -140,7 +139,7 @@ func (h *ModelServingHandler) handleListModels(w http.ResponseWriter, r *http.Re
 // handleRegisterModel handles POST /v1/models
 func (h *ModelServingHandler) handleRegisterModel(w http.ResponseWriter, r *http.Request) {
 	var req MLRegisterModelRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -251,7 +250,7 @@ func (h *ModelServingHandler) handleRegisterVersion(w http.ResponseWriter, r *ht
 	}
 
 	var req RegisterVersionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -368,7 +367,7 @@ func (h *ModelServingHandler) handleCreateSnapshot(w http.ResponseWriter, r *htt
 	}
 
 	var req CreateSnapshotRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -435,7 +434,7 @@ func (h *ModelServingHandler) handleValidateFeatures(w http.ResponseWriter, r *h
 	}
 
 	var req ValidateFeaturesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -516,7 +515,7 @@ func (h *ModelServingHandler) handleAcknowledgeAlert(w http.ResponseWriter, r *h
 	var req struct {
 		AcknowledgedBy string `json:"acknowledged_by"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -540,7 +539,7 @@ func (h *ModelServingHandler) handleServeFeatures(w http.ResponseWriter, r *http
 	}
 
 	var req ServeFeaturesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

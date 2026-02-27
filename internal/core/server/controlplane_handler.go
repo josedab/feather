@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/controlplane"
@@ -38,7 +37,7 @@ func (h *ControlPlaneHandler) handleListInstances(w http.ResponseWriter, r *http
 
 func (h *ControlPlaneHandler) handleRegisterInstance(w http.ResponseWriter, r *http.Request) {
 	var inst controlplane.Instance
-	if err := json.NewDecoder(r.Body).Decode(&inst); err != nil {
+	if err := strictDecode(r.Body, &inst); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -83,7 +82,7 @@ func (h *ControlPlaneHandler) handleListRegions(w http.ResponseWriter, r *http.R
 
 func (h *ControlPlaneHandler) handleAddRegion(w http.ResponseWriter, r *http.Request) {
 	var region controlplane.Region
-	if err := json.NewDecoder(r.Body).Decode(&region); err != nil {
+	if err := strictDecode(r.Body, &region); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -106,7 +105,7 @@ func (h *ControlPlaneHandler) handleListPolicies(w http.ResponseWriter, r *http.
 
 func (h *ControlPlaneHandler) handleAddPolicy(w http.ResponseWriter, r *http.Request) {
 	var policy controlplane.Policy
-	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
+	if err := strictDecode(r.Body, &policy); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

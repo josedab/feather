@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/feastcompat"
@@ -44,7 +43,7 @@ func (h *FeastGatewayHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *FeastGatewayHandler) handlePush(w http.ResponseWriter, r *http.Request) {
 	var req feastcompat.PushRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -59,7 +58,7 @@ func (h *FeastGatewayHandler) handlePush(w http.ResponseWriter, r *http.Request)
 
 func (h *FeastGatewayHandler) handleApply(w http.ResponseWriter, r *http.Request) {
 	var req feastcompat.ApplyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -100,7 +99,7 @@ func (h *FeastGatewayHandler) handleListDatasets(w http.ResponseWriter, r *http.
 
 func (h *FeastGatewayHandler) handleSaveDataset(w http.ResponseWriter, r *http.Request) {
 	var ds feastcompat.SavedDataset
-	if err := json.NewDecoder(r.Body).Decode(&ds); err != nil {
+	if err := strictDecode(r.Body, &ds); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -132,7 +131,7 @@ func (h *FeastGatewayHandler) handleMigrate(w http.ResponseWriter, r *http.Reque
 	var body struct {
 		FeastYAML string `json:"feast_yaml"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := strictDecode(r.Body, &body); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body; provide feast_yaml field")
 		return
 	}

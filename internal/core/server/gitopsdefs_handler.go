@@ -58,7 +58,7 @@ func (h *GitOpsDefsHandler) handleLoadDefinition(w http.ResponseWriter, r *http.
 	}
 
 	var def gitopsdefs.FeatureDefinition
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -206,7 +206,7 @@ func (h *GitOpsDefsHandler) handleApply(w http.ResponseWriter, r *http.Request) 
 
 func (h *GitOpsDefsHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var spec gitopsdefs.DeclarativeSpec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -235,7 +235,7 @@ func (h *GitOpsDefsHandler) handleLoadSpec(w http.ResponseWriter, r *http.Reques
 	}
 
 	var body json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := strictDecode(r.Body, &body); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

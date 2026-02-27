@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
@@ -43,10 +42,10 @@ func (h *ObsConsoleHandler) handleDashboard(w http.ResponseWriter, r *http.Reque
 
 func (h *ObsConsoleHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Feature     string `json:"feature"`
-		SLASeconds  int    `json:"sla_seconds"`
+		Feature    string `json:"feature"`
+		SLASeconds int    `json:"sla_seconds"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -58,7 +57,7 @@ func (h *ObsConsoleHandler) handleRecordUpdate(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Feature string `json:"feature"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -73,7 +72,7 @@ func (h *ObsConsoleHandler) handleUpdateQuality(w http.ResponseWriter, r *http.R
 		Consistency  float64 `json:"consistency"`
 		Timeliness   float64 `json:"timeliness"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -88,7 +87,7 @@ func (h *ObsConsoleHandler) handleAddAlert(w http.ResponseWriter, r *http.Reques
 		Feature  string                   `json:"feature"`
 		Message  string                   `json:"message"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -119,7 +118,7 @@ func (h *ObsConsoleHandler) handleSetCost(w http.ResponseWriter, r *http.Request
 		Feature string  `json:"feature"`
 		Cost    float64 `json:"cost"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/queryplanner"
@@ -30,7 +29,7 @@ func (h *QueryPlannerHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleOptimize handles POST /v1/planner/optimize
 func (h *QueryPlannerHandler) handleOptimize(w http.ResponseWriter, r *http.Request) {
 	var query queryplanner.Query
-	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
+	if err := strictDecode(r.Body, &query); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -51,7 +50,7 @@ func (h *QueryPlannerHandler) handleRecordCost(w http.ResponseWriter, r *http.Re
 		DurationMs float64 `json:"duration_ms"`
 		RowCount   int64   `json:"row_count"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -72,7 +71,7 @@ func (h *QueryPlannerHandler) handleRecordResult(w http.ResponseWriter, r *http.
 		ActualCostMs float64 `json:"actual_cost_ms"`
 		ActualRows   int64   `json:"actual_rows"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -184,7 +183,7 @@ func (h *EmbeddingHandler) handleStoreEmbedding(w http.ResponseWriter, r *http.R
 	}
 
 	var req EmbeddingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -326,7 +325,7 @@ func (h *EmbeddingHandler) handleLookup(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req LookupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -370,7 +369,7 @@ func (h *EmbeddingHandler) handleGenerate(w http.ResponseWriter, r *http.Request
 	}
 
 	var req GenerateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -444,7 +443,7 @@ func (h *EmbeddingHandler) handleBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req BatchGenerateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -488,7 +487,7 @@ func (h *EmbeddingHandler) handleBatchAsync(w http.ResponseWriter, r *http.Reque
 	}
 
 	var req BatchGenerateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -544,7 +543,7 @@ func (h *EmbeddingHandler) handleRegisterModel(w http.ResponseWriter, r *http.Re
 	}
 
 	var req ModelRegistrationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -641,7 +640,7 @@ func (h *EmbeddingHandler) handleRegisterVersion(w http.ResponseWriter, r *http.
 	}
 
 	var req VersionRegistrationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -710,7 +709,7 @@ func (h *EmbeddingHandler) handleCheckCompatibility(w http.ResponseWriter, r *ht
 	}
 
 	var req CompatibilityRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

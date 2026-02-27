@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/qualitygates"
@@ -31,7 +30,7 @@ func (h *QualityGatesHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleValidateSchema handles POST /v1/quality/validate/schema
 func (h *QualityGatesHandler) handleValidateSchema(w http.ResponseWriter, r *http.Request) {
 	var schema qualitygates.SchemaDefinition
-	if err := json.NewDecoder(r.Body).Decode(&schema); err != nil {
+	if err := strictDecode(r.Body, &schema); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -51,7 +50,7 @@ func (h *QualityGatesHandler) handleAssertQuality(w http.ResponseWriter, r *http
 		Feature string    `json:"feature"`
 		Samples []float64 `json:"samples"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -73,7 +72,7 @@ func (h *QualityGatesHandler) handleAssertQuality(w http.ResponseWriter, r *http
 // handleValidatePR handles POST /v1/quality/validate/pr
 func (h *QualityGatesHandler) handleValidatePR(w http.ResponseWriter, r *http.Request) {
 	var req qualitygates.PRValidationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -90,7 +89,7 @@ func (h *QualityGatesHandler) handleValidatePR(w http.ResponseWriter, r *http.Re
 // handleEvaluateRules handles POST /v1/quality/rules/evaluate
 func (h *QualityGatesHandler) handleEvaluateRules(w http.ResponseWriter, r *http.Request) {
 	var result qualitygates.PRValidationResult
-	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
+	if err := strictDecode(r.Body, &result); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -102,7 +101,7 @@ func (h *QualityGatesHandler) handleEvaluateRules(w http.ResponseWriter, r *http
 // handleGenerateReport handles POST /v1/quality/report
 func (h *QualityGatesHandler) handleGenerateReport(w http.ResponseWriter, r *http.Request) {
 	var result qualitygates.PRValidationResult
-	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
+	if err := strictDecode(r.Body, &result); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

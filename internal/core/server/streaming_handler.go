@@ -144,7 +144,7 @@ type StreamSubscribeRequest struct {
 // handleSubscribe handles POST /v1/stream/subscribe
 func (h *StreamingHandler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	var req StreamSubscribeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -213,7 +213,7 @@ type StreamPublishRequest struct {
 // handlePublish handles POST /v1/stream/publish
 func (h *StreamingHandler) handlePublish(w http.ResponseWriter, r *http.Request) {
 	var req StreamPublishRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

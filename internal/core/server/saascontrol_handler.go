@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -53,7 +52,7 @@ func (h *SaaSControlHandler) handleCreateTenant(w http.ResponseWriter, r *http.R
 		Email  string `json:"email"`
 		PlanID string `json:"plan_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -131,7 +130,7 @@ func (h *SaaSControlHandler) handleProvisionInstance(w http.ResponseWriter, r *h
 		Region   string `json:"region,omitempty"`
 		Replicas int    `json:"replicas,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -171,7 +170,7 @@ func (h *SaaSControlHandler) handleScaleInstance(w http.ResponseWriter, r *http.
 	var req struct {
 		Replicas int `json:"replicas"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		// Try query param
 		if rStr := r.URL.Query().Get("replicas"); rStr != "" {
 			v, err := strconv.Atoi(rStr)

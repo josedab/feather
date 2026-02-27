@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -40,7 +39,7 @@ func (h *BackpressureHandler) handleRecordQueueDepth(w http.ResponseWriter, r *h
 	var req struct {
 		Depth float64 `json:"depth"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -63,7 +62,7 @@ func (h *BackpressureHandler) handleRecordLatency(w http.ResponseWriter, r *http
 	var req struct {
 		LatencyMs float64 `json:"latency_ms"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -86,7 +85,7 @@ func (h *BackpressureHandler) handleRecordErrorRate(w http.ResponseWriter, r *ht
 	var req struct {
 		Rate float64 `json:"rate"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

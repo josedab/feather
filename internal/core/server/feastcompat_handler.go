@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -35,7 +34,7 @@ func (h *FeastCompatHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *FeastCompatHandler) handleGetOnlineFeatures(w http.ResponseWriter, r *http.Request) {
 	var req feastcompat.OnlineFeatureRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -50,7 +49,7 @@ func (h *FeastCompatHandler) handleGetOnlineFeatures(w http.ResponseWriter, r *h
 
 func (h *FeastCompatHandler) handleMaterialize(w http.ResponseWriter, r *http.Request) {
 	var req feastcompat.MaterializeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -73,7 +72,7 @@ func (h *FeastCompatHandler) handleListMappings(w http.ResponseWriter, r *http.R
 
 func (h *FeastCompatHandler) handleRegisterMapping(w http.ResponseWriter, r *http.Request) {
 	var mapping feastcompat.FeatureViewMapping
-	if err := json.NewDecoder(r.Body).Decode(&mapping); err != nil {
+	if err := strictDecode(r.Body, &mapping); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

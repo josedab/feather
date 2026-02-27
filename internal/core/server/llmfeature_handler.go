@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -49,7 +48,7 @@ func (h *LLMFeatureHandler) handleCreateTemplate(w http.ResponseWriter, r *http.
 		return
 	}
 	var tmpl llmfeature.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+	if err := strictDecode(r.Body, &tmpl); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -83,7 +82,7 @@ func (h *LLMFeatureHandler) handleUpdateTemplate(w http.ResponseWriter, r *http.
 		return
 	}
 	var tmpl llmfeature.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+	if err := strictDecode(r.Body, &tmpl); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -113,7 +112,7 @@ func (h *LLMFeatureHandler) handleStoreCompletion(w http.ResponseWriter, r *http
 		return
 	}
 	var rec llmfeature.CompletionRecord
-	if err := json.NewDecoder(r.Body).Decode(&rec); err != nil {
+	if err := strictDecode(r.Body, &rec); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

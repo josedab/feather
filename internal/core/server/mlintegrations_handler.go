@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -63,7 +62,7 @@ func (h *MLIntegrationsHandler) handleMLflowStartRun(w http.ResponseWriter, r *h
 		Name         string `json:"name"`
 		ExperimentID string `json:"experiment_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -94,7 +93,7 @@ func (h *MLIntegrationsHandler) handleMLflowEndRun(w http.ResponseWriter, r *htt
 	var req struct {
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -114,7 +113,7 @@ func (h *MLIntegrationsHandler) handleMLflowLogFeatures(w http.ResponseWriter, r
 	var req struct {
 		FeatureIDs []string `json:"feature_ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -130,7 +129,7 @@ func (h *MLIntegrationsHandler) handleMLflowLogMetrics(w http.ResponseWriter, r 
 	var req struct {
 		Metrics map[string]float64 `json:"metrics"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -154,7 +153,7 @@ func (h *MLIntegrationsHandler) handleMLflowStats(w http.ResponseWriter, r *http
 
 func (h *MLIntegrationsHandler) handleKubeflowRegisterComponent(w http.ResponseWriter, r *http.Request) {
 	var comp kubeflow.Component
-	if err := json.NewDecoder(r.Body).Decode(&comp); err != nil {
+	if err := strictDecode(r.Body, &comp); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -178,7 +177,7 @@ func (h *MLIntegrationsHandler) handleKubeflowCreateRun(w http.ResponseWriter, r
 		Name         string   `json:"name"`
 		ComponentIDs []string `json:"component_ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -212,7 +211,7 @@ func (h *MLIntegrationsHandler) handleKubeflowStats(w http.ResponseWriter, r *ht
 
 func (h *MLIntegrationsHandler) handleAirflowRegisterOperator(w http.ResponseWriter, r *http.Request) {
 	var op airflow.DAGOperator
-	if err := json.NewDecoder(r.Body).Decode(&op); err != nil {
+	if err := strictDecode(r.Body, &op); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

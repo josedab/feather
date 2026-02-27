@@ -55,7 +55,7 @@ type DBTSyncRequest struct {
 // handleSync handles POST /v1/dbt/sync
 func (h *DBTHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	var req DBTSyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -116,7 +116,7 @@ func (h *DBTHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 // handleValidate handles POST /v1/dbt/validate
 func (h *DBTHandler) handleValidate(w http.ResponseWriter, r *http.Request) {
 	var req DBTSyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

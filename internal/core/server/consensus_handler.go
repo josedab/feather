@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -76,7 +75,7 @@ func (h *ConsensusHandler) handlePropose(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var req proposeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -126,7 +125,7 @@ func (h *ConsensusHandler) handleRebalance(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req rebalanceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -146,7 +145,7 @@ func (h *ConsensusHandler) handleAddPeer(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		PeerID string `json:"peer_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

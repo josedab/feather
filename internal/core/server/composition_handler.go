@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -100,7 +99,7 @@ func (h *CompositionHandler) handleCreateDAG(w http.ResponseWriter, r *http.Requ
 	}
 
 	var req DAGRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -246,7 +245,7 @@ func (h *CompositionHandler) handleCompose(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req ComposeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -286,7 +285,7 @@ func (h *CompositionHandler) handleComposeBatch(w http.ResponseWriter, r *http.R
 	}
 
 	var req ComposeBatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

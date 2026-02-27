@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -56,7 +55,7 @@ func (h *LifecycleManagerHandler) handleTrackFeature(w http.ResponseWriter, r *h
 	var req struct {
 		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -76,7 +75,7 @@ func (h *LifecycleManagerHandler) handleRecordAccess(w http.ResponseWriter, r *h
 		Feature  string `json:"feature"`
 		Consumer string `json:"consumer"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -91,7 +90,7 @@ func (h *LifecycleManagerHandler) handleUpdateMetrics(w http.ResponseWriter, r *
 		FreshnessScore float64 `json:"freshness_score"`
 		StorageBytes   int64   `json:"storage_bytes"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -112,7 +111,7 @@ func (h *LifecycleManagerHandler) handleListRules(w http.ResponseWriter, r *http
 
 func (h *LifecycleManagerHandler) handleAddRule(w http.ResponseWriter, r *http.Request) {
 	var rule lifecycle.LifecycleRule
-	if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+	if err := strictDecode(r.Body, &rule); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

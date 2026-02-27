@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -49,7 +48,7 @@ func (h *WasmRuntimeHandler) handleListModules(w http.ResponseWriter, r *http.Re
 
 func (h *WasmRuntimeHandler) handleRegisterModule(w http.ResponseWriter, r *http.Request) {
 	var mod wasmruntime.Module
-	if err := json.NewDecoder(r.Body).Decode(&mod); err != nil {
+	if err := strictDecode(r.Body, &mod); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -103,7 +102,7 @@ func (h *WasmRuntimeHandler) handleListDevices(w http.ResponseWriter, r *http.Re
 
 func (h *WasmRuntimeHandler) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	var dev wasmruntime.Device
-	if err := json.NewDecoder(r.Body).Decode(&dev); err != nil {
+	if err := strictDecode(r.Body, &dev); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

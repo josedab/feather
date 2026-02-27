@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -37,7 +36,7 @@ func (h *SkewDetectHandler) handleRegister(w http.ResponseWriter, r *http.Reques
 	var req struct {
 		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -59,7 +58,7 @@ func (h *SkewDetectHandler) handleRecordOnline(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Values []float64 `json:"values"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -77,7 +76,7 @@ func (h *SkewDetectHandler) handleRecordOffline(w http.ResponseWriter, r *http.R
 	var req struct {
 		Values []float64 `json:"values"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -134,7 +133,7 @@ func (h *SkewDetectHandler) handleGetAlerts(w http.ResponseWriter, r *http.Reque
 
 func (h *SkewDetectHandler) handleSetContract(w http.ResponseWriter, r *http.Request) {
 	var contract skewdetect.DataContract
-	if err := json.NewDecoder(r.Body).Decode(&contract); err != nil {
+	if err := strictDecode(r.Body, &contract); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

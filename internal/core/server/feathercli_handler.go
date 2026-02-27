@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/feathercli"
@@ -32,7 +31,7 @@ func (h *FeatherCLIHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleQuery handles POST /v1/cli/query
 func (h *FeatherCLIHandler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	var query feathercli.FeatureQuery
-	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
+	if err := strictDecode(r.Body, &query); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

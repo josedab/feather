@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/modelserving"
@@ -28,7 +27,7 @@ func (h *ModelGatewayHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *ModelGatewayHandler) handlePredict(w http.ResponseWriter, r *http.Request) {
 	var req modelserving.PredictRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -58,7 +57,7 @@ func (h *ModelGatewayHandler) handleSetABConfig(w http.ResponseWriter, r *http.R
 		ModelID string                `json:"model_id"`
 		Config  modelserving.ABConfig `json:"config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

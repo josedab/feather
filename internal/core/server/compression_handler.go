@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/compression"
@@ -34,7 +33,7 @@ func (h *CompressionHandler) handleAnalyze(w http.ResponseWriter, r *http.Reques
 		Data     []byte `json:"data"`
 		DataType string `json:"data_type"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -51,7 +50,7 @@ func (h *CompressionHandler) handleAnalyze(w http.ResponseWriter, r *http.Reques
 // handleSelectStrategy handles POST /v1/compression/select
 func (h *CompressionHandler) handleSelectStrategy(w http.ResponseWriter, r *http.Request) {
 	var stats compression.DataStats
-	if err := json.NewDecoder(r.Body).Decode(&stats); err != nil {
+	if err := strictDecode(r.Body, &stats); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -65,10 +64,10 @@ func (h *CompressionHandler) handleSelectStrategy(w http.ResponseWriter, r *http
 // handleCompress handles POST /v1/compression/compress
 func (h *CompressionHandler) handleCompress(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Data     []byte              `json:"data"`
+		Data     []byte               `json:"data"`
 		Strategy compression.Strategy `json:"strategy"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -85,7 +84,7 @@ func (h *CompressionHandler) handleCompress(w http.ResponseWriter, r *http.Reque
 // handleDecompress handles POST /v1/compression/decompress
 func (h *CompressionHandler) handleDecompress(w http.ResponseWriter, r *http.Request) {
 	var block compression.CompressedBlock
-	if err := json.NewDecoder(r.Body).Decode(&block); err != nil {
+	if err := strictDecode(r.Body, &block); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -111,9 +110,9 @@ func (h *CompressionHandler) handleShouldReEncode(w http.ResponseWriter, r *http
 
 	shouldReEncode, newStrategy := h.selector.ShouldReEncode(feature)
 	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
-		"feature":        feature,
+		"feature":         feature,
 		"should_reencode": shouldReEncode,
-		"new_strategy":   newStrategy,
+		"new_strategy":    newStrategy,
 	})
 }
 

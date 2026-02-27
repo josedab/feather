@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -101,7 +100,7 @@ func (h *TransformHandler) handleListTransforms(w http.ResponseWriter, r *http.R
 // handleRegisterTransform handles POST /v1/transforms
 func (h *TransformHandler) handleRegisterTransform(w http.ResponseWriter, r *http.Request) {
 	var req TransformRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -210,7 +209,7 @@ func (h *TransformHandler) handleUnregisterTransform(w http.ResponseWriter, r *h
 // handleDefineFromDSL handles POST /v1/transforms/dsl
 func (h *TransformHandler) handleDefineFromDSL(w http.ResponseWriter, r *http.Request) {
 	var req DSLRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -252,7 +251,7 @@ func (h *TransformHandler) handleExecute(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req ExecuteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -289,7 +288,7 @@ func (h *TransformHandler) handleExecuteAndStore(w http.ResponseWriter, r *http.
 	}
 
 	var req ExecuteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -323,7 +322,7 @@ func (h *TransformHandler) handleExecuteAndStore(w http.ResponseWriter, r *http.
 // handleExecuteChain handles POST /v1/transforms/chain
 func (h *TransformHandler) handleExecuteChain(w http.ResponseWriter, r *http.Request) {
 	var req ChainExecuteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

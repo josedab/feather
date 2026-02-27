@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -32,7 +31,7 @@ func (h *NLDiscoveryHandler) handleQuery(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Query string `json:"query"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -50,7 +49,7 @@ func (h *NLDiscoveryHandler) handleChat(w http.ResponseWriter, r *http.Request) 
 		ConversationID string `json:"conversation_id"`
 		Message        string `json:"message"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -100,7 +99,7 @@ func (h *NLDiscoveryHandler) handleRegisterFeature(w http.ResponseWriter, r *htt
 		EntityType  string   `json:"entity_type"`
 		Tags        []string `json:"tags"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

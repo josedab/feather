@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/replication"
@@ -46,7 +45,7 @@ func (h *ReplicationHandler) handleAddRegion(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var region replication.Region
-	if err := json.NewDecoder(r.Body).Decode(&region); err != nil {
+	if err := strictDecode(r.Body, &region); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

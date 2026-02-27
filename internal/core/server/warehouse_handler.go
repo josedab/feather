@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -244,7 +243,7 @@ func (h *WarehouseHandler) handleRegisterConnector(w http.ResponseWriter, r *htt
 	}
 
 	var req WarehouseConnectorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -424,7 +423,7 @@ func (h *WarehouseHandler) handleCreateJob(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req SyncJobRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -528,7 +527,7 @@ func (h *WarehouseHandler) handleSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req SyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -574,7 +573,7 @@ func (h *WarehouseHandler) handleFullSync(w http.ResponseWriter, r *http.Request
 	}
 
 	var req SyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -620,7 +619,7 @@ func (h *WarehouseHandler) handleIncrementalSync(w http.ResponseWriter, r *http.
 	}
 
 	var req SyncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -40,7 +39,7 @@ func (h *LineageGraphHandler) handleGetGraph(w http.ResponseWriter, r *http.Requ
 
 func (h *LineageGraphHandler) handleAddNode(w http.ResponseWriter, r *http.Request) {
 	var node lineagegraph.Node
-	if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
+	if err := strictDecode(r.Body, &node); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -79,7 +78,7 @@ func (h *LineageGraphHandler) handleUpdateNode(w http.ResponseWriter, r *http.Re
 		Freshness string            `json:"freshness"`
 		Metadata  map[string]string `json:"metadata,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -113,7 +112,7 @@ func (h *LineageGraphHandler) handleAddEdge(w http.ResponseWriter, r *http.Reque
 		To    string `json:"to"`
 		Label string `json:"label,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

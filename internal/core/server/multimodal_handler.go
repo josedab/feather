@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/multimodal"
@@ -40,7 +39,7 @@ func (h *MultiModalHandler) handleStoreBlob(w http.ResponseWriter, r *http.Reque
 		Data        string            `json:"data"` // base64
 		Tags        map[string]string `json:"tags"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -130,7 +129,7 @@ func (h *MultiModalHandler) handleAddEmbedding(w http.ResponseWriter, r *http.Re
 		Vector []float64 `json:"vector"`
 		Model  string    `json:"model"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -163,7 +162,7 @@ func (h *MultiModalHandler) handleSearchEmbeddings(w http.ResponseWriter, r *htt
 		Query []float64 `json:"query"`
 		TopK  int       `json:"top_k"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

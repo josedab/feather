@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -40,7 +39,7 @@ func (h *CrossOrgFederationHandler) handleListOrgs(w http.ResponseWriter, r *htt
 
 func (h *CrossOrgFederationHandler) handleRegisterOrg(w http.ResponseWriter, r *http.Request) {
 	var org federation.Organization
-	if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
+	if err := strictDecode(r.Body, &org); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -64,7 +63,7 @@ func (h *CrossOrgFederationHandler) handleListAgreements(w http.ResponseWriter, 
 
 func (h *CrossOrgFederationHandler) handleCreateAgreement(w http.ResponseWriter, r *http.Request) {
 	var agreement federation.SharingAgreement
-	if err := json.NewDecoder(r.Body).Decode(&agreement); err != nil {
+	if err := strictDecode(r.Body, &agreement); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -79,9 +78,9 @@ func (h *CrossOrgFederationHandler) handleCreateAgreement(w http.ResponseWriter,
 func (h *CrossOrgFederationHandler) handleProcessRequest(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Request  federation.CrossOrgRequest `json:"request"`
-		Features map[string]interface{}      `json:"features"`
+		Features map[string]interface{}     `json:"features"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

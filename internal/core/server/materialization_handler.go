@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -51,7 +50,7 @@ func (h *MaterializationHandler) handleCreatePipeline(w http.ResponseWriter, r *
 	}
 
 	var pipeline materialization.Pipeline
-	if err := json.NewDecoder(r.Body).Decode(&pipeline); err != nil {
+	if err := strictDecode(r.Body, &pipeline); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -98,7 +97,7 @@ func (h *MaterializationHandler) handleUpdatePipeline(w http.ResponseWriter, r *
 
 	name := r.PathValue("name")
 	var pipeline materialization.Pipeline
-	if err := json.NewDecoder(r.Body).Decode(&pipeline); err != nil {
+	if err := strictDecode(r.Body, &pipeline); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -183,7 +182,7 @@ func (h *MaterializationHandler) handleBackfill(w http.ResponseWriter, r *http.R
 		End      string `json:"end"`
 		Interval string `json:"interval"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

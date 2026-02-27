@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/benchpub"
@@ -35,7 +34,7 @@ func (h *BenchPubHandler) handleRunBenchmark(w http.ResponseWriter, r *http.Requ
 	}
 
 	var cfg benchpub.BenchmarkConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -95,7 +94,7 @@ func (h *BenchPubHandler) handleCompare(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		Names []string `json:"names"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

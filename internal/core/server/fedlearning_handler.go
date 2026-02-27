@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/fedlearning"
@@ -34,10 +33,10 @@ func (h *FedLearningHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleRegisterOrg handles POST /v1/fedlearn/orgs
 func (h *FedLearningHandler) handleRegisterOrg(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ID     string               `json:"id"`
+		ID     string                `json:"id"`
 		Config fedlearning.OrgConfig `json:"config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -82,7 +81,7 @@ func (h *FedLearningHandler) handleDeregisterOrg(w http.ResponseWriter, r *http.
 // handleSecureAggregate handles POST /v1/fedlearn/aggregate
 func (h *FedLearningHandler) handleSecureAggregate(w http.ResponseWriter, r *http.Request) {
 	var req fedlearning.AggregationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -99,10 +98,10 @@ func (h *FedLearningHandler) handleSecureAggregate(w http.ResponseWriter, r *htt
 // handleSetPolicy handles POST /v1/fedlearn/policy
 func (h *FedLearningHandler) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Feature string                   `json:"feature"`
+		Feature string                    `json:"feature"`
 		Policy  fedlearning.FeaturePolicy `json:"policy"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -145,7 +144,7 @@ func (h *FedLearningHandler) handleSubmitGradient(w http.ResponseWriter, r *http
 		Feature  string    `json:"feature"`
 		Gradient []float64 `json:"gradient"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/cloud"
@@ -32,7 +31,7 @@ func (h *CloudHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *CloudHandler) handleProvision(w http.ResponseWriter, r *http.Request) {
 	var req cloud.ProvisionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -68,7 +67,7 @@ func (h *CloudHandler) handleScale(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	var req cloud.ScaleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -107,7 +106,7 @@ func (h *CloudHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request)
 		Reads  int64 `json:"reads"`
 		Writes int64 `json:"writes"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

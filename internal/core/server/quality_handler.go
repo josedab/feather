@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -120,7 +119,7 @@ func (h *QualityHandler) handleAddRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req ValidationRuleJSON
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -196,7 +195,7 @@ func (h *QualityHandler) handleValidateValue(w http.ResponseWriter, r *http.Requ
 	}
 
 	var req ValidateValueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -231,7 +230,7 @@ func (h *QualityHandler) handleValidateBatch(w http.ResponseWriter, r *http.Requ
 	}
 
 	var req ValidateBatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/federateddiscovery"
@@ -54,7 +53,7 @@ func (h *FederatedDiscoveryHandler) handlePublish(w http.ResponseWriter, r *http
 	}
 
 	var entry federateddiscovery.CatalogEntry
-	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
+	if err := strictDecode(r.Body, &entry); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -121,7 +120,7 @@ func (h *FederatedDiscoveryHandler) handleSearch(w http.ResponseWriter, r *http.
 	}
 
 	var query federateddiscovery.SearchQuery
-	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
+	if err := strictDecode(r.Body, &query); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -144,7 +143,7 @@ func (h *FederatedDiscoveryHandler) handleSubscribe(w http.ResponseWriter, r *ht
 		EntryID    string `json:"entry_id"`
 		Subscriber string `json:"subscriber"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -169,7 +168,7 @@ func (h *FederatedDiscoveryHandler) handleUnsubscribe(w http.ResponseWriter, r *
 		EntryID    string `json:"entry_id"`
 		Subscriber string `json:"subscriber"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

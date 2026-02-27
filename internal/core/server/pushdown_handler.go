@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/pushdown"
@@ -44,7 +43,7 @@ func (h *PushdownHandler) handleRegisterDerived(w http.ResponseWriter, r *http.R
 		return
 	}
 	var df pushdown.DerivedFeature
-	if err := json.NewDecoder(r.Body).Decode(&df); err != nil {
+	if err := strictDecode(r.Body, &df); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -89,7 +88,7 @@ func (h *PushdownHandler) handleEvaluate(w http.ResponseWriter, r *http.Request)
 		Feature string             `json:"feature"`
 		Context map[string]float64 `json:"context"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -112,7 +111,7 @@ func (h *PushdownHandler) handleEvaluateAdhoc(w http.ResponseWriter, r *http.Req
 		Expression string             `json:"expression"`
 		Context    map[string]float64 `json:"context"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

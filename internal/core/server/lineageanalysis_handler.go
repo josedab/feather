@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -42,7 +41,7 @@ func (h *LineageAnalysisHandler) handleListNodes(w http.ResponseWriter, r *http.
 
 func (h *LineageAnalysisHandler) handleAddNode(w http.ResponseWriter, r *http.Request) {
 	var node lineageanalysis.LineageNode
-	if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
+	if err := strictDecode(r.Body, &node); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -74,7 +73,7 @@ func (h *LineageAnalysisHandler) handleGetNode(w http.ResponseWriter, r *http.Re
 
 func (h *LineageAnalysisHandler) handleAddEdge(w http.ResponseWriter, r *http.Request) {
 	var edge lineageanalysis.LineageEdge
-	if err := json.NewDecoder(r.Body).Decode(&edge); err != nil {
+	if err := strictDecode(r.Body, &edge); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

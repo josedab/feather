@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/arrowflight"
@@ -35,7 +34,7 @@ func (h *FlightEndpointHandler) handleGetBatch(w http.ResponseWriter, r *http.Re
 		Entities []string `json:"entities"`
 		Features []string `json:"features"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -49,7 +48,7 @@ func (h *FlightEndpointHandler) handleGetBatch(w http.ResponseWriter, r *http.Re
 
 func (h *FlightEndpointHandler) handleGetRecords(w http.ResponseWriter, r *http.Request) {
 	var req arrowflight.BatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -63,7 +62,7 @@ func (h *FlightEndpointHandler) handleGetRecords(w http.ResponseWriter, r *http.
 
 func (h *FlightEndpointHandler) handlePutBatch(w http.ResponseWriter, r *http.Request) {
 	var batch arrowflight.ColumnarBatch
-	if err := json.NewDecoder(r.Body).Decode(&batch); err != nil {
+	if err := strictDecode(r.Body, &batch); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -77,7 +76,7 @@ func (h *FlightEndpointHandler) handlePutBatch(w http.ResponseWriter, r *http.Re
 
 func (h *FlightEndpointHandler) handleGetSchema(w http.ResponseWriter, r *http.Request) {
 	var desc arrowflight.FlightDescriptor
-	if err := json.NewDecoder(r.Body).Decode(&desc); err != nil {
+	if err := strictDecode(r.Body, &desc); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

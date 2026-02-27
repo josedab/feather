@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -52,7 +51,7 @@ func (h *ContractHandler) handleCreateContract(w http.ResponseWriter, r *http.Re
 	}
 
 	var spec contract.Spec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -99,7 +98,7 @@ func (h *ContractHandler) handleUpdateContract(w http.ResponseWriter, r *http.Re
 
 	name := r.PathValue("name")
 	var spec contract.Spec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

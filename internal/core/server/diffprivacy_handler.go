@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/diffprivacy"
@@ -30,10 +29,10 @@ func (h *DiffPrivacyHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleRegister handles POST /v1/privacy/register
 func (h *DiffPrivacyHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name   string                       `json:"name"`
+		Name   string                           `json:"name"`
 		Config diffprivacy.FeaturePrivacyConfig `json:"config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -57,7 +56,7 @@ func (h *DiffPrivacyHandler) handleAddNoise(w http.ResponseWriter, r *http.Reque
 		Feature string  `json:"feature"`
 		Value   float64 `json:"value"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -103,7 +102,7 @@ func (h *DiffPrivacyHandler) handleNoisyAggregate(w http.ResponseWriter, r *http
 		Values  []float64 `json:"values"`
 		AggType string    `json:"agg_type"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

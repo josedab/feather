@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/joins"
@@ -28,7 +27,7 @@ func (h *JoinsHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *JoinsHandler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 	var cfg joins.JoinConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -74,7 +73,7 @@ func (h *JoinsHandler) handleExecuteJoin(w http.ResponseWriter, r *http.Request)
 	id := r.PathValue("id")
 
 	var req executeJoinRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

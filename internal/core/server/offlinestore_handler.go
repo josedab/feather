@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -55,7 +54,7 @@ func (h *OfflineStoreHandler) handleCreateDataset(w http.ResponseWriter, r *http
 	}
 
 	var cfg offlinestore.DatasetConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -128,7 +127,7 @@ func (h *OfflineStoreHandler) handleAppendRows(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Rows []offlinestore.FeatureRow `json:"rows"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -237,7 +236,7 @@ func (h *OfflineStoreHandler) handleExportDataset(w http.ResponseWriter, r *http
 	}
 
 	var cfg offlinestore.ExportConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

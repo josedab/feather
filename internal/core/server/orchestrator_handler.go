@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/tools/backfill"
@@ -42,7 +41,7 @@ type createDAGRequest struct {
 
 func (h *OrchestratorHandler) handleCreateDAG(w http.ResponseWriter, r *http.Request) {
 	var req createDAGRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -137,7 +136,7 @@ func (h *OrchestratorHandler) handleFailNode(w http.ResponseWriter, r *http.Requ
 	nodeID := r.PathValue("nodeId")
 
 	var req failNodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

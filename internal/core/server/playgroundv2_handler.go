@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/playgroundv2"
@@ -33,7 +32,7 @@ func (h *PlaygroundV2Handler) RegisterRoutes(mux *http.ServeMux) {
 // handleExecuteQuery handles POST /v1/playground/query
 func (h *PlaygroundV2Handler) handleExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	var query playgroundv2.Query
-	if err := json.NewDecoder(r.Body).Decode(&query); err != nil {
+	if err := strictDecode(r.Body, &query); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -75,7 +74,7 @@ func (h *PlaygroundV2Handler) handleGetSchemaDetails(w http.ResponseWriter, r *h
 // handleStartSimulation handles POST /v1/playground/simulate
 func (h *PlaygroundV2Handler) handleStartSimulation(w http.ResponseWriter, r *http.Request) {
 	var cfg playgroundv2.SimulationConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	if err := strictDecode(r.Body, &cfg); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -108,7 +107,7 @@ func (h *PlaygroundV2Handler) handleStopSimulation(w http.ResponseWriter, r *htt
 // handlePreviewRegistration handles POST /v1/playground/deploy/preview
 func (h *PlaygroundV2Handler) handlePreviewRegistration(w http.ResponseWriter, r *http.Request) {
 	var spec playgroundv2.RegistrationSpec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -125,7 +124,7 @@ func (h *PlaygroundV2Handler) handlePreviewRegistration(w http.ResponseWriter, r
 // handleConfirmRegistration handles POST /v1/playground/deploy/confirm
 func (h *PlaygroundV2Handler) handleConfirmRegistration(w http.ResponseWriter, r *http.Request) {
 	var spec playgroundv2.RegistrationSpec
-	if err := json.NewDecoder(r.Body).Decode(&spec); err != nil {
+	if err := strictDecode(r.Body, &spec); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

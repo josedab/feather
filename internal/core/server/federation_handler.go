@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -175,7 +174,7 @@ func (h *FederationHandler) handleJoinNode(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req JoinNodeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -313,7 +312,7 @@ func (h *FederationHandler) handleShareFeature(w http.ResponseWriter, r *http.Re
 	}
 
 	var req ShareFeatureRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -377,7 +376,7 @@ func (h *FederationHandler) handleUpdateFeature(w http.ResponseWriter, r *http.R
 	}
 
 	var req ShareFeatureRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -470,7 +469,7 @@ func (h *FederationHandler) handleSearchFeatures(w http.ResponseWriter, r *http.
 	}
 
 	var req SearchFeaturesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -526,7 +525,7 @@ func (h *FederationHandler) handleReplicateFeature(w http.ResponseWriter, r *htt
 	}
 
 	var req ReplicateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -572,7 +571,7 @@ func (h *FederationHandler) handleSetReplicationPolicy(w http.ResponseWriter, r 
 	}
 
 	var req ReplicationPolicyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

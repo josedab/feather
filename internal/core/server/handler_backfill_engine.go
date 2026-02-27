@@ -48,11 +48,11 @@ func (h *BackfillEngineHandler) handleListSources(w http.ResponseWriter, r *http
 
 func (h *BackfillEngineHandler) handleRegisterSource(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name string                        `json:"name"`
-		Type backfillengine.SourceType     `json:"type"`
-		Config json.RawMessage             `json:"config"`
+		Name   string                    `json:"name"`
+		Type   backfillengine.SourceType `json:"type"`
+		Config json.RawMessage           `json:"config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -106,7 +106,7 @@ func (h *BackfillEngineHandler) handleUnregisterSource(w http.ResponseWriter, r 
 
 func (h *BackfillEngineHandler) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	var req backfillengine.JobRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -71,7 +70,7 @@ func (h *StreamComputeHandler) handleListPipelines(w http.ResponseWriter, r *htt
 
 func (h *StreamComputeHandler) handleCreatePipeline(w http.ResponseWriter, r *http.Request) {
 	var req createPipelineRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -195,7 +194,7 @@ func (h *StreamComputeHandler) handleStopPipeline(w http.ResponseWriter, r *http
 
 func (h *StreamComputeHandler) handleIngest(w http.ResponseWriter, r *http.Request) {
 	var req ingestRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

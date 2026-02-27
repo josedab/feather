@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/incrmat"
@@ -54,7 +53,7 @@ func (h *CDCHandler) handleListSources(w http.ResponseWriter, r *http.Request) {
 
 func (h *CDCHandler) handleRegisterSource(w http.ResponseWriter, r *http.Request) {
 	var src incrmat.CDCSourceConfig
-	if err := json.NewDecoder(r.Body).Decode(&src); err != nil {
+	if err := strictDecode(r.Body, &src); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -87,7 +86,7 @@ func (h *CDCHandler) handleRemoveSource(w http.ResponseWriter, r *http.Request) 
 
 func (h *CDCHandler) handleProcessEvent(w http.ResponseWriter, r *http.Request) {
 	var event incrmat.CDCEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -103,7 +102,7 @@ func (h *CDCHandler) handleProcessBatch(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		Events []incrmat.CDCEvent `json:"events"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

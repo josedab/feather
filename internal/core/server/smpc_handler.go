@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/federation"
@@ -36,7 +35,7 @@ func (h *SMPCHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleRegisterParty handles POST /v1/smpc/parties.
 func (h *SMPCHandler) handleRegisterParty(w http.ResponseWriter, r *http.Request) {
 	var party federation.Party
-	if err := json.NewDecoder(r.Body).Decode(&party); err != nil {
+	if err := strictDecode(r.Body, &party); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -101,7 +100,7 @@ type createSharesRequest struct {
 // handleCreateShares handles POST /v1/smpc/shares.
 func (h *SMPCHandler) handleCreateShares(w http.ResponseWriter, r *http.Request) {
 	var req createSharesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -126,7 +125,7 @@ type reconstructRequest struct {
 // handleReconstructSecret handles POST /v1/smpc/reconstruct.
 func (h *SMPCHandler) handleReconstructSecret(w http.ResponseWriter, r *http.Request) {
 	var req reconstructRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -145,7 +144,7 @@ func (h *SMPCHandler) handleReconstructSecret(w http.ResponseWriter, r *http.Req
 // handleSubmitCompute handles POST /v1/smpc/compute.
 func (h *SMPCHandler) handleSubmitCompute(w http.ResponseWriter, r *http.Request) {
 	var req federation.ComputeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

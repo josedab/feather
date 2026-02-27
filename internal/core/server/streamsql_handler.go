@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/integrations/streamsql"
@@ -47,7 +46,7 @@ type createStreamRequest struct {
 
 func (h *StreamSQLHandler) handleCreateStream(w http.ResponseWriter, r *http.Request) {
 	var req createStreamRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -81,7 +80,7 @@ type executeQueryRequest struct {
 
 func (h *StreamSQLHandler) handleExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	var req executeQueryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -109,7 +108,7 @@ type registerQueryRequest struct {
 
 func (h *StreamSQLHandler) handleRegisterQuery(w http.ResponseWriter, r *http.Request) {
 	var req registerQueryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -168,7 +167,7 @@ func (h *StreamSQLHandler) handlePushRecords(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var req pushRecordsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

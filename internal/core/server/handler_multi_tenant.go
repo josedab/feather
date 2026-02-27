@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/tenant"
@@ -37,7 +36,7 @@ func (h *MultiTenantHandler) handleRecord(w http.ResponseWriter, r *http.Request
 		Metric   string  `json:"metric"`
 		Value    float64 `json:"value"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

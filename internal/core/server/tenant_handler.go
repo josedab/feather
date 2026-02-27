@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -186,7 +185,7 @@ func (h *TenantHandler) handleListTenants(w http.ResponseWriter, r *http.Request
 // handleCreateTenant handles POST /v1/tenants
 func (h *TenantHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	var req TenantCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -273,7 +272,7 @@ func (h *TenantHandler) handleUpdateTenant(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req UpdateTenantRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -411,7 +410,7 @@ func (h *TenantHandler) handleUpdateQuotas(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req UpdateQuotasRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -590,7 +589,7 @@ func (h *TenantHandler) handleResizePartition(w http.ResponseWriter, r *http.Req
 	}
 
 	var req ResizePartitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -681,7 +680,7 @@ func (h *TenantHandler) handleGrantShare(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req GrantShareRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

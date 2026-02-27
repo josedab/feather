@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/platform/cluster"
@@ -40,7 +39,7 @@ func (h *AutoShardingHandler) handleAddNode(w http.ResponseWriter, r *http.Reque
 		NodeID  string `json:"node_id"`
 		Address string `json:"address"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -95,7 +94,7 @@ func (h *AutoShardingHandler) handleQuorumRead(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Key string `json:"key"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -112,7 +111,7 @@ func (h *AutoShardingHandler) handleQuorumWrite(w http.ResponseWriter, r *http.R
 		Key   string      `json:"key"`
 		Value interface{} `json:"value"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

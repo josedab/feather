@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/llmgateway"
@@ -34,7 +33,7 @@ func (h *LLMGatewayHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *LLMGatewayHandler) handleLookup(w http.ResponseWriter, r *http.Request) {
 	var req llmgateway.LookupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -45,7 +44,7 @@ func (h *LLMGatewayHandler) handleLookup(w http.ResponseWriter, r *http.Request)
 
 func (h *LLMGatewayHandler) handleStore(w http.ResponseWriter, r *http.Request) {
 	var req llmgateway.StoreRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -60,7 +59,7 @@ func (h *LLMGatewayHandler) handleStore(w http.ResponseWriter, r *http.Request) 
 
 func (h *LLMGatewayHandler) handleRegisterTemplate(w http.ResponseWriter, r *http.Request) {
 	var tmpl llmgateway.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+	if err := strictDecode(r.Body, &tmpl); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -82,7 +81,7 @@ func (h *LLMGatewayHandler) handleListTemplates(w http.ResponseWriter, r *http.R
 
 func (h *LLMGatewayHandler) handleRender(w http.ResponseWriter, r *http.Request) {
 	var req llmgateway.RenderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -97,7 +96,7 @@ func (h *LLMGatewayHandler) handleRender(w http.ResponseWriter, r *http.Request)
 
 func (h *LLMGatewayHandler) handleCreateABTest(w http.ResponseWriter, r *http.Request) {
 	var test llmgateway.ABTest
-	if err := json.NewDecoder(r.Body).Decode(&test); err != nil {
+	if err := strictDecode(r.Body, &test); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -134,7 +133,7 @@ func (h *LLMGatewayHandler) handleResolveABTest(w http.ResponseWriter, r *http.R
 	var req struct {
 		EntityID string `json:"entity_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

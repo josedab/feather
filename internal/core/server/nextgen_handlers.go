@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
@@ -34,7 +33,7 @@ func (h *CloudServiceHandler) handleListInstances(w http.ResponseWriter, r *http
 
 func (h *CloudServiceHandler) handleProvisionInstance(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -63,7 +62,7 @@ func (h *CloudServiceHandler) handleTerminateInstance(w http.ResponseWriter, r *
 func (h *CloudServiceHandler) handleScaleInstance(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -116,7 +115,7 @@ func (h *FeatherQLHandler) handleParse(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Query string `json:"query"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -135,7 +134,7 @@ func (h *FeatherQLHandler) handleCompile(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Query string `json:"query"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -149,7 +148,7 @@ func (h *FeatherQLHandler) handleExecute(w http.ResponseWriter, r *http.Request)
 	var req struct {
 		Query string `json:"query"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -163,7 +162,7 @@ func (h *FeatherQLHandler) handleValidate(w http.ResponseWriter, r *http.Request
 	var req struct {
 		Query string `json:"query"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -202,7 +201,7 @@ func (h *LLMCacheHandler) handleLookup(w http.ResponseWriter, r *http.Request) {
 		Prompt string `json:"prompt"`
 		Model  string `json:"model"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -214,7 +213,7 @@ func (h *LLMCacheHandler) handleLookup(w http.ResponseWriter, r *http.Request) {
 
 func (h *LLMCacheHandler) handleStore(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -263,7 +262,7 @@ func (h *AutoFEHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *AutoFEHandler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -321,7 +320,7 @@ func (h *GeoRoutingHandler) handleListRegions(w http.ResponseWriter, r *http.Req
 
 func (h *GeoRoutingHandler) handleAddRegion(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -395,7 +394,7 @@ func (h *ABRolloutHandler) handleListRollouts(w http.ResponseWriter, r *http.Req
 
 func (h *ABRolloutHandler) handleStartRollout(w http.ResponseWriter, r *http.Request) {
 	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -56,7 +55,7 @@ func (h *CloudControlHandler) handleListTenants(w http.ResponseWriter, r *http.R
 
 func (h *CloudControlHandler) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	var t cloudcontrol.Tenant
-	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
+	if err := strictDecode(r.Body, &t); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -98,7 +97,7 @@ func (h *CloudControlHandler) handleListInstances(w http.ResponseWriter, r *http
 
 func (h *CloudControlHandler) handleProvisionInstance(w http.ResponseWriter, r *http.Request) {
 	var inst cloudcontrol.Instance
-	if err := json.NewDecoder(r.Body).Decode(&inst); err != nil {
+	if err := strictDecode(r.Body, &inst); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -153,7 +152,7 @@ func (h *CloudControlHandler) handleTerminateInstance(w http.ResponseWriter, r *
 func (h *CloudControlHandler) handleScaleInstance(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var req cloudcontrol.ScaleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -177,7 +176,7 @@ func (h *CloudControlHandler) handleScaleInstance(w http.ResponseWriter, r *http
 func (h *CloudControlHandler) handleSetAutoscale(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var policy cloudcontrol.AutoscalePolicy
-	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
+	if err := strictDecode(r.Body, &policy); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -220,7 +219,7 @@ func (h *CloudControlHandler) handleRecordUsage(w http.ResponseWriter, r *http.R
 	}
 
 	var record cloudcontrol.UsageRecord
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := strictDecode(r.Body, &record); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -275,7 +274,7 @@ func (h *CloudControlHandler) handleGenerateInvoice(w http.ResponseWriter, r *ht
 		PeriodStart string `json:"period_start"`
 		PeriodEnd   string `json:"period_end"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

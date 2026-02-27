@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -35,7 +34,7 @@ func (h *MultiRegionHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *MultiRegionHandler) handleAddRegion(w http.ResponseWriter, r *http.Request) {
 	var region multiregion.Region
-	if err := json.NewDecoder(r.Body).Decode(&region); err != nil {
+	if err := strictDecode(r.Body, &region); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -93,7 +92,7 @@ func (h *MultiRegionHandler) handleRoute(w http.ResponseWriter, r *http.Request)
 
 func (h *MultiRegionHandler) handleSetResidency(w http.ResponseWriter, r *http.Request) {
 	var rule multiregion.ResidencyRule
-	if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+	if err := strictDecode(r.Body, &rule); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -115,7 +114,7 @@ func (h *MultiRegionHandler) handleGetResidencyRules(w http.ResponseWriter, r *h
 
 func (h *MultiRegionHandler) handleReplicate(w http.ResponseWriter, r *http.Request) {
 	var event multiregion.ReplicationEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := strictDecode(r.Body, &event); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

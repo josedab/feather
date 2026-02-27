@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -50,7 +49,7 @@ func (h *FinOpsHandler) handleRegisterTeam(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var team finops.Team
-	if err := json.NewDecoder(r.Body).Decode(&team); err != nil {
+	if err := strictDecode(r.Body, &team); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -118,7 +117,7 @@ func (h *FinOpsHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var record finops.UsageRecord
-	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+	if err := strictDecode(r.Body, &record); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -180,7 +179,7 @@ func (h *FinOpsHandler) handleSetRate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var rate finops.CostRate
-	if err := json.NewDecoder(r.Body).Decode(&rate); err != nil {
+	if err := strictDecode(r.Body, &rate); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

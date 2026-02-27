@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/autogen"
@@ -83,7 +82,7 @@ func (h *AutogenHandler) handleGenerateFeatures(w http.ResponseWriter, r *http.R
 	}
 
 	var req GenerateFeaturesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -195,7 +194,7 @@ func (h *AutogenHandler) handleSuggestTransformations(w http.ResponseWriter, r *
 	}
 
 	var req SuggestTransformationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -264,7 +263,7 @@ func (h *AutogenHandler) handleSuggestAggregations(w http.ResponseWriter, r *htt
 	}
 
 	var req SuggestAggregationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

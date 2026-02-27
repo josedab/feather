@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -63,7 +62,7 @@ func (h *CatalogHandler) GetCatalog() *registry.Catalog {
 // handleRegisterFeature handles POST /v1/catalog/features
 func (h *CatalogHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Request) {
 	var def registry.FeatureDefinition
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -187,7 +186,7 @@ func (h *CatalogHandler) handleSetStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req SetStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -401,7 +400,7 @@ func (h *CatalogHandler) handleExport(w http.ResponseWriter, r *http.Request) {
 // handleImport handles POST /v1/catalog/import
 func (h *CatalogHandler) handleImport(w http.ResponseWriter, r *http.Request) {
 	var features []registry.FeatureDefinition
-	if err := json.NewDecoder(r.Body).Decode(&features); err != nil {
+	if err := strictDecode(r.Body, &features); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

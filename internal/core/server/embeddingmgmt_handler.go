@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -41,7 +40,7 @@ func (h *EmbeddingMgmtHandler) handleListModels(w http.ResponseWriter, r *http.R
 
 func (h *EmbeddingMgmtHandler) handleRegisterModel(w http.ResponseWriter, r *http.Request) {
 	var model embeddingmgmt.EmbeddingModel
-	if err := json.NewDecoder(r.Body).Decode(&model); err != nil {
+	if err := strictDecode(r.Body, &model); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -63,7 +62,7 @@ func (h *EmbeddingMgmtHandler) handleCreateCollection(w http.ResponseWriter, r *
 		ModelID  string            `json:"model_id"`
 		Metadata map[string]string `json:"metadata,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -114,7 +113,7 @@ func (h *EmbeddingMgmtHandler) handleDeleteCollection(w http.ResponseWriter, r *
 func (h *EmbeddingMgmtHandler) handleUpsert(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	var emb embeddingmgmt.Embedding
-	if err := json.NewDecoder(r.Body).Decode(&emb); err != nil {
+	if err := strictDecode(r.Body, &emb); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -146,7 +145,7 @@ func (h *EmbeddingMgmtHandler) handleSearch(w http.ResponseWriter, r *http.Reque
 		Query []float64 `json:"query"`
 		TopK  int       `json:"top_k,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

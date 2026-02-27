@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/starlarkudf"
@@ -37,7 +36,7 @@ func (h *StarlarkUDFHandler) handleList(w http.ResponseWriter, r *http.Request) 
 
 func (h *StarlarkUDFHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var udf starlarkudf.UDF
-	if err := json.NewDecoder(r.Body).Decode(&udf); err != nil {
+	if err := strictDecode(r.Body, &udf); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -74,7 +73,7 @@ func (h *StarlarkUDFHandler) handleExecute(w http.ResponseWriter, r *http.Reques
 	var req struct {
 		Inputs map[string]interface{} `json:"inputs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

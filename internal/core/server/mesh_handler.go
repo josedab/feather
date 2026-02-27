@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/mesh"
@@ -48,7 +47,7 @@ func (h *MeshHandler) handleListNodes(w http.ResponseWriter, r *http.Request) {
 
 func (h *MeshHandler) handleRegisterNode(w http.ResponseWriter, r *http.Request) {
 	var node mesh.Node
-	if err := json.NewDecoder(r.Body).Decode(&node); err != nil {
+	if err := strictDecode(r.Body, &node); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
@@ -155,7 +154,7 @@ func (h *MeshHandler) handleListOrgs(w http.ResponseWriter, r *http.Request) {
 func (h *MeshHandler) handleRegisterOrg(w http.ResponseWriter, r *http.Request) {
 	proto := h.ensureProtocol()
 	var org mesh.Organization
-	if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
+	if err := strictDecode(r.Body, &org); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -179,7 +178,7 @@ func (h *MeshHandler) handleListGrants(w http.ResponseWriter, r *http.Request) {
 func (h *MeshHandler) handleGrantAccess(w http.ResponseWriter, r *http.Request) {
 	proto := h.ensureProtocol()
 	var grant mesh.AccessGrant
-	if err := json.NewDecoder(r.Body).Decode(&grant); err != nil {
+	if err := strictDecode(r.Body, &grant); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -203,7 +202,7 @@ func (h *MeshHandler) handleRevokeAccess(w http.ResponseWriter, r *http.Request)
 func (h *MeshHandler) handleTransferFeatures(w http.ResponseWriter, r *http.Request) {
 	proto := h.ensureProtocol()
 	var req mesh.FeatureTransferRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

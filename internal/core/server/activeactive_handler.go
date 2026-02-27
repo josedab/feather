@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/activeactive"
@@ -40,7 +39,7 @@ func (h *ActiveActiveHandler) handleListPeers(w http.ResponseWriter, r *http.Req
 
 func (h *ActiveActiveHandler) handleAddPeer(w http.ResponseWriter, r *http.Request) {
 	var peer activeactive.Peer
-	if err := json.NewDecoder(r.Body).Decode(&peer); err != nil {
+	if err := strictDecode(r.Body, &peer); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -75,7 +74,7 @@ func (h *ActiveActiveHandler) handleRemovePeer(w http.ResponseWriter, r *http.Re
 
 func (h *ActiveActiveHandler) handleReplicate(w http.ResponseWriter, r *http.Request) {
 	var msg activeactive.ReplicationMessage
-	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+	if err := strictDecode(r.Body, &msg); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -89,7 +88,7 @@ func (h *ActiveActiveHandler) handleReplicate(w http.ResponseWriter, r *http.Req
 
 func (h *ActiveActiveHandler) handleReceive(w http.ResponseWriter, r *http.Request) {
 	var msg activeactive.ReplicationMessage
-	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+	if err := strictDecode(r.Body, &msg); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

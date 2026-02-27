@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/arrowflight"
@@ -31,7 +30,7 @@ func (h *ArrowFlightHandler) RegisterRoutes(mux *http.ServeMux) {
 // handleGetFlightInfo handles POST /v1/flight/info
 func (h *ArrowFlightHandler) handleGetFlightInfo(w http.ResponseWriter, r *http.Request) {
 	var desc arrowflight.FlightDescriptor
-	if err := json.NewDecoder(r.Body).Decode(&desc); err != nil {
+	if err := strictDecode(r.Body, &desc); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -48,7 +47,7 @@ func (h *ArrowFlightHandler) handleGetFlightInfo(w http.ResponseWriter, r *http.
 // handleDoGet handles POST /v1/flight/get
 func (h *ArrowFlightHandler) handleDoGet(w http.ResponseWriter, r *http.Request) {
 	var ticket arrowflight.FlightTicket
-	if err := json.NewDecoder(r.Body).Decode(&ticket); err != nil {
+	if err := strictDecode(r.Body, &ticket); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -68,7 +67,7 @@ func (h *ArrowFlightHandler) handleDoPut(w http.ResponseWriter, r *http.Request)
 		Descriptor arrowflight.FlightDescriptor `json:"descriptor"`
 		Batch      arrowflight.RecordBatch      `json:"batch"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -85,7 +84,7 @@ func (h *ArrowFlightHandler) handleDoPut(w http.ResponseWriter, r *http.Request)
 // handleDoExchange handles POST /v1/flight/exchange
 func (h *ArrowFlightHandler) handleDoExchange(w http.ResponseWriter, r *http.Request) {
 	var req arrowflight.ExchangeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

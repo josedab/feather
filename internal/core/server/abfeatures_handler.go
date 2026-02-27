@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -55,7 +54,7 @@ func (h *ABFeaturesHandler) handleCreateExperiment(w http.ResponseWriter, r *htt
 	}
 
 	var exp abfeatures.Experiment
-	if err := json.NewDecoder(r.Body).Decode(&exp); err != nil {
+	if err := strictDecode(r.Body, &exp); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -185,7 +184,7 @@ func (h *ABFeaturesHandler) handleRecordMetric(w http.ResponseWriter, r *http.Re
 		LatencyMs float64 `json:"latency_ms"`
 		Error     *string `json:"error,omitempty"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -217,7 +216,7 @@ func (h *ABFeaturesHandler) handleRecordScore(w http.ResponseWriter, r *http.Req
 		VariantID string  `json:"variant_id"`
 		Score     float64 `json:"score"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

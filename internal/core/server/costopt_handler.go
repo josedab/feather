@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -51,7 +50,7 @@ func (h *CostOptHandler) handleRecordAccess(w http.ResponseWriter, r *http.Reque
 		LatencyMs    int    `json:"latency_ms"`
 		IsWrite      bool   `json:"is_write"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -153,7 +152,7 @@ func (h *CostOptHandler) handleAddCostData(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var point costopt.CostDataPoint
-	if err := json.NewDecoder(r.Body).Decode(&point); err != nil {
+	if err := strictDecode(r.Body, &point); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/prefetch"
@@ -32,7 +31,7 @@ func (h *PrefetchHandler) handleRecordAccess(w http.ResponseWriter, r *http.Requ
 		EntityKey string   `json:"entity_key"`
 		Features  []string `json:"features"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

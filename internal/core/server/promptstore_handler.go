@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -43,7 +42,7 @@ func (h *PromptStoreHandler) handleList(w http.ResponseWriter, r *http.Request) 
 
 func (h *PromptStoreHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	var tmpl promptstore.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+	if err := strictDecode(r.Body, &tmpl); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -82,7 +81,7 @@ func (h *PromptStoreHandler) handleGet(w http.ResponseWriter, r *http.Request) {
 func (h *PromptStoreHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var tmpl promptstore.PromptTemplate
-	if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+	if err := strictDecode(r.Body, &tmpl); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -134,7 +133,7 @@ func (h *PromptStoreHandler) handleRender(w http.ResponseWriter, r *http.Request
 	var req struct {
 		Variables map[string]string `json:"variables"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -165,7 +164,7 @@ func (h *PromptStoreHandler) handleRecordScore(w http.ResponseWriter, r *http.Re
 		Version int     `json:"version"`
 		Score   float64 `json:"score"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

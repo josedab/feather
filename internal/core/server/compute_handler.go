@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/tools/compute"
@@ -37,7 +36,7 @@ func (h *ComputeHandler) handleListDefinitions(w http.ResponseWriter, r *http.Re
 
 func (h *ComputeHandler) handleDefineFeature(w http.ResponseWriter, r *http.Request) {
 	var def compute.FeatureDefinition
-	if err := json.NewDecoder(r.Body).Decode(&def); err != nil {
+	if err := strictDecode(r.Body, &def); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -82,7 +81,7 @@ type computeExecuteRequest struct {
 
 func (h *ComputeHandler) handleExecute(w http.ResponseWriter, r *http.Request) {
 	var req computeExecuteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -101,7 +100,7 @@ type computeBatchRequest struct {
 
 func (h *ComputeHandler) handleBatchExecute(w http.ResponseWriter, r *http.Request) {
 	var req computeBatchRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

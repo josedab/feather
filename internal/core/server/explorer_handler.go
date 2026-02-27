@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -37,7 +36,7 @@ func (h *ExplorerHandler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *ExplorerHandler) handleRecordInsight(w http.ResponseWriter, r *http.Request) {
 	var insight dashboard.FeatureInsight
-	if err := json.NewDecoder(r.Body).Decode(&insight); err != nil {
+	if err := strictDecode(r.Body, &insight); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -77,7 +76,7 @@ type correlationRequest struct {
 
 func (h *ExplorerHandler) handleComputeCorrelation(w http.ResponseWriter, r *http.Request) {
 	var req correlationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -102,7 +101,7 @@ func (h *ExplorerHandler) handleListCorrelations(w http.ResponseWriter, r *http.
 
 func (h *ExplorerHandler) handleRecordUsage(w http.ResponseWriter, r *http.Request) {
 	var pattern dashboard.UsagePattern
-	if err := json.NewDecoder(r.Body).Decode(&pattern); err != nil {
+	if err := strictDecode(r.Body, &pattern); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -126,7 +125,7 @@ func (h *ExplorerHandler) handleGetUsage(w http.ResponseWriter, r *http.Request)
 
 func (h *ExplorerHandler) handleRecordCost(w http.ResponseWriter, r *http.Request) {
 	var cost dashboard.CostBreakdown
-	if err := json.NewDecoder(r.Body).Decode(&cost); err != nil {
+	if err := strictDecode(r.Body, &cost); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

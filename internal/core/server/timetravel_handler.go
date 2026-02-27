@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -52,7 +51,7 @@ func (h *TimeTravelHandler) handleCreateSession(w http.ResponseWriter, r *http.R
 		StartTime string   `json:"start_time"`
 		EndTime   string   `json:"end_time"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -105,7 +104,7 @@ func (h *TimeTravelHandler) handleAddSnapshot(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var snapshot timetravel.Snapshot
-	if err := json.NewDecoder(r.Body).Decode(&snapshot); err != nil {
+	if err := strictDecode(r.Body, &snapshot); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -140,7 +139,7 @@ func (h *TimeTravelHandler) handleCompare(w http.ResponseWriter, r *http.Request
 		WindowB   timetravel.TimeWindow  `json:"window_b"`
 		Snapshots []*timetravel.Snapshot `json:"snapshots"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

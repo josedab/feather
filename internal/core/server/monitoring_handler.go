@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -50,7 +49,7 @@ func (h *MonitoringHandler) handleRegisterMonitor(w http.ResponseWriter, r *http
 		return
 	}
 	var monitor monitoring.FeatureMonitor
-	if err := json.NewDecoder(r.Body).Decode(&monitor); err != nil {
+	if err := strictDecode(r.Body, &monitor); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -94,7 +93,7 @@ func (h *MonitoringHandler) handleRecordValue(w http.ResponseWriter, r *http.Req
 	var req struct {
 		Value float64 `json:"value"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -122,7 +121,7 @@ func (h *MonitoringHandler) handleAddRule(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var rule monitoring.AlertRule
-	if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+	if err := strictDecode(r.Body, &rule); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

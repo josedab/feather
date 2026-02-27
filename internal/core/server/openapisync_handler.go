@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/openapisync"
@@ -45,7 +44,7 @@ func (h *OpenAPISyncHandler) handleListRoutes(w http.ResponseWriter, r *http.Req
 // handleAddRoute handles POST /v1/openapi/routes
 func (h *OpenAPISyncHandler) handleAddRoute(w http.ResponseWriter, r *http.Request) {
 	var route openapisync.RouteInfo
-	if err := json.NewDecoder(r.Body).Decode(&route); err != nil {
+	if err := strictDecode(r.Body, &route); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

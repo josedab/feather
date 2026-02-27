@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -106,7 +105,7 @@ func (h *LineageHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Re
 	}
 
 	var req RegisterLineageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -179,7 +178,7 @@ func (h *LineageHandler) handleRegisterSource(w http.ResponseWriter, r *http.Req
 	}
 
 	var req RegisterSourceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -251,7 +250,7 @@ func (h *LineageHandler) handleRegisterConsumer(w http.ResponseWriter, r *http.R
 	}
 
 	var req RegisterConsumerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -296,7 +295,7 @@ func (h *LineageHandler) handleLinkSource(w http.ResponseWriter, r *http.Request
 	}
 
 	var req LinkSourceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -326,7 +325,7 @@ func (h *LineageHandler) handleLinkConsumer(w http.ResponseWriter, r *http.Reque
 	}
 
 	var req LinkConsumerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -478,7 +477,7 @@ func (h *LineageHandler) handleSetPIIMetadata(w http.ResponseWriter, r *http.Req
 	}
 
 	var req SetPIIMetadataRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}

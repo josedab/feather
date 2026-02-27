@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/feather-store/feather/internal/extensions/experiment"
@@ -204,7 +203,7 @@ func (h *ExperimentHandler) handleCreateExperiment(w http.ResponseWriter, r *htt
 	}
 
 	var req ExperimentJSON
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -236,7 +235,7 @@ func (h *ExperimentHandler) handleUpdateExperiment(w http.ResponseWriter, r *htt
 	}
 
 	var req ExperimentJSON
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -318,7 +317,7 @@ func (h *ExperimentHandler) handleStopExperiment(w http.ResponseWriter, r *http.
 	var req struct {
 		Completed bool `json:"completed"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -359,7 +358,7 @@ func (h *ExperimentHandler) handleGetAssignment(w http.ResponseWriter, r *http.R
 	}
 
 	var req AssignmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -400,7 +399,7 @@ func (h *ExperimentHandler) handleGetFeatureValue(w http.ResponseWriter, r *http
 	}
 
 	var req FeatureValueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -451,7 +450,7 @@ func (h *ExperimentHandler) handleTrackExposure(w http.ResponseWriter, r *http.R
 	}
 
 	var req ExposureEventJSON
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -493,7 +492,7 @@ func (h *ExperimentHandler) handleTrackMetric(w http.ResponseWriter, r *http.Req
 	}
 
 	var req MetricEventJSON
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -718,7 +717,7 @@ func (h *ExperimentHandler) handleCheckAutoDecision(w http.ResponseWriter, r *ht
 		MaxPValue     *float64 `json:"max_p_value,omitempty"`
 	}
 	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+		if err := strictDecode(r.Body, &req); err == nil {
 			if req.MinSampleSize != nil {
 				config.MinSampleSize = *req.MinSampleSize
 			}

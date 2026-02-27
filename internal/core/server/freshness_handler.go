@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -137,7 +136,7 @@ type PolicyRequest struct {
 // handleCreatePolicy creates a new policy.
 func (h *FreshnessHandler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 	var req PolicyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
@@ -196,7 +195,7 @@ func (h *FreshnessHandler) handleUpdatePolicy(w http.ResponseWriter, r *http.Req
 	}
 
 	var req PolicyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
@@ -255,7 +254,7 @@ type AccessRecordRequest struct {
 // handleRecordAccess records a feature access.
 func (h *FreshnessHandler) handleRecordAccess(w http.ResponseWriter, r *http.Request) {
 	var req AccessRecordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
@@ -279,7 +278,7 @@ type ChangeRecordRequest struct {
 // handleRecordChange records a feature value change.
 func (h *FreshnessHandler) handleRecordChange(w http.ResponseWriter, r *http.Request) {
 	var req ChangeRecordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
@@ -302,7 +301,7 @@ type DriftRecordRequest struct {
 // handleRecordDrift records a drift score.
 func (h *FreshnessHandler) handleRecordDrift(w http.ResponseWriter, r *http.Request) {
 	var req DriftRecordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
@@ -324,7 +323,7 @@ type StaleRecordRequest struct {
 // handleRecordStale records a stale serve event.
 func (h *FreshnessHandler) handleRecordStale(w http.ResponseWriter, r *http.Request) {
 	var req StaleRecordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}

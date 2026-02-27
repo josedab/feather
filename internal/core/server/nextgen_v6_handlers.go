@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -105,7 +104,7 @@ func (h *ComputeGraphV2Handler) handleDerive(w http.ResponseWriter, r *http.Requ
 	var req struct {
 		Statement string `json:"statement"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -126,7 +125,7 @@ func (h *ComputeGraphV2Handler) handleDeriveBatch(w http.ResponseWriter, r *http
 	var req struct {
 		Specs []computegraph.DeriveSpec `json:"specs"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -146,7 +145,7 @@ func (h *ComputeGraphV2Handler) handleMemoizerInvalidate(w http.ResponseWriter, 
 	var req struct {
 		Keys []string `json:"keys"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -183,7 +182,7 @@ func (h *ConsistencyAdvancedHandler) handleKS(w http.ResponseWriter, r *http.Req
 		Offline   []float64 `json:"offline"`
 		Threshold float64   `json:"threshold"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -198,7 +197,7 @@ func (h *ConsistencyAdvancedHandler) handlePSI(w http.ResponseWriter, r *http.Re
 		NumBins   int       `json:"num_bins"`
 		Threshold float64   `json:"threshold"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -212,7 +211,7 @@ func (h *ConsistencyAdvancedHandler) handleChiSquared(w http.ResponseWriter, r *
 		Expected  map[string]int `json:"expected"`
 		Threshold float64        `json:"threshold"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -227,7 +226,7 @@ func (h *ConsistencyAdvancedHandler) handleJSD(w http.ResponseWriter, r *http.Re
 		NumBins   int       `json:"num_bins"`
 		Threshold float64   `json:"threshold"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -239,7 +238,7 @@ func (h *ConsistencyAdvancedHandler) handleSnapshot(w http.ResponseWriter, r *ht
 	var req struct {
 		Values []float64 `json:"values"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -272,7 +271,7 @@ func (h *GitOpsManifestHandler) handleLoad(w http.ResponseWriter, r *http.Reques
 	var req struct {
 		Path string `json:"path"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -292,7 +291,7 @@ func (h *GitOpsManifestHandler) handleValidate(w http.ResponseWriter, r *http.Re
 	var req struct {
 		Path string `json:"path"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -310,7 +309,7 @@ func (h *GitOpsManifestHandler) handleValidate(w http.ResponseWriter, r *http.Re
 
 func (h *GitOpsManifestHandler) handleCICDGenerate(w http.ResponseWriter, r *http.Request) {
 	var req gitopsdefs.CICDConfig
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -352,7 +351,7 @@ func (h *ArrowBatchHandler) handleBatch(w http.ResponseWriter, r *http.Request) 
 		Entities []string `json:"entities"`
 		Features []string `json:"features"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -370,7 +369,7 @@ func (h *ArrowBatchHandler) handleConvert(w http.ResponseWriter, r *http.Request
 		Features map[string]map[string]interface{} `json:"features"`
 		Schema   []arrowflight.ColumnSchema        `json:"schema"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -443,7 +442,7 @@ func (h *StreamAdvancedHandler) handleRollback(w http.ResponseWriter, r *http.Re
 
 func (h *StreamAdvancedHandler) handleTemporalJoin(w http.ResponseWriter, r *http.Request) {
 	var req streamcompute.TemporalJoinConfig
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -462,7 +461,7 @@ func (h *StreamAdvancedHandler) handleListPatterns(w http.ResponseWriter, r *htt
 
 func (h *StreamAdvancedHandler) handleCreatePattern(w http.ResponseWriter, r *http.Request) {
 	var req streamcompute.PatternSpec
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -526,7 +525,7 @@ func (h *FeastEnhancedHandler) handleCreateService(w http.ResponseWriter, r *htt
 		Views       []string `json:"views"`
 		Description string   `json:"description"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -553,7 +552,7 @@ func (h *FeastEnhancedHandler) handleUpdateService(w http.ResponseWriter, r *htt
 	var req struct {
 		Views []string `json:"views"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -597,7 +596,7 @@ func (h *FeastEnhancedHandler) handleMigratePlan(w http.ResponseWriter, r *http.
 	var req struct {
 		FeastConfig string `json:"feast_config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -613,7 +612,7 @@ func (h *FeastEnhancedHandler) handleMigrateExecute(w http.ResponseWriter, r *ht
 	var req struct {
 		FeastConfig string `json:"feast_config"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -637,7 +636,7 @@ func (h *FeastEnhancedHandler) handleRunTests(w http.ResponseWriter, r *http.Req
 	var req struct {
 		TestName string `json:"test_name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -693,7 +692,7 @@ func (h *EmbeddingLifecycleHandler) handleSubmitBatch(w http.ResponseWriter, r *
 		Collection string                    `json:"collection"`
 		Items      []embeddingmgmt.BatchItem `json:"items"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -734,7 +733,7 @@ func (h *EmbeddingLifecycleHandler) handleCancelBatch(w http.ResponseWriter, r *
 
 func (h *EmbeddingLifecycleHandler) handleCreateABTest(w http.ResponseWriter, r *http.Request) {
 	var req embeddingmgmt.ABTestConfig
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -807,7 +806,7 @@ func (h *EmbeddingLifecycleHandler) handleSetReference(w http.ResponseWriter, r 
 		ModelID    string      `json:"model_id"`
 		Vectors    [][]float64 `json:"vectors"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -853,7 +852,7 @@ func (h *SDKLanguagesHandler) handleList(w http.ResponseWriter, r *http.Request)
 func (h *SDKLanguagesHandler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	language := r.PathValue("language")
 	var schema sdkcodegen.SchemaDefinition
-	if err := json.NewDecoder(r.Body).Decode(&schema); err != nil {
+	if err := strictDecode(r.Body, &schema); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
@@ -898,7 +897,7 @@ func (h *PredictiveWarmingHandler) handleRecordAccess(w http.ResponseWriter, r *
 		Entity  string `json:"entity"`
 		Feature string `json:"feature"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		writeJSONError(r.Context(), w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}

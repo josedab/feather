@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -61,7 +60,7 @@ type recordFreshnessReq struct {
 
 func (h *RealtimeMonitorHandler) handleRecordFreshness(w http.ResponseWriter, r *http.Request) {
 	var req recordFreshnessReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -96,7 +95,7 @@ type recordLatencyReq struct {
 
 func (h *RealtimeMonitorHandler) handleRecordLatency(w http.ResponseWriter, r *http.Request) {
 	var req recordLatencyReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -129,7 +128,7 @@ type fireAlertReq struct {
 
 func (h *RealtimeMonitorHandler) handleFireAlert(w http.ResponseWriter, r *http.Request) {
 	var req fireAlertReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := strictDecode(r.Body, &req); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -161,7 +160,7 @@ func (h *RealtimeMonitorHandler) handlePipelineHealth(w http.ResponseWriter, r *
 
 func (h *RealtimeMonitorHandler) handleUpdatePipelineHealth(w http.ResponseWriter, r *http.Request) {
 	var health realtimemonitor.PipelineHealth
-	if err := json.NewDecoder(r.Body).Decode(&health); err != nil {
+	if err := strictDecode(r.Body, &health); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -197,7 +196,7 @@ func (h *RealtimeMonitorHandler) handleListNotifiers(w http.ResponseWriter, r *h
 
 func (h *RealtimeMonitorHandler) handleAddNotifier(w http.ResponseWriter, r *http.Request) {
 	var config realtimemonitor.NotifierConfig
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+	if err := strictDecode(r.Body, &config); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
 		return
 	}
