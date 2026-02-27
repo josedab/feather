@@ -43,6 +43,32 @@ jobs:
         run: |
           vacuum lint -d api/openapi/feather.yaml
 
+  generate-check:
+    name: Generated Code Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "25.x"
+
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - name: Check generated code is up-to-date
+        run: make generate-check
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -55,6 +81,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Environment diagnostics
+        run: make doctor || true
 
       - name: Run short tests (fast feedback)
         run: go test -short -count=1 ./...
@@ -167,6 +196,7 @@ jobs:
   python-sdk:
     name: Python SDK Tests
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && (contains(github.event.pull_request.changed_files, 'sdk/python') || !contains(github.event.pull_request.labels.*.name, 'skip-sdk')))
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -180,4 +210,25 @@ jobs:
         working-directory: sdk/python
         run: |
           pip install -e ".[dev]" 2>/dev/null || pip install -e .
-          python -m pytest tests/ -v --tb=short || echo "::warning::Python SDK tests failed"
+          python -m pytest tests/ -v --tb=short
+
+  typescript-sdk:
+    name: TypeScript SDK Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && (contains(github.event.pull_request.changed_files, 'sdk/typescript') || !contains(github.event.pull_request.labels.*.name, 'skip-sdk')))
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: sdk/typescript/package.json
+
+      - name: Install and test TypeScript SDK
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm test
