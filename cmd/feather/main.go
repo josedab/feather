@@ -29,6 +29,7 @@ func main() {
 	configPath := flag.String("config", "", "Path to configuration file")
 	showVersion := flag.Bool("version", false, "Print version and exit")
 	validateOnly := flag.Bool("validate", false, "Validate config and exit")
+	verbose := flag.Bool("verbose", false, "Enable debug logging (overrides config log level)")
 	flag.Parse()
 
 	if *showVersion {
@@ -94,6 +95,11 @@ func main() {
 		fmt.Printf("   HTTP: :%d  gRPC: :%d\n", cfg.Serving.HTTP.Port, cfg.Serving.GRPC.Port)
 		fmt.Printf("   Schema: %d groups, %d features\n", len(cfg.Schema.Groups), featureCount)
 		return
+	}
+
+	// Override log level if -verbose flag is set
+	if *verbose {
+		cfg.Logging.Level = "debug"
 	}
 
 	// Initialize logger first
