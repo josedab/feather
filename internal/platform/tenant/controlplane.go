@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -73,13 +74,14 @@ type UsageRecord struct {
 
 // ControlPlane manages tenant provisioning, authentication, and metering.
 type ControlPlane struct {
-	mu           sync.RWMutex
-	registry     *TenantRegistry
-	authConfigs  map[string]*AuthConfig   // tenantID -> auth config
-	apiKeys      map[string]*APIKey       // keyID -> API key
-	sessions     map[string]*TenantAuthInfo // sessionToken -> auth info
-	usageRecords map[string][]UsageRecord // tenantID -> usage records
-	currentUsage map[string]*UsageRecord  // tenantID -> current period
+	mu             sync.RWMutex
+	registry       *TenantRegistry
+	authConfigs    map[string]*AuthConfig   // tenantID -> auth config
+	apiKeys        map[string]*APIKey       // keyID -> API key
+	sessions       map[string]*TenantAuthInfo // sessionToken -> auth info
+	usageRecords   map[string][]UsageRecord // tenantID -> usage records
+	currentUsage   map[string]*UsageRecord  // tenantID -> current period
+	authMiddleware func(http.Handler) http.Handler
 }
 
 // NewControlPlane creates a new multi-tenant control plane.
@@ -92,6 +94,11 @@ func NewControlPlane(registry *TenantRegistry) *ControlPlane {
 		usageRecords: make(map[string][]UsageRecord),
 		currentUsage: make(map[string]*UsageRecord),
 	}
+}
+
+// SetAuthMiddleware configures the authentication middleware for control plane routes.
+func (cp *ControlPlane) SetAuthMiddleware(mw func(http.Handler) http.Handler) {
+	cp.authMiddleware = mw
 }
 
 // ConfigureAuth sets up authentication for a tenant.
@@ -385,24 +392,36 @@ func (cp *ControlPlane) GenerateCRD(tenantID string) (*K8sCRDSpec, error) {
 
 // RegisterRoutes registers control plane HTTP routes.
 func (cp *ControlPlane) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /v1/tenants/{id}/auth", cp.handleConfigureAuth)
-	mux.HandleFunc("GET /v1/tenants/{id}/auth", cp.handleGetAuth)
-	mux.HandleFunc("POST /v1/tenants/{id}/apikeys", cp.handleCreateAPIKey)
-	mux.HandleFunc("GET /v1/tenants/{id}/apikeys", cp.handleListAPIKeys)
-	mux.HandleFunc("GET /v1/tenants/{id}/usage", cp.handleGetUsage)
-	mux.HandleFunc("GET /v1/tenants/{id}/crd", cp.handleGenerateCRD)
-	mux.HandleFunc("GET /v1/tenants/{id}/cost", cp.handleGetCost)
+	wrap := cp.authMiddleware
+	if wrap == nil {
+		// Fallback: if no auth middleware set, use a passthrough (should not happen in production)
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
+
+	mux.Handle("POST /v1/tenants/{id}/auth", wrap(http.HandlerFunc(cp.handleConfigureAuth)))
+	mux.Handle("GET /v1/tenants/{id}/auth", wrap(http.HandlerFunc(cp.handleGetAuth)))
+	mux.Handle("POST /v1/tenants/{id}/apikeys", wrap(http.HandlerFunc(cp.handleCreateAPIKey)))
+	mux.Handle("GET /v1/tenants/{id}/apikeys", wrap(http.HandlerFunc(cp.handleListAPIKeys)))
+	mux.Handle("GET /v1/tenants/{id}/usage", wrap(http.HandlerFunc(cp.handleGetUsage)))
+	mux.Handle("GET /v1/tenants/{id}/crd", wrap(http.HandlerFunc(cp.handleGenerateCRD)))
+	mux.Handle("GET /v1/tenants/{id}/cost", wrap(http.HandlerFunc(cp.handleGetCost)))
 }
+
+// controlPlaneMaxBodySize limits request bodies on control plane endpoints.
+const controlPlaneMaxBodySize = 1 << 20 // 1MB
 
 func (cp *ControlPlane) handleConfigureAuth(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
+	r.Body = http.MaxBytesReader(w, r.Body, controlPlaneMaxBodySize)
 	var config AuthConfig
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		writeControlJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		slog.Warn("invalid auth config request body", "tenant_id", tenantID, "error", err)
+		writeControlJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 	if err := cp.ConfigureAuth(tenantID, config); err != nil {
-		writeControlJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		slog.Error("failed to configure auth", "tenant_id", tenantID, "error", err)
+		writeControlJSON(w, http.StatusBadRequest, map[string]string{"error": "failed to configure auth"})
 		return
 	}
 	writeControlJSON(w, http.StatusOK, map[string]interface{}{"success": true})
@@ -412,7 +431,8 @@ func (cp *ControlPlane) handleGetAuth(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
 	config, err := cp.GetAuthConfig(tenantID)
 	if err != nil {
-		writeControlJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		slog.Debug("auth config not found", "tenant_id", tenantID, "error", err)
+		writeControlJSON(w, http.StatusNotFound, map[string]string{"error": "auth config not found"})
 		return
 	}
 	writeControlJSON(w, http.StatusOK, config)
@@ -420,17 +440,20 @@ func (cp *ControlPlane) handleGetAuth(w http.ResponseWriter, r *http.Request) {
 
 func (cp *ControlPlane) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	tenantID := r.PathValue("id")
+	r.Body = http.MaxBytesReader(w, r.Body, controlPlaneMaxBodySize)
 	var req struct {
 		Name        string   `json:"name"`
 		Permissions []string `json:"permissions"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeControlJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		slog.Warn("invalid API key request body", "tenant_id", tenantID, "error", err)
+		writeControlJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 	key, rawKey, err := cp.CreateAPIKey(tenantID, req.Name, req.Permissions, 0)
 	if err != nil {
-		writeControlJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		slog.Error("failed to create API key", "tenant_id", tenantID, "error", err)
+		writeControlJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create API key"})
 		return
 	}
 	writeControlJSON(w, http.StatusCreated, map[string]interface{}{
@@ -456,7 +479,8 @@ func (cp *ControlPlane) handleGenerateCRD(w http.ResponseWriter, r *http.Request
 	tenantID := r.PathValue("id")
 	crd, err := cp.GenerateCRD(tenantID)
 	if err != nil {
-		writeControlJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		slog.Debug("CRD generation failed", "tenant_id", tenantID, "error", err)
+		writeControlJSON(w, http.StatusNotFound, map[string]string{"error": "tenant not found"})
 		return
 	}
 	writeControlJSON(w, http.StatusOK, crd)
