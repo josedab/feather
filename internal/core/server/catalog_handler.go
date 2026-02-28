@@ -10,7 +10,8 @@ import (
 
 // CatalogHandler handles feature catalog API requests.
 type CatalogHandler struct {
-	catalog *registry.Catalog
+	catalog     *registry.Catalog
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewCatalogHandler creates a new catalog handler.
@@ -22,12 +23,14 @@ func NewCatalogHandler() *CatalogHandler {
 
 // RegisterRoutes registers catalog API routes.
 func (h *CatalogHandler) RegisterRoutes(mux *http.ServeMux) {
+	wrap := h.requireAuth
+
 	// Feature CRUD
-	mux.HandleFunc("POST /v1/catalog/features", h.handleRegisterFeature)
+	mux.Handle("POST /v1/catalog/features", wrap(http.HandlerFunc(h.handleRegisterFeature)))
 	mux.HandleFunc("GET /v1/catalog/features", h.handleListFeatures)
 	mux.HandleFunc("GET /v1/catalog/features/{name}", h.handleGetFeature)
-	mux.HandleFunc("DELETE /v1/catalog/features/{name}", h.handleDeleteFeature)
-	mux.HandleFunc("PUT /v1/catalog/features/{name}/status", h.handleSetStatus)
+	mux.Handle("DELETE /v1/catalog/features/{name}", wrap(http.HandlerFunc(h.handleDeleteFeature)))
+	mux.Handle("PUT /v1/catalog/features/{name}/status", wrap(http.HandlerFunc(h.handleSetStatus)))
 
 	// Versioning
 	mux.HandleFunc("GET /v1/catalog/features/{name}/versions", h.handleGetVersions)
@@ -49,9 +52,9 @@ func (h *CatalogHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/catalog/dashboard", h.handleGetDashboard)
 	mux.HandleFunc("GET /v1/catalog/popular", h.handleGetPopular)
 	mux.HandleFunc("GET /v1/catalog/recent", h.handleGetRecent)
-	mux.HandleFunc("POST /v1/catalog/features/{name}/view", h.handleRecordView)
+	mux.Handle("POST /v1/catalog/features/{name}/view", wrap(http.HandlerFunc(h.handleRecordView)))
 	mux.HandleFunc("GET /v1/catalog/export", h.handleExport)
-	mux.HandleFunc("POST /v1/catalog/import", h.handleImport)
+	mux.Handle("POST /v1/catalog/import", wrap(http.HandlerFunc(h.handleImport)))
 }
 
 // GetCatalog returns the catalog for integration.
@@ -67,10 +70,7 @@ func (h *CatalogHandler) handleRegisterFeature(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	registeredBy := r.Header.Get("X-User-ID")
-	if registeredBy == "" {
-		registeredBy = "anonymous"
-	}
+	registeredBy := userFromRequest(r)
 
 	if err := h.catalog.Register(&def, registeredBy); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
@@ -191,10 +191,7 @@ func (h *CatalogHandler) handleSetStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedBy := r.Header.Get("X-User-ID")
-	if updatedBy == "" {
-		updatedBy = "anonymous"
-	}
+	updatedBy := userFromRequest(r)
 
 	if err := h.catalog.SetStatus(name, registry.FeatureStatus(req.Status), updatedBy); err != nil {
 		h.writeError(r.Context(), w, http.StatusNotFound, err.Error())
@@ -405,10 +402,7 @@ func (h *CatalogHandler) handleImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	importedBy := r.Header.Get("X-User-ID")
-	if importedBy == "" {
-		importedBy = "anonymous"
-	}
+	importedBy := userFromRequest(r)
 
 	imported := 0
 	for _, def := range features {

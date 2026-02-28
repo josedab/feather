@@ -12,7 +12,8 @@ import (
 
 // BackfillHandler handles backfill API requests.
 type BackfillHandler struct {
-	manager *backfill.Manager
+	manager     *backfill.Manager
+	requireAuth func(http.Handler) http.Handler
 }
 
 // storeWriter adapts storage.Store to backfill.FeatureWriter
@@ -61,17 +62,19 @@ func NewBackfillHandler(store *storage.Store) *BackfillHandler {
 
 // RegisterRoutes registers backfill API routes.
 func (h *BackfillHandler) RegisterRoutes(mux *http.ServeMux) {
+	wrap := h.requireAuth
+
 	// Job management
-	mux.HandleFunc("POST /v1/backfill/jobs", h.handleCreateJob)
+	mux.Handle("POST /v1/backfill/jobs", wrap(http.HandlerFunc(h.handleCreateJob)))
 	mux.HandleFunc("GET /v1/backfill/jobs", h.handleListJobs)
 	mux.HandleFunc("GET /v1/backfill/jobs/{id}", h.handleGetJob)
-	mux.HandleFunc("DELETE /v1/backfill/jobs/{id}", h.handleDeleteJob)
+	mux.Handle("DELETE /v1/backfill/jobs/{id}", wrap(http.HandlerFunc(h.handleDeleteJob)))
 
 	// Job control
-	mux.HandleFunc("POST /v1/backfill/jobs/{id}/start", h.handleStartJob)
-	mux.HandleFunc("POST /v1/backfill/jobs/{id}/pause", h.handlePauseJob)
-	mux.HandleFunc("POST /v1/backfill/jobs/{id}/resume", h.handleResumeJob)
-	mux.HandleFunc("POST /v1/backfill/jobs/{id}/cancel", h.handleCancelJob)
+	mux.Handle("POST /v1/backfill/jobs/{id}/start", wrap(http.HandlerFunc(h.handleStartJob)))
+	mux.Handle("POST /v1/backfill/jobs/{id}/pause", wrap(http.HandlerFunc(h.handlePauseJob)))
+	mux.Handle("POST /v1/backfill/jobs/{id}/resume", wrap(http.HandlerFunc(h.handleResumeJob)))
+	mux.Handle("POST /v1/backfill/jobs/{id}/cancel", wrap(http.HandlerFunc(h.handleCancelJob)))
 
 	// Checkpoints
 	mux.HandleFunc("GET /v1/backfill/jobs/{id}/checkpoint", h.handleGetCheckpoint)
@@ -79,7 +82,7 @@ func (h *BackfillHandler) RegisterRoutes(mux *http.ServeMux) {
 	// Stats and export
 	mux.HandleFunc("GET /v1/backfill/stats", h.handleGetStats)
 	mux.HandleFunc("GET /v1/backfill/jobs/{id}/export", h.handleExportJob)
-	mux.HandleFunc("POST /v1/backfill/import", h.handleImportJob)
+	mux.Handle("POST /v1/backfill/import", wrap(http.HandlerFunc(h.handleImportJob)))
 }
 
 // GetManager returns the backfill manager for integration.
@@ -126,10 +129,7 @@ func (h *BackfillHandler) handleCreateJob(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	createdBy := r.Header.Get("X-User-ID")
-	if createdBy == "" {
-		createdBy = "anonymous"
-	}
+	createdBy := userFromRequest(r)
 
 	job := &backfill.Job{
 		ID:          req.ID,

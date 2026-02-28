@@ -38,7 +38,9 @@ func init() {
 		if maxBytes == 0 {
 			maxBytes = 4 * 1024 * 1024 * 1024
 		}
-		return NewTenantHandler(maxBytes)
+		h := NewTenantHandler(maxBytes)
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("warehouse", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewWarehouseHandler(WarehouseHandlerConfig{

@@ -10,7 +10,8 @@ import (
 
 // GroupsHandler handles feature group API requests.
 type GroupsHandler struct {
-	manager *groups.Manager
+	manager     *groups.Manager
+	requireAuth func(http.Handler) http.Handler
 }
 
 // NewGroupsHandler creates a new groups handler.
@@ -22,29 +23,31 @@ func NewGroupsHandler() *GroupsHandler {
 
 // RegisterRoutes registers feature group API routes.
 func (h *GroupsHandler) RegisterRoutes(mux *http.ServeMux) {
+	wrap := h.requireAuth
+
 	// Group CRUD
-	mux.HandleFunc("POST /v1/groups", h.handleCreateGroup)
+	mux.Handle("POST /v1/groups", wrap(http.HandlerFunc(h.handleCreateGroup)))
 	mux.HandleFunc("GET /v1/groups", h.handleListGroups)
 	mux.HandleFunc("GET /v1/groups/{id}", h.handleGetGroup)
-	mux.HandleFunc("PUT /v1/groups/{id}", h.handleUpdateGroup)
-	mux.HandleFunc("DELETE /v1/groups/{id}", h.handleDeleteGroup)
+	mux.Handle("PUT /v1/groups/{id}", wrap(http.HandlerFunc(h.handleUpdateGroup)))
+	mux.Handle("DELETE /v1/groups/{id}", wrap(http.HandlerFunc(h.handleDeleteGroup)))
 
 	// Group status
-	mux.HandleFunc("PUT /v1/groups/{id}/status", h.handleSetStatus)
+	mux.Handle("PUT /v1/groups/{id}/status", wrap(http.HandlerFunc(h.handleSetStatus)))
 
 	// Group features
-	mux.HandleFunc("POST /v1/groups/{id}/features", h.handleAddFeature)
-	mux.HandleFunc("DELETE /v1/groups/{id}/features/{feature}", h.handleRemoveFeature)
+	mux.Handle("POST /v1/groups/{id}/features", wrap(http.HandlerFunc(h.handleAddFeature)))
+	mux.Handle("DELETE /v1/groups/{id}/features/{feature}", wrap(http.HandlerFunc(h.handleRemoveFeature)))
 	mux.HandleFunc("GET /v1/groups/{id}/features", h.handleGetFeatures)
 
 	// Group versions
 	mux.HandleFunc("GET /v1/groups/{id}/versions/{version}", h.handleGetVersion)
 
 	// Views - use /v1/feature-views to avoid route conflict with /v1/groups/{id}/features
-	mux.HandleFunc("POST /v1/feature-views", h.handleCreateView)
+	mux.Handle("POST /v1/feature-views", wrap(http.HandlerFunc(h.handleCreateView)))
 	mux.HandleFunc("GET /v1/feature-views", h.handleListViews)
 	mux.HandleFunc("GET /v1/feature-views/{id}", h.handleGetView)
-	mux.HandleFunc("DELETE /v1/feature-views/{id}", h.handleDeleteView)
+	mux.Handle("DELETE /v1/feature-views/{id}", wrap(http.HandlerFunc(h.handleDeleteView)))
 
 	// Query by entity/tag - use different paths to avoid route conflicts
 	mux.HandleFunc("GET /v1/entities/{entity}/groups", h.handleGetByEntity)
@@ -80,10 +83,7 @@ func (h *GroupsHandler) handleCreateGroup(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	createdBy := r.Header.Get("X-User-ID")
-	if createdBy == "" {
-		createdBy = "anonymous"
-	}
+	createdBy := userFromRequest(r)
 
 	group := &groups.FeatureGroup{
 		ID:          req.ID,
@@ -163,10 +163,7 @@ func (h *GroupsHandler) handleUpdateGroup(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	updatedBy := r.Header.Get("X-User-ID")
-	if updatedBy == "" {
-		updatedBy = "anonymous"
-	}
+	updatedBy := userFromRequest(r)
 
 	group := &groups.FeatureGroup{
 		ID:          id,
@@ -229,10 +226,7 @@ func (h *GroupsHandler) handleSetStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	updatedBy := r.Header.Get("X-User-ID")
-	if updatedBy == "" {
-		updatedBy = "anonymous"
-	}
+	updatedBy := userFromRequest(r)
 
 	if err := h.manager.SetStatus(id, req.Status, updatedBy); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
@@ -260,10 +254,7 @@ func (h *GroupsHandler) handleAddFeature(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedBy := r.Header.Get("X-User-ID")
-	if updatedBy == "" {
-		updatedBy = "anonymous"
-	}
+	updatedBy := userFromRequest(r)
 
 	if err := h.manager.AddFeature(id, feature, updatedBy); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())
@@ -285,10 +276,7 @@ func (h *GroupsHandler) handleRemoveFeature(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	updatedBy := r.Header.Get("X-User-ID")
-	if updatedBy == "" {
-		updatedBy = "anonymous"
-	}
+	updatedBy := userFromRequest(r)
 
 	if err := h.manager.RemoveFeature(id, featureName, updatedBy); err != nil {
 		h.writeError(r.Context(), w, http.StatusBadRequest, err.Error())

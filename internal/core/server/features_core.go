@@ -18,16 +18,22 @@ import (
 // freshness, sla, drift, semantic, quality, sharding, marketplace.
 func init() {
 	registerHandler("groups", MaturityStable, func(deps *handlerDeps) FeatureHandler {
-		return NewGroupsHandler()
+		h := NewGroupsHandler()
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("backfill", MaturityStable, func(deps *handlerDeps) FeatureHandler {
-		return NewBackfillHandler(deps.Store)
+		h := NewBackfillHandler(deps.Store)
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("streaming", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 		return NewStreamingHandler(deps.Ctx)
 	})
 	registerHandler("catalog", MaturityStable, func(deps *handlerDeps) FeatureHandler {
-		return NewCatalogHandler()
+		h := NewCatalogHandler()
+		h.requireAuth = deps.AuthMiddleware
+		return h
 	})
 	registerHandler("auth", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 		return NewAuthHandler()

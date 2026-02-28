@@ -16,6 +16,7 @@ type TenantHandler struct {
 	hotTier       *tenant.PartitionedHotTier
 	middleware    *tenant.Middleware
 	priorityQueue *tenant.PriorityQueue
+	requireAuth   func(http.Handler) http.Handler
 }
 
 // NewTenantHandler creates a new tenant handler.
@@ -49,29 +50,31 @@ func NewTenantHandlerWithRegistry(registry *tenant.TenantRegistry, totalHotTierS
 
 // RegisterRoutes registers tenant management API routes.
 func (h *TenantHandler) RegisterRoutes(mux *http.ServeMux) {
-	// Tenant CRUD routes
+	wrap := h.requireAuth
+
+	// Tenant CRUD routes - reads are open, writes require auth
 	mux.HandleFunc("GET /v1/tenants", h.handleListTenants)
-	mux.HandleFunc("POST /v1/tenants", h.handleCreateTenant)
+	mux.Handle("POST /v1/tenants", wrap(http.HandlerFunc(h.handleCreateTenant)))
 	mux.HandleFunc("GET /v1/tenants/{id}", h.handleGetTenant)
-	mux.HandleFunc("PUT /v1/tenants/{id}", h.handleUpdateTenant)
-	mux.HandleFunc("DELETE /v1/tenants/{id}", h.handleDeleteTenant)
+	mux.Handle("PUT /v1/tenants/{id}", wrap(http.HandlerFunc(h.handleUpdateTenant)))
+	mux.Handle("DELETE /v1/tenants/{id}", wrap(http.HandlerFunc(h.handleDeleteTenant)))
 
 	// Tenant status routes
-	mux.HandleFunc("POST /v1/tenants/{id}/enable", h.handleEnableTenant)
-	mux.HandleFunc("POST /v1/tenants/{id}/disable", h.handleDisableTenant)
+	mux.Handle("POST /v1/tenants/{id}/enable", wrap(http.HandlerFunc(h.handleEnableTenant)))
+	mux.Handle("POST /v1/tenants/{id}/disable", wrap(http.HandlerFunc(h.handleDisableTenant)))
 
 	// Quota management routes
 	mux.HandleFunc("GET /v1/tenants/{id}/quotas", h.handleGetQuotas)
-	mux.HandleFunc("PUT /v1/tenants/{id}/quotas", h.handleUpdateQuotas)
+	mux.Handle("PUT /v1/tenants/{id}/quotas", wrap(http.HandlerFunc(h.handleUpdateQuotas)))
 
 	// Usage and metrics routes
 	mux.HandleFunc("GET /v1/tenants/{id}/usage", h.handleGetUsage)
 	mux.HandleFunc("GET /v1/tenants/{id}/metrics", h.handleGetMetrics)
-	mux.HandleFunc("POST /v1/tenants/{id}/metrics/reset", h.handleResetMetrics)
+	mux.Handle("POST /v1/tenants/{id}/metrics/reset", wrap(http.HandlerFunc(h.handleResetMetrics)))
 
 	// Partition management routes
 	mux.HandleFunc("GET /v1/tenants/{id}/partition", h.handleGetPartition)
-	mux.HandleFunc("PUT /v1/tenants/{id}/partition/resize", h.handleResizePartition)
+	mux.Handle("PUT /v1/tenants/{id}/partition/resize", wrap(http.HandlerFunc(h.handleResizePartition)))
 
 	// Global stats routes
 	mux.HandleFunc("GET /v1/tenants/stats", h.handleGlobalStats)
@@ -79,8 +82,8 @@ func (h *TenantHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Cross-tenant sharing routes
 	mux.HandleFunc("GET /v1/tenants/{id}/shares", h.handleListShares)
-	mux.HandleFunc("POST /v1/tenants/{id}/shares", h.handleGrantShare)
-	mux.HandleFunc("DELETE /v1/tenants/shares/{grantId}", h.handleRevokeShare)
+	mux.Handle("POST /v1/tenants/{id}/shares", wrap(http.HandlerFunc(h.handleGrantShare)))
+	mux.Handle("DELETE /v1/tenants/shares/{grantId}", wrap(http.HandlerFunc(h.handleRevokeShare)))
 
 	// Audit log routes
 	mux.HandleFunc("GET /v1/tenants/{id}/audit", h.handleGetAuditLog)
@@ -685,10 +688,7 @@ func (h *TenantHandler) handleGrantShare(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	grantedBy := r.Header.Get("X-User-ID")
-	if grantedBy == "" {
-		grantedBy = "system"
-	}
+	grantedBy := userFromRequest(r)
 
 	grant := &tenant.ShareGrant{
 		FromTenantID: fromTenantID,
