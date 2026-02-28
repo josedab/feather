@@ -19,7 +19,6 @@ func (s *HTTPServer) registerDocsRoutes() {
 
 func (s *HTTPServer) handleOpenAPISpec(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/yaml")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if _, err := w.Write(openapiSpec); err != nil {
 		slog.Debug("failed to write OpenAPI spec", "error", err)
 	}
@@ -56,7 +55,6 @@ func (s *HTTPServer) handleOpenAPIJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if err := json.NewEncoder(w).Encode(info); err != nil {
 		slog.Debug("failed to encode OpenAPI JSON", "error", err)
 	}

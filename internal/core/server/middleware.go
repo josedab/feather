@@ -203,10 +203,17 @@ func corsMiddleware(config *CORSConfig) func(http.Handler) http.Handler {
 	allowAll := false
 	for _, origin := range config.AllowedOrigins {
 		if origin == "*" {
+			slog.Warn("CORS: wildcard '*' origin is not recommended for production — configure explicit AllowedOrigins instead")
 			allowAll = true
 			break
 		}
 		allowedOrigins[origin] = true
+	}
+
+	// When no explicit origins are configured and wildcard is not set,
+	// no cross-origin requests will be allowed (secure default).
+	if !allowAll && len(allowedOrigins) == 0 {
+		slog.Info("CORS: no AllowedOrigins configured — cross-origin requests will be blocked")
 	}
 
 	// Prevent wildcard origin with credentials - this combination is a browser

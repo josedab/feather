@@ -193,6 +193,9 @@ type HTTPServingConfig struct {
 	WriteTimeout time.Duration `yaml:"write_timeout"`
 	// TrustedProxies is a list of CIDR ranges or IPs whose X-Forwarded-For headers are trusted.
 	TrustedProxies []string `yaml:"trusted_proxies,omitempty"`
+	// CORSAllowedOrigins is a list of origins allowed for CORS requests.
+	// If empty, no cross-origin requests are allowed (most restrictive default).
+	CORSAllowedOrigins []string `yaml:"cors_allowed_origins,omitempty"`
 }
 
 // SyncConfig defines sync configuration.
