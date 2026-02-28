@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/feather-store/feather/internal/core/logging"
+	"github.com/feather-store/feather/internal/platform/auth"
 )
 
 // SuccessResponse is the standard response for successful operations.
@@ -58,4 +59,13 @@ func strictDecode(r io.Reader, v interface{}) error {
 	dec := json.NewDecoder(r)
 	dec.DisallowUnknownFields()
 	return dec.Decode(v)
+}
+
+// userFromRequest extracts the authenticated user identity from the request context.
+// Falls back to "anonymous" if no authenticated identity is available.
+func userFromRequest(r *http.Request) string {
+	if key := auth.APIKeyFromContext(r.Context()); key != nil {
+		return key.Name
+	}
+	return "anonymous"
 }
