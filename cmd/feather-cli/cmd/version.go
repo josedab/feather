@@ -116,7 +116,10 @@ func getServerVersion() *serverVersion {
 		return &serverVersion{Version: "unknown", Status: "healthy"}
 	}
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return &serverVersion{Status: "healthy", Version: "unknown"}
+	}
 	var verResp struct {
 		Version string `json:"version"`
 	}

@@ -65,7 +65,7 @@ func runHealth(cmd *cobra.Command, args []string) error {
 		_ = resp.Body.Close()
 	}()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return fmt.Errorf("reading response: %w", err)
 	}
