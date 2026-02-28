@@ -10,23 +10,38 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/feather-store/feather/internal/core/domain"
 	"github.com/feather-store/feather/internal/core/storage"
 )
 
+// DefaultExportBaseDir is the default allowed base directory for exports.
+const DefaultExportBaseDir = "/var/lib/feather/exports"
+
 // Exporter exports features for training.
 type Exporter struct {
-	store  *storage.Store
-	schema *storage.Registry
+	store   *storage.Store
+	schema  *storage.Registry
+	baseDir string
 }
 
 // NewExporter creates a new exporter.
 func NewExporter(store *storage.Store, schema *storage.Registry) *Exporter {
 	return &Exporter{
-		store:  store,
-		schema: schema,
+		store:   store,
+		schema:  schema,
+		baseDir: DefaultExportBaseDir,
+	}
+}
+
+// NewExporterWithBaseDir creates a new exporter with a custom allowed base directory.
+func NewExporterWithBaseDir(store *storage.Store, schema *storage.Registry, baseDir string) *Exporter {
+	return &Exporter{
+		store:   store,
+		schema:  schema,
+		baseDir: baseDir,
 	}
 }
 
@@ -82,6 +97,24 @@ func (e *Exporter) Export(ctx context.Context, req ExportRequest) (*ExportResult
 	if req.OutputPath == "" {
 		return nil, fmt.Errorf("output path required")
 	}
+
+	// Sanitize and validate output path against allowed base directory
+	cleanPath := filepath.Clean(req.OutputPath)
+	if !filepath.IsAbs(cleanPath) {
+		cleanPath = filepath.Join(e.baseDir, cleanPath)
+	}
+	absBase, err := filepath.Abs(e.baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving base directory: %w", err)
+	}
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return nil, fmt.Errorf("resolving output path: %w", err)
+	}
+	if !strings.HasPrefix(absPath, absBase+string(filepath.Separator)) && absPath != absBase {
+		return nil, fmt.Errorf("output path must be within the allowed base directory %q", absBase)
+	}
+	req.OutputPath = absPath
 
 	// Create output directory if needed
 	dir := filepath.Dir(req.OutputPath)
