@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/feather-store/feather/internal/platform/urlvalidation"
 )
 
 // WebhookNotifier sends alerts to a webhook URL.
@@ -30,6 +32,10 @@ func (w *WebhookNotifier) Name() string { return w.name }
 
 // Notify sends the alert as a JSON POST to the configured webhook URL.
 func (w *WebhookNotifier) Notify(alert Alert) error {
+	if err := urlvalidation.ValidateWebhookURL(w.url); err != nil {
+		return fmt.Errorf("webhook URL blocked by SSRF protection: %w", err)
+	}
+
 	body, err := json.Marshal(alert)
 	if err != nil {
 		return fmt.Errorf("marshaling alert: %w", err)

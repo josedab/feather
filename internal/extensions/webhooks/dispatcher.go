@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/feather-store/feather/internal/platform/urlvalidation"
 )
 
 // EventType identifies the kind of feature lifecycle event.
@@ -201,6 +204,13 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 		}
 
 		if strings.HasPrefix(wh.URL, "http://") || strings.HasPrefix(wh.URL, "https://") {
+			if err := urlvalidation.ValidateWebhookURL(wh.URL); err != nil {
+				slog.Warn("webhook URL blocked by SSRF protection", "webhook_id", wh.ID, "error", err)
+				result.Success = false
+				result.Error = "webhook URL blocked by security policy"
+				d.totalFailed.Add(1)
+				d.deadLetter = append(d.deadLetter, event)
+			} else {
 			body, _ := json.Marshal(event)
 			resp, err := d.httpClient.Post(wh.URL, "application/json", bytes.NewReader(body))
 			if err != nil {
@@ -221,6 +231,7 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 				} else {
 					result.Success = true
 				}
+			}
 			}
 		} else {
 			result.StatusCode = 200

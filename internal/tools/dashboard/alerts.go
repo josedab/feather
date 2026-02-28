@@ -5,9 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/feather-store/feather/internal/platform/urlvalidation"
 )
 
 // AlertManager manages dashboard alerts.
@@ -170,6 +173,11 @@ func (m *AlertManager) Cleanup(maxAge time.Duration) {
 }
 
 func (m *AlertManager) sendWebhook(alert *Alert) {
+	if err := urlvalidation.ValidateWebhookURL(m.webhookURL); err != nil {
+		slog.Warn("webhook URL blocked by SSRF protection", "url", m.webhookURL, "error", err)
+		return
+	}
+
 	payload := map[string]interface{}{
 		"type":    "alert",
 		"alert":   alert,
