@@ -53,7 +53,7 @@ func TestNewAuditLogger(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
@@ -67,7 +67,7 @@ func TestNewAuditLogger_Disabled(t *testing.T) {
 		Enabled: false,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
@@ -87,7 +87,7 @@ func TestNewAuditLogger_WithFile(t *testing.T) {
 		OutputPath:    logPath,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
@@ -116,7 +116,7 @@ func TestAuditLogger_Log(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -145,7 +145,7 @@ func TestAuditLogger_Log_Closed(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 
 	// Close logger
@@ -164,7 +164,7 @@ func TestAuditLogger_LogAccess(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -185,7 +185,7 @@ func TestAuditLogger_LogWrite(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -206,7 +206,7 @@ func TestAuditLogger_LogAuth(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -226,7 +226,7 @@ func TestAuditLogger_LogDenied(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -249,7 +249,7 @@ func TestAuditLogger_LogCritical(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -271,7 +271,7 @@ func TestAuditLogger_OnEvent(t *testing.T) {
 		FlushInterval: 100 * time.Millisecond,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -312,7 +312,7 @@ func TestAuditLogger_SeverityFiltering(t *testing.T) {
 		LogLevel:      SeverityWarning, // Only warning and above
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -340,7 +340,7 @@ func TestAuditLogger_Stats(t *testing.T) {
 		FlushInterval: 100 * time.Millisecond,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 
@@ -364,7 +364,7 @@ func TestAuditLogger_Query(t *testing.T) {
 		FlushInterval: time.Second,
 	}
 
-	logger, err := NewAuditLogger(config, nil)
+	logger, err := NewAuditLogger(context.Background(), config, nil)
 	require.NoError(t, err)
 	defer logger.Close()
 

@@ -11,7 +11,7 @@
 //
 // All data operations are logged with full context:
 //
-//	auditor := governance.NewAuditLogger(config)
+//	auditor := governance.NewAuditLogger(ctx, config)
 //	auditor.LogAccess(ctx, &AuditEvent{
 //	    Action:    ActionRead,
 //	    Resource:  "user:123",
@@ -216,7 +216,7 @@ type AuditLogger struct {
 }
 
 // NewAuditLogger creates a new audit logger.
-func NewAuditLogger(config AuditConfig, logger *slog.Logger) (*AuditLogger, error) {
+func NewAuditLogger(ctx context.Context, config AuditConfig, logger *slog.Logger) (*AuditLogger, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -243,7 +243,7 @@ func NewAuditLogger(config AuditConfig, logger *slog.Logger) (*AuditLogger, erro
 
 	// Start background processor
 	if config.Enabled {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(ctx)
 		al.cancel = cancel
 		al.wg.Add(1)
 		go al.processLoop(ctx)
