@@ -486,7 +486,7 @@ func (f *Federation) checkNodeHealth() {
 	defer f.mu.Unlock()
 
 	for _, node := range f.nodes {
-		healthy := f.pingNode(node)
+		healthy := f.pingNode(context.Background(), node)
 		if healthy {
 			node.State = NodeStateHealthy
 			node.LastSeen = time.Now()
@@ -505,8 +505,8 @@ func (f *Federation) checkNodeHealth() {
 	}
 }
 
-func (f *Federation) pingNode(node *Node) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func (f *Federation) pingNode(ctx context.Context, node *Node) bool {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	url := fmt.Sprintf("%s/v1/health", node.Address)
@@ -532,12 +532,12 @@ func (f *Federation) runSync() {
 		case <-f.stopCh:
 			return
 		case <-f.syncTicker.C:
-			f.syncCatalog()
+			f.syncCatalog(context.Background())
 		}
 	}
 }
 
-func (f *Federation) syncCatalog() {
+func (f *Federation) syncCatalog(ctx context.Context) {
 	f.mu.RLock()
 	nodes := make([]*Node, 0, len(f.nodes))
 	for _, node := range f.nodes {
@@ -548,7 +548,7 @@ func (f *Federation) syncCatalog() {
 	f.mu.RUnlock()
 
 	for _, node := range nodes {
-		f.syncWithNode(context.Background(), node)
+		f.syncWithNode(ctx, node)
 	}
 
 	f.emitEvent(Event{
