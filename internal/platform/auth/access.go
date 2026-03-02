@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -155,7 +156,10 @@ func (ac *AccessController) CreateAPIKey(key *APIKey, createdBy string) (string,
 	}
 
 	// Generate random key
-	rawKey := generateAPIKey()
+	rawKey, err := generateAPIKey()
+	if err != nil {
+		return "", err
+	}
 	keyHash := hashKey(rawKey)
 	prefix := rawKey[:8]
 
@@ -167,7 +171,11 @@ func (ac *AccessController) CreateAPIKey(key *APIKey, createdBy string) (string,
 		return "", ErrTenantNotFound
 	}
 
-	key.ID = generateID()
+	id, err := generateID()
+	if err != nil {
+		return "", err
+	}
+	key.ID = id
 	key.KeyHash = keyHash
 	key.Prefix = prefix
 	key.CreatedAt = time.Now()
@@ -455,7 +463,11 @@ func (ac *AccessController) DeleteRole(name string) error {
 
 // LogAudit records an audit log entry.
 func (ac *AccessController) LogAudit(log AuditLog) {
-	log.ID = generateID()
+	id, err := generateID()
+	if err != nil {
+		return
+	}
+	log.ID = id
 	log.Timestamp = time.Now()
 
 	ac.mu.Lock()
@@ -522,25 +534,21 @@ func TenantFromContext(ctx context.Context) string {
 
 // Helper functions
 // generateAPIKey creates a new API key with cryptographic randomness.
-// Panics on crypto/rand failure because a predictable API key would be
-// a critical security vulnerability.
-func generateAPIKey() string {
+func generateAPIKey() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		panic("crypto/rand failed: " + err.Error())
+		return "", fmt.Errorf("generating API key: %w", err)
 	}
-	return "fk_" + hex.EncodeToString(bytes)
+	return "fk_" + hex.EncodeToString(bytes), nil
 }
 
 // generateID creates a random identifier.
-// Panics on crypto/rand failure because falling back to a predictable ID
-// could cause collisions or security issues in authentication contexts.
-func generateID() string {
+func generateID() (string, error) {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {
-		panic("crypto/rand failed: " + err.Error())
+		return "", fmt.Errorf("generating ID: %w", err)
 	}
-	return hex.EncodeToString(bytes)
+	return hex.EncodeToString(bytes), nil
 }
 
 func hashKey(key string) string {

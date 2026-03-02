@@ -153,8 +153,13 @@ func (cp *ControlPlane) CreateAPIKey(tenantID, name string, permissions []string
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
+	keyID, err := generateKeyID()
+	if err != nil {
+		return nil, "", fmt.Errorf("generating key ID: %w", err)
+	}
+
 	key := &APIKey{
-		ID:          generateKeyID(),
+		ID:          keyID,
 		TenantID:    tenantID,
 		Name:        name,
 		KeyPrefix:   rawKey[:8],
@@ -177,14 +182,12 @@ func hashAPIKey(key string) string {
 
 // generateKeyID creates a cryptographically random key ID to prevent
 // enumeration attacks (replaces predictable time-based IDs).
-// Panics on crypto/rand failure because a predictable key ID would
-// defeat the purpose of using crypto/rand.
-func generateKeyID() string {
+func generateKeyID() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand failed: " + err.Error())
+		return "", fmt.Errorf("generating key ID: %w", err)
 	}
-	return "key-" + hex.EncodeToString(b)
+	return "key-" + hex.EncodeToString(b), nil
 }
 
 // RevokeAPIKey revokes an API key.
