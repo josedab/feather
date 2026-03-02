@@ -323,7 +323,7 @@ func (s *HTTPServer) handleGetFeatures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	features, err := s.getEntityFeatures(entityKey, featureNames)
+	features, err := s.getEntityFeatures(r.Context(), entityKey, featureNames)
 	if err != nil {
 		s.writeErrorFromErr(r.Context(), w, err)
 		return
@@ -365,7 +365,7 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 	}
 
 	for _, entityKey := range req.Entities {
-		features, err := s.getEntityFeatures(entityKey, req.Features)
+		features, err := s.getEntityFeatures(r.Context(), entityKey, req.Features)
 		if err != nil {
 			if domain.IsNotFound(err) {
 				continue
@@ -605,8 +605,8 @@ func (s *HTTPServer) handleLive(w http.ResponseWriter, r *http.Request) {
 }
 
 // getEntityFeatures retrieves features for an entity.
-func (s *HTTPServer) getEntityFeatures(entityKey string, featureNames []string) (*domain.EntityFeatures, error) {
-	features, err := s.store.Get(context.Background(), entityKey, featureNames)
+func (s *HTTPServer) getEntityFeatures(ctx context.Context, entityKey string, featureNames []string) (*domain.EntityFeatures, error) {
+	features, err := s.store.Get(ctx, entityKey, featureNames)
 	if err != nil && !domain.IsNotFound(err) {
 		return nil, err
 	}
