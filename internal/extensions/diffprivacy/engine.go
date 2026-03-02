@@ -343,71 +343,90 @@ func (e *Engine) consumeBudgetLocked(fs *featureState) {
 func (e *Engine) applyMechanism(m Mechanism, value, sensitivity, epsilon, delta float64) (float64, error) {
 	switch m {
 	case MechanismLaplace:
-		return e.laplace(value, sensitivity, epsilon), nil
+		return e.laplace(value, sensitivity, epsilon)
 	case MechanismGaussian:
-		return e.gaussian(value, sensitivity, epsilon, delta), nil
+		return e.gaussian(value, sensitivity, epsilon, delta)
 	case MechanismLocalDP:
-		return e.randomizedResponse(value, epsilon), nil
+		return e.randomizedResponse(value, epsilon)
 	default:
 		return 0, fmt.Errorf("unknown mechanism %q", m)
 	}
 }
 
 // cryptoFloat64 returns a cryptographically secure random float64 in [0, 1).
-// Panics on crypto/rand failure because a broken CSPRNG means the differential
-// privacy guarantees cannot be met, and silently falling back would be worse
-// than crashing.
-func cryptoFloat64() float64 {
+// Returns an error if the CSPRNG fails.
+func cryptoFloat64() (float64, error) {
 	var b [8]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		panic("crypto/rand failed: " + err.Error())
+		return 0, fmt.Errorf("crypto/rand failed: %w", err)
 	}
 	// Use 53 bits of entropy for a uniform float64 in [0, 1).
-	return float64(binary.LittleEndian.Uint64(b[:])>>11) / (1 << 53)
+	return float64(binary.LittleEndian.Uint64(b[:])>>11) / (1 << 53), nil
 }
 
 // cryptoNormFloat64 returns a cryptographically secure normally distributed
 // float64 using the Box-Muller transform.
-func cryptoNormFloat64() float64 {
-	u1 := cryptoFloat64()
-	u2 := cryptoFloat64()
+func cryptoNormFloat64() (float64, error) {
+	u1, err := cryptoFloat64()
+	if err != nil {
+		return 0, err
+	}
+	u2, err := cryptoFloat64()
+	if err != nil {
+		return 0, err
+	}
 	// Avoid log(0) by clamping u1 away from zero.
 	for u1 == 0 {
-		u1 = cryptoFloat64()
+		u1, err = cryptoFloat64()
+		if err != nil {
+			return 0, err
+		}
 	}
-	return math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2)
+	return math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2), nil
 }
 
 // laplace adds Laplace noise scaled to sensitivity/epsilon.
-func (e *Engine) laplace(value, sensitivity, epsilon float64) float64 {
+func (e *Engine) laplace(value, sensitivity, epsilon float64) (float64, error) {
 	scale := sensitivity / epsilon
 	// Laplace noise via inverse CDF: L(0, scale) = -scale * sign(u) * ln(1 - 2|u|)
-	u := cryptoFloat64() - 0.5
+	u, err := cryptoFloat64()
+	if err != nil {
+		return 0, err
+	}
+	u -= 0.5
 	noise := -scale * math.Copysign(1, u) * math.Log(1-2*math.Abs(u))
-	return value + noise
+	return value + noise, nil
 }
 
 // gaussian adds Gaussian noise calibrated so the mechanism satisfies (ε, δ)-DP.
-func (e *Engine) gaussian(value, sensitivity, epsilon, delta float64) float64 {
+func (e *Engine) gaussian(value, sensitivity, epsilon, delta float64) (float64, error) {
 	sigma := sensitivity * math.Sqrt(2*math.Log(1.25/delta)) / epsilon
-	noise := cryptoNormFloat64() * sigma
-	return value + noise
+	norm, err := cryptoNormFloat64()
+	if err != nil {
+		return 0, err
+	}
+	noise := norm * sigma
+	return value + noise, nil
 }
 
 // randomizedResponse implements local DP via randomized response.
 // Treats value > 0.5 as "true" and flips the answer with probability
 // determined by epsilon. Returns 1.0 (true) or 0.0 (false).
-func (e *Engine) randomizedResponse(value, epsilon float64) float64 {
+func (e *Engine) randomizedResponse(value, epsilon float64) (float64, error) {
 	truthful := value > 0.5
 	p := math.Exp(epsilon) / (math.Exp(epsilon) + 1) // probability of telling truth
-	if cryptoFloat64() < p {
+	r, err := cryptoFloat64()
+	if err != nil {
+		return 0, err
+	}
+	if r < p {
 		if truthful {
-			return 1.0
+			return 1.0, nil
 		}
-		return 0.0
+		return 0.0, nil
 	}
 	if truthful {
-		return 0.0
+		return 0.0, nil
 	}
-	return 1.0
+	return 1.0, nil
 }
