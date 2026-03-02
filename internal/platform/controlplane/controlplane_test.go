@@ -7,7 +7,7 @@ import (
 
 func setupManager(t *testing.T) (*Manager, context.Context) {
 	t.Helper()
-	mgr := NewManager(DefaultManagerConfig())
+	mgr := NewManager(context.Background(), DefaultManagerConfig())
 	ctx := context.Background()
 
 	// Add a default region so instance registration succeeds.
@@ -136,7 +136,7 @@ func TestListInstances(t *testing.T) {
 }
 
 func TestRegions(t *testing.T) {
-	mgr := NewManager(DefaultManagerConfig())
+	mgr := NewManager(context.Background(), DefaultManagerConfig())
 	ctx := context.Background()
 	defer mgr.Close()
 
@@ -182,7 +182,7 @@ func TestRegions(t *testing.T) {
 }
 
 func TestPolicies(t *testing.T) {
-	mgr := NewManager(DefaultManagerConfig())
+	mgr := NewManager(context.Background(), DefaultManagerConfig())
 	ctx := context.Background()
 	defer mgr.Close()
 

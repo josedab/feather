@@ -120,8 +120,8 @@ type Manager struct {
 }
 
 // NewManager creates a new control plane Manager with the given configuration.
-func NewManager(config ManagerConfig) *Manager {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewManager(ctx context.Context, config ManagerConfig) *Manager {
+	ctx, cancel := context.WithCancel(ctx)
 	return &Manager{
 		config:      config,
 		instances:   make(map[string]*Instance),

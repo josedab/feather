@@ -34,7 +34,7 @@
 //
 // # Usage
 //
-//	mgr := controlplane.NewManager(controlplane.DefaultManagerConfig())
+//	mgr := controlplane.NewManager(ctx, controlplane.DefaultManagerConfig())
 //
 //	// Register a region
 //	mgr.AddRegion(ctx, &controlplane.Region{
