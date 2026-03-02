@@ -168,7 +168,7 @@ func (k *KafkaConsumer) Start(ctx context.Context) error {
 			atomic.AddInt64(&k.metrics.BytesReceived, int64(len(msg.Value)))
 			atomic.StoreInt64(&k.metrics.LastMessageTime, time.Now().UnixNano())
 
-			if err := k.processMessage(msg); err != nil {
+			if err := k.processMessage(ctx, msg); err != nil {
 				atomic.AddInt64(&k.metrics.MessagesError, 1)
 				if k.circuitBreaker != nil {
 					k.circuitBreaker.RecordFailure()
@@ -218,7 +218,7 @@ func (k *KafkaConsumer) Close() error {
 	return k.consumer.Close()
 }
 
-func (k *KafkaConsumer) processMessage(msg *kafka.Message) error {
+func (k *KafkaConsumer) processMessage(ctx context.Context, msg *kafka.Message) error {
 	update, err := k.decoder.Decode(msg.Value)
 	if err != nil {
 		return fmt.Errorf("decoding message: %w", err)
@@ -238,7 +238,7 @@ func (k *KafkaConsumer) processMessage(msg *kafka.Message) error {
 		}
 	}
 
-	if err := k.store.Put(context.Background(), update.EntityKey, features); err != nil {
+	if err := k.store.Put(ctx, update.EntityKey, features); err != nil {
 		return fmt.Errorf("storing features: %w", err)
 	}
 

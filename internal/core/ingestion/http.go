@@ -152,7 +152,7 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.ingestUpdate(&update); err != nil {
+	if err := h.ingestUpdate(r.Context(), &update); err != nil {
 		atomic.AddInt64(&h.metrics.RequestsError, 1)
 		var validationErr *ValidationError
 		if errors.As(err, &validationErr) {
@@ -198,7 +198,7 @@ func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		if err := h.ingestUpdate(&update); err != nil {
+		if err := h.ingestUpdate(r.Context(), &update); err != nil {
 			errorCount++
 			continue
 		}
@@ -216,7 +216,7 @@ func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *HTTPIngestion) ingestUpdate(update *domain.FeatureUpdate) error {
+func (h *HTTPIngestion) ingestUpdate(ctx context.Context, update *domain.FeatureUpdate) error {
 	if update.Timestamp == 0 {
 		update.Timestamp = time.Now().UnixNano()
 	}
@@ -244,7 +244,7 @@ func (h *HTTPIngestion) ingestUpdate(update *domain.FeatureUpdate) error {
 		}
 	}
 
-	if err := h.store.Put(context.Background(), update.EntityKey, features); err != nil {
+	if err := h.store.Put(ctx, update.EntityKey, features); err != nil {
 		return fmt.Errorf("storing features: %w", err)
 	}
 
