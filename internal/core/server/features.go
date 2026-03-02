@@ -28,6 +28,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/feather-store/feather/internal/core/aggregation"
 	"github.com/feather-store/feather/internal/core/metrics"
@@ -80,14 +81,41 @@ var featureRegistry = map[string]handlerFactory{}
 // Query with RegisteredHandlerSpecs() to inspect maturity levels.
 var handlerSpecs []HandlerSpec
 
+// registryMu protects featureRegistry and handlerSpecs during init-time
+// registration. After FreezeRegistry is called, the registry becomes
+// read-only and the mutex is no longer needed.
+var registryMu sync.RWMutex
+
+// registryFrozen is set to true after all init() registrations complete.
+// Once frozen, registerHandler panics to catch programming errors.
+var registryFrozen bool
+
 // registerHandler registers a handler with its maturity level.
+// Must only be called during init(); panics if the registry is frozen.
 func registerHandler(name string, maturity Maturity, factory handlerFactory) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	if registryFrozen {
+		panic("server: registerHandler called after registry was frozen: " + name)
+	}
 	featureRegistry[name] = factory
 	handlerSpecs = append(handlerSpecs, HandlerSpec{Name: name, Maturity: maturity, Factory: factory})
 }
 
+// FreezeRegistry prevents further handler registrations. Call once during
+// startup after all init() functions have run.
+func FreezeRegistry() {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	registryFrozen = true
+}
+
 // RegisteredFeatures returns all available feature names.
 func RegisteredFeatures() []string {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	names := make([]string, 0, len(featureRegistry))
 	for name := range featureRegistry {
 		names = append(names, name)
@@ -98,6 +126,9 @@ func RegisteredFeatures() []string {
 // RegisteredHandlerSpecs returns handler specs grouped by maturity.
 // Useful for CLI tools and diagnostics (e.g., make api-routes).
 func RegisteredHandlerSpecs() []HandlerSpec {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	out := make([]HandlerSpec, len(handlerSpecs))
 	copy(out, handlerSpecs)
 	return out
@@ -105,6 +136,9 @@ func RegisteredHandlerSpecs() []HandlerSpec {
 
 // registerEnabledFeatures creates and registers all enabled feature handlers.
 func registerEnabledFeatures(mux *http.ServeMux, enabled map[string]bool, deps *handlerDeps) {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	// Validate that all enabled feature names correspond to registered handlers
 	for name := range enabled {
 		if !enabled[name] {
@@ -137,6 +171,9 @@ type HandlerInventory struct {
 
 // GetHandlerInventory returns all handlers with maturity and enabled status.
 func GetHandlerInventory(enabled map[string]bool) []HandlerInventory {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	inv := make([]HandlerInventory, 0, len(handlerSpecs))
 	for _, spec := range handlerSpecs {
 		inv = append(inv, HandlerInventory{
