@@ -132,7 +132,7 @@ func TestRebalancer_Creation(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	if rebalancer == nil {
 		t.Fatal("expected non-nil rebalancer")
@@ -149,7 +149,7 @@ func TestRebalancer_Stats_Empty(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	stats := rebalancer.Stats()
 
@@ -169,7 +169,7 @@ func TestRebalancer_SetTransferFunc(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	called := false
 	rebalancer.SetTransferFunc(func(ctx context.Context, task *RebalanceTask) error {
@@ -191,7 +191,7 @@ func TestRebalancer_GetCurrentPlan_Empty(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	plan := rebalancer.GetCurrentPlan()
 	if plan != nil {
@@ -207,7 +207,7 @@ func TestRebalancer_GetPlanHistory_Empty(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	history := rebalancer.GetPlanHistory()
 	if len(history) != 0 {
@@ -223,7 +223,7 @@ func TestRebalancer_CancelRebalance_NoPlan(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	err := rebalancer.CancelRebalance()
 	if err == nil {
@@ -241,7 +241,7 @@ func TestRebalancer_TriggerRebalance_NoChanges(t *testing.T) {
 	pm := NewPartitionMap(ring, 64, 2)
 
 	rebalancerConfig := DefaultRebalancerConfig()
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	// With a single node and no changes, there should be nothing to rebalance
 	_, err := rebalancer.TriggerRebalance()
@@ -261,7 +261,7 @@ func TestRebalancer_OnMembershipChange(t *testing.T) {
 
 	rebalancerConfig := DefaultRebalancerConfig()
 	rebalancerConfig.MinRebalanceDelay = 0 // Disable delay for testing
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	// Simulate a node join event
 	newNode := &Node{ID: "node-2", Weight: 100, VirtualNodes: 100}
@@ -288,7 +288,7 @@ func TestRebalancer_DryRun(t *testing.T) {
 	rebalancerConfig := DefaultRebalancerConfig()
 	rebalancerConfig.DryRun = true
 	rebalancerConfig.MinRebalanceDelay = 0
-	rebalancer := NewRebalancer(rebalancerConfig, membership, ring, pm)
+	rebalancer := NewRebalancer(context.Background(), rebalancerConfig, membership, ring, pm)
 
 	// Add a node to trigger rebalance
 	ring.AddNode(&Node{ID: "node-2", Weight: 100, VirtualNodes: 100})

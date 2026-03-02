@@ -128,8 +128,8 @@ type Rebalancer struct {
 }
 
 // NewRebalancer creates a new rebalancer.
-func NewRebalancer(config RebalancerConfig, membership *MembershipManager, ring *HashRing, partitionMap *PartitionMap) *Rebalancer {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewRebalancer(ctx context.Context, config RebalancerConfig, membership *MembershipManager, ring *HashRing, partitionMap *PartitionMap) *Rebalancer {
+	ctx, cancel := context.WithCancel(ctx)
 
 	r := &Rebalancer{
 		config:       config,
