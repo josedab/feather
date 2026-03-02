@@ -113,8 +113,8 @@ type RaftNode struct {
 
 // NewRaftNode creates a new Raft consensus node with the given configuration
 // and state machine.
-func NewRaftNode(config RaftConfig, sm StateMachine) *RaftNode {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewRaftNode(ctx context.Context, config RaftConfig, sm StateMachine) *RaftNode {
+	ctx, cancel := context.WithCancel(ctx)
 
 	peers := make(map[string]*PeerState)
 	for _, peerID := range config.Peers {

@@ -32,7 +32,7 @@ func TestRaftNodeCreation(t *testing.T) {
 	config.Peers = []string{"node-2", "node-3"}
 
 	sm := &testStateMachine{}
-	node := NewRaftNode(config, sm)
+	node := NewRaftNode(context.Background(), config, sm)
 
 	if node == nil {
 		t.Fatal("expected non-nil RaftNode")
@@ -73,7 +73,7 @@ func TestRaftLeaderElection(t *testing.T) {
 	config.Peers = []string{}
 
 	sm := &testStateMachine{}
-	node := NewRaftNode(config, sm)
+	node := NewRaftNode(context.Background(), config, sm)
 
 	ctx := context.Background()
 	if err := node.Start(ctx); err != nil {
@@ -118,7 +118,7 @@ func TestRaftPropose(t *testing.T) {
 	config.ElectionTimeout = 50 * time.Millisecond
 
 	sm := &testStateMachine{}
-	node := NewRaftNode(config, sm)
+	node := NewRaftNode(context.Background(), config, sm)
 
 	ctx := context.Background()
 	if err := node.Start(ctx); err != nil {
@@ -171,7 +171,7 @@ func TestRaftPropose(t *testing.T) {
 	followerConfig := DefaultRaftConfig()
 	followerConfig.NodeID = "follower-node"
 	followerSM := &testStateMachine{}
-	follower := NewRaftNode(followerConfig, followerSM)
+	follower := NewRaftNode(context.Background(), followerConfig, followerSM)
 
 	_, err = follower.Propose(ctx, cmd)
 	if err == nil {
@@ -184,7 +184,7 @@ func TestRaftVoteGrant(t *testing.T) {
 	config.NodeID = "voter"
 
 	sm := &testStateMachine{}
-	node := NewRaftNode(config, sm)
+	node := NewRaftNode(context.Background(), config, sm)
 	ctx := context.Background()
 
 	// Grant vote to a candidate with higher term
@@ -217,7 +217,7 @@ func TestRaftHeartbeat(t *testing.T) {
 	config.NodeID = "follower"
 
 	sm := &testStateMachine{}
-	node := NewRaftNode(config, sm)
+	node := NewRaftNode(context.Background(), config, sm)
 	ctx := context.Background()
 
 	// Receive heartbeat from leader
@@ -491,7 +491,7 @@ func TestRaftSetPeers(t *testing.T) {
 	config.Peers = []string{"node-2"}
 
 	sm := &testStateMachine{}
-	node := NewRaftNode(config, sm)
+	node := NewRaftNode(context.Background(), config, sm)
 	ctx := context.Background()
 
 	stats := node.Stats(ctx)
@@ -593,7 +593,7 @@ func TestDefaultConfigs(t *testing.T) {
 func TestRaftNode_AddRemovePeer(t *testing.T) {
 	config := DefaultRaftConfig()
 	config.NodeID = "node1"
-	node := NewRaftNode(config, nil)
+	node := NewRaftNode(context.Background(), config, nil)
 
 	ctx := context.Background()
 
@@ -634,7 +634,7 @@ func TestRaftNode_ClusterHealth(t *testing.T) {
 	config := DefaultRaftConfig()
 	config.NodeID = "node1"
 	config.Peers = []string{"node2", "node3"}
-	node := NewRaftNode(config, nil)
+	node := NewRaftNode(context.Background(), config, nil)
 
 	health := node.GetClusterHealth(context.Background())
 	if health.NodeID != "node1" {
