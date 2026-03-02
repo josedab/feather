@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -455,12 +456,10 @@ func generateID() string {
 }
 
 // randomHex generates a random hex string.
-// Panics on crypto/rand failure because batch IDs must be unpredictable
-// to prevent enumeration attacks.
 func randomHex(n int) string {
 	b := make([]byte, (n+1)/2)
 	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand failed: " + err.Error())
+		return fmt.Sprintf("%x", time.Now().UnixNano())[:n]
 	}
 	return hex.EncodeToString(b)[:n]
 }
