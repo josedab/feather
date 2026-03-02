@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/feather-store/feather/internal/extensions/composition"
@@ -97,14 +98,14 @@ func init() {
 		return NewComputeHandler(compute.NewComputeEngine(compute.DefaultComputeConfig()))
 	})
 	registerHandler("consensus", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
-		node := consensus.NewRaftNode(consensus.DefaultRaftConfig(), nil)
+		node := consensus.NewRaftNode(context.Background(), consensus.DefaultRaftConfig(), nil)
 		return NewConsensusHandler(node, consensus.NewShardManager(16, node))
 	})
 	registerHandler("stream_sql", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewStreamSQLHandler(streamsql.NewEngine(streamsql.DefaultEngineConfig()))
 	})
 	registerHandler("control_plane", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
-		return NewControlPlaneHandler(controlplane.NewManager(controlplane.DefaultManagerConfig()))
+		return NewControlPlaneHandler(controlplane.NewManager(context.Background(), controlplane.DefaultManagerConfig()))
 	})
 	registerHandler("versioning", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewVersioningHandler(versioning.NewVersionStore())

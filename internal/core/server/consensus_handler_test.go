@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,7 @@ import (
 
 func setupConsensusHandler(t *testing.T) *http.ServeMux {
 	t.Helper()
-	raft := consensus.NewRaftNode(consensus.DefaultRaftConfig(), nil)
+	raft := consensus.NewRaftNode(context.Background(), consensus.DefaultRaftConfig(), nil)
 	shardMgr := consensus.NewShardManager(16, raft)
 	handler := NewConsensusHandler(raft, shardMgr)
 	mux := http.NewServeMux()

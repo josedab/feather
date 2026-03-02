@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,7 @@ import (
 
 func setupControlPlaneHandler(t *testing.T) *http.ServeMux {
 	t.Helper()
-	manager := controlplane.NewManager(controlplane.DefaultManagerConfig())
+	manager := controlplane.NewManager(context.Background(), controlplane.DefaultManagerConfig())
 	handler := NewControlPlaneHandler(manager)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)

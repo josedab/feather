@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,7 +16,7 @@ func TestClusterHandler_ListNodes(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -49,7 +50,7 @@ func TestClusterHandler_ListNodes_AliveFilter(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -71,7 +72,7 @@ func TestClusterHandler_GetNode_NotFound(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -93,7 +94,7 @@ func TestClusterHandler_GetLocalNode(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -124,7 +125,7 @@ func TestClusterHandler_GetStats(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -153,7 +154,7 @@ func TestClusterHandler_GetRing(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -186,7 +187,7 @@ func TestClusterHandler_GetRing_WithDistribution(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -219,7 +220,7 @@ func TestClusterHandler_RingLookup(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -253,7 +254,7 @@ func TestClusterHandler_RingLookup_NoKey(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -278,7 +279,7 @@ func TestClusterHandler_RingLookup_WithCount(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-2", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -312,7 +313,7 @@ func TestClusterHandler_ListPartitions(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -348,7 +349,7 @@ func TestClusterHandler_ListPartitions_ByNode(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -372,7 +373,7 @@ func TestClusterHandler_GetPartition(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -403,7 +404,7 @@ func TestClusterHandler_GetPartition_InvalidID(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -425,7 +426,7 @@ func TestClusterHandler_GetPartition_OutOfRange(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -449,7 +450,7 @@ func TestClusterHandler_GetPartitionForKey(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -485,7 +486,7 @@ func TestClusterHandler_GetRebalanceStatus(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -521,7 +522,7 @@ func TestClusterHandler_TriggerRebalance_NoChangesNeeded(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -546,7 +547,7 @@ func TestClusterHandler_CancelRebalance_NoPlanInProgress(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -570,7 +571,7 @@ func TestClusterHandler_GetRebalanceHistory(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -604,7 +605,7 @@ func TestClusterHandler_GetRebalanceHistory_WithLimit(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -626,7 +627,7 @@ func TestClusterHandler_GetRebalanceHistory_InvalidLimit(t *testing.T) {
 
 	ring := cluster.NewHashRing(100)
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
@@ -689,7 +690,7 @@ func TestClusterHandler_RingLookup_InvalidCount(t *testing.T) {
 	ring.AddNode(&cluster.Node{ID: "node-1", Weight: 100, VirtualNodes: 100})
 
 	pm := cluster.NewPartitionMap(ring, 64, 2)
-	rebalancer := cluster.NewRebalancer(cluster.DefaultRebalancerConfig(), membership, ring, pm)
+	rebalancer := cluster.NewRebalancer(context.Background(), cluster.DefaultRebalancerConfig(), membership, ring, pm)
 
 	handler := NewClusterHandler(membership, ring, pm, rebalancer)
 
