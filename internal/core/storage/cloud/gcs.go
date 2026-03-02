@@ -242,7 +242,12 @@ func (b *GCSBackend) BatchGet(ctx context.Context, entityKeys []string, features
 		wg.Add(1)
 		go func(entityKey string) {
 			defer wg.Done()
-			sem <- struct{}{}
+			select {
+			case sem <- struct{}{}:
+			case <-ctx.Done():
+				errChan <- ctx.Err()
+				return
+			}
 			defer func() { <-sem }()
 
 			featureValues, err := b.Get(ctx, entityKey, features)
@@ -287,7 +292,12 @@ func (b *GCSBackend) BatchPut(ctx context.Context, updates map[string]map[string
 		wg.Add(1)
 		go func(key string, feats map[string]*domain.FeatureValue) {
 			defer wg.Done()
-			sem <- struct{}{}
+			select {
+			case sem <- struct{}{}:
+			case <-ctx.Done():
+				errChan <- ctx.Err()
+				return
+			}
 			defer func() { <-sem }()
 
 			if err := b.Put(ctx, key, feats); err != nil {
