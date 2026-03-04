@@ -336,7 +336,10 @@ func (g *Generator) callOpenAI(ctx context.Context, prompt string) (string, int,
 		"temperature": g.config.Temperature,
 	}
 
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", 0, fmt.Errorf("marshaling OpenAI request: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return "", 0, err
@@ -396,7 +399,10 @@ func (g *Generator) callAnthropic(ctx context.Context, prompt string) (string, i
 		"messages":   []map[string]string{{"role": "user", "content": prompt}},
 	}
 
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", 0, fmt.Errorf("marshaling Anthropic request: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/messages", bytes.NewReader(body))
 	if err != nil {
 		return "", 0, err
@@ -457,7 +463,10 @@ func (g *Generator) callOllama(ctx context.Context, prompt string) (string, int,
 		"stream": false,
 	}
 
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", 0, fmt.Errorf("marshaling Ollama request: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/api/generate", bytes.NewReader(body))
 	if err != nil {
 		return "", 0, err
