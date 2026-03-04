@@ -198,3 +198,4 @@ These environment variables are used by optional extension modules. They are rea
 | [`configs/feather-tls.yaml`](../configs/feather-tls.yaml) | TLS/mTLS configuration |
 | [`configs/feather-kafka-sasl.yaml`](../configs/feather-kafka-sasl.yaml) | Kafka with SASL/SSL authentication |
 | [`configs/feather-tracing.yaml`](../configs/feather-tracing.yaml) | OpenTelemetry tracing setup |
+| [`configs/prometheus.yml`](../configs/prometheus.yml) | Prometheus scrape configuration for Feather metrics |

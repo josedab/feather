@@ -307,6 +307,7 @@ Feather can be configured via **YAML file** or **environment variables**.
 | `configs/feather-tls.yaml` | TLS/mTLS configuration with client certificate verification |
 | `configs/feather-kafka-sasl.yaml` | Kafka with SASL/SSL authentication (Confluent Cloud, AWS MSK) |
 | `configs/feather-tracing.yaml` | OpenTelemetry distributed tracing (Jaeger, Tempo, Datadog) |
+| `configs/prometheus.yml` | Prometheus scrape configuration for Feather metrics |
 
 ### Key Environment Variables
 
