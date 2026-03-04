@@ -211,27 +211,38 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 				d.totalFailed.Add(1)
 				d.deadLetter = append(d.deadLetter, event)
 			} else {
-			body, _ := json.Marshal(event)
-			resp, err := d.httpClient.Post(wh.URL, "application/json", bytes.NewReader(body))
-			if err != nil {
-				result.Success = false
-				result.StatusCode = 0
-				result.Error = err.Error()
-				d.totalFailed.Add(1)
-				d.deadLetter = append(d.deadLetter, event)
-			} else {
-				io.Copy(io.Discard, resp.Body)
-				resp.Body.Close()
-				result.StatusCode = resp.StatusCode
-				if resp.StatusCode >= 400 {
+				body, err := json.Marshal(event)
+				if err != nil {
 					result.Success = false
-					result.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+					result.Error = fmt.Sprintf("failed to marshal event: %v", err)
 					d.totalFailed.Add(1)
 					d.deadLetter = append(d.deadLetter, event)
 				} else {
-					result.Success = true
+					resp, err := d.httpClient.Post(wh.URL, "application/json", bytes.NewReader(body))
+					if err != nil {
+						result.Success = false
+						result.StatusCode = 0
+						result.Error = err.Error()
+						d.totalFailed.Add(1)
+						d.deadLetter = append(d.deadLetter, event)
+					} else {
+						func() {
+							defer func() {
+								_, _ = io.Copy(io.Discard, resp.Body)
+								_ = resp.Body.Close()
+							}()
+							result.StatusCode = resp.StatusCode
+							if resp.StatusCode >= 400 {
+								result.Success = false
+								result.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
+								d.totalFailed.Add(1)
+								d.deadLetter = append(d.deadLetter, event)
+							} else {
+								result.Success = true
+							}
+						}()
+					}
 				}
-			}
 			}
 		} else {
 			result.StatusCode = 200
