@@ -372,26 +372,6 @@ POST /v1/schema/groups
 
 ---
 
-#### Update Feature Group
-
-```
-PUT /v1/schema/groups/{name}
-```
-
-Updates an existing feature group. Only additive changes are allowed (adding new features). Removing features or changing data types is not permitted.
-
----
-
-#### Delete Feature Group
-
-```
-DELETE /v1/schema/groups/{name}
-```
-
-Deletes a feature group schema. Does not delete stored feature data.
-
----
-
 ### Vector Search
 
 #### List Vector Indexes
