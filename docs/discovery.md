@@ -42,7 +42,7 @@ Feather includes an intelligent feature discovery system that helps users find, 
 
 The semantic search engine enables finding features by meaning rather than exact keyword matches.
 
-**Location**: `internal/semantic/search.go`
+**Location**: `internal/extensions/semantic/search.go`
 
 #### Embeddings
 
