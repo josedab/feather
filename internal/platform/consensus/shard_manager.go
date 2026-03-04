@@ -215,7 +215,9 @@ func (sm *ShardManager) MigrateShard(ctx context.Context, shardID int, fromNode,
 			"to_node":   toNode,
 		})
 		if err == nil {
-			_, _ = sm.raftNode.Propose(ctx, cmd)
+			if _, err := sm.raftNode.Propose(ctx, cmd); err != nil {
+				slog.Warn("raft proposal for shard migration failed", "shard_id", shardID, "from", fromNode, "to", toNode, "error", err)
+			}
 		}
 	}
 
