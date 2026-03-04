@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -161,7 +162,9 @@ func (m *AlertManager) Trigger(ctx context.Context, alertType AlertType, severit
 	// Notify handlers
 	for _, handler := range handlers {
 		go func(h AlertHandler) {
-			_ = h.HandleAlert(ctx, alert)
+			if err := h.HandleAlert(ctx, alert); err != nil {
+				slog.Error("alert handler failed", "alert", alert.Title, "severity", alert.Severity, "error", err)
+			}
 		}(handler)
 	}
 
