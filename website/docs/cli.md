@@ -441,7 +441,7 @@ feather-cli version
     "version": "1.0.0",
     "git_commit": "abc1234",
     "build_date": "2024-01-15T10:30:00Z",
-    "go_version": "go1.22.0",
+    "go_version": "go1.24",
     "platform": "darwin/arm64"
   },
   "server": {

@@ -12,7 +12,7 @@ This guide will have you serving ML features in under 5 minutes. No Docker requi
 
 - Linux, macOS, or Windows with WSL2
 - curl (for installation)
-- Optional: Go 1.22+ (for building from source)
+- Optional: Go 1.24+ (for building from source)
 
 ## Quick Install
 
