@@ -10,6 +10,8 @@ Extension handlers are enabled via the `EnabledFeatures` map in `cmd/feather/mai
 
 **Maturity:** stable
 
+> **⚠️ Not yet implemented.** The sharding handler is registered but currently returns `nil` (see `features_core.go`). These endpoints are not reachable and will return 404. The `internal/extensions/sharding` package exists but is not wired into the handler. This section documents the planned API.
+
 Distributed sharding with consistent hashing for horizontal scaling.
 
 | Method | Path | Description |
@@ -18,64 +20,6 @@ Distributed sharding with consistent hashing for horizontal scaling.
 | `GET` | `/v1/sharding/partition?key=X` | Get partition for a key |
 | `GET` | `/v1/sharding/owners?key=X` | Get replica owners for a key |
 | `POST` | `/v1/sharding/recompute` | Recompute partition map |
-
-**Example — Get partition for a key:**
-
-```bash
-curl "http://localhost:8080/v1/sharding/partition?key=user:123"
-```
-
-```json
-{
-  "success": true,
-  "data": {
-    "key": "user:123",
-    "partition": 42,
-    "node": "node-1"
-  }
-}
-```
-
-**Example — Get shard routing statistics:**
-
-```bash
-curl http://localhost:8080/v1/sharding/stats
-```
-
-```json
-{
-  "success": true,
-  "data": {
-    "total_partitions": 256,
-    "active_nodes": 3,
-    "replication_factor": 2,
-    "requests_routed": 1542000
-  }
-}
-```
-
-**Example — Get replica owners for a key:**
-
-```bash
-curl "http://localhost:8080/v1/sharding/owners?key=user:123"
-```
-
-```json
-{
-  "success": true,
-  "data": {
-    "key": "user:123",
-    "owners": ["node-1", "node-3"],
-    "primary": "node-1"
-  }
-}
-```
-
-**Example — Recompute partition map:**
-
-```bash
-curl -X POST http://localhost:8080/v1/sharding/recompute
-```
 
 ---
 
