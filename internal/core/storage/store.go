@@ -313,8 +313,12 @@ func (s *Store) CheckWarmHealth() (time.Duration, error) {
 		return 0, fmt.Errorf("warm tier not initialized")
 	}
 	start := time.Now()
-	_, _ = s.warm.Get("__health_check__", []string{"test"})
-	return time.Since(start), nil
+	_, err := s.warm.Get("__health_check__", []string{"test"})
+	elapsed := time.Since(start)
+	if err != nil && !domain.IsNotFound(err) {
+		return elapsed, fmt.Errorf("warm tier health check failed: %w", err)
+	}
+	return elapsed, nil
 }
 
 // Stats returns aggregated statistics across all storage tiers.
