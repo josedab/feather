@@ -38,7 +38,7 @@ FEATHER_HOT_MAX_MEMORY=8GB \
 # =============================================================================
 # Server Configuration
 # =============================================================================
-server:
+serving:
   http:
     port: 8080                    # HTTP server port
     host: "0.0.0.0"              # Bind address
@@ -373,7 +373,7 @@ storage:
 ### High Throughput
 
 ```yaml
-server:
+serving:
   grpc:
     max_concurrent: 5000
 
