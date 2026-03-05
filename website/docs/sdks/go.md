@@ -14,7 +14,7 @@ The official Go client provides a type-safe, high-performance interface to Feath
 go get github.com/feather-store/feather/sdk/go/feather
 ```
 
-**Requirements:** Go 1.21+
+**Requirements:** Go 1.24+
 
 ## Quick Start
 
