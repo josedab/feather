@@ -172,6 +172,7 @@ These environment variables are used by optional extension modules. They are rea
 | `FEATHER_STARLARK_SIDECAR_ADDR` | string | _(empty)_ | `extensions/starlarkudf` | Address of the Starlark UDF sidecar process |
 | `FEATHER_PYTHON_WORKER_ENDPOINT` | string | _(empty)_ | `extensions/pythonsdk` | Endpoint for the Python worker process |
 | `FEATHER_FLINK_JOBMANAGER_ADDR` | string | _(empty)_ | `integrations/flink` | Address of the Apache Flink JobManager |
+| `OPENAI_API_KEY` | string | _(empty)_ | `extensions/llm` | API key for OpenAI embeddings and LLM features |
 | `FEATHER_E2E_URL` | string | _(empty)_ | `test/e2e` | Base URL for end-to-end tests |
 
 ---
