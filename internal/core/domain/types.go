@@ -74,6 +74,7 @@ const (
 	DataTypeTimestamp
 )
 
+// String returns the string representation of the data type.
 func (d DataType) String() string {
 	switch d {
 	case DataTypeInt64:
