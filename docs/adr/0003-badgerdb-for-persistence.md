@@ -89,7 +89,7 @@ opts := badger.DefaultOptions(path).
 
 ## Implementation Notes
 
-Key file: `internal/storage/warm.go`
+Key file: `internal/core/storage/warm.go`
 
 ```go
 type WarmTier struct {

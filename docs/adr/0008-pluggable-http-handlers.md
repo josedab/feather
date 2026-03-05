@@ -36,7 +36,7 @@ We implement a **pluggable handler registration system** with feature flags:
 Each feature area has its own handler file:
 
 ```
-internal/server/
+internal/core/server/
 ├── http.go              # Core server, routing
 ├── handlers.go          # Core feature handlers
 ├── vector_handler.go    # Vector similarity handlers
@@ -150,7 +150,7 @@ func (s *HTTPServer) handleVectorSearch(w http.ResponseWriter, r *http.Request) 
 
 ### HTTPServerConfig
 
-Key file: `internal/server/http.go`
+Key file: `internal/core/server/http.go`
 
 ```go
 type HTTPServerConfig struct {

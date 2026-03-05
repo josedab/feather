@@ -85,7 +85,7 @@ All statistics use `atomic.Int64` for lock-free updates:
 
 ## Implementation Notes
 
-Key file: `internal/storage/hot.go`
+Key file: `internal/core/storage/hot.go`
 
 ```go
 const numShards = 256

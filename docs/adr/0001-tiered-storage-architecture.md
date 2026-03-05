@@ -80,9 +80,9 @@ This design ensures:
 ## Implementation Notes
 
 Key files:
-- `internal/storage/store.go` - Unified Store interface coordinating both tiers
-- `internal/storage/hot.go` - In-memory LRU implementation
-- `internal/storage/warm.go` - BadgerDB wrapper with versioning
+- `internal/core/storage/store.go` - Unified Store interface coordinating both tiers
+- `internal/core/storage/hot.go` - In-memory LRU implementation
+- `internal/core/storage/warm.go` - BadgerDB wrapper with versioning
 
 Configuration:
 ```yaml

@@ -129,7 +129,7 @@ logger.Error("storage failure",
 
 ### Logger Package
 
-Key file: `internal/logging/logger.go`
+Key file: `internal/core/logging/logger.go`
 
 ```go
 package logging

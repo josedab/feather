@@ -131,15 +131,15 @@ func (s *Store) GetBatch(entityIDs []string, features []string) (map[string]map[
 
 ### Key Files
 
-- `internal/storage/pool.go` - Pool definitions
-- `internal/storage/hot.go` - Hot tier uses pools
-- `internal/storage/warm.go` - Warm tier uses pools
-- `internal/server/http.go` - HTTP handlers use pools
+- `internal/core/storage/pool.go` - Pool definitions
+- `internal/core/storage/hot.go` - Hot tier uses pools
+- `internal/core/storage/warm.go` - Warm tier uses pools
+- `internal/core/server/http.go` - HTTP handlers use pools
 
 ### Pool Definitions
 
 ```go
-// internal/storage/pool.go
+// internal/core/storage/pool.go
 
 package storage
 

@@ -102,7 +102,7 @@ No business logic in handlers; they only translate protocol to domain calls.
 
 ### gRPC Server
 
-Key file: `internal/server/grpc.go`
+Key file: `internal/core/server/grpc.go`
 
 ```go
 type GRPCServer struct {
@@ -119,7 +119,7 @@ func (s *GRPCServer) GetFeatures(ctx context.Context, req *pb.GetFeaturesRequest
 
 ### HTTP Server
 
-Key file: `internal/server/http.go`
+Key file: `internal/core/server/http.go`
 
 ```go
 func (s *HTTPServer) handleGetFeatures(w http.ResponseWriter, r *http.Request) {

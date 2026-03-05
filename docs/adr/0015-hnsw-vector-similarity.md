@@ -208,10 +208,10 @@ DELETE /v1/vectors/{index}/{id}       Delete vector
 
 ### Key Files
 
-- `internal/vector/store.go` - Vector store managing multiple indexes
-- `internal/vector/hnsw.go` - HNSW algorithm implementation
-- `internal/vector/distance.go` - Distance metric implementations
-- `internal/server/http_vectors.go` - HTTP handlers
+- `internal/core/vector/store.go` - Vector store managing multiple indexes
+- `internal/core/vector/hnsw.go` - HNSW algorithm implementation
+- `internal/core/vector/distance.go` - Distance metric implementations
+- `internal/core/server/vector_handler.go` - HTTP handlers
 
 ### Persistence
 

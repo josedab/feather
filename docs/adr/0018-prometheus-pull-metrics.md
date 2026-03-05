@@ -160,7 +160,7 @@ featureName := "click_count"  // Don't use as label
 ### Metrics Registration
 
 ```go
-// internal/metrics/metrics.go
+// internal/core/metrics/metrics.go
 
 package metrics
 

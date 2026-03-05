@@ -119,7 +119,7 @@ This prevents cascade failures when downstream systems are unhealthy.
 
 ### Kafka Consumer
 
-Key file: `internal/ingestion/kafka.go`
+Key file: `internal/core/ingestion/kafka.go`
 
 ```go
 type KafkaConsumer struct {
@@ -153,7 +153,7 @@ func (k *KafkaConsumer) Start(ctx context.Context) error {
 
 ### HTTP Ingestion
 
-Key file: `internal/ingestion/http.go`
+Key file: `internal/core/ingestion/http.go`
 
 ```go
 type HTTPIngestion struct {

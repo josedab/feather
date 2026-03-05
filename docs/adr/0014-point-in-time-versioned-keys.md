@@ -150,8 +150,8 @@ func (w *WarmTier) GetAsOf(entityID, feature string, asOf time.Time) (FeatureVal
 
 ### Key Files
 
-- `internal/storage/warm.go` - Versioned key implementation
-- `internal/storage/keys.go` - Key formatting utilities
+- `internal/core/storage/warm.go` - Versioned key implementation
+- `internal/core/storage/keys.go` - Key formatting utilities
 
 ### Key Format Utilities
 

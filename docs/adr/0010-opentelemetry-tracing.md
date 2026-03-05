@@ -128,7 +128,7 @@ tracing:
 
 ### Tracer Initialization
 
-Key file: `internal/tracing/tracing.go`
+Key file: `internal/core/tracing/tracing.go`
 
 ```go
 package tracing
