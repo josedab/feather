@@ -669,7 +669,7 @@ metrics:
 
 ### Grafana Dashboard
 
-Import the Feather dashboard from `deploy/grafana/feather-dashboard.json` or create queries:
+Import the Feather dashboards from `deploy/grafana/` (`feather-features.json`, `feather-operations.json`, `feather-overview.json`) or create queries:
 
 ```promql
 # Cache hit rate
