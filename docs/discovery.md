@@ -111,7 +111,7 @@ similarity := dotProduct(a, b) / (magnitude(a) * magnitude(b))
 
 The NL Query Engine interprets human language questions about features.
 
-**Location**: `internal/semantic/nlquery.go`
+**Location**: `internal/extensions/semantic/nlquery.go`
 
 #### Intent Classification
 
@@ -179,7 +179,7 @@ suggestions := nlEngine.Suggest(ctx, "user click")
 
 The discovery engine maintains a graph of feature relationships.
 
-**Location**: `internal/semantic/discovery.go`
+**Location**: `internal/extensions/semantic/discovery.go`
 
 #### Relationship Types
 
@@ -244,7 +244,7 @@ for iteration := 0; iteration < maxIterations; iteration++ {
 
 The recommendation engine provides personalized feature suggestions.
 
-**Location**: `internal/semantic/recommend.go`
+**Location**: `internal/extensions/semantic/recommend.go`
 
 #### Recommendation Strategies
 
@@ -378,7 +378,7 @@ func applyDiversity(recommendations []Recommendation, config DiversityConfig) []
 
 The main discovery engine coordinates all components.
 
-**Location**: `internal/semantic/discovery.go`
+**Location**: `internal/extensions/semantic/discovery.go`
 
 ### Query Interface
 

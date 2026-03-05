@@ -1,6 +1,6 @@
 # Feature Flags Reference
 
-Feather uses feature flags (`HTTPServerFeatureConfig`) to toggle optional HTTP handler groups on the server. Each flag controls whether a set of API routes is registered at startup. Flags are defined in `internal/server/http.go` and configured in `cmd/feather/main.go`.
+Feather uses feature flags (`HTTPServerFeatureConfig`) to toggle optional HTTP handler groups on the server. Each flag controls whether a set of API routes is registered at startup. Flags are defined in `internal/core/server/http.go` and configured in `cmd/feather/main.go`.
 
 ## Flag Reference
 
@@ -107,7 +107,7 @@ Feather uses feature flags (`HTTPServerFeatureConfig`) to toggle optional HTTP h
 
 ## External Dependency Activation
 
-The `HTTPServerDependencies` struct (defined in `internal/server/http.go`) provides optional external components to handlers. The following dependency fields exist:
+The `HTTPServerDependencies` struct (defined in `internal/core/server/http.go`) provides optional external components to handlers. The following dependency fields exist:
 
 | Dependency Field | Used By |
 |-----------------|---------|

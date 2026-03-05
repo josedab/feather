@@ -105,7 +105,7 @@ The Spark connector enables bidirectional data flow between Feather and Apache S
 ### Spark Connector Configuration
 
 ```go
-import "github.com/feather-store/feather/internal/spark"
+import "github.com/feather-store/feather/internal/integrations/spark"
 
 config := spark.Config{
     SparkMaster:             "local[*]",  // or "yarn", "k8s://..."
@@ -278,7 +278,7 @@ The Flink connector enables real-time streaming feature updates with exactly-onc
 ### Flink Connector Configuration
 
 ```go
-import "github.com/feather-store/feather/internal/flink"
+import "github.com/feather-store/feather/internal/integrations/flink"
 
 config := flink.Config{
     JobManagerAddress:  "localhost:8081",
