@@ -870,6 +870,7 @@ The following handlers are registered but not documented in detail here. Enable 
 | `drift` | `/v1/drift/` | stable | Statistical drift detection |
 | `semantic` | `/v1/semantic/` | stable | Semantic search for features (see [Semantic Search](#semantic-search)) |
 | `quality` | `/v1/quality/` | stable | Data quality validation |
+| `feast_ga` | `/v1/feast/` | stable | Feast compatibility layer (GA) |
 
 #### Beta Handlers
 
@@ -889,6 +890,7 @@ The following handlers are registered but not documented in detail here. Enable 
 | `dbt` | `/v1/dbt/` | beta | dbt integration |
 | `compute` | `/v1/compute/` | beta | Compute engine |
 | `consensus` | `/v1/consensus/` | beta | Raft consensus |
+| `cluster` | — | beta | ⚠️ Not implemented (handler returns nil) |
 | `stream_sql` | `/v1/stream-sql/` | beta | Stream SQL processing |
 | `control_plane` | `/v1/controlplane/` | beta | Control plane management |
 | `versioning` | `/v1/versioning/` | beta | Feature versioning (branches, tags) |
@@ -897,6 +899,53 @@ The following handlers are registered but not documented in detail here. Enable 
 | `contracts` | `/v1/contracts/` | beta | Feature contracts |
 | `materialization` | `/v1/materialization/` | beta | Feature materialization |
 | `replication` | `/v1/replication/` | beta | Data replication |
+| `ab_features` | `/v1/ab/features/` | beta | A/B feature testing |
+| `auto_sharding` | `/v1/autosharding/` | beta | Automatic shard management |
+| `backfill_engine` | `/v1/backfill-engine/` | beta | Advanced backfill orchestration |
+| `backpressure` | `/v1/backpressure/` | beta | Backpressure management |
+| `bench_suite` | `/v1/bench-suite/` | beta | Extended benchmark suite |
+| `cdc_materialization` | `/v1/cdc/` | beta | CDC-based materialization |
+| `cloud_control` | `/v1/cloud-control/` | beta | Cloud control plane management |
+| `consistency_validator` | `/v1/consistency-validator/` | beta | Consistency validation rules |
+| `contract_cicd` | `/v1/contracts/cicd/` | beta | Contract CI/CD integration |
+| `contract_test` | `/v1/contracts/test/` | beta | Contract testing |
+| `dashboard_v2` | `/v1/dashboard/` | beta | Feature monitoring dashboard (v2) |
+| `declarative_graph` | `/v1/declarative-graph/` | beta | Declarative computation graphs |
+| `explorer` | `/v1/explorer/` | beta | Feature explorer UI backend |
+| `feast_gateway` | `/v1/feast/gateway/` | beta | Feast-compatible gateway |
+| `feature_dashboard` | `/v1/feature-dashboard/` | beta | Feature analytics dashboard |
+| `featherql_v2` | `/v1/featherql/v2/` | beta | FeatherQL v2 engine |
+| `finops` | `/v1/finops/` | beta | FinOps dashboards and chargeback |
+| `flight_endpoint` | `/v1/flight/` | beta | Arrow Flight endpoint |
+| `flink_pipeline` | `/v1/flink/` | beta | Apache Flink pipeline integration |
+| `ftl` | `/v1/ftl/` | beta | Feature Transformation Language |
+| `gitops_defs` | `/v1/gitops/defs/` | beta | GitOps schema definitions |
+| `importance_scoring` | `/v1/importance/` | beta | Feature importance scoring |
+| `incr_materialization` | `/v1/incr-materialization/` | beta | Incremental materialization |
+| `k8s_autoscaler` | `/v1/autoscaler/` | beta | Kubernetes-aware autoscaling |
+| `lineage_analysis` | `/v1/lineage/analysis/` | beta | Lineage impact analysis |
+| `lineage_graph` | `/v1/lineage/graph/` | beta | Lineage graph visualization |
+| `llm_store` | `/v1/llm/store/` | beta | LLM feature storage |
+| `ml_integrations` | `/v1/ml/integrations/` | beta | ML framework integrations |
+| `mobile_sync` | `/v1/mobile/sync/` | beta | Mobile SDK sync protocol |
+| `model_registry` | `/v1/models/registry/` | beta | Model registry management |
+| `monitoring` | `/v1/monitoring/` | beta | Unified monitoring and alerting |
+| `multi_region` | `/v1/multi-region/` | beta | Multi-region deployment management |
+| `multi_tenant_metering` | `/v1/metering/` | beta | Multi-tenant usage metering |
+| `obs_console` | `/v1/obs-console/` | beta | Observability console |
+| `offline_store_sync` | `/v1/offline/sync/` | beta | Offline store synchronization |
+| `orchestrator` | `/v1/orchestrator/` | beta | Pipeline orchestration |
+| `parity` | `/v1/parity/` | beta | Online/offline parity validation |
+| `prompt_store` | `/v1/prompts/` | beta | LLM prompt management |
+| `python_sidecar` | `/v1/python/sidecar/` | beta | Python sidecar transforms |
+| `python_transforms` | `/v1/python/transforms/` | beta | Python transform pipelines |
+| `quality_score` | `/v1/quality/score/` | beta | Automated quality scoring |
+| `realtime_monitor` | `/v1/realtime-monitor/` | beta | Real-time monitoring |
+| `region_federation` | `/v1/region-federation/` | beta | Cross-region federation |
+| `saas_control` | `/v1/saas/control/` | beta | SaaS control plane |
+| `schema_evolution` | `/v1/schema/evolution/` | beta | Schema evolution management |
+| `sdk_codegen` | `/v1/sdk/codegen/` | beta | SDK code generation |
+| `stream_compute` | `/v1/stream-compute/` | beta | Stream computation engine |
 
 #### Experimental Handlers
 
@@ -911,6 +960,57 @@ The following handlers are registered but not documented in detail here. Enable 
 | `time_travel` | `/v1/timetravel/` | experimental | Time travel debugging |
 | `llm_gateway` | `/v1/llm/gateway/` | experimental | LLM gateway routing |
 | `compute_graph` | `/v1/compute-graph/` | experimental | Compute graph engine |
+| `adaptive_cache` | `/v1/adaptive-cache/` | experimental | ML-driven adaptive caching |
+| `anomaly_detect` | `/v1/anomaly/` | experimental | Anomaly detection on features |
+| `api_gateway` | `/v1/gateway/` | experimental | API gateway and routing |
+| `arrow_batch` | `/v1/arrow/batch/` | experimental | Arrow batch data transport |
+| `arrow_flight` | `/v1/arrow/flight/` | experimental | Arrow Flight data transport |
+| `audit_log` | `/v1/audit/` | experimental | Audit logging |
+| `audit_trail` | `/v1/audit/trail/` | experimental | Event-sourced audit trail |
+| `autogen` | `/v1/autogen/` | experimental | Automatic feature generation |
+| `bench_pub` | `/v1/bench-pub/` | experimental | Benchmark publishing |
+| `catalog_ui` | `/v1/catalog-ui/` | experimental | Catalog UI service |
+| `cloud_storage` | `/v1/cloud-storage/` | experimental | Cloud storage connectors |
+| `compression` | `/v1/compression/` | experimental | Intelligent tiered compression |
+| `compute_graph_v2` | `/v1/compute-graph/v2/` | experimental | Compute graph engine (v2) |
+| `consistency_advanced` | `/v1/consistency/advanced/` | experimental | Advanced consistency checks |
+| `diff_privacy` | `/v1/privacy/` | experimental | Differential privacy engine |
+| `embedding_lifecycle` | `/v1/embeddings/lifecycle/` | experimental | Embedding lifecycle management |
+| `embedding_mgmt` | `/v1/embeddings/mgmt/` | experimental | Embedding management |
+| `feast_compat` | `/v1/feast/compat/` | experimental | Feast compatibility adapter |
+| `feast_enhanced` | `/v1/feast/enhanced/` | experimental | Enhanced Feast compatibility |
+| `feather_cli` | — | experimental | CLI tool handler |
+| `feather_cloud` | `/v1/cloud/` | experimental | Cloud control plane |
+| `fed_learning` | `/v1/federated-learning/` | experimental | Federated learning adapter |
+| `federated_discovery` | `/v1/federated/discovery/` | experimental | Federated feature discovery |
+| `federation_cross_org` | `/v1/federation/cross-org/` | experimental | Cross-organization federation |
+| `gitops_manifests` | `/v1/gitops/manifests/` | experimental | GitOps manifest management |
+| `lifecycle_manager` | `/v1/lifecycle/` | experimental | Feature lifecycle management |
+| `llm_features` | `/v1/llm/features/` | experimental | LLM-specific feature types |
+| `model_gateway` | `/v1/models/gateway/` | experimental | Model gateway routing |
+| `nl_discovery` | `/v1/nl-discovery/` | experimental | Natural language feature discovery |
+| `notebook_sdk` | `/v1/notebook/` | experimental | Jupyter/Colab integration |
+| `offline_store` | `/v1/offline/` | experimental | Offline feature store |
+| `openapi_sync` | `/v1/openapi/` | experimental | OpenAPI spec synchronization |
+| `playground_v2` | `/v1/playground/v2/` | experimental | Enhanced playground (v2) |
+| `predictive_warming` | `/v1/predictive-warming/` | experimental | Predictive cache warming |
+| `prefetch` | `/v1/prefetch/` | experimental | ML-based feature pre-fetching |
+| `pushdown` | `/v1/pushdown/` | experimental | Server-side expression evaluation |
+| `python_runtime` | `/v1/python/runtime/` | experimental | Python runtime environment |
+| `quality_gates` | `/v1/quality/gates/` | experimental | CI/CD quality gates |
+| `query_planner` | `/v1/query-planner/` | experimental | Self-optimizing query planner |
+| `sdk_languages` | `/v1/sdk/languages/` | experimental | Multi-language SDK support |
+| `semantic_catalog` | `/v1/semantic/catalog/` | experimental | Semantic feature catalog |
+| `skew_detect` | `/v1/skew/` | experimental | Online/offline skew detection |
+| `smpc` | `/v1/smpc/` | experimental | Secure multi-party computation |
+| `starlark_udf` | `/v1/starlark/` | experimental | Starlark UDF runtime |
+| `stream_advanced` | `/v1/stream/advanced/` | experimental | Advanced stream processing |
+| `stream_dsl` | `/v1/stream-dsl/` | experimental | Stream processing DSL |
+| `terraform_provider` | `/v1/terraform/` | experimental | Terraform provider |
+| `ui` | `/ui/` | experimental | Embedded web UI |
+| `wasm_runtime` | `/v1/wasm/runtime/` | experimental | WASM runtime management |
+| `wasm_udf` | `/v1/wasm/udf/` | experimental | WASM user-defined functions |
+| `webhook_events` | `/v1/webhooks/` | experimental | Webhook event delivery |
 
 > **Tip:** Run `make api-routes` for a complete list of all handlers with maturity levels and enabled status.
 
