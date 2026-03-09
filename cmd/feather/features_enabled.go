@@ -124,5 +124,17 @@ func buildEnabledFeatures(cfg *config.Config) map[string]bool {
 		"auto_sharding":         true,
 		"feast_ga":              true,
 		"offline_store_sync":    true,
+		// Next-gen v8 features
+		"streaming_cdc":         true,
+		"mcp_server":            true,
+		"arrow_flight_batch":    true,
+		"computation_graph":     true,
+		"contract_cicd_native":  true,
+		"cross_org_federation":  true,
+		"predictive_prefetch":   true,
+		"notebook_sdk_v2":       true,
+		"feature_gc":            true,
+		"graphql_federation":    true,
+		"streaming_cdc_pipeline": true,
 	}
 }
