@@ -1,6 +1,7 @@
 package cloudstorage
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"strings"
@@ -78,9 +79,19 @@ type ObjectStore struct {
 	mu           sync.RWMutex
 	config       StoreConfig
 	objects      map[string]*storedObject
+	backend      Backend
 	totalPuts    atomic.Int64
 	totalGets    atomic.Int64
 	totalDeletes atomic.Int64
+}
+
+// SetBackend configures a Backend to delegate storage operations to.
+// When a backend is set, Put, Get, Delete, List, Exists, and Copy
+// operations are forwarded to the backend instead of the in-memory store.
+func (s *ObjectStore) SetBackend(b Backend) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.backend = b
 }
 
 // NewObjectStore creates a new object store.
@@ -93,6 +104,18 @@ func NewObjectStore(config StoreConfig) *ObjectStore {
 
 // Put stores an object with the given key.
 func (s *ObjectStore) Put(key string, data []byte, contentType string, metadata map[string]string) error {
+	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		if err := b.Put(context.Background(), key, data, contentType, metadata); err != nil {
+			return err
+		}
+		s.totalPuts.Add(1)
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -123,6 +146,19 @@ func (s *ObjectStore) Put(key string, data []byte, contentType string, metadata 
 // Get retrieves an object by key.
 func (s *ObjectStore) Get(key string) ([]byte, *ObjectInfo, error) {
 	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		data, info, err := b.Get(context.Background(), key)
+		if err != nil {
+			return nil, nil, err
+		}
+		s.totalGets.Add(1)
+		return data, info, nil
+	}
+
+	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	obj, exists := s.objects[key]
@@ -138,6 +174,18 @@ func (s *ObjectStore) Get(key string) ([]byte, *ObjectInfo, error) {
 
 // Delete removes an object by key.
 func (s *ObjectStore) Delete(key string) error {
+	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		if err := b.Delete(context.Background(), key); err != nil {
+			return err
+		}
+		s.totalDeletes.Add(1)
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -152,6 +200,18 @@ func (s *ObjectStore) Delete(key string) error {
 
 // List returns objects matching the given prefix, up to limit.
 func (s *ObjectStore) List(prefix string, limit int) []ObjectInfo {
+	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		results, err := b.List(context.Background(), prefix, limit)
+		if err != nil {
+			return nil
+		}
+		return results
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -170,6 +230,18 @@ func (s *ObjectStore) List(prefix string, limit int) []ObjectInfo {
 // Exists checks whether an object exists.
 func (s *ObjectStore) Exists(key string) bool {
 	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		exists, err := b.Exists(context.Background(), key)
+		if err != nil {
+			return false
+		}
+		return exists
+	}
+
+	s.mu.RLock()
 	defer s.mu.RUnlock()
 	_, exists := s.objects[key]
 	return exists
@@ -177,6 +249,18 @@ func (s *ObjectStore) Exists(key string) bool {
 
 // GetInfo returns metadata for an object without retrieving its data.
 func (s *ObjectStore) GetInfo(key string) (*ObjectInfo, error) {
+	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		_, info, err := b.Get(context.Background(), key)
+		if err != nil {
+			return nil, err
+		}
+		return info, nil
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -191,6 +275,18 @@ func (s *ObjectStore) GetInfo(key string) (*ObjectInfo, error) {
 
 // Copy duplicates an object from srcKey to dstKey.
 func (s *ObjectStore) Copy(srcKey, dstKey string) error {
+	s.mu.RLock()
+	b := s.backend
+	s.mu.RUnlock()
+
+	if b != nil {
+		if err := b.Copy(context.Background(), srcKey, dstKey); err != nil {
+			return err
+		}
+		s.totalPuts.Add(1)
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
