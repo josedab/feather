@@ -94,10 +94,11 @@ type StoreStats struct {
 
 // Store manages datasets and feature rows for offline access.
 type Store struct {
-	mu       sync.RWMutex
-	config   StoreConfig
-	datasets map[string]*DatasetInfo
-	data     map[string][]FeatureRow
+	mu            sync.RWMutex
+	config        StoreConfig
+	datasets      map[string]*DatasetInfo
+	data          map[string][]FeatureRow
+	parquetWriter *ParquetWriter
 }
 
 // NewStore creates a new offline store.
@@ -213,6 +214,13 @@ func (s *Store) AppendRows(dataset string, rows []FeatureRow) error {
 		return fmt.Errorf("would exceed max rows per dataset (%d)", s.config.MaxRowsPerDataset)
 	}
 
+	// Write to Parquet first so a failure doesn't leave inconsistent state.
+	if s.parquetWriter != nil {
+		if _, _, err := s.parquetWriter.WriteRows(dataset, info.Config.EntityType, rows); err != nil {
+			return fmt.Errorf("writing parquet: %w", err)
+		}
+	}
+
 	s.data[dataset] = append(currentRows, rows...)
 	info.RowCount = int64(len(s.data[dataset]))
 
@@ -222,6 +230,13 @@ func (s *Store) AppendRows(dataset string, rows []FeatureRow) error {
 	info.CompletedAt = time.Now()
 
 	return nil
+}
+
+// SetParquetWriter configures Parquet persistence for the store.
+func (s *Store) SetParquetWriter(pw *ParquetWriter) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.parquetWriter = pw
 }
 
 // GetRows returns rows from a dataset with pagination.
