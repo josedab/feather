@@ -1,6 +1,8 @@
 package wasmudf
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -77,6 +79,8 @@ type Runtime struct {
 	execCount  int64
 	execErrors int64
 	totalMs    float64
+	executor   WASMExecutor
+	compiled   map[string]CompiledModule
 }
 
 // NewRuntime creates a new WASM runtime.
@@ -185,7 +189,15 @@ func (r *Runtime) DeleteModule(id string) error {
 	return nil
 }
 
-// Execute simulates running a WASM module with the given input.
+// SetExecutor sets a pluggable WASM executor for real module execution.
+func (r *Runtime) SetExecutor(executor WASMExecutor) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.executor = executor
+	r.compiled = make(map[string]CompiledModule)
+}
+
+// Execute runs a WASM module with the given input, using the executor if set.
 func (r *Runtime) Execute(moduleID string, input map[string]interface{}) (*ExecutionResult, error) {
 	r.mu.RLock()
 	mod, exists := r.modules[moduleID]
@@ -219,6 +231,15 @@ func (r *Runtime) Execute(moduleID string, input map[string]interface{}) (*Execu
 		}
 	}
 
+	// Use executor if available and module has WASM bytes
+	r.mu.RLock()
+	executor := r.executor
+	r.mu.RUnlock()
+
+	if executor != nil && mod.WasmBytes != nil && len(mod.WasmBytes) > 0 {
+		return r.executeWithExecutor(moduleID, mod, input, executor)
+	}
+
 	// Simulate execution
 	startTime := time.Now()
 	output := make(map[string]interface{})
@@ -239,6 +260,88 @@ func (r *Runtime) Execute(moduleID string, input map[string]interface{}) (*Execu
 		Output:       output,
 		DurationMs:   durationMs,
 		MemoryUsedMB: memUsed,
+	}, nil
+}
+
+// executeWithExecutor runs a module through the pluggable WASM executor.
+func (r *Runtime) executeWithExecutor(moduleID string, mod *Module, input map[string]interface{}, executor WASMExecutor) (*ExecutionResult, error) {
+	startTime := time.Now()
+
+	// Compile if not already cached
+	r.mu.Lock()
+	compiled, exists := r.compiled[moduleID]
+	if !exists {
+		var err error
+		compiled, err = executor.CompileModule(context.Background(), mod.Name, mod.WasmBytes)
+		if err != nil {
+			r.execCount++
+			r.execErrors++
+			r.mu.Unlock()
+			return &ExecutionResult{
+				ModuleID: moduleID,
+				Success:  false,
+				Error:    fmt.Sprintf("compilation failed: %v", err),
+			}, fmt.Errorf("compiling module: %w", err)
+		}
+		r.compiled[moduleID] = compiled
+	}
+	r.mu.Unlock()
+
+	// Marshal input to JSON
+	inputBytes, err := json.Marshal(input)
+	if err != nil {
+		r.mu.Lock()
+		r.execCount++
+		r.execErrors++
+		r.mu.Unlock()
+		return &ExecutionResult{
+			ModuleID: moduleID,
+			Success:  false,
+			Error:    fmt.Sprintf("marshaling input: %v", err),
+		}, fmt.Errorf("marshaling input: %w", err)
+	}
+
+	// Call through executor
+	outputBytes, err := compiled.Call(context.Background(), "transform", inputBytes)
+	if err != nil {
+		r.mu.Lock()
+		r.execCount++
+		r.execErrors++
+		r.mu.Unlock()
+		return &ExecutionResult{
+			ModuleID: moduleID,
+			Success:  false,
+			Error:    fmt.Sprintf("execution failed: %v", err),
+		}, fmt.Errorf("executing module: %w", err)
+	}
+
+	// Unmarshal output
+	var output map[string]interface{}
+	if err := json.Unmarshal(outputBytes, &output); err != nil {
+		r.mu.Lock()
+		r.execCount++
+		r.execErrors++
+		r.mu.Unlock()
+		return &ExecutionResult{
+			ModuleID: moduleID,
+			Success:  false,
+			Error:    fmt.Sprintf("unmarshaling output: %v", err),
+		}, fmt.Errorf("unmarshaling output: %w", err)
+	}
+
+	durationMs := float64(time.Since(startTime).Microseconds()) / 1000.0
+
+	r.mu.Lock()
+	r.execCount++
+	r.totalMs += durationMs
+	r.mu.Unlock()
+
+	return &ExecutionResult{
+		ModuleID:     moduleID,
+		Success:      true,
+		Output:       output,
+		DurationMs:   durationMs,
+		MemoryUsedMB: 1,
 	}, nil
 }
 
