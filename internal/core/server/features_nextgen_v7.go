@@ -54,7 +54,12 @@ func init() {
 		return NewAutoShardingHandler(cluster.NewAutoShardingEngine(cluster.DefaultAutoShardingConfig()))
 	})
 	registerHandler("feast_ga", MaturityStable, func(deps *handlerDeps) FeatureHandler {
-		return NewFeastGAHandler(feastcompat.NewGAGateway(feastcompat.DefaultGAConfig()))
+		gaGw := feastcompat.NewGAGateway(feastcompat.DefaultGAConfig())
+		if deps.Store != nil {
+			storeAdapter := feastcompat.NewStoreLookupAdapter(deps.Store)
+			gaGw.SetStoreAdapter(storeAdapter)
+		}
+		return NewFeastGAHandler(gaGw)
 	})
 	registerHandler("offline_store_sync", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		store := offlinestore.NewStore(offlinestore.DefaultStoreConfig())

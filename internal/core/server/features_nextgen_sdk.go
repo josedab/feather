@@ -44,11 +44,21 @@ func init() {
 		return NewSchemaEvolutionHandler(schemaevolution.NewManager(schemaevolution.DefaultManagerConfig()))
 	})
 	registerHandler("feast_compat", MaturityExperimental, func(deps *handlerDeps) FeatureHandler {
-		return NewFeastCompatHandler(feastcompat.NewAdapter(feastcompat.DefaultAdapterConfig()))
+		adapter := feastcompat.NewAdapter(feastcompat.DefaultAdapterConfig())
+		if deps.Store != nil {
+			storeAdapter := feastcompat.NewStoreLookupAdapter(deps.Store)
+			adapter.SetLookupFunc(storeAdapter.LookupFunc())
+		}
+		return NewFeastCompatHandler(adapter)
 	})
 	registerHandler("feast_gateway", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		adapter := feastcompat.NewAdapter(feastcompat.DefaultAdapterConfig())
-		return NewFeastGatewayHandler(feastcompat.NewGateway(adapter))
+		gw := feastcompat.NewGateway(adapter)
+		if deps.Store != nil {
+			storeAdapter := feastcompat.NewStoreLookupAdapter(deps.Store)
+			gw.SetStoreAdapter(storeAdapter)
+		}
+		return NewFeastGatewayHandler(gw)
 	})
 	registerHandler("saas_control", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewSaaSControlHandler(saascontrol.NewControlPlane(saascontrol.DefaultControlPlaneConfig()))
