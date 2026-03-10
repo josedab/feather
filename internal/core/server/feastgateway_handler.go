@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/feather-store/feather/internal/extensions/feastcompat"
 )
@@ -36,6 +37,9 @@ func (h *FeastGatewayHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Migration tooling
 	mux.HandleFunc("POST /v1/feast/migrate", h.handleMigrate)
+
+	// Materialize (Feast materialize-incremental)
+	mux.HandleFunc("POST /v1/feast/materialize", h.handleMaterialize)
 
 	// Gateway stats
 	mux.HandleFunc("GET /v1/feast/gateway/stats", h.handleGatewayStats)
@@ -146,6 +150,29 @@ func (h *FeastGatewayHandler) handleMigrate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	h.writeJSON(r.Context(), w, http.StatusOK, result)
+}
+
+func (h *FeastGatewayHandler) handleMaterialize(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		EndDate string `json:"end_date"`
+	}
+	if err := strictDecode(r.Body, &req); err != nil {
+		h.writeError(r.Context(), w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	endDate := time.Now()
+	if req.EndDate != "" {
+		parsed, err := time.Parse(time.RFC3339, req.EndDate)
+		if err != nil {
+			h.writeError(r.Context(), w, http.StatusBadRequest, "invalid end_date: use RFC3339 format")
+			return
+		}
+		endDate = parsed
+	}
+
+	stats := h.gateway.MaterializeIncremental(endDate)
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
 }
 
 func (h *FeastGatewayHandler) writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {
