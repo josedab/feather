@@ -26,14 +26,15 @@ func DefaultGAConfig() GAConfig {
 
 // GAGateway provides a production-grade Feast-compatible gateway.
 type GAGateway struct {
-	config    GAConfig
-	gateway   *Gateway
-	adapter   *Adapter
-	suite     *CompatTestSuite
-	migrator  *MigrationCLI
-	mu        sync.RWMutex
-	features  map[string]interface{} // in-memory feature store for GA
-	stats     GAStats
+	config       GAConfig
+	gateway      *Gateway
+	adapter      *Adapter
+	storeAdapter *StoreLookupAdapter
+	suite        *CompatTestSuite
+	migrator     *MigrationCLI
+	mu           sync.RWMutex
+	features     map[string]interface{} // in-memory feature store for GA
+	stats        GAStats
 }
 
 // GAStats tracks GA gateway statistics.
@@ -70,6 +71,14 @@ func (g *GAGateway) SetFeature(entityKey, featureRef string, value interface{}) 
 	g.features[key] = value
 }
 
+// SetStoreAdapter configures the GA gateway to use real storage for reads and writes.
+func (g *GAGateway) SetStoreAdapter(adapter *StoreLookupAdapter) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.storeAdapter = adapter
+	g.gateway.SetStoreAdapter(adapter)
+}
+
 // GetOnlineFeatures implements the Feast get_online_features endpoint.
 func (g *GAGateway) GetOnlineFeatures(entityRows []map[string]interface{}, featureRefs []string) (map[string]interface{}, error) {
 	g.mu.Lock()
@@ -88,8 +97,18 @@ func (g *GAGateway) GetOnlineFeatures(entityRows []map[string]interface{}, featu
 		"feature_names": featureRefs,
 	}
 
-	// Build results per entity, looking up feature values.
+	// Snapshot mutable state under a single lock to avoid races.
 	g.mu.RLock()
+	storeAdapter := g.storeAdapter
+	var lookupFn FeatureLookupFunc
+	if storeAdapter != nil {
+		lookupFn = storeAdapter.LookupFunc()
+	}
+	// Copy the in-memory features map reference (map reads are safe
+	// as long as we don't write concurrently, and writes are guarded by mu).
+	featuresSnapshot := g.features
+	g.mu.RUnlock()
+
 	results := make([]map[string]interface{}, len(entityRows))
 	for i, entity := range entityRows {
 		row := make(map[string]interface{})
@@ -101,17 +120,34 @@ func (g *GAGateway) GetOnlineFeatures(entityRows []map[string]interface{}, featu
 		for _, v := range entity {
 			entityKey += fmt.Sprintf("%v", v)
 		}
-		for _, ref := range featureRefs {
-			key := entityKey + ":" + ref
-			if val, ok := g.features[key]; ok {
-				row[ref] = val
+
+		if lookupFn != nil {
+			vals, err := lookupFn(entityKey, featureRefs)
+			if err == nil {
+				for _, ref := range featureRefs {
+					if val, ok := vals[ref]; ok {
+						row[ref] = val
+					} else {
+						row[ref] = nil
+					}
+				}
 			} else {
-				row[ref] = nil
+				for _, ref := range featureRefs {
+					row[ref] = nil
+				}
+			}
+		} else {
+			for _, ref := range featureRefs {
+				key := entityKey + ":" + ref
+				if val, ok := featuresSnapshot[key]; ok {
+					row[ref] = val
+				} else {
+					row[ref] = nil
+				}
 			}
 		}
 		results[i] = row
 	}
-	g.mu.RUnlock()
 
 	result["results"] = results
 	return result, nil

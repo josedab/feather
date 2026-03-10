@@ -96,6 +96,7 @@ type SavedDataset struct {
 type Gateway struct {
 	mu              sync.RWMutex
 	adapter         *Adapter
+	storeAdapter    *StoreLookupAdapter
 	featureServices map[string]*FeatureService
 	entities        map[string]*EntityDef
 	savedDatasets   map[string]*SavedDataset
@@ -117,6 +118,14 @@ func NewGateway(adapter *Adapter) *Gateway {
 		entities:        make(map[string]*EntityDef),
 		savedDatasets:   make(map[string]*SavedDataset),
 	}
+}
+
+// SetStoreAdapter configures the gateway to use real storage for reads and writes.
+func (g *Gateway) SetStoreAdapter(adapter *StoreLookupAdapter) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.storeAdapter = adapter
+	g.adapter.SetLookupFunc(adapter.LookupFunc())
 }
 
 // Adapter returns the underlying adapter.
@@ -141,7 +150,24 @@ func (g *Gateway) Push(req PushRequest) (*PushResponse, error) {
 	g.mu.Lock()
 	g.pushStats.TotalPushes++
 	g.pushStats.TotalRows += int64(len(req.DfData))
+	storeAdapter := g.storeAdapter
 	g.mu.Unlock()
+
+	if storeAdapter != nil {
+		ingested, err := storeAdapter.PushToStore(req.PushSourceName, req.DfData)
+		if err != nil {
+			g.mu.Lock()
+			g.pushStats.FailedPushes++
+			g.mu.Unlock()
+			return nil, fmt.Errorf("pushing to store: %w", err)
+		}
+		return &PushResponse{
+			Success:      true,
+			RowsIngested: ingested,
+			PushSource:   req.PushSourceName,
+			Destination:  dest,
+		}, nil
+	}
 
 	return &PushResponse{
 		Success:      true,
@@ -307,13 +333,34 @@ type MaterializeStats struct {
 // MaterializeIncremental materializes features up to the given end date.
 func (g *Gateway) MaterializeIncremental(endDate time.Time) *MaterializeStats {
 	g.mu.RLock()
-	defer g.mu.RUnlock()
+	storeAdapter := g.storeAdapter
+	mappings := g.adapter.ListMappings()
+	g.mu.RUnlock()
 
-	return &MaterializeStats{
-		ViewsMaterialized: len(g.adapter.ListMappings()),
+	stats := &MaterializeStats{
+		ViewsMaterialized: len(mappings),
 		RowsWritten:       0,
 		EndDate:           endDate,
 	}
+
+	if storeAdapter != nil {
+		for _, m := range mappings {
+			features := make([]string, 0, len(m.FeatureMapping))
+			for _, featherName := range m.FeatureMapping {
+				features = append(features, featherName)
+			}
+			entityKeys := make([]string, 0, len(m.EntityMapping))
+			for _, featherKey := range m.EntityMapping {
+				entityKeys = append(entityKeys, featherKey)
+			}
+			if len(entityKeys) > 0 && len(features) > 0 {
+				rows, _ := storeAdapter.MaterializeFromStore(entityKeys, features, endDate)
+				stats.RowsWritten += rows
+			}
+		}
+	}
+
+	return stats
 }
 
 // GetOnlineFeatures delegates to the adapter for Feast-compatible feature retrieval.
