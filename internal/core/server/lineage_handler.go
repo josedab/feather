@@ -10,13 +10,15 @@ import (
 
 // LineageHandler handles lineage API requests.
 type LineageHandler struct {
-	tracker *lineage.Tracker
+	tracker  *lineage.Tracker
+	unified  *lineage.UnifiedLineage
 }
 
 // NewLineageHandler creates a new lineage handler.
 func NewLineageHandler(tracker *lineage.Tracker) *LineageHandler {
 	return &LineageHandler{
 		tracker: tracker,
+		unified: lineage.NewUnifiedLineage(lineage.DefaultUnifiedConfig()),
 	}
 }
 
@@ -49,6 +51,11 @@ func (h *LineageHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/lineage/pii", h.handleGetPIIFeatures)
 	mux.HandleFunc("POST /v1/lineage/pii/{id}", h.handleSetPIIMetadata)
 	mux.HandleFunc("GET /v1/lineage/audit", h.handleGetAuditLog)
+
+	// Unified lineage visualization
+	mux.HandleFunc("GET /v1/lineage/visualize", h.handleVisualize)
+	mux.HandleFunc("GET /v1/lineage/unified/graph", h.handleUnifiedGraph)
+	mux.HandleFunc("GET /v1/lineage/unified/stats", h.handleUnifiedStats)
 }
 
 // handleListFeatures handles GET /v1/lineage/features
@@ -547,4 +554,46 @@ func (h *LineageHandler) writeJSON(ctx context.Context, w http.ResponseWriter, s
 
 func (h *LineageHandler) writeError(ctx context.Context, w http.ResponseWriter, status int, message string) {
 	writeJSONError(ctx, w, status, message)
+}
+
+// handleVisualize handles GET /v1/lineage/visualize
+func (h *LineageHandler) handleVisualize(w http.ResponseWriter, r *http.Request) {
+	if h.unified == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "unified lineage not configured")
+		return
+	}
+
+	html := h.unified.GenerateVisualizationHTML()
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte(html)); err != nil {
+		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+	}
+}
+
+// handleUnifiedGraph handles GET /v1/lineage/unified/graph
+func (h *LineageHandler) handleUnifiedGraph(w http.ResponseWriter, r *http.Request) {
+	if h.unified == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "unified lineage not configured")
+		return
+	}
+
+	graph := h.unified.GetGraph()
+	h.writeJSON(r.Context(), w, http.StatusOK, graph)
+}
+
+// handleUnifiedStats handles GET /v1/lineage/unified/stats
+func (h *LineageHandler) handleUnifiedStats(w http.ResponseWriter, r *http.Request) {
+	if h.unified == nil {
+		h.writeError(r.Context(), w, http.StatusServiceUnavailable, "unified lineage not configured")
+		return
+	}
+
+	stats := h.unified.Stats()
+	h.writeJSON(r.Context(), w, http.StatusOK, stats)
+}
+
+// GetUnifiedLineage returns the unified lineage instance for external use.
+func (h *LineageHandler) GetUnifiedLineage() *lineage.UnifiedLineage {
+	return h.unified
 }
