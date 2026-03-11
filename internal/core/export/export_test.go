@@ -60,8 +60,8 @@ func TestExporter_Export_NoOutputPath(t *testing.T) {
 }
 
 func TestExporter_Export_UnsupportedFormat(t *testing.T) {
-	exporter := NewExporter(nil, nil)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(nil, nil, tmpDir)
 
 	req := ExportRequest{
 		Entities:   []string{"user:1"},
@@ -325,8 +325,8 @@ func seedTestData(t *testing.T, store *storage.Store) {
 func TestExporter_ExportCSV(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 	outPath := filepath.Join(tmpDir, "out.csv")
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -370,8 +370,8 @@ func TestExporter_ExportCSV(t *testing.T) {
 
 func TestExporter_ExportCSV_NoEntities(t *testing.T) {
 	store, schema := newTestStore(t)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	_, err := exporter.Export(context.Background(), ExportRequest{
 		Entities:   []string{},
@@ -386,8 +386,8 @@ func TestExporter_ExportCSV_NoEntities(t *testing.T) {
 
 func TestExporter_ExportCSV_MissingEntity(t *testing.T) {
 	store, schema := newTestStore(t)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
 		Entities:   []string{"nonexistent:1"},
@@ -408,8 +408,8 @@ func TestExporter_ExportCSV_MissingEntity(t *testing.T) {
 func TestExporter_ExportCSV_WithEndTime(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	endTime := time.Now().Add(time.Minute)
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -430,8 +430,8 @@ func TestExporter_ExportCSV_WithEndTime(t *testing.T) {
 func TestExporter_ExportCSV_ContextCancellation(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
@@ -450,8 +450,8 @@ func TestExporter_ExportCSV_ContextCancellation(t *testing.T) {
 func TestExporter_ExportJSON(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 	outPath := filepath.Join(tmpDir, "out.json")
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -497,8 +497,8 @@ func TestExporter_ExportJSON(t *testing.T) {
 
 func TestExporter_ExportJSON_NoEntities(t *testing.T) {
 	store, schema := newTestStore(t)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	_, err := exporter.Export(context.Background(), ExportRequest{
 		Entities:   []string{},
@@ -514,8 +514,8 @@ func TestExporter_ExportJSON_NoEntities(t *testing.T) {
 func TestExporter_ExportJSON_WithEndTime(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	endTime := time.Now().Add(time.Minute)
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -536,8 +536,8 @@ func TestExporter_ExportJSON_WithEndTime(t *testing.T) {
 func TestExporter_ExportJSONL(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 	outPath := filepath.Join(tmpDir, "out.jsonl")
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -585,8 +585,8 @@ func TestExporter_ExportJSONL(t *testing.T) {
 
 func TestExporter_ExportJSONL_NoEntities(t *testing.T) {
 	store, schema := newTestStore(t)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	_, err := exporter.Export(context.Background(), ExportRequest{
 		Entities:   []string{},
@@ -602,8 +602,8 @@ func TestExporter_ExportJSONL_NoEntities(t *testing.T) {
 func TestExporter_ExportJSONL_WithEndTime(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	endTime := time.Now().Add(time.Minute)
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -624,8 +624,8 @@ func TestExporter_ExportJSONL_WithEndTime(t *testing.T) {
 func TestExporter_ExportParquet(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 	outPath := filepath.Join(tmpDir, "out.parquet")
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -656,8 +656,8 @@ func TestExporter_ExportParquet(t *testing.T) {
 
 func TestExporter_ExportParquet_Empty(t *testing.T) {
 	store, schema := newTestStore(t)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 	outPath := filepath.Join(tmpDir, "empty.parquet")
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
@@ -678,8 +678,8 @@ func TestExporter_ExportParquet_Empty(t *testing.T) {
 
 func TestExporter_ExportParquet_NoEntities(t *testing.T) {
 	store, schema := newTestStore(t)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	_, err := exporter.Export(context.Background(), ExportRequest{
 		Entities:   []string{},
@@ -695,8 +695,8 @@ func TestExporter_ExportParquet_NoEntities(t *testing.T) {
 func TestExporter_Export_OutputPathCreation(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 	// nested directory that doesn't exist yet
 	outPath := filepath.Join(tmpDir, "nested", "deep", "out.csv")
 
@@ -717,8 +717,8 @@ func TestExporter_Export_OutputPathCreation(t *testing.T) {
 func TestExporter_Export_BytesWrittenPopulated(t *testing.T) {
 	store, schema := newTestStore(t)
 	seedTestData(t, store)
-	exporter := NewExporter(store, schema)
 	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(store, schema, tmpDir)
 
 	result, err := exporter.Export(context.Background(), ExportRequest{
 		Entities:   []string{"user:1"},
