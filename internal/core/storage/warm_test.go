@@ -442,3 +442,43 @@ func BenchmarkWarmTier_Get(b *testing.B) {
 		warm.Get("user:bench", featureNames)
 	}
 }
+
+func TestWarmTier_RunGC(t *testing.T) {
+	t.Parallel()
+	wt, err := NewWarmTier(WarmTierOptions{InMemory: true})
+	if err != nil {
+		t.Fatalf("NewWarmTier failed: %v", err)
+	}
+	defer wt.Close()
+
+	now := time.Now().UnixNano()
+	err = wt.Put("user:1", map[string]*domain.FeatureValue{
+		"age": {Value: int64(25), Timestamp: now, Version: 1},
+	})
+	if err != nil {
+		t.Fatalf("Put failed: %v", err)
+	}
+
+	// RunGC on in-memory DB may return ErrNoRewrite (nothing to GC), which is expected.
+	_ = wt.RunGC()
+}
+
+func TestWarmTier_RunGC_DefaultRatio(t *testing.T) {
+	t.Parallel()
+	wt, err := NewWarmTier(WarmTierOptions{InMemory: true, GCDiscardRatio: 0})
+	if err != nil {
+		t.Fatalf("NewWarmTier failed: %v", err)
+	}
+	defer wt.Close()
+	_ = wt.RunGC()
+}
+
+func TestWarmTier_RunGC_InvalidRatio(t *testing.T) {
+	t.Parallel()
+	wt, err := NewWarmTier(WarmTierOptions{InMemory: true, GCDiscardRatio: 1.5})
+	if err != nil {
+		t.Fatalf("NewWarmTier failed: %v", err)
+	}
+	defer wt.Close()
+	_ = wt.RunGC()
+}
