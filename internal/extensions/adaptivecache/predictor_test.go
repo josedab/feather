@@ -175,3 +175,52 @@ func TestStats(t *testing.T) {
 		t.Errorf("expected positive avg score, got %f", stats.AvgScore)
 	}
 }
+
+func TestEvictLowest(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultPredictorConfig()
+	cfg.MaxTracked = 3
+	p := NewPredictor(cfg)
+
+	// Fill to capacity.
+	p.RecordAccess("key-a")
+	p.RecordAccess("key-b")
+	p.RecordAccess("key-c")
+
+	// Boost key-b and key-c so key-a has the lowest score.
+	for i := 0; i < 10; i++ {
+		p.RecordAccess("key-b")
+		p.RecordAccess("key-c")
+	}
+
+	// Adding a new key should evict the lowest-scored key.
+	p.RecordAccess("key-d")
+
+	stats := p.Stats()
+	if stats.TrackedKeys != 3 {
+		t.Errorf("expected 3 tracked keys after eviction, got %d", stats.TrackedKeys)
+	}
+
+	// key-a should have been evicted (lowest score).
+	preds := p.GetPredictions(10)
+	for _, pred := range preds {
+		if pred.Key == "key-a" {
+			t.Error("expected key-a to be evicted")
+		}
+	}
+}
+
+func TestEvictLowest_SingleCapacity(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultPredictorConfig()
+	cfg.MaxTracked = 1
+	p := NewPredictor(cfg)
+
+	p.RecordAccess("key-a")
+	p.RecordAccess("key-b")
+
+	stats := p.Stats()
+	if stats.TrackedKeys != 1 {
+		t.Errorf("expected 1 tracked key, got %d", stats.TrackedKeys)
+	}
+}
