@@ -175,3 +175,92 @@ func TestColumnProjection_Nil(t *testing.T) {
 		t.Fatal("expected nil for nil batch")
 	}
 }
+
+func TestBatchBuilder_Rows(t *testing.T) {
+	t.Parallel()
+	schema := []ColumnSchema{
+		{Name: "entity_key", Type: DataTypeString, Nullable: false},
+		{Name: "score", Type: DataTypeFloat64, Nullable: true},
+	}
+	b := NewBatchBuilder(schema)
+
+	if b.Rows() != 0 {
+		t.Errorf("expected 0 rows initially, got %d", b.Rows())
+	}
+	_ = b.AddRow(map[string]interface{}{"entity_key": "u:1", "score": 0.9})
+	_ = b.AddRow(map[string]interface{}{"entity_key": "u:2", "score": 0.8})
+	if b.Rows() != 2 {
+		t.Errorf("expected 2 rows, got %d", b.Rows())
+	}
+}
+
+func TestEvalPredicate(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		val      interface{}
+		pred     Predicate
+		expected bool
+	}{
+		{"nil is_null", nil, Predicate{Operator: "is_null"}, true},
+		{"nil other", nil, Predicate{Operator: "eq", Value: "x"}, false},
+		{"eq match", "hello", Predicate{Operator: "eq", Value: "hello"}, true},
+		{"eq =", "hello", Predicate{Operator: "=", Value: "hello"}, true},
+		{"eq ==", "hello", Predicate{Operator: "==", Value: "hello"}, true},
+		{"neq match", "hello", Predicate{Operator: "neq", Value: "world"}, true},
+		{"neq !=", "hello", Predicate{Operator: "!=", Value: "world"}, true},
+		{"gt >", int64(10), Predicate{Operator: ">", Value: int64(5)}, true},
+		{"gte >=", int64(5), Predicate{Operator: ">=", Value: int64(5)}, true},
+		{"lt <", int64(3), Predicate{Operator: "<", Value: int64(5)}, true},
+		{"lte <=", int64(5), Predicate{Operator: "<=", Value: int64(5)}, true},
+		{"contains", "hello world", Predicate{Operator: "contains", Value: "world"}, true},
+		{"is_not_null val", "val", Predicate{Operator: "is_not_null"}, true},
+		{"is_not_null nil", nil, Predicate{Operator: "is_not_null"}, false},
+		{"unknown op", "val", Predicate{Operator: "unknown"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := evalPredicate(tt.val, tt.pred); got != tt.expected {
+				t.Errorf("evalPredicate(%v, %s) = %v, want %v", tt.val, tt.pred.Operator, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestToArrowFloat(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		input    interface{}
+		expected float64
+	}{
+		{float64(3.14), 3.14},
+		{float32(2.5), 2.5},
+		{int(42), 42.0},
+		{int64(100), 100.0},
+		{int32(7), 7.0},
+		{"not a number", 0},
+		{nil, 0},
+		{true, 0},
+	}
+	for _, tt := range tests {
+		if got := toArrowFloat(tt.input); got != tt.expected {
+			t.Errorf("toArrowFloat(%v) = %f, want %f", tt.input, got, tt.expected)
+		}
+	}
+}
+
+func TestCompareNumeric(t *testing.T) {
+	t.Parallel()
+	if compareNumeric(int64(5), int64(3)) != 1 {
+		t.Error("expected 5 > 3 = 1")
+	}
+	if compareNumeric(int64(3), int64(5)) != -1 {
+		t.Error("expected 3 < 5 = -1")
+	}
+	if compareNumeric(int64(5), int64(5)) != 0 {
+		t.Error("expected 5 == 5 = 0")
+	}
+	if compareNumeric(float64(1.5), float64(1.5)) != 0 {
+		t.Error("expected 1.5 == 1.5 = 0")
+	}
+}

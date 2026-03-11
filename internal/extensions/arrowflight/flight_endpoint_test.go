@@ -100,3 +100,115 @@ func (w *testWriter) WriteBatch(_ context.Context, batch *RecordBatch) (*PutResu
 	w.batches = append(w.batches, batch)
 	return &PutResult{RowsWritten: int64(batch.Rows)}, nil
 }
+
+func TestFlightServiceEndpoint_GetSchema(t *testing.T) {
+	t.Parallel()
+	server := NewServer(DefaultConfig())
+	batch := NewBatchServer(server, DefaultBatchConfig())
+	endpoint := NewFlightServiceEndpoint(server, batch, DefaultFlightServiceConfig())
+
+	desc := FlightDescriptor{
+		Type:     "path",
+		Features: []string{"age", "score"},
+		Entities: []string{"user:1"},
+	}
+
+	schema, err := endpoint.GetSchema(context.Background(), desc)
+	if err != nil {
+		t.Fatalf("GetSchema failed: %v", err)
+	}
+	if len(schema) != 3 {
+		t.Errorf("expected 3 columns (entity_key + 2 features), got %d", len(schema))
+	}
+	if schema[0].Name != "entity_key" {
+		t.Errorf("expected first column entity_key, got %s", schema[0].Name)
+	}
+}
+
+func TestFlightServiceEndpoint_GetSchema_Error(t *testing.T) {
+	t.Parallel()
+	server := NewServer(DefaultConfig())
+	batch := NewBatchServer(server, DefaultBatchConfig())
+	endpoint := NewFlightServiceEndpoint(server, batch, DefaultFlightServiceConfig())
+
+	desc := FlightDescriptor{Type: "path"}
+	_, err := endpoint.GetSchema(context.Background(), desc)
+	if err == nil {
+		t.Error("expected error for empty features")
+	}
+
+	stats := endpoint.Stats()
+	if stats.ErrorCount != 1 {
+		t.Errorf("expected 1 error, got %d", stats.ErrorCount)
+	}
+}
+
+func TestFlightServiceEndpoint_DoGetRecordBatch(t *testing.T) {
+	t.Parallel()
+	server := NewServer(DefaultConfig())
+	batch := NewBatchServer(server, DefaultBatchConfig())
+	endpoint := NewFlightServiceEndpoint(server, batch, DefaultFlightServiceConfig())
+
+	req := BatchRequest{
+		Descriptor: FlightDescriptor{
+			Type:     "path",
+			Features: []string{"age"},
+			Entities: []string{"user:1"},
+		},
+	}
+
+	resp, err := endpoint.DoGetRecordBatch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("DoGetRecordBatch failed: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatal("expected non-nil response with data")
+	}
+}
+
+func TestFlightServiceEndpoint_DoGetRecordBatch_WithFiltering(t *testing.T) {
+	t.Parallel()
+	server := NewServer(DefaultConfig())
+	batch := NewBatchServer(server, DefaultBatchConfig())
+	endpoint := NewFlightServiceEndpoint(server, batch, DefaultFlightServiceConfig())
+
+	req := BatchRequest{
+		Descriptor: FlightDescriptor{
+			Type:     "path",
+			Features: []string{"age", "score"},
+			Entities: []string{"user:1"},
+		},
+		Predicates: []Predicate{{Column: "age", Operator: "gt", Value: 10}},
+		Columns:    []string{"age"},
+		Limit:      5,
+		Offset:     0,
+	}
+
+	resp, err := endpoint.DoGetRecordBatch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("DoGetRecordBatch with filtering failed: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+}
+
+func TestFlightServiceEndpoint_HealthCheck(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(DefaultConfig())
+	batch := NewBatchServer(server, DefaultBatchConfig())
+
+	endpoint := NewFlightServiceEndpoint(server, batch, DefaultFlightServiceConfig())
+	if err := endpoint.HealthCheck(); err != nil {
+		t.Errorf("expected healthy endpoint, got: %v", err)
+	}
+
+	if err := NewFlightServiceEndpoint(nil, batch, DefaultFlightServiceConfig()).HealthCheck(); err == nil {
+		t.Error("expected error for nil server")
+	}
+
+	if err := NewFlightServiceEndpoint(server, nil, DefaultFlightServiceConfig()).HealthCheck(); err == nil {
+		t.Error("expected error for nil batch server")
+	}
+}
