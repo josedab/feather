@@ -116,10 +116,7 @@ func (e *FlightServiceEndpoint) DoGetRecordBatch(ctx context.Context, req BatchR
 		return nil, fmt.Errorf("getting flight info: %w", err)
 	}
 
-	ticket := FlightTicket{
-		Desc:   req.Descriptor,
-		Schema: info.Schema,
-	}
+	ticket := info.Endpoints[0].Ticket
 	rb, err := e.server.DoGet(ctx, ticket)
 	if err != nil {
 		atomic.AddInt64(&e.stats.ErrorCount, 1)
