@@ -170,3 +170,67 @@ func TestStats(t *testing.T) {
 		t.Errorf("expected 0 routed, got %d", stats.TotalRouted)
 	}
 }
+
+func TestGateway_Stop(t *testing.T) {
+	t.Parallel()
+	gw := NewGateway(DefaultGatewayConfig())
+	_ = gw.AddBackend(Backend{ID: "b1", URL: "http://localhost:8080", Status: Healthy, Weight: 1})
+
+	// Route to start a coalescing goroutine.
+	_, _ = gw.Route("tenant1", "entity1")
+
+	// Stop should not panic.
+	gw.Stop()
+}
+
+func TestGateway_CheckRateLimit(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultGatewayConfig()
+	cfg.RateLimitPerSec = 3
+	gw := NewGateway(cfg)
+
+	for i := 0; i < 3; i++ {
+		if !gw.CheckRateLimit("tenant1") {
+			t.Errorf("expected request %d to be allowed", i+1)
+		}
+	}
+	if gw.CheckRateLimit("tenant1") {
+		t.Error("expected 4th request to be blocked")
+	}
+	// Different tenant has independent limit.
+	if !gw.CheckRateLimit("tenant2") {
+		t.Error("expected different tenant to be allowed")
+	}
+}
+
+func TestGateway_GetBackendStats(t *testing.T) {
+	t.Parallel()
+	gw := NewGateway(DefaultGatewayConfig())
+	_ = gw.AddBackend(Backend{ID: "b1", URL: "http://localhost:8080", Status: Healthy, Weight: 1})
+
+	for i := 0; i < 5; i++ {
+		_, _ = gw.Route("tenant1", "entity1")
+	}
+
+	stats := gw.GetBackendStats()
+	if len(stats) == 0 {
+		t.Error("expected at least one backend stat")
+	}
+
+	totalReqs := int64(0)
+	for _, s := range stats {
+		totalReqs += s.TotalRequests
+	}
+	if totalReqs == 0 {
+		t.Error("expected some requests recorded")
+	}
+}
+
+func TestGateway_GetBackendStats_Empty(t *testing.T) {
+	t.Parallel()
+	gw := NewGateway(DefaultGatewayConfig())
+	stats := gw.GetBackendStats()
+	if len(stats) != 0 {
+		t.Errorf("expected 0 stats, got %d", len(stats))
+	}
+}
