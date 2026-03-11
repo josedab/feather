@@ -155,3 +155,54 @@ func TestStats(t *testing.T) {
 		t.Errorf("expected 20 checks, got %d", stats.TotalChecks)
 	}
 }
+
+func TestDetector_RegisterFeature(t *testing.T) {
+	t.Parallel()
+	d := NewDetector(DefaultDetectorConfig())
+
+	d.RegisterFeature("clicks")
+	d.RegisterFeature("revenue")
+
+	stats := d.Stats()
+	if stats.TotalFeatures != 2 {
+		t.Errorf("expected 2 features, got %d", stats.TotalFeatures)
+	}
+
+	// Registering the same feature again should not create a duplicate.
+	d.RegisterFeature("clicks")
+	stats = d.Stats()
+	if stats.TotalFeatures != 2 {
+		t.Errorf("expected 2 features after duplicate register, got %d", stats.TotalFeatures)
+	}
+}
+
+func TestDetector_GetFeatureStats(t *testing.T) {
+	t.Parallel()
+	d := NewDetector(DefaultDetectorConfig())
+
+	// Unregistered feature should return error.
+	_, err := d.GetFeatureStats("nonexistent")
+	if err != ErrFeatureNotMonitored {
+		t.Errorf("expected ErrFeatureNotMonitored, got %v", err)
+	}
+
+	// Register and feed some values.
+	d.RegisterFeature("clicks")
+	for i := 0; i < 10; i++ {
+		d.Check("clicks", float64(i))
+	}
+
+	fs, err := d.GetFeatureStats("clicks")
+	if err != nil {
+		t.Fatalf("GetFeatureStats failed: %v", err)
+	}
+	if fs["mean"] == nil {
+		t.Error("expected mean in feature stats")
+	}
+	if fs["stddev"] == nil {
+		t.Error("expected stddev in feature stats")
+	}
+	if fs["anomaly_rate"] == nil {
+		t.Error("expected anomaly_rate in feature stats")
+	}
+}
