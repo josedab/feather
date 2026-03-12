@@ -382,3 +382,162 @@ func TestMaterializerDedupEviction(t *testing.T) {
 		t.Errorf("expected 20 materialized, got %d", stats.EventsMaterialized)
 	}
 }
+
+func TestCoordinatorUnregisterSource(t *testing.T) {
+	t.Parallel()
+	coord := NewCoordinator(DefaultCoordinatorConfig())
+	src := &mockSource{}
+	_ = coord.RegisterSource("test-src", src)
+
+	if err := coord.UnregisterSource("test-src"); err != nil {
+		t.Fatalf("UnregisterSource failed: %v", err)
+	}
+	sources := coord.ListSources()
+	if len(sources) != 0 {
+		t.Errorf("expected 0 sources after unregister, got %d", len(sources))
+	}
+
+	// Unregistering a nonexistent source should fail.
+	if err := coord.UnregisterSource("nonexistent"); err != ErrSourceNotFound {
+		t.Errorf("expected ErrSourceNotFound, got %v", err)
+	}
+}
+
+func TestCoordinatorListJobs(t *testing.T) {
+	t.Parallel()
+	coord := NewCoordinator(DefaultCoordinatorConfig())
+	src := &mockSource{}
+	_ = coord.RegisterSource("test-src", src)
+
+	now := time.Now()
+	_, _ = coord.CreateJob(JobRequest{SourceName: "test-src", StartTime: now.Add(-2 * time.Hour), EndTime: now})
+	_, _ = coord.CreateJob(JobRequest{SourceName: "test-src", StartTime: now.Add(-time.Hour), EndTime: now})
+
+	jobs := coord.ListJobs()
+	if len(jobs) != 2 {
+		t.Errorf("expected 2 jobs, got %d", len(jobs))
+	}
+}
+
+func TestCoordinatorPauseJob(t *testing.T) {
+	t.Parallel()
+	coord := NewCoordinator(DefaultCoordinatorConfig())
+
+	// Use a source with many events so the job doesn't finish immediately.
+	now := time.Now()
+	events := make([]Event, 100)
+	for i := range events {
+		events[i] = Event{
+			ID: fmt.Sprintf("e%d", i), Source: "s", EntityKey: fmt.Sprintf("u:%d", i),
+			Features: map[string]interface{}{"x": i}, Timestamp: now.Add(-time.Duration(100-i) * time.Minute), Offset: int64(i),
+		}
+	}
+	src := &mockSource{events: events}
+	_ = coord.RegisterSource("test-src", src)
+
+	job, _ := coord.CreateJob(JobRequest{
+		SourceName: "test-src",
+		StartTime:  now.Add(-200 * time.Minute),
+		EndTime:    now,
+		BatchSize:  1, // process one at a time
+	})
+
+	// Can't pause a non-running job.
+	err := coord.PauseJob(job.ID)
+	if err != ErrJobNotRunning {
+		t.Errorf("expected ErrJobNotRunning, got %v", err)
+	}
+
+	// Start and then pause.
+	writer := &mockWriter{}
+	_ = coord.StartJob(job.ID, writer)
+	time.Sleep(50 * time.Millisecond)
+
+	if err := coord.PauseJob(job.ID); err != nil {
+		// Job may have already completed; check status.
+		j, _ := coord.GetJob(job.ID)
+		if j.Status != JobStatusCompleted {
+			t.Fatalf("PauseJob failed: %v (status=%s)", err, j.Status)
+		}
+		return
+	}
+	j, _ := coord.GetJob(job.ID)
+	if j.Status != JobStatusPaused {
+		t.Errorf("expected paused, got %s", j.Status)
+	}
+
+	// Pause nonexistent job.
+	if err := coord.PauseJob("nonexistent"); err != ErrJobNotFound {
+		t.Errorf("expected ErrJobNotFound, got %v", err)
+	}
+}
+
+func TestCoordinatorGetCheckpoint(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultCoordinatorConfig()
+	cfg.CheckpointEvery = 1
+	coord := NewCoordinator(cfg)
+
+	now := time.Now()
+	events := []Event{
+		{ID: "e1", Source: "s", EntityKey: "u:1", Features: map[string]interface{}{"x": 1}, Timestamp: now.Add(-time.Minute), Offset: 0},
+	}
+	src := &mockSource{events: events}
+	_ = coord.RegisterSource("test-src", src)
+
+	job, _ := coord.CreateJob(JobRequest{
+		SourceName: "test-src",
+		StartTime:  now.Add(-10 * time.Minute),
+		EndTime:    now,
+		BatchSize:  10,
+	})
+
+	writer := &mockWriter{}
+	_ = coord.StartJob(job.ID, writer)
+
+	deadline := time.After(5 * time.Second)
+	for {
+		j, _ := coord.GetJob(job.ID)
+		if j.Status == JobStatusCompleted || j.Status == JobStatusFailed {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("job did not complete in time")
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	cp, err := coord.GetCheckpoint(job.ID)
+	if err != nil {
+		t.Fatalf("GetCheckpoint failed: %v", err)
+	}
+	if cp.EventsProcessed != 1 {
+		t.Errorf("expected 1 event processed in checkpoint, got %d", cp.EventsProcessed)
+	}
+
+	// Nonexistent checkpoint.
+	_, err = coord.GetCheckpoint("nonexistent")
+	if err != ErrJobNotFound {
+		t.Errorf("expected ErrJobNotFound, got %v", err)
+	}
+}
+
+func TestCoordinatorStats(t *testing.T) {
+	t.Parallel()
+	coord := NewCoordinator(DefaultCoordinatorConfig())
+	src := &mockSource{}
+	_ = coord.RegisterSource("test-src", src)
+
+	now := time.Now()
+	_, _ = coord.CreateJob(JobRequest{SourceName: "test-src", StartTime: now.Add(-time.Hour), EndTime: now})
+
+	stats := coord.Stats()
+	if stats.TotalJobs != 1 {
+		t.Errorf("expected TotalJobs=1, got %d", stats.TotalJobs)
+	}
+	if stats.RunningJobs != 0 {
+		t.Errorf("expected RunningJobs=0, got %d", stats.RunningJobs)
+	}
+}
