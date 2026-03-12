@@ -201,3 +201,43 @@ func TestClose(t *testing.T) {
 	// Close again is safe
 	require.NoError(t, l.Close())
 }
+
+func TestGetEntry(t *testing.T) {
+	t.Parallel()
+	l := NewLogger(DefaultLoggerConfig())
+	defer l.Close()
+
+	entry := AuditEntry{
+		ID:       "entry-1",
+		Action:   ActionRead,
+		Actor:    "user:admin",
+		Resource: "feature:clicks",
+	}
+	require.NoError(t, l.Log(entry))
+
+	got, err := l.GetEntry("entry-1")
+	require.NoError(t, err)
+	require.Equal(t, "user:admin", got.Actor)
+	require.Equal(t, ActionRead, got.Action)
+	require.Equal(t, "feature:clicks", got.Resource)
+
+	// Nonexistent entry.
+	_, err = l.GetEntry("nonexistent")
+	require.Error(t, err)
+}
+
+func TestGetEntry_AutoID(t *testing.T) {
+	t.Parallel()
+	l := NewLogger(DefaultLoggerConfig())
+	defer l.Close()
+
+	require.NoError(t, l.Log(AuditEntry{
+		Action:   ActionWrite,
+		Actor:    "user:writer",
+		Resource: "feature:revenue",
+	}))
+
+	got, err := l.GetEntry("audit-1")
+	require.NoError(t, err)
+	require.Equal(t, "user:writer", got.Actor)
+}
