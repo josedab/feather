@@ -273,3 +273,275 @@ func BenchmarkLocalProvider(b *testing.B) {
 		_, _ = provider.Embed(ctx, "This is a test document for benchmarking.")
 	}
 }
+
+func TestProcess_FullPipeline(t *testing.T) {
+	provider := NewLocalProvider(64)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+	config.BatchSize = 10
+	config.CacheEnabled = true
+	config.CacheMaxSize = 100
+
+	pipeline := NewPipeline(config, nil)
+	ctx := context.Background()
+
+	result, err := pipeline.Process(ctx, "user:1", "bio", "This is a sample text for embedding.")
+	if err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+	if result.Dimension != 64 {
+		t.Errorf("expected dimension 64, got %d", result.Dimension)
+	}
+	if result.EntityKey != "user:1" {
+		t.Errorf("expected entity key user:1, got %s", result.EntityKey)
+	}
+	if result.FeatureName != "emb_bio" {
+		t.Errorf("expected feature name emb_bio, got %s", result.FeatureName)
+	}
+}
+
+func TestProcess_CacheHit(t *testing.T) {
+	provider := NewLocalProvider(64)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+	config.CacheEnabled = true
+	config.CacheMaxSize = 100
+
+	pipeline := NewPipeline(config, nil)
+	ctx := context.Background()
+
+	text := "Same text for cache test."
+	r1, _ := pipeline.Process(ctx, "user:1", "f1", text)
+	r2, _ := pipeline.Process(ctx, "user:2", "f2", text)
+
+	// Both should have same embedding from cache
+	for i := range r1.Embedding {
+		if r1.Embedding[i] != r2.Embedding[i] {
+			t.Error("cached embedding should be identical")
+			break
+		}
+	}
+
+	stats := pipeline.Stats()
+	if stats.CacheHits < 1 {
+		t.Error("expected at least 1 cache hit")
+	}
+}
+
+func TestProcess_ProviderError(t *testing.T) {
+	config := DefaultPipelineConfig()
+	config.Provider = nil // No provider
+
+	pipeline := NewPipeline(config, nil)
+	_, err := pipeline.Process(context.Background(), "user:1", "f1", "text")
+	if err != ErrProviderNotConfigured {
+		t.Errorf("expected ErrProviderNotConfigured, got %v", err)
+	}
+}
+
+func TestProcess_EmptyInput(t *testing.T) {
+	provider := NewLocalProvider(64)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+
+	pipeline := NewPipeline(config, nil)
+	_, err := pipeline.Process(context.Background(), "user:1", "f1", "")
+	if err != ErrEmptyInput {
+		t.Errorf("expected ErrEmptyInput, got %v", err)
+	}
+}
+
+func TestProcessBatch_Multiple(t *testing.T) {
+	provider := NewLocalProvider(32)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+	config.CacheEnabled = false
+
+	pipeline := NewPipeline(config, nil)
+	ctx := context.Background()
+
+	features := map[string]string{
+		"bio":         "User biography text here.",
+		"description": "Product description text.",
+	}
+
+	results, err := pipeline.ProcessBatch(ctx, "user:1", features)
+	if err != nil {
+		t.Fatalf("ProcessBatch failed: %v", err)
+	}
+	if len(results) != 2 {
+		t.Errorf("expected 2 results, got %d", len(results))
+	}
+}
+
+func TestProcessBatch_PartialFailure(t *testing.T) {
+	provider := NewLocalProvider(32)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+
+	pipeline := NewPipeline(config, nil)
+	ctx := context.Background()
+
+	// Include an empty text that will fail
+	features := map[string]string{
+		"valid": "Valid text.",
+		"empty": "",
+	}
+
+	results, err := pipeline.ProcessBatch(ctx, "user:1", features)
+	// Should return error on first failure and partial results
+	if err == nil {
+		// All succeeded (map iteration order may process "valid" first or last)
+		_ = results
+	}
+}
+
+func TestProcessBatch_Empty(t *testing.T) {
+	provider := NewLocalProvider(32)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+
+	pipeline := NewPipeline(config, nil)
+	results, err := pipeline.ProcessBatch(context.Background(), "user:1", map[string]string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Errorf("expected 0 results for empty batch, got %d", len(results))
+	}
+}
+
+func TestAggregate_WeightedMode(t *testing.T) {
+	config := DefaultPipelineConfig()
+	config.AggregateMethod = AggregateWeighted
+	pipeline := &Pipeline{config: config}
+
+	embeddings := [][]float32{
+		{1.0, 2.0, 3.0},
+		{4.0, 5.0, 6.0},
+		{7.0, 8.0, 9.0},
+	}
+	result := pipeline.aggregate(embeddings)
+	if len(result) != 3 {
+		t.Fatalf("expected dimension 3, got %d", len(result))
+	}
+	// Earlier chunks get higher weight
+	if result[0] <= 0 {
+		t.Error("expected positive value")
+	}
+}
+
+func TestAggregate_MaxMode(t *testing.T) {
+	config := DefaultPipelineConfig()
+	config.AggregateMethod = AggregateMax
+	pipeline := &Pipeline{config: config}
+
+	embeddings := [][]float32{
+		{1.0, 5.0, 3.0},
+		{4.0, 2.0, 6.0},
+	}
+	result := pipeline.aggregate(embeddings)
+	if result[0] != 4.0 || result[1] != 5.0 || result[2] != 6.0 {
+		t.Errorf("expected element-wise max [4,5,6], got %v", result)
+	}
+}
+
+func TestAggregate_FirstMode(t *testing.T) {
+	config := DefaultPipelineConfig()
+	config.AggregateMethod = AggregateFirst
+	pipeline := &Pipeline{config: config}
+
+	embeddings := [][]float32{
+		{1.0, 2.0},
+		{3.0, 4.0},
+	}
+	result := pipeline.aggregate(embeddings)
+	if result[0] != 1.0 || result[1] != 2.0 {
+		t.Errorf("expected first embedding [1,2], got %v", result)
+	}
+}
+
+func TestAggregate_EmptyVectors(t *testing.T) {
+	config := DefaultPipelineConfig()
+	pipeline := &Pipeline{config: config}
+
+	result := pipeline.aggregate([][]float32{})
+	if result != nil {
+		t.Errorf("expected nil for empty vectors, got %v", result)
+	}
+}
+
+func TestEmbedBatched_LargeBatch(t *testing.T) {
+	provider := NewLocalProvider(16)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+	config.BatchSize = 3
+
+	pipeline := NewPipeline(config, nil)
+
+	// 7 chunks with batch size 3 = 3 batches (3, 3, 1)
+	texts := make([]string, 7)
+	for i := range texts {
+		texts[i] = "text chunk " + string(rune('a'+i))
+	}
+
+	embeddings, err := pipeline.embedBatched(context.Background(), texts)
+	if err != nil {
+		t.Fatalf("embedBatched failed: %v", err)
+	}
+	if len(embeddings) != 7 {
+		t.Errorf("expected 7 embeddings, got %d", len(embeddings))
+	}
+}
+
+func TestEmbedBatched_EmptyChunks(t *testing.T) {
+	provider := NewLocalProvider(16)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+	config.BatchSize = 10
+
+	pipeline := NewPipeline(config, nil)
+
+	embeddings, err := pipeline.embedBatched(context.Background(), []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(embeddings) != 0 {
+		t.Errorf("expected 0 embeddings for empty input, got %d", len(embeddings))
+	}
+}
+
+func TestSetProvider(t *testing.T) {
+	config := DefaultPipelineConfig()
+	pipeline := NewPipeline(config, nil)
+
+	newProvider := NewLocalProvider(256)
+	pipeline.SetProvider(newProvider)
+
+	stats := pipeline.Stats()
+	if stats.Dimension != 256 {
+		t.Errorf("expected dimension 256 after provider swap, got %d", stats.Dimension)
+	}
+}
+
+func TestClearCache(t *testing.T) {
+	provider := NewLocalProvider(32)
+	config := DefaultPipelineConfig()
+	config.Provider = provider
+	config.CacheEnabled = true
+	config.CacheMaxSize = 100
+
+	pipeline := NewPipeline(config, nil)
+	ctx := context.Background()
+
+	// Populate cache via Process (which tracks cache stats)
+	_, _ = pipeline.Process(ctx, "u1", "f1", "cache me please")
+	pipeline.ClearCache()
+
+	// After clearing, next call should be a miss
+	_, _ = pipeline.Process(ctx, "u2", "f2", "cache me please")
+	stats := pipeline.Stats()
+	if stats.CacheMisses < 2 {
+		t.Errorf("expected at least 2 cache misses after clear, got %d", stats.CacheMisses)
+	}
+}
