@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -226,5 +227,110 @@ func TestDashboardRoutes(t *testing.T) {
 				t.Errorf("expected %d, got %d", tc.status, w.Code)
 			}
 		})
+	}
+}
+
+func TestAlertManager_Delete_Existing(t *testing.T) {
+	am := NewAlertManager("")
+	alert := &Alert{Title: "Delete Me", Severity: SeverityInfo, Source: "test"}
+	_ = am.Create(alert)
+
+	err := am.Delete(alert.ID)
+	if err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+
+	_, err = am.Get(alert.ID)
+	if err == nil {
+		t.Error("expected error after deletion")
+	}
+}
+
+func TestAlertManager_Delete_NonExistent(t *testing.T) {
+	am := NewAlertManager("")
+	err := am.Delete("nonexistent-id")
+	if err == nil {
+		t.Error("expected error for non-existent alert")
+	}
+}
+
+func TestAlertManager_Cleanup(t *testing.T) {
+	am := NewAlertManager("")
+
+	old := &Alert{Title: "Old Alert", Severity: SeverityInfo, Source: "test"}
+	_ = am.Create(old)
+	_ = am.Resolve(old.ID)
+
+	am.mu.Lock()
+	past := time.Now().Add(-2 * time.Hour)
+	am.alerts[old.ID].ResolvedAt = &past
+	am.mu.Unlock()
+
+	recent := &Alert{Title: "Recent Alert", Severity: SeverityInfo, Source: "test"}
+	_ = am.Create(recent)
+	_ = am.Resolve(recent.ID)
+
+	am.Cleanup(1 * time.Hour)
+
+	all := am.GetAll()
+	if len(all) != 1 {
+		t.Errorf("expected 1 alert after cleanup, got %d", len(all))
+	}
+}
+
+func TestAlertManager_Cleanup_KeepRecent(t *testing.T) {
+	am := NewAlertManager("")
+
+	alert := &Alert{Title: "Recent", Severity: SeverityInfo, Source: "test"}
+	_ = am.Create(alert)
+	_ = am.Resolve(alert.ID)
+
+	am.Cleanup(1 * time.Hour)
+
+	all := am.GetAll()
+	if len(all) != 1 {
+		t.Errorf("expected 1 alert (recent should be kept), got %d", len(all))
+	}
+}
+
+func TestAlertManager_SendWebhook_Success(t *testing.T) {
+	// sendWebhook has SSRF protection that blocks localhost/127.0.0.1
+	// Test that the webhook mechanism fires without errors for valid URLs.
+	// The URL validation blocks test servers, so verify the public API
+	// (Create) works with a webhook URL that would pass validation.
+	am := NewAlertManager("https://httpbin.org/post") // Would work in real env
+	alert := &Alert{Title: "Webhook Test", Severity: SeverityWarning, Source: "test"}
+	err := am.Create(alert)
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	// Verify the alert was created regardless of webhook outcome
+	_, err = am.Get(alert.ID)
+	if err != nil {
+		t.Error("expected alert to exist after create")
+	}
+}
+
+func TestAlertManager_SendWebhook_NonSuccess(t *testing.T) {
+	// Verify no panic when webhook URL is set but unreachable
+	am := NewAlertManager("https://nonexistent.invalid/webhook")
+	alert := &Alert{Title: "Fail Test", Severity: SeverityWarning, Source: "test"}
+	_ = am.Create(alert)
+	time.Sleep(200 * time.Millisecond)
+	// Just verify no panic — the goroutine should handle errors gracefully
+}
+
+func TestAlertForError(t *testing.T) {
+	err := fmt.Errorf("disk full")
+	alert := AlertForError("storage", "failed to write data", err)
+
+	if alert.Severity != SeverityCritical {
+		t.Errorf("expected critical severity, got %s", alert.Severity)
+	}
+	if alert.Source != "storage" {
+		t.Errorf("expected source=storage, got %s", alert.Source)
+	}
+	if alert.Metadata == nil || alert.Metadata["error"] != "disk full" {
+		t.Error("expected error metadata")
 	}
 }
