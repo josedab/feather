@@ -646,6 +646,60 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	// Validate tracing sample rate
+	if c.Tracing.Enabled {
+		if c.Tracing.SampleRate < 0 || c.Tracing.SampleRate > 1.0 {
+			errs = append(errs, ValidationError{
+				Field:   "tracing.sample_rate",
+				Message: fmt.Sprintf("sample rate must be between 0.0 and 1.0, got %f", c.Tracing.SampleRate),
+			})
+		}
+		if c.Tracing.Endpoint == "" {
+			errs = append(errs, ValidationError{
+				Field:   "tracing.endpoint",
+				Message: "endpoint required when tracing is enabled",
+			})
+		}
+	}
+
+	// Validate timeouts are positive
+	if c.Serving.HTTP.ReadTimeout < 0 {
+		errs = append(errs, ValidationError{
+			Field:   "serving.http.read_timeout",
+			Message: "read timeout must not be negative",
+		})
+	}
+	if c.Serving.HTTP.WriteTimeout < 0 {
+		errs = append(errs, ValidationError{
+			Field:   "serving.http.write_timeout",
+			Message: "write timeout must not be negative",
+		})
+	}
+
+	// Validate gRPC max concurrent streams
+	if c.Serving.GRPC.MaxConcurrent < 0 {
+		errs = append(errs, ValidationError{
+			Field:   "serving.grpc.max_concurrent",
+			Message: fmt.Sprintf("max concurrent must not be negative, got %d", c.Serving.GRPC.MaxConcurrent),
+		})
+	}
+
+	// Validate sync config
+	if c.Sync.Enabled {
+		if c.Sync.BatchSize <= 0 {
+			errs = append(errs, ValidationError{
+				Field:   "sync.batch_size",
+				Message: fmt.Sprintf("batch size must be positive, got %d", c.Sync.BatchSize),
+			})
+		}
+		if c.Sync.SyncInterval <= 0 {
+			errs = append(errs, ValidationError{
+				Field:   "sync.sync_interval",
+				Message: "sync interval must be positive",
+			})
+		}
+	}
+
 	// Check for port conflicts
 	ports := make(map[int]string)
 	if c.Serving.HTTP.Port > 0 {
