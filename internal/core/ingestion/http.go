@@ -302,14 +302,16 @@ func writeError(ctx context.Context, w http.ResponseWriter, status int, message 
 	writeJSON(ctx, w, status, map[string]string{"error": message})
 }
 
-// toFloat64 converts a value to float64 if possible.
-// rateLimiter implements a simple token bucket rate limiter per client.
+// rateLimiter implements a token bucket rate limiter per client with a global cap.
 type rateLimiter struct {
-	mu       sync.Mutex
-	clients  map[string]*tokenBucket
-	rps      int
-	burst    int
-	cleanupT time.Time
+	mu         sync.Mutex
+	clients    map[string]*tokenBucket
+	rps        int
+	burst      int
+	maxClients int // cap on tracked clients to prevent memory exhaustion
+	globalRPS  int // global requests-per-second across all clients
+	globalBkt  *tokenBucket
+	cleanupT   time.Time
 }
 
 type tokenBucket struct {
@@ -318,11 +320,19 @@ type tokenBucket struct {
 }
 
 func newRateLimiter(rps, burst int) *rateLimiter {
+	now := time.Now()
+	globalRPS := rps * 100 // global limit = 100x single client
 	return &rateLimiter{
-		clients:  make(map[string]*tokenBucket),
-		rps:      rps,
-		burst:    burst,
-		cleanupT: time.Now(),
+		clients:    make(map[string]*tokenBucket),
+		rps:        rps,
+		burst:      burst,
+		maxClients: 10000,
+		globalRPS:  globalRPS,
+		globalBkt: &tokenBucket{
+			tokens:     float64(globalRPS),
+			lastRefill: now,
+		},
+		cleanupT: now,
 	}
 }
 
@@ -331,6 +341,17 @@ func (rl *rateLimiter) allow(clientID string) bool {
 	defer rl.mu.Unlock()
 
 	now := time.Now()
+
+	// Check global rate limit first
+	gElapsed := now.Sub(rl.globalBkt.lastRefill).Seconds()
+	rl.globalBkt.tokens += gElapsed * float64(rl.globalRPS)
+	if rl.globalBkt.tokens > float64(rl.globalRPS) {
+		rl.globalBkt.tokens = float64(rl.globalRPS)
+	}
+	rl.globalBkt.lastRefill = now
+	if rl.globalBkt.tokens < 1 {
+		return false
+	}
 
 	// Periodic cleanup of stale clients
 	if now.Sub(rl.cleanupT) > time.Minute {
@@ -344,6 +365,10 @@ func (rl *rateLimiter) allow(clientID string) bool {
 
 	bucket, ok := rl.clients[clientID]
 	if !ok {
+		// Cap max tracked clients to prevent memory exhaustion
+		if len(rl.clients) >= rl.maxClients {
+			return false
+		}
 		bucket = &tokenBucket{
 			tokens:     float64(rl.burst),
 			lastRefill: now,
@@ -365,5 +390,6 @@ func (rl *rateLimiter) allow(clientID string) bool {
 	}
 
 	bucket.tokens--
+	rl.globalBkt.tokens--
 	return true
 }
