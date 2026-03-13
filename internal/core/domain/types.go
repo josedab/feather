@@ -287,6 +287,13 @@ type GetFeaturesRequest struct {
 // GetFeaturesResponse returns feature vectors.
 type GetFeaturesResponse struct {
 	Entities map[string]*EntityFeatures `json:"entities"`
+	Errors   []EntityError              `json:"errors,omitempty"`
+}
+
+// EntityError reports a per-entity error in batch operations.
+type EntityError struct {
+	Entity  string `json:"entity"`
+	Message string `json:"message"`
 }
 
 // EntityFeatures contains features for one entity.
