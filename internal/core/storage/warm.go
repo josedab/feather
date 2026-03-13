@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -203,6 +206,7 @@ func (w *WarmTier) GetAsOf(entityKey string, features []string, asOf time.Time) 
 func (w *WarmTier) ExpireOlderThan(retention time.Duration) (int, error) {
 	cutoff := time.Now().Add(-retention).UnixNano()
 	deleted := 0
+	skipped := 0
 
 	err := w.db.Update(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
@@ -215,10 +219,14 @@ func (w *WarmTier) ExpireOlderThan(retention time.Duration) (int, error) {
 			item := it.Item()
 			key := item.Key()
 
-			// Parse timestamp from key
-			var timestamp int64
-			_, err := fmt.Sscanf(string(key), "h:%*[^:]:%*[^:]:%d", &timestamp)
+			// Parse timestamp from history key format "h:<entity>:<feature>:<timestamp>"
+			timestamp, err := parseHistoryKeyTimestamp(string(key))
 			if err != nil {
+				skipped++
+				if skipped <= 10 {
+					slog.Warn("skipping malformed history key during expiration",
+						"key", string(key), "error", err)
+				}
 				continue
 			}
 
@@ -232,7 +240,25 @@ func (w *WarmTier) ExpireOlderThan(retention time.Duration) (int, error) {
 		return nil
 	})
 
+	if skipped > 0 {
+		slog.Warn("skipped malformed history keys during expiration", "count", skipped)
+	}
+
 	return deleted, err
+}
+
+// parseHistoryKeyTimestamp extracts the timestamp from a history key.
+// History keys have format "h:<entity>:<feature>:<timestamp>".
+func parseHistoryKeyTimestamp(key string) (int64, error) {
+	lastColon := strings.LastIndex(key, ":")
+	if lastColon < 0 || lastColon == len(key)-1 {
+		return 0, fmt.Errorf("no timestamp segment in key %q", key)
+	}
+	ts, err := strconv.ParseInt(key[lastColon+1:], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid timestamp in key %q: %w", key, err)
+	}
+	return ts, nil
 }
 
 // Close closes the warm tier.
