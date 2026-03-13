@@ -38,6 +38,7 @@ var (
 	ErrUnauthorized    = errors.New("unauthorized")
 	ErrForbidden       = errors.New("forbidden")
 	ErrTimeout         = errors.New("operation timed out")
+	ErrNoData          = errors.New("no data in window")
 )
 
 // ValidationError represents a validation failure with field details.
