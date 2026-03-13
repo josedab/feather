@@ -149,7 +149,9 @@ func TestDispatchHTTPDelivery(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	d := NewDispatcher(DefaultDispatcherConfig())
+	cfg := DefaultDispatcherConfig()
+	cfg.AllowedCIDRs = []string{"127.0.0.0/8"} // Allow localhost for testing
+	d := NewDispatcher(cfg)
 	require.NoError(t, d.RegisterWebhook(WebhookConfig{
 		ID:     "wh-http",
 		Name:   "HTTP Hook",
@@ -178,7 +180,9 @@ func TestDispatchHTTPFailure(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	d := NewDispatcher(DefaultDispatcherConfig())
+	cfg := DefaultDispatcherConfig()
+	cfg.AllowedCIDRs = []string{"127.0.0.0/8"} // Allow localhost for testing
+	d := NewDispatcher(cfg)
 	require.NoError(t, d.RegisterWebhook(WebhookConfig{
 		ID:     "wh-fail",
 		Name:   "Failing Hook",

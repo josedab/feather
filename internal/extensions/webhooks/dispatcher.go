@@ -61,10 +61,11 @@ type DeliveryResult struct {
 
 // DispatcherConfig configures the webhook dispatcher.
 type DispatcherConfig struct {
-	MaxWebhooks    int `json:"max_webhooks"`
-	MaxRetries     int `json:"max_retries"`
-	RetryDelayMs   int `json:"retry_delay_ms"`
-	DeadLetterSize int `json:"dead_letter_size"`
+	MaxWebhooks    int      `json:"max_webhooks"`
+	MaxRetries     int      `json:"max_retries"`
+	RetryDelayMs   int      `json:"retry_delay_ms"`
+	DeadLetterSize int      `json:"dead_letter_size"`
+	AllowedCIDRs   []string `json:"allowed_cidrs,omitempty"` // CIDRs that bypass SSRF protection
 }
 
 // DefaultDispatcherConfig returns sensible defaults.
@@ -204,19 +205,19 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 		}
 
 		if strings.HasPrefix(wh.URL, "http://") || strings.HasPrefix(wh.URL, "https://") {
-			if err := urlvalidation.ValidateWebhookURL(wh.URL); err != nil {
+			if err := urlvalidation.ValidateWebhookURLWithAllowlist(wh.URL, d.config.AllowedCIDRs); err != nil {
 				slog.Warn("webhook URL blocked by SSRF protection", "webhook_id", wh.ID, "error", err)
 				result.Success = false
 				result.Error = "webhook URL blocked by security policy"
 				d.totalFailed.Add(1)
-				d.deadLetter = append(d.deadLetter, event)
+				d.addDeadLetter(event)
 			} else {
 				body, err := json.Marshal(event)
 				if err != nil {
 					result.Success = false
 					result.Error = fmt.Sprintf("failed to marshal event: %v", err)
 					d.totalFailed.Add(1)
-					d.deadLetter = append(d.deadLetter, event)
+					d.addDeadLetter(event)
 				} else {
 					resp, err := d.httpClient.Post(wh.URL, "application/json", bytes.NewReader(body))
 					if err != nil {
@@ -224,7 +225,7 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 						result.StatusCode = 0
 						result.Error = err.Error()
 						d.totalFailed.Add(1)
-						d.deadLetter = append(d.deadLetter, event)
+						d.addDeadLetter(event)
 					} else {
 						func() {
 							defer func() {
@@ -236,7 +237,7 @@ func (d *Dispatcher) Dispatch(event Event) []DeliveryResult {
 								result.Success = false
 								result.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
 								d.totalFailed.Add(1)
-								d.deadLetter = append(d.deadLetter, event)
+								d.addDeadLetter(event)
 							} else {
 								result.Success = true
 							}
@@ -332,4 +333,14 @@ func (d *Dispatcher) matchesEvent(wh *WebhookConfig, eventType EventType) bool {
 		}
 	}
 	return false
+}
+
+// addDeadLetter appends an event to the dead-letter queue, evicting the oldest
+// entry if the queue exceeds the configured size limit.
+// Must be called with d.mu held.
+func (d *Dispatcher) addDeadLetter(event Event) {
+	if d.config.DeadLetterSize > 0 && len(d.deadLetter) >= d.config.DeadLetterSize {
+		d.deadLetter = d.deadLetter[1:]
+	}
+	d.deadLetter = append(d.deadLetter, event)
 }
