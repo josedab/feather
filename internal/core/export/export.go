@@ -245,12 +245,21 @@ func (e *Exporter) exportCSV(ctx context.Context, req ExportRequest, w io.Writer
 
 func (e *Exporter) exportJSON(ctx context.Context, req ExportRequest, w io.Writer) (*ExportResult, error) {
 	result := &ExportResult{}
-	rows := make([]TrainingRow, 0)
 
 	entities := req.Entities
 	if len(entities) == 0 {
 		return nil, fmt.Errorf("entity list required for export")
 	}
+
+	// Stream JSON array: write opening bracket, then each row, then closing bracket.
+	// This avoids buffering all rows in memory for large exports.
+	if _, err := w.Write([]byte("[\n")); err != nil {
+		return nil, fmt.Errorf("writing JSON array start: %w", err)
+	}
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	first := true
 
 	for _, entityKey := range entities {
 		select {
@@ -284,20 +293,28 @@ func (e *Exporter) exportJSON(ctx context.Context, req ExportRequest, w io.Write
 			}
 		}
 
-		rows = append(rows, TrainingRow{
+		if !first {
+			if _, err := w.Write([]byte(",\n")); err != nil {
+				return nil, fmt.Errorf("writing JSON separator: %w", err)
+			}
+		}
+		first = false
+
+		row := TrainingRow{
 			EntityKey: entityKey,
 			Timestamp: maxTimestamp,
 			Features:  featureMap,
-		})
+		}
+		if err := encoder.Encode(row); err != nil {
+			return nil, fmt.Errorf("encoding JSON row: %w", err)
+		}
 
 		result.EntitiesExported++
 		result.RowsWritten++
 	}
 
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(rows); err != nil {
-		return nil, fmt.Errorf("encoding JSON: %w", err)
+	if _, err := w.Write([]byte("]\n")); err != nil {
+		return nil, fmt.Errorf("writing JSON array end: %w", err)
 	}
 
 	result.FeaturesExported = len(req.Features)
