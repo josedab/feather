@@ -10,12 +10,13 @@ import (
 
 // CircuitBreaker implements a simple circuit breaker pattern.
 type CircuitBreaker struct {
-	failures    int64
-	successes   int64
-	state       int32 // 0=closed, 1=open, 2=half-open
-	lastFailure int64
-	threshold   int64
-	timeout     time.Duration
+	failures        int64
+	successes       int64
+	state           int32 // 0=closed, 1=open, 2=half-open
+	lastFailure     int64
+	halfOpenAllowed int32 // 1=probe slot available, 0=probe in flight
+	threshold       int64
+	timeout         time.Duration
 }
 
 // CircuitBreakerState represents the circuit breaker state.
@@ -47,13 +48,16 @@ func (cb *CircuitBreaker) Allow() bool {
 		// Check if timeout has passed
 		lastFailure := atomic.LoadInt64(&cb.lastFailure)
 		if time.Since(time.Unix(0, lastFailure)) > cb.timeout {
-			// Transition to half-open
-			atomic.CompareAndSwapInt32(&cb.state, int32(CircuitOpen), int32(CircuitHalfOpen))
-			return true
+			// Transition to half-open, allow exactly one probe
+			if atomic.CompareAndSwapInt32(&cb.state, int32(CircuitOpen), int32(CircuitHalfOpen)) {
+				atomic.StoreInt32(&cb.halfOpenAllowed, 0) // probe slot consumed by this caller
+				return true
+			}
 		}
 		return false
 	case CircuitHalfOpen:
-		return true
+		// Only allow one probe request in half-open state
+		return atomic.CompareAndSwapInt32(&cb.halfOpenAllowed, 1, 0)
 	}
 	return true
 }
@@ -64,7 +68,7 @@ func (cb *CircuitBreaker) RecordSuccess() {
 	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
 
 	if state == CircuitHalfOpen {
-		// Reset failures and close circuit
+		// Probe succeeded: reset failures and close circuit
 		atomic.StoreInt64(&cb.failures, 0)
 		atomic.StoreInt32(&cb.state, int32(CircuitClosed))
 	}
@@ -78,8 +82,9 @@ func (cb *CircuitBreaker) RecordFailure() {
 	state := CircuitBreakerState(atomic.LoadInt32(&cb.state))
 
 	if state == CircuitHalfOpen {
-		// Back to open
+		// Probe failed: reopen circuit and reset probe slot for next timeout
 		atomic.StoreInt32(&cb.state, int32(CircuitOpen))
+		atomic.StoreInt32(&cb.halfOpenAllowed, 1)
 	} else if state == CircuitClosed && failures >= cb.threshold {
 		// Open the circuit
 		atomic.StoreInt32(&cb.state, int32(CircuitOpen))
