@@ -95,6 +95,9 @@ func (r *RingBuffer) PopOldest() {
 	if r.size == 0 {
 		return
 	}
+	// Zero out the oldest slot to prevent stale data from being readable
+	oldestIdx := (r.head - r.size + r.capacity) % r.capacity
+	r.buckets[oldestIdx] = AggregationBucket{}
 	r.size--
 }
 

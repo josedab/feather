@@ -237,27 +237,34 @@ func (w *WindowManager) Compute(function domain.AggFunction) (float64, error) {
 	})
 
 	if !hasData {
-		return 0, nil
+		return 0, domain.ErrNoData
 	}
 
 	switch function {
 	case domain.AggCount:
 		return float64(count), nil
 	case domain.AggSum:
+		if math.IsInf(sum, 0) || math.IsNaN(sum) {
+			return 0, fmt.Errorf("aggregation overflow: sum is %v", sum)
+		}
 		return sum, nil
 	case domain.AggAvg:
 		if count == 0 {
-			return 0, nil
+			return 0, domain.ErrNoData
 		}
-		return sum / float64(count), nil
+		avg := sum / float64(count)
+		if math.IsInf(avg, 0) || math.IsNaN(avg) {
+			return 0, fmt.Errorf("aggregation overflow: avg is %v", avg)
+		}
+		return avg, nil
 	case domain.AggMin:
 		if minVal == math.MaxFloat64 {
-			return 0, nil
+			return 0, domain.ErrNoData
 		}
 		return minVal, nil
 	case domain.AggMax:
 		if maxVal == -math.MaxFloat64 {
-			return 0, nil
+			return 0, domain.ErrNoData
 		}
 		return maxVal, nil
 	case domain.AggLast:
