@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"regexp"
 	"sync"
 	"time"
 
@@ -289,6 +290,22 @@ func validateValue(spec *domain.FeatureSpec, value interface{}) error {
 				return &domain.ValidationError{
 					Field:   spec.Name,
 					Message: fmt.Sprintf("value %q not in allowed values", strVal),
+				}
+			}
+		}
+
+		if v.Regex != "" {
+			re, err := regexp.Compile(v.Regex)
+			if err != nil {
+				return &domain.ValidationError{
+					Field:   spec.Name,
+					Message: fmt.Sprintf("invalid regex pattern %q: %v", v.Regex, err),
+				}
+			}
+			if !re.MatchString(strVal) {
+				return &domain.ValidationError{
+					Field:   spec.Name,
+					Message: fmt.Sprintf("value %q does not match pattern %q", strVal, v.Regex),
 				}
 			}
 		}
