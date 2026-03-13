@@ -41,6 +41,12 @@ func isPrivateIP(ip net.IP) bool {
 // ValidateWebhookURL checks that a URL is safe for outbound HTTP requests.
 // It rejects URLs targeting private/reserved IP ranges to prevent SSRF.
 func ValidateWebhookURL(rawURL string) error {
+	return ValidateWebhookURLWithAllowlist(rawURL, nil)
+}
+
+// ValidateWebhookURLWithAllowlist checks URL safety while allowing specific CIDRs.
+// Allowed CIDRs bypass the private IP check (useful for testing and internal services).
+func ValidateWebhookURLWithAllowlist(rawURL string, allowedCIDRs []string) error {
 	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
 		return fmt.Errorf("URL must use http or https scheme")
 	}
@@ -55,6 +61,15 @@ func ValidateWebhookURL(rawURL string) error {
 		return fmt.Errorf("URL must contain a hostname")
 	}
 
+	// Parse allowed CIDRs
+	var allowed []*net.IPNet
+	for _, cidr := range allowedCIDRs {
+		_, block, err := net.ParseCIDR(cidr)
+		if err == nil {
+			allowed = append(allowed, block)
+		}
+	}
+
 	// Resolve hostname to IP addresses
 	ips, err := net.LookupHost(host)
 	if err != nil {
@@ -66,10 +81,19 @@ func ValidateWebhookURL(rawURL string) error {
 		if ip == nil {
 			continue
 		}
-		if isPrivateIP(ip) {
+		if isPrivateIP(ip) && !isAllowed(ip, allowed) {
 			return fmt.Errorf("URL resolves to private/reserved IP address")
 		}
 	}
 
 	return nil
+}
+
+func isAllowed(ip net.IP, allowed []*net.IPNet) bool {
+	for _, block := range allowed {
+		if block.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
