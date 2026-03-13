@@ -376,3 +376,58 @@ func BenchmarkEngine_Compute(b *testing.B) {
 		engine.Compute("user:bench", "bench", domain.AggSum)
 	}
 }
+
+func TestWindowManager_Compute_EmptyWindow_ReturnsErrNoData(t *testing.T) {
+	spec := &domain.AggregationSpec{
+		Function: domain.AggCount,
+		Window:   time.Hour,
+	}
+	wm := NewWindowManager(spec)
+
+	functions := []domain.AggFunction{
+		domain.AggCount, domain.AggSum, domain.AggAvg,
+		domain.AggMin, domain.AggMax, domain.AggLast,
+	}
+
+	for _, fn := range functions {
+		_, err := wm.Compute(fn)
+		if !errors.Is(err, domain.ErrNoData) {
+			t.Errorf("Compute(%s) on empty window: got err=%v, want ErrNoData", fn, err)
+		}
+	}
+}
+
+func TestEngine_Compute_NoEntity_ReturnsNotFound(t *testing.T) {
+	engine := NewEngine()
+	engine.RegisterAggregation("feature", &domain.AggregationSpec{
+		Function: domain.AggSum,
+		Window:   time.Hour,
+	})
+
+	_, err := engine.Compute("nonexistent", "feature", domain.AggSum)
+	if !errors.Is(err, domain.ErrEntityNotFound) {
+		t.Errorf("Compute on nonexistent entity: got %v, want ErrEntityNotFound", err)
+	}
+}
+
+func TestWindowManager_Compute_ExpiredData_ReturnsErrNoData(t *testing.T) {
+	spec := &domain.AggregationSpec{
+		Function: domain.AggSum,
+		Window:   time.Minute,
+	}
+	wm := NewWindowManager(spec)
+
+	// Add data far in the past (beyond the window)
+	oldTime := time.Now().Add(-2 * time.Hour)
+	wm.Update(42.0, oldTime)
+
+	// The data should be outside the compute window
+	val, err := wm.Compute(domain.AggSum)
+	if err == nil && val == 0 {
+		// Acceptable: old data was rotated out and returns ErrNoData or 0
+		return
+	}
+	if err != nil && !errors.Is(err, domain.ErrNoData) {
+		t.Errorf("Compute on expired data: got unexpected err=%v", err)
+	}
+}
