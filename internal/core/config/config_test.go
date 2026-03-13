@@ -902,3 +902,119 @@ func indexOf(s string, c byte) int {
 	}
 	return -1
 }
+
+func TestConfig_Validate_TracingSampleRate(t *testing.T) {
+	tests := []struct {
+		name       string
+		sampleRate float64
+		wantErr    bool
+	}{
+		{"valid zero", 0.0, false},
+		{"valid mid", 0.5, false},
+		{"valid one", 1.0, false},
+		{"negative", -0.1, true},
+		{"too high", 1.5, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				Tracing: TracingConfig{
+					Enabled:    true,
+					SampleRate: tt.sampleRate,
+					Endpoint:   "localhost:4317",
+				},
+			}
+			err := cfg.Validate()
+			if tt.wantErr && err == nil {
+				t.Error("expected validation error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestConfig_Validate_TracingEndpointRequired(t *testing.T) {
+	cfg := &Config{
+		Tracing: TracingConfig{
+			Enabled:    true,
+			SampleRate: 0.5,
+			Endpoint:   "",
+		},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Error("expected validation error for missing tracing endpoint")
+	}
+}
+
+func TestConfig_Validate_NegativeTimeouts(t *testing.T) {
+	cfg := &Config{
+		Serving: ServingConfig{
+			HTTP: HTTPServingConfig{
+				Port:        8080,
+				ReadTimeout: -1 * time.Second,
+			},
+		},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Error("expected validation error for negative read timeout")
+	}
+
+	cfg2 := &Config{
+		Serving: ServingConfig{
+			HTTP: HTTPServingConfig{
+				Port:         8080,
+				WriteTimeout: -1 * time.Second,
+			},
+		},
+	}
+	err = cfg2.Validate()
+	if err == nil {
+		t.Error("expected validation error for negative write timeout")
+	}
+}
+
+func TestConfig_Validate_NegativeMaxConcurrent(t *testing.T) {
+	cfg := &Config{
+		Serving: ServingConfig{
+			GRPC: GRPCServingConfig{
+				Port:          50051,
+				MaxConcurrent: -1,
+			},
+		},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Error("expected validation error for negative max concurrent")
+	}
+}
+
+func TestConfig_Validate_SyncConfig(t *testing.T) {
+	cfg := &Config{
+		Sync: SyncConfig{
+			Enabled:      true,
+			BatchSize:    0,
+			SyncInterval: 5 * time.Second,
+		},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Error("expected validation error for zero batch size")
+	}
+
+	cfg2 := &Config{
+		Sync: SyncConfig{
+			Enabled:      true,
+			BatchSize:    100,
+			SyncInterval: 0,
+		},
+	}
+	err = cfg2.Validate()
+	if err == nil {
+		t.Error("expected validation error for zero sync interval")
+	}
+}
