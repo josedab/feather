@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -360,20 +361,35 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	const maxBatchEntities = 10000
+	if len(req.Entities) > maxBatchEntities {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed,
+			fmt.Sprintf("too many entities: %d exceeds maximum %d", len(req.Entities), maxBatchEntities))
+		return
+	}
+
 	result := domain.GetFeaturesResponse{
 		Entities: make(map[string]*domain.EntityFeatures),
 	}
 
+	var entityErrors []domain.EntityError
 	for _, entityKey := range req.Entities {
 		features, err := s.getEntityFeatures(r.Context(), entityKey, req.Features)
 		if err != nil {
 			if domain.IsNotFound(err) {
 				continue
 			}
-			s.writeErrorFromErr(r.Context(), w, err)
-			return
+			entityErrors = append(entityErrors, domain.EntityError{
+				Entity:  entityKey,
+				Message: err.Error(),
+			})
+			continue
 		}
 		result.Entities[entityKey] = features
+	}
+
+	if len(entityErrors) > 0 {
+		result.Errors = entityErrors
 	}
 
 	s.writeAPIResponse(w, r, http.StatusOK, result)
@@ -643,6 +659,9 @@ func (s *HTTPServer) getEntityFeatures(ctx context.Context, entityKey string, fe
 					Value:     val,
 					Timestamp: time.Now().UnixNano(),
 				}
+			} else if !domain.IsNotFound(err) && !errors.Is(err, domain.ErrNoData) {
+				logging.FromContext(ctx, nil).Warn("aggregation compute failed",
+					"entity", entityKey, "feature", name, "error", err)
 			}
 		}
 	}

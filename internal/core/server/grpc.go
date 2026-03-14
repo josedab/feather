@@ -149,6 +149,9 @@ func (s *GRPCServer) IsTLSEnabled() bool {
 	return s.tlsConfig != nil && s.tlsConfig.Enabled
 }
 
+// maxGRPCEntities is the maximum number of entities allowed per gRPC request.
+const maxGRPCEntities = 10000
+
 // GetFeatures retrieves features for one or more entities.
 func (s *GRPCServer) GetFeatures(ctx context.Context, req *pb.GetFeaturesRequest) (*pb.GetFeaturesResponse, error) {
 	start := time.Now()
@@ -163,6 +166,9 @@ func (s *GRPCServer) GetFeatures(ctx context.Context, req *pb.GetFeaturesRequest
 	}
 	if len(req.GetFeatures()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "features required")
+	}
+	if len(req.GetEntities()) > maxGRPCEntities {
+		return nil, status.Errorf(codes.InvalidArgument, "too many entities: %d exceeds maximum %d", len(req.GetEntities()), maxGRPCEntities)
 	}
 
 	result := &pb.GetFeaturesResponse{
@@ -191,6 +197,10 @@ func (s *GRPCServer) GetFeaturesStream(req *pb.GetFeaturesRequest, stream grpc.S
 			s.metrics.RecordGRPCLatency("GetFeaturesStream", time.Since(start))
 		}
 	}()
+
+	if len(req.GetEntities()) > maxGRPCEntities {
+		return status.Errorf(codes.InvalidArgument, "too many entities: %d exceeds maximum %d", len(req.GetEntities()), maxGRPCEntities)
+	}
 
 	for _, entityKey := range req.GetEntities() {
 		features, err := s.getFeaturesForEntity(stream.Context(), entityKey, req.GetFeatures())
