@@ -93,7 +93,12 @@ func (h *StreamingHandler) handleSSE(w http.ResponseWriter, r *http.Request) {
 			"subscription_id": sub.ID,
 		},
 	}
-	data, _ := json.Marshal(connEvent)
+	data, err := json.Marshal(connEvent)
+	if err != nil {
+		slog.Error("failed to marshal SSE connected event", "error", err)
+		h.writeError(r.Context(), w, http.StatusInternalServerError, "failed to marshal event")
+		return
+	}
 	if _, err := w.Write([]byte("event: connected\ndata: " + string(data) + "\n\n")); err != nil {
 		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
 		return
