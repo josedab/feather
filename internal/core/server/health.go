@@ -242,14 +242,25 @@ func (h *HealthChecker) LivenessCheck() bool {
 	return h.IsHealthy()
 }
 
-// ReadinessCheck performs a readiness check.
+// ReadinessCheck performs a readiness check by verifying the store is accessible
+// and responsive. Goes beyond a nil check by probing the warm tier.
 func (h *HealthChecker) ReadinessCheck() bool {
 	if !h.IsReady() {
 		return false
 	}
 
-	// Verify we can access the store
 	if h.store == nil {
+		return false
+	}
+
+	// Probe the warm tier to verify actual I/O functionality
+	latency, err := h.store.CheckWarmHealth()
+	if err != nil {
+		return false
+	}
+
+	// Reject if warm tier latency exceeds a reasonable threshold
+	if latency > 500*time.Millisecond {
 		return false
 	}
 
