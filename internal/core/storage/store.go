@@ -90,6 +90,8 @@ type Store struct {
 	warmWrites      chan warmWriteRequest
 	warmWriteErrors int64
 	warmWriteDrops  int64
+	promotionErrors int64
+	onTTLCycle      func()
 	wg              sync.WaitGroup
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -127,6 +129,8 @@ type StoreMetrics struct {
 	WarmWriteErrors int64
 	// WarmWriteDrops is the number of warm tier writes dropped due to shutdown.
 	WarmWriteDrops int64
+	// PromotionErrors is the number of warm-to-hot tier promotion failures.
+	PromotionErrors int64
 }
 
 // StoreOptions configures the store's behavior and resource limits.
@@ -150,6 +154,11 @@ type StoreOptions struct {
 	// WarmWriteBuffer is the size of the warm tier write queue.
 	// Defaults to 1024 if not specified.
 	WarmWriteBuffer int
+
+	// OnTTLCycle is an optional callback invoked on each TTL check cycle.
+	// Use this to run periodic cleanup tasks (e.g., aggregation window eviction)
+	// that should happen alongside TTL processing.
+	OnTTLCycle func()
 }
 
 type warmWriteRequest struct {
@@ -175,13 +184,14 @@ func NewStore(ctx context.Context, opts StoreOptions, schema SchemaRegistry) (*S
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Store{
-		hot:     hot,
-		warm:    warm,
-		schema:  schema,
-		metrics: &StoreMetrics{},
-		ctx:     ctx,
-		cancel:  cancel,
-		logger:  slog.Default(),
+		hot:        hot,
+		warm:       warm,
+		schema:     schema,
+		metrics:    &StoreMetrics{},
+		onTTLCycle: opts.OnTTLCycle,
+		ctx:        ctx,
+		cancel:     cancel,
+		logger:     slog.Default(),
 	}
 
 	// Start background tasks
@@ -211,6 +221,10 @@ func NewStore(ctx context.Context, opts StoreOptions, schema SchemaRegistry) (*S
 
 // Get retrieves features for an entity.
 func (s *Store) Get(ctx context.Context, entityKey string, features []string) (map[string]*domain.FeatureValue, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("store get: %w", err)
+	}
+
 	// Try hot tier first
 	result, err := s.hot.Get(entityKey, features)
 	if err != nil && !errors.Is(err, domain.ErrEntityNotFound) {
@@ -242,6 +256,9 @@ func (s *Store) Get(ctx context.Context, entityKey string, features []string) (m
 
 	// Check warm tier for missing features
 	if len(missing) > 0 {
+		if err := ctx.Err(); err != nil {
+			return nil, fmt.Errorf("store get (before warm lookup): %w", err)
+		}
 		warmResult, err := s.warm.Get(entityKey, missing)
 		if err != nil {
 			return nil, err
@@ -251,7 +268,8 @@ func (s *Store) Get(ctx context.Context, entityKey string, features []string) (m
 		}
 		if len(warmResult) > 0 {
 			if err := s.hot.Put(entityKey, warmResult); err != nil {
-				slog.Debug("failed to promote warm result to hot tier", "entity", entityKey, "error", err)
+				atomic.AddInt64(&s.promotionErrors, 1)
+				slog.Warn("failed to promote warm result to hot tier", "entity", entityKey, "error", err)
 			}
 		}
 	}
@@ -261,11 +279,18 @@ func (s *Store) Get(ctx context.Context, entityKey string, features []string) (m
 
 // GetAsOf retrieves features as of a specific timestamp.
 func (s *Store) GetAsOf(ctx context.Context, entityKey string, features []string, asOf time.Time) (map[string]*domain.FeatureValue, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("store get_as_of: %w", err)
+	}
 	return s.warm.GetAsOf(entityKey, features, asOf)
 }
 
 // Put stores features for an entity in both tiers.
 func (s *Store) Put(ctx context.Context, entityKey string, features map[string]*domain.FeatureValue) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("store put: %w", err)
+	}
+
 	// Write to hot tier first
 	if err := s.hot.Put(entityKey, features); err != nil {
 		return fmt.Errorf("putting features to hot tier: %w", err)
@@ -279,6 +304,10 @@ func (s *Store) Put(ctx context.Context, entityKey string, features map[string]*
 
 // Delete removes an entity from both tiers.
 func (s *Store) Delete(ctx context.Context, entityKey string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("store delete: %w", err)
+	}
+
 	if err := s.hot.Delete(entityKey); err != nil {
 		return fmt.Errorf("deleting entity from hot tier: %w", err)
 	}
@@ -342,6 +371,7 @@ func (s *Store) Metrics() StoreMetrics {
 		HotMisses:       hotMetrics.Misses,
 		WarmWriteErrors: atomic.LoadInt64(&s.warmWriteErrors),
 		WarmWriteDrops:  atomic.LoadInt64(&s.warmWriteDrops),
+		PromotionErrors: atomic.LoadInt64(&s.promotionErrors),
 	}
 }
 
@@ -361,8 +391,20 @@ func (s *Store) ttlLoop(ctx context.Context, interval time.Duration) {
 				for _, group := range s.schema.ListGroups() {
 					if group.TTL > 0 {
 						s.hot.ExpireOlderThan(group.TTL)
+						if deleted, err := s.warm.ExpireOlderThan(group.TTL); err != nil {
+							slog.Warn("warm tier expiration failed",
+								"group", group.Name, "error", err)
+						} else if deleted > 0 {
+							slog.Debug("warm tier expired history entries",
+								"group", group.Name, "deleted", deleted)
+						}
 					}
 				}
+			}
+
+			// Run optional periodic callback (e.g., aggregation window eviction)
+			if s.onTTLCycle != nil {
+				s.onTTLCycle()
 			}
 		}
 	}
