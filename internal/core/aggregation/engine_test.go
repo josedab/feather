@@ -431,3 +431,90 @@ func TestWindowManager_Compute_ExpiredData_ReturnsErrNoData(t *testing.T) {
 		t.Errorf("Compute on expired data: got unexpected err=%v", err)
 	}
 }
+
+func TestEngine_EvictInactive(t *testing.T) {
+engine := NewEngine()
+
+spec := &domain.AggregationSpec{
+Function: domain.AggSum,
+Window:   time.Minute,
+}
+engine.RegisterAggregation("clicks", spec)
+
+// Add data for two entities
+now := time.Now()
+engine.Update("user:1", "clicks", 1.0, now)
+engine.Update("user:2", "clicks", 2.0, now.Add(-2*time.Hour))
+
+if engine.WindowCount() != 2 {
+t.Fatalf("WindowCount = %d, want 2", engine.WindowCount())
+}
+
+// Evict entities inactive for more than 1 hour
+evicted := engine.EvictInactive(time.Hour)
+
+if evicted != 1 {
+t.Errorf("evicted = %d, want 1", evicted)
+}
+if engine.WindowCount() != 1 {
+t.Errorf("WindowCount after eviction = %d, want 1", engine.WindowCount())
+}
+
+// user:1 should still be computable
+val, err := engine.Compute("user:1", "clicks", domain.AggSum)
+if err != nil {
+t.Errorf("Compute user:1 after eviction: %v", err)
+}
+if val != 1.0 {
+t.Errorf("Compute user:1 = %v, want 1.0", val)
+}
+
+// user:2 should be gone
+_, err = engine.Compute("user:2", "clicks", domain.AggSum)
+if err == nil {
+t.Error("expected error for evicted entity user:2")
+}
+}
+
+func TestEngine_EvictInactive_NoEviction(t *testing.T) {
+engine := NewEngine()
+
+spec := &domain.AggregationSpec{
+Function: domain.AggCount,
+Window:   time.Minute,
+}
+engine.RegisterAggregation("views", spec)
+
+engine.Update("user:1", "views", 1.0, time.Now())
+
+evicted := engine.EvictInactive(time.Hour)
+if evicted != 0 {
+t.Errorf("evicted = %d, want 0 (all entities are fresh)", evicted)
+}
+if engine.WindowCount() != 1 {
+t.Errorf("WindowCount = %d, want 1", engine.WindowCount())
+}
+}
+
+func TestEngine_WindowCount(t *testing.T) {
+engine := NewEngine()
+
+if engine.WindowCount() != 0 {
+t.Errorf("WindowCount = %d, want 0 for empty engine", engine.WindowCount())
+}
+
+spec := &domain.AggregationSpec{
+Function: domain.AggSum,
+Window:   time.Minute,
+}
+engine.RegisterAggregation("clicks", spec)
+engine.RegisterAggregation("views", spec)
+
+engine.Update("user:1", "clicks", 1.0, time.Now())
+engine.Update("user:1", "views", 2.0, time.Now())
+engine.Update("user:2", "clicks", 3.0, time.Now())
+
+if engine.WindowCount() != 3 {
+t.Errorf("WindowCount = %d, want 3", engine.WindowCount())
+}
+}

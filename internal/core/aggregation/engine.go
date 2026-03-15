@@ -116,12 +116,53 @@ func (e *Engine) ComputeWithSpec(entityKey, featureName string) (float64, error)
 	return e.Compute(entityKey, featureName, spec.Function)
 }
 
+// EvictInactive removes window managers for entities that haven't been updated
+// within maxAge. Returns the number of entity-feature pairs evicted.
+func (e *Engine) EvictInactive(maxAge time.Duration) int {
+	cutoff := time.Now().Add(-maxAge).UnixNano()
+	evicted := 0
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	for entityKey, featureWindows := range e.windows {
+		for featureName, wm := range featureWindows {
+			wm.mu.RLock()
+			lastUpdate := wm.lastUpdateTime
+			wm.mu.RUnlock()
+
+			if lastUpdate > 0 && lastUpdate < cutoff {
+				delete(featureWindows, featureName)
+				evicted++
+			}
+		}
+		if len(featureWindows) == 0 {
+			delete(e.windows, entityKey)
+		}
+	}
+
+	return evicted
+}
+
+// WindowCount returns the total number of active entity-feature window managers.
+func (e *Engine) WindowCount() int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	count := 0
+	for _, featureWindows := range e.windows {
+		count += len(featureWindows)
+	}
+	return count
+}
+
 // WindowManager manages sliding windows for a feature.
 type WindowManager struct {
-	spec       *domain.AggregationSpec
-	buckets    *RingBuffer
-	bucketSize time.Duration
-	mu         sync.RWMutex
+	spec           *domain.AggregationSpec
+	buckets        *RingBuffer
+	bucketSize     time.Duration
+	lastUpdateTime int64 // UnixNano of last Update call
+	mu             sync.RWMutex
 }
 
 // NewWindowManager creates a new window manager.
@@ -156,6 +197,7 @@ func (w *WindowManager) Update(value float64, timestamp time.Time) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	w.lastUpdateTime = timestamp.UnixNano()
 	bucketStart := timestamp.Truncate(w.bucketSize).UnixNano()
 
 	// Check if we need to add to existing bucket or create new one
