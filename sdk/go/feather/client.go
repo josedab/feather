@@ -261,15 +261,15 @@ func (f *FeatureClient) Get(ctx context.Context, entityID string, features []str
 // GetBatch retrieves features for multiple entities.
 func (f *FeatureClient) GetBatch(ctx context.Context, entityIDs []string, features []string) (map[string]*GetResponse, error) {
 	req := struct {
-		EntityIDs []string `json:"entity_ids"`
-		Features  []string `json:"features"`
+		Entities []string `json:"entities"`
+		Features []string `json:"features"`
 	}{
-		EntityIDs: entityIDs,
-		Features:  features,
+		Entities: entityIDs,
+		Features: features,
 	}
 
 	var resp struct {
-		Results map[string]*GetResponse `json:"results"`
+		Entities map[string]*GetResponse `json:"entities"`
 	}
 
 	err := f.client.request(ctx, "POST", "/v1/features/batch", req, &resp)
@@ -277,7 +277,7 @@ func (f *FeatureClient) GetBatch(ctx context.Context, entityIDs []string, featur
 		return nil, err
 	}
 
-	return resp.Results, nil
+	return resp.Entities, nil
 }
 
 // PutRequest represents a feature put request.
@@ -345,23 +345,53 @@ func (c *CatalogClient) Get(ctx context.Context, name string) (*FeatureDefinitio
 	return &def, nil
 }
 
-// List lists feature definitions.
+// ListOptions configures pagination for list operations.
+type ListOptions struct {
+	// Limit is the maximum number of items to return. 0 uses server default.
+	Limit int
+	// Offset is the number of items to skip. 0 starts from the beginning.
+	Offset int
+}
+
+// ListResult contains paginated list results.
+type ListResult struct {
+	Features []*FeatureDefinition `json:"features"`
+	Total    int                  `json:"total"`
+	Limit    int                  `json:"limit"`
+	Offset   int                  `json:"offset"`
+}
+
+// List lists feature definitions with optional pagination and filters.
 func (c *CatalogClient) List(ctx context.Context, filter map[string]string) ([]*FeatureDefinition, error) {
+	result, err := c.ListWithOptions(ctx, filter, nil)
+	if err != nil {
+		return nil, err
+	}
+	return result.Features, nil
+}
+
+// ListWithOptions lists feature definitions with pagination and filters.
+func (c *CatalogClient) ListWithOptions(ctx context.Context, filter map[string]string, opts *ListOptions) (*ListResult, error) {
 	params := url.Values{}
 	for k, v := range filter {
 		params.Set(k, v)
 	}
-
-	var resp struct {
-		Features []*FeatureDefinition `json:"features"`
+	if opts != nil {
+		if opts.Limit > 0 {
+			params.Set("limit", strconv.Itoa(opts.Limit))
+		}
+		if opts.Offset > 0 {
+			params.Set("offset", strconv.Itoa(opts.Offset))
+		}
 	}
 
+	var resp ListResult
 	err := c.client.request(ctx, "GET", "/v1/catalog/features?"+params.Encode(), nil, &resp)
 	if err != nil {
 		return nil, err
 	}
 
-	return resp.Features, nil
+	return &resp, nil
 }
 
 // Search searches for features.
@@ -500,15 +530,67 @@ func (v *VectorClient) Search(ctx context.Context, indexName string, vector []fl
 	return resp.Results, nil
 }
 
-// StreamingClient handles streaming operations.
+// StreamingClient handles streaming operations via polling.
 type StreamingClient struct {
 	client *Client
 }
 
-// Subscribe subscribes to feature updates.
-func (s *StreamingClient) Subscribe(ctx context.Context, features []string, handler func(FeatureUpdate)) error {
-	// This is a placeholder - actual implementation would use WebSocket or SSE
-	return fmt.Errorf("streaming not yet implemented in SDK")
+// SubscribeOptions configures the streaming subscription.
+type SubscribeOptions struct {
+	// EntityID is the entity to watch for updates.
+	EntityID string
+	// PollInterval is how often to check for updates. Defaults to 1 second.
+	PollInterval time.Duration
+}
+
+// Subscribe watches for feature value changes on a specific entity and calls
+// the handler when any subscribed feature changes. Blocks until the context
+// is cancelled. Uses polling since the server does not support push-based streaming.
+func (s *StreamingClient) Subscribe(ctx context.Context, opts SubscribeOptions, features []string, handler func(FeatureUpdate)) error {
+	if opts.EntityID == "" {
+		return fmt.Errorf("entity_id is required for subscription")
+	}
+	if len(features) == 0 {
+		return fmt.Errorf("at least one feature is required for subscription")
+	}
+
+	pollInterval := opts.PollInterval
+	if pollInterval <= 0 {
+		pollInterval = time.Second
+	}
+
+	// Track last known values to detect changes
+	lastValues := make(map[string]interface{})
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			resp, err := s.client.Features.Get(ctx, opts.EntityID, features)
+			if err != nil {
+				continue // Transient errors — retry on next tick
+			}
+
+			for name, fv := range resp.Features {
+				prev, seen := lastValues[name]
+				if !seen || prev != fv.Value {
+					lastValues[name] = fv.Value
+					if seen { // Only fire handler after first baseline is established
+						handler(FeatureUpdate{
+							EntityID:  opts.EntityID,
+							Feature:   name,
+							Value:     fv.Value,
+							Timestamp: fv.Timestamp,
+						})
+					}
+				}
+			}
+		}
+	}
 }
 
 // FeatureUpdate represents a real-time feature update.

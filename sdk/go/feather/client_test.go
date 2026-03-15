@@ -141,9 +141,9 @@ func TestFeatureClient_Put(t *testing.T) {
 func TestFeatureClient_GetBatch(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := struct {
-			Results map[string]*GetResponse `json:"results"`
+			Entities map[string]*GetResponse `json:"entities"`
 		}{
-			Results: map[string]*GetResponse{
+			Entities: map[string]*GetResponse{
 				"user:1": {EntityID: "user:1", Features: map[string]FeatureValue{}},
 				"user:2": {EntityID: "user:2", Features: map[string]FeatureValue{}},
 			},
