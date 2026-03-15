@@ -56,7 +56,7 @@ func TestGitOpsDefsHandler_GetStats(t *testing.T) {
 
 func TestGitOpsDefsHandler_LoadDefinition(t *testing.T) {
 	ts := newTestGitOpsDefsServer(t)
-	body := `{"name":"click_rate","version":"v1","type":"float64","entity":"user","description":"Click-through rate"}`
+	body := `{"name":"click_rate","version":"v1","entity_type":"user","description":"Click-through rate"}`
 	rr := ts.request(http.MethodPost, "/v1/gitops/definitions", body)
 	if rr.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())

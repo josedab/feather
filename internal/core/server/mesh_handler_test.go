@@ -35,7 +35,7 @@ func TestMeshHandler_ListNodes(t *testing.T) {
 
 func TestMeshHandler_RegisterNode(t *testing.T) {
 	_, mux := setupMeshHandler(t)
-	body := `{"id":"node1","name":"test-node","endpoint":"http://localhost:8080","region":"us-east-1"}`
+	body := `{"id":"node1","address":"http://localhost:8080"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/mesh/nodes", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

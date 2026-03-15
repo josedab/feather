@@ -33,7 +33,7 @@ func TestCostOpt_GetStats(t *testing.T) {
 
 func TestCostOpt_PostRecordAccess(t *testing.T) {
 	mux := setupCostOptHandler(t)
-	body := `{"feature_group":"user_features","feature":"click_count","is_write":false}`
+	body := `{"feature_group":"user_features","entity":"click_count","is_write":false}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/costopt/access", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

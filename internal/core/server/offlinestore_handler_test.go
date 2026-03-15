@@ -56,7 +56,7 @@ func TestOfflineStoreHandler_GetStats(t *testing.T) {
 
 func TestOfflineStoreHandler_CreateDataset(t *testing.T) {
 	ts := newTestOfflineStoreServer(t)
-	body := `{"name":"training_data","entity_key":"user_id","features":["click_rate","view_count"]}`
+	body := `{"name":"training_data","entity_type":"user_id"}`
 	rr := ts.request(http.MethodPost, "/v1/offline/datasets", body)
 	if rr.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())

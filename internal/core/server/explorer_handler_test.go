@@ -31,7 +31,7 @@ func TestExplorer_GetStats(t *testing.T) {
 
 func TestExplorer_PostRecordInsight(t *testing.T) {
 	mux := setupExplorerHandler(t)
-	body := `{"feature_id":"feat1","name":"click_rate","description":"Click through rate"}`
+	body := `{"feature_id":"feat1","entity_count":100}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/explorer/insights", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

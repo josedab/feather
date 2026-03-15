@@ -32,7 +32,7 @@ func TestOrchestratorHandler_ListDAGs(t *testing.T) {
 
 func TestOrchestratorHandler_CreateDAG(t *testing.T) {
 	_, mux := setupOrchestratorHandler(t)
-	body := `{"name":"test-dag","nodes":[{"id":"n1","name":"step1","type":"transform"}]}`
+	body := `{"name":"test-dag","nodes":[{"id":"n1","feature_id":"step1"}]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/orchestrator/dags", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

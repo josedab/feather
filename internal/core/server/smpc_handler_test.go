@@ -30,7 +30,7 @@ func TestSMPC_GetListParties(t *testing.T) {
 
 func TestSMPC_PostRegisterParty(t *testing.T) {
 	mux := setupSMPCHandler(t)
-	body := `{"id":"party1","name":"Alice","endpoint":"https://alice.example.com"}`
+	body := `{"id":"party1","name":"Alice","address":"https://alice.example.com"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/smpc/parties", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

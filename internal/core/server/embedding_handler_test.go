@@ -97,7 +97,6 @@ func TestEmbeddingHandler_StoreEmbedding(t *testing.T) {
 		"content":   "Hello world",
 		"vector":    []float64{0.1, 0.2, 0.3, 0.4},
 		"model_id":  "text-embedding-ada-002",
-		"dimension": 4,
 	}
 
 	rr := ts.postJSON("/v1/embeddings", body)
@@ -152,14 +151,12 @@ func TestEmbeddingHandler_BatchStore(t *testing.T) {
 				"content":   "First text",
 				"vector":    []float64{0.1, 0.2, 0.3},
 				"model_id":  "text-embedding-ada-002",
-				"dimension": 3,
 			},
 			{
 				"id":        "batch-2",
 				"content":   "Second text",
 				"vector":    []float64{0.4, 0.5, 0.6},
 				"model_id":  "text-embedding-ada-002",
-				"dimension": 3,
 			},
 		},
 	}
@@ -256,7 +253,6 @@ func TestEmbeddingHandler_RegisterModel(t *testing.T) {
 	body := map[string]interface{}{
 		"model_id":  "custom-model",
 		"provider":  "openai",
-		"dimension": 1536,
 	}
 
 	rr := ts.postJSON("/v1/embeddings/models", body)
@@ -407,7 +403,6 @@ func TestEmbeddingHandler_StoreAndRetrieve(t *testing.T) {
 		"content":   "Hello world",
 		"vector":    []float64{0.1, 0.2, 0.3, 0.4},
 		"model_id":  "test-model",
-		"dimension": 4,
 	}
 
 	rr := ts.postJSON("/v1/embeddings", body)
@@ -430,7 +425,6 @@ func TestEmbeddingHandler_StoreEmbedding_DuplicateID(t *testing.T) {
 		"content":   "First",
 		"vector":    []float64{0.1, 0.2, 0.3},
 		"model_id":  "test-model",
-		"dimension": 3,
 	}
 
 	ts.postJSON("/v1/embeddings", body)
@@ -467,7 +461,7 @@ func TestEmbeddingHandler_Lookup_WithStore(t *testing.T) {
 
 	// Store an embedding first
 	ts.postJSON("/v1/embeddings", map[string]interface{}{
-		"id": "lookup-1", "content": "test", "vector": []float64{0.1}, "model_id": "m", "dimension": 1,
+		"id": "lookup-1", "content": "test", "vector": []float64{0.1}, "model_id": "m",
 	})
 
 	// Lookup - the lookup endpoint expects contents and model_id
@@ -499,7 +493,6 @@ func TestEmbeddingHandler_RegisterModel_WithManager(t *testing.T) {
 		"id":        "custom-model-v1",
 		"model_id":  "custom-model-v1",
 		"provider":  "openai",
-		"dimension": 1536,
 	}
 
 	rr := ts.postJSON("/v1/embeddings/models", body)
@@ -537,7 +530,7 @@ func TestEmbeddingHandler_Delete_WithStore(t *testing.T) {
 
 	// Store an embedding
 	ts.postJSON("/v1/embeddings", map[string]interface{}{
-		"id": "del-1", "content": "test", "vector": []float64{0.1}, "model_id": "m", "dimension": 1,
+		"id": "del-1", "content": "test", "vector": []float64{0.1}, "model_id": "m",
 	})
 
 	rr := ts.delete("/v1/embeddings/del-1")

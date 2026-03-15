@@ -38,7 +38,7 @@ func TestMaterializationHandler_ListPipelines(t *testing.T) {
 
 func TestMaterializationHandler_CreatePipeline(t *testing.T) {
 	_, mux := setupMaterializationHandler(t)
-	body := `{"name":"test-pipeline","steps":[{"name":"step1","query":"SELECT * FROM users"}],"trigger":"manual"}`
+	body := `{"name":"test-pipeline","steps":[{"name":"step1","expression":"SELECT * FROM users"}],"trigger":"manual"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/pipelines", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

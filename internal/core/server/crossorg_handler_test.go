@@ -31,7 +31,7 @@ func TestCrossOrg_ListOrgs(t *testing.T) {
 
 func TestCrossOrg_RegisterOrg(t *testing.T) {
 	mux := setupCrossOrgHandler(t)
-	body := `{"id":"org1","name":"Test Org","endpoint":"https://example.com"}`
+	body := `{"id":"org1","name":"Test Org","trust_level":"full"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/federation/orgs", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

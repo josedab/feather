@@ -56,7 +56,7 @@ func TestBenchPubHandler_GetStats(t *testing.T) {
 
 func TestBenchPubHandler_RunBenchmark(t *testing.T) {
 	ts := newTestBenchPubServer(t)
-	body := `{"name":"latency_test","operations":100,"concurrency":4}`
+	body := `{"name":"latency_test","concurrency":4}`
 	rr := ts.request(http.MethodPost, "/v1/benchmarks/run", body)
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())

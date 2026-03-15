@@ -56,7 +56,7 @@ func TestABFeaturesHandler_GetStats(t *testing.T) {
 
 func TestABFeaturesHandler_CreateExperiment(t *testing.T) {
 	ts := newTestABFeaturesServer(t)
-	body := `{"id":"exp-1","name":"button_color","variants":[{"id":"control","name":"blue","weight":50},{"id":"treatment","name":"green","weight":50}]}`
+	body := `{"id":"exp-1","name":"button_color","variants":[{"id":"control","name":"blue","traffic_percent":50},{"id":"treatment","name":"green","traffic_percent":50}]}`
 	rr := ts.request(http.MethodPost, "/v1/experiments", body)
 	if rr.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())
@@ -91,7 +91,7 @@ func TestABFeaturesHandler_ListExperiments(t *testing.T) {
 
 	// Create an experiment first
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 
 	rr := ts.request(http.MethodGet, "/v1/experiments", "")
 	if rr.Code != http.StatusOK {
@@ -115,7 +115,7 @@ func TestABFeaturesHandler_GetExperiment(t *testing.T) {
 
 	// Create experiment
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 
 	rr := ts.request(http.MethodGet, "/v1/experiments/exp-1", "")
 	if rr.Code != http.StatusOK {
@@ -127,7 +127,7 @@ func TestABFeaturesHandler_StartExperiment(t *testing.T) {
 	ts := newTestABFeaturesServer(t)
 
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 
 	rr := ts.request(http.MethodPost, "/v1/experiments/exp-1/start", "")
 	if rr.Code != http.StatusOK {
@@ -139,7 +139,7 @@ func TestABFeaturesHandler_StopExperiment(t *testing.T) {
 	ts := newTestABFeaturesServer(t)
 
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 	ts.request(http.MethodPost, "/v1/experiments/exp-1/start", "")
 
 	rr := ts.request(http.MethodPost, "/v1/experiments/exp-1/stop", "")
@@ -152,7 +152,7 @@ func TestABFeaturesHandler_ResolveVariant(t *testing.T) {
 	ts := newTestABFeaturesServer(t)
 
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 	ts.request(http.MethodPost, "/v1/experiments/exp-1/start", "")
 
 	rr := ts.request(http.MethodGet, "/v1/experiments/exp-1/resolve?entity_id=user:123", "")
@@ -180,7 +180,7 @@ func TestABFeaturesHandler_RecordMetric(t *testing.T) {
 	ts := newTestABFeaturesServer(t)
 
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 
 	rr := ts.request(http.MethodPost, "/v1/experiments/exp-1/metric",
 		`{"variant_id":"control","latency_ms":15.5}`)
@@ -201,7 +201,7 @@ func TestABFeaturesHandler_RecordScore(t *testing.T) {
 	ts := newTestABFeaturesServer(t)
 
 	ts.request(http.MethodPost, "/v1/experiments",
-		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","weight":50},{"id":"treat","name":"b","weight":50}]}`)
+		`{"id":"exp-1","name":"test","variants":[{"id":"control","name":"a","traffic_percent":50},{"id":"treat","name":"b","traffic_percent":50}]}`)
 
 	rr := ts.request(http.MethodPost, "/v1/experiments/exp-1/score",
 		`{"variant_id":"control","score":0.85}`)

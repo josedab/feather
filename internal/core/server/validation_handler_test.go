@@ -30,7 +30,7 @@ func TestValidation_GetListRules(t *testing.T) {
 
 func TestValidation_PostAddRule(t *testing.T) {
 	mux := setupValidationHandler(t)
-	body := `{"name":"rule1","feature":"age","type":"range","min":0,"max":150}`
+	body := `{"name":"rule1","feature":"age","compare_method":"absolute","tolerance":0.01,"sample_rate":1.0,"enabled":true}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/validation/rules", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

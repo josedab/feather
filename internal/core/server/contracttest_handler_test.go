@@ -56,7 +56,7 @@ func TestContractTestHandler_GetStats(t *testing.T) {
 
 func TestContractTestHandler_RegisterContract(t *testing.T) {
 	ts := newTestContractTestServer(t)
-	body := `{"id":"schema-v1","name":"click_rate_schema","feature":"click_rate","type":"schema","schema_rules":{"click_rate":"float64"}}`
+	body := `{"id":"schema-v1","name":"click_rate_schema","feature_group":"click_rate","type":"schema","rules":{"click_rate":"float64"}}`
 	rr := ts.request(http.MethodPost, "/v1/contracts", body)
 	if rr.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())

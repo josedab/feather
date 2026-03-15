@@ -56,7 +56,7 @@ func TestNotebookSDKHandler_GetStats(t *testing.T) {
 
 func TestNotebookSDKHandler_CreateSession(t *testing.T) {
 	ts := newTestNotebookSDKServer(t)
-	body := `{"name":"test-session"}`
+	body := `{"notebook":"test-session"}`
 	rr := ts.request(http.MethodPost, "/v1/notebook/sessions", body)
 	if rr.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusCreated, rr.Code, rr.Body.String())

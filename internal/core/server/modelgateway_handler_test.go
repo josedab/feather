@@ -55,7 +55,7 @@ func TestModelGateway_ListAdapters(t *testing.T) {
 
 func TestModelGateway_SetABConfig(t *testing.T) {
 	mux := setupModelGatewayHandler(t)
-	body := `{"model_id":"model-1","config":{"model_a":"v1","model_b":"v2","traffic_pct":50,"enabled":true}}`
+	body := `{"model_id":"model-1","config":{"model_a":"v1","model_b":"v2","traffic_pct_b":50,"enabled":true}}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/predict/ab-config", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

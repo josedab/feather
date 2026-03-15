@@ -56,7 +56,7 @@ func TestQualityGatesHandler_GetStats(t *testing.T) {
 
 func TestQualityGatesHandler_ValidateSchema(t *testing.T) {
 	ts := newTestQualityGatesServer(t)
-	body := `{"name":"test_schema","features":[{"name":"clicks","type":"int64"}]}`
+	body := `{"name":"test_schema","features":[{"name":"clicks","data_type":"int64"}]}`
 	rr := ts.request(http.MethodPost, "/v1/quality/validate/schema", body)
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())

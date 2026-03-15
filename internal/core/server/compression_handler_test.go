@@ -73,7 +73,7 @@ func TestCompressionHandler_Analyze_InvalidJSON(t *testing.T) {
 
 func TestCompressionHandler_SelectStrategy(t *testing.T) {
 	ts := newTestCompressionServer(t)
-	body := `{"size":1024,"cardinality":100,"data_type":"float64"}`
+	body := `{"size":1024,"cardinality":100}`
 	rr := ts.request(http.MethodPost, "/v1/compression/select", body)
 	if rr.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d; body: %s", http.StatusOK, rr.Code, rr.Body.String())

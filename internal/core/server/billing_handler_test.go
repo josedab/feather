@@ -31,7 +31,7 @@ func TestBilling_GetStats(t *testing.T) {
 
 func TestBilling_PostCreatePlan(t *testing.T) {
 	mux := setupBillingHandler(t)
-	body := `{"id":"plan1","name":"basic","price_cents":999}`
+	body := `{"id":"plan1","name":"basic","price_per_unit":999}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/billing/plans", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

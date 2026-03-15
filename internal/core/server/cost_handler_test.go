@@ -525,24 +525,25 @@ func TestCostHandler_NotFound(t *testing.T) {
 	endpoints := []struct {
 		method string
 		path   string
+		body   string
 	}{
-		{"GET", "/v1/cost/budgets/nonexistent"},
-		{"PUT", "/v1/cost/budgets/nonexistent"},
-		{"DELETE", "/v1/cost/budgets/nonexistent"},
-		{"GET", "/v1/cost/budgets/nonexistent/status"},
-		{"GET", "/v1/cost/rules/nonexistent"},
-		{"PUT", "/v1/cost/rules/nonexistent"},
-		{"DELETE", "/v1/cost/rules/nonexistent"},
-		{"GET", "/v1/cost/invoices/nonexistent"},
-		{"PUT", "/v1/cost/invoices/nonexistent/status"},
-		{"POST", "/v1/cost/invoices/nonexistent/credit"},
+		{"GET", "/v1/cost/budgets/nonexistent", ""},
+		{"PUT", "/v1/cost/budgets/nonexistent", `{"amount":1}`},
+		{"DELETE", "/v1/cost/budgets/nonexistent", ""},
+		{"GET", "/v1/cost/budgets/nonexistent/status", ""},
+		{"GET", "/v1/cost/rules/nonexistent", ""},
+		{"PUT", "/v1/cost/rules/nonexistent", `{"name":"test","costCenter":"eng","percentage":50}`},
+		{"DELETE", "/v1/cost/rules/nonexistent", ""},
+		{"GET", "/v1/cost/invoices/nonexistent", ""},
+		{"PUT", "/v1/cost/invoices/nonexistent/status", `{"status":"paid"}`},
+		{"POST", "/v1/cost/invoices/nonexistent/credit", `{"amount":1,"description":"test"}`},
 	}
 
 	for _, ep := range endpoints {
 		t.Run(ep.method+" "+ep.path, func(t *testing.T) {
 			var body *bytes.Buffer
-			if ep.method == "PUT" || ep.method == "POST" {
-				body = bytes.NewBufferString(`{"amount":1}`)
+			if ep.body != "" {
+				body = bytes.NewBufferString(ep.body)
 			} else {
 				body = bytes.NewBuffer(nil)
 			}

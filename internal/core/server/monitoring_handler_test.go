@@ -38,7 +38,7 @@ func TestMonitoringHandler_ListMonitors(t *testing.T) {
 
 func TestMonitoringHandler_RegisterMonitor(t *testing.T) {
 	_, mux := setupMonitoringHandler(t)
-	body := `{"id":"mon1","feature":"clicks","type":"numeric"}`
+	body := `{"id":"mon1","feature_name":"clicks","type":"numeric"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/monitoring/monitors", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

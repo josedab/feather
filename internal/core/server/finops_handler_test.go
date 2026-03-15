@@ -38,7 +38,7 @@ func TestFinOpsHandler_ListTeams(t *testing.T) {
 
 func TestFinOpsHandler_RegisterTeam(t *testing.T) {
 	_, mux := setupFinOpsHandler(t)
-	body := `{"id":"team1","name":"ML Team","budget_limit":1000}`
+	body := `{"id":"team1","name":"ML Team","budget":1000}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/finops/teams", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

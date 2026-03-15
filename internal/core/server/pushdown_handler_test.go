@@ -30,7 +30,7 @@ func TestPushdown_GetListDerived(t *testing.T) {
 
 func TestPushdown_PostRegisterDerived(t *testing.T) {
 	mux := setupPushdownHandler(t)
-	body := `{"name":"derived1","expression":"a + b","dependencies":["a","b"]}`
+	body := `{"name":"derived1","expression":"a + b","inputs":["a","b"]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/pushdown/derived", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

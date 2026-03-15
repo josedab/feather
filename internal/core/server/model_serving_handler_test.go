@@ -122,9 +122,6 @@ func TestModelServingHandler_RegisterModel(t *testing.T) {
 	body := map[string]interface{}{
 		"id":          "model-1",
 		"name":        "Test Model",
-		"version":     "1.0.0",
-		"framework":   "tensorflow",
-		"features":    []string{"feature1", "feature2"},
 		"description": "Test model description",
 	}
 
@@ -216,11 +213,8 @@ func TestModelServingHandler_EndToEnd(t *testing.T) {
 
 	// Register a model
 	modelBody := map[string]interface{}{
-		"id":        "e2e-model",
-		"name":      "E2E Test Model",
-		"version":   "1.0.0",
-		"framework": "pytorch",
-		"features":  []string{"feature1", "feature2"},
+		"id":   "e2e-model",
+		"name": "E2E Test Model",
 	}
 	modelRR := ts.postJSON("/v1/models", modelBody)
 	if modelRR.Code != http.StatusCreated && modelRR.Code != http.StatusOK {
