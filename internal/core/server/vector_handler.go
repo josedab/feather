@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -285,6 +286,13 @@ func (h *VectorHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.writeError(r.Context(), w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if idx.Dimension > 0 && len(req.Vector) != idx.Dimension {
+		h.writeError(r.Context(), w, http.StatusBadRequest,
+			fmt.Sprintf("vector dimension mismatch: query has %d dimensions, index %q expects %d",
+				len(req.Vector), indexName, idx.Dimension))
 		return
 	}
 
