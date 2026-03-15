@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -119,6 +120,13 @@ func (h *HTTPIngestion) maxRequestSize() int64 {
 func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&h.metrics.RequestsReceived, 1)
 
+	// Validate Content-Type
+	if ct := r.Header.Get("Content-Type"); ct != "" && !isJSONContentType(ct) {
+		atomic.AddInt64(&h.metrics.RequestsError, 1)
+		writeError(r.Context(), w, http.StatusUnsupportedMediaType, "Content-Type must be application/json")
+		return
+	}
+
 	// Limit request body size to prevent DoS
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxRequestSize())
 
@@ -146,9 +154,9 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if update.EntityKey == "" {
+	if err := domain.ValidateEntityKey(update.EntityKey); err != nil {
 		atomic.AddInt64(&h.metrics.RequestsError, 1)
-		writeError(r.Context(), w, http.StatusBadRequest, "entity_key required")
+		writeError(r.Context(), w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -173,6 +181,13 @@ func (h *HTTPIngestion) HandlePush(w http.ResponseWriter, r *http.Request) {
 func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&h.metrics.RequestsReceived, 1)
 
+	// Validate Content-Type
+	if ct := r.Header.Get("Content-Type"); ct != "" && !isJSONContentType(ct) {
+		atomic.AddInt64(&h.metrics.RequestsError, 1)
+		writeError(r.Context(), w, http.StatusUnsupportedMediaType, "Content-Type must be application/json")
+		return
+	}
+
 	// Limit request body size to prevent DoS (use 10x default for bulk)
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxRequestSize()*10)
 
@@ -193,7 +208,7 @@ func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 	errorCount := 0
 
 	for _, update := range updates {
-		if update.EntityKey == "" {
+		if err := domain.ValidateEntityKey(update.EntityKey); err != nil {
 			errorCount++
 			continue
 		}
@@ -288,6 +303,13 @@ func (h *HTTPIngestion) Metrics() HTTPIngestionMetrics {
 func (h *HTTPIngestion) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /ingest", h.HandlePush)
 	mux.HandleFunc("POST /ingest/bulk", h.HandleBulkPush)
+}
+
+// isJSONContentType checks if the Content-Type header indicates JSON.
+func isJSONContentType(ct string) bool {
+	ct = strings.ToLower(strings.TrimSpace(ct))
+	// Accept "application/json" with optional charset parameter
+	return ct == "application/json" || strings.HasPrefix(ct, "application/json;")
 }
 
 func writeJSON(ctx context.Context, w http.ResponseWriter, status int, data interface{}) {

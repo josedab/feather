@@ -157,6 +157,28 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		timestampFormat = time.RFC3339
 	}
 
+	batchSize := config.BatchSize
+	if batchSize <= 0 {
+		batchSize = 100 // default batch size
+	}
+
+	// Pending batch: entity key -> merged features
+	type pendingWrite struct {
+		entityKey string
+		features  map[string]*domain.FeatureValue
+	}
+	pending := make([]pendingWrite, 0, batchSize)
+
+	flushBatch := func() error {
+		for _, pw := range pending {
+			if err := b.store.Put(ctx, pw.entityKey, pw.features); err != nil {
+				return err
+			}
+		}
+		pending = pending[:0]
+		return nil
+	}
+
 	// Process rows
 	for {
 		select {
@@ -189,12 +211,13 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		}
 
 		entityKey := strings.TrimSpace(record[entityKeyIdx])
-		if entityKey == "" {
+		if err := domain.ValidateEntityKey(entityKey); err != nil {
 			if config.SkipErrors {
 				result.RowsError++
+				result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
 				continue
 			}
-			return nil, fmt.Errorf("row %d: empty entity key", result.RowsProcessed)
+			return nil, fmt.Errorf("row %d: %w", result.RowsProcessed, err)
 		}
 
 		// Parse timestamp
@@ -245,13 +268,17 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		}
 
 		if len(features) > 0 {
-			if err := b.store.Put(ctx, entityKey, features); err != nil {
-				if config.SkipErrors {
-					result.RowsError++
-					result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
-					continue
+			pending = append(pending, pendingWrite{entityKey: entityKey, features: features})
+			if len(pending) >= batchSize {
+				if err := flushBatch(); err != nil {
+					if config.SkipErrors {
+						result.RowsError++
+						result.Errors = append(result.Errors, fmt.Sprintf("batch flush at row %d: %v", result.RowsProcessed, err))
+						pending = pending[:0]
+						continue
+					}
+					return nil, fmt.Errorf("flushing batch at row %d: %w", result.RowsProcessed, err)
 				}
-				return nil, fmt.Errorf("storing features for row %d: %w", result.RowsProcessed, err)
 			}
 		}
 
@@ -260,6 +287,17 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		atomic.AddInt64(&b.metrics.RowsProcessed, 1)
 		atomic.AddInt64(&b.metrics.RowsSuccess, 1)
 		atomic.AddInt64(&b.metrics.FeaturesImported, int64(len(features)))
+	}
+
+	// Flush remaining batch
+	if len(pending) > 0 {
+		if err := flushBatch(); err != nil {
+			if !config.SkipErrors {
+				return nil, fmt.Errorf("flushing final batch: %w", err)
+			}
+			result.RowsError++
+			result.Errors = append(result.Errors, fmt.Sprintf("final batch flush: %v", err))
+		}
 	}
 
 	atomic.AddInt64(&b.metrics.FilesProcessed, 1)
@@ -310,6 +348,14 @@ func (b *BatchImporter) ImportJSONReader(ctx context.Context, r io.Reader, confi
 				continue
 			}
 			return nil, fmt.Errorf("row %d: missing or invalid entity key", result.RowsProcessed)
+		}
+		if err := domain.ValidateEntityKey(entityKey); err != nil {
+			if config.SkipErrors {
+				result.RowsError++
+				result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
+				continue
+			}
+			return nil, fmt.Errorf("row %d: %w", result.RowsProcessed, err)
 		}
 
 		timestamp := time.Now().UnixNano()
@@ -422,6 +468,14 @@ func (b *BatchImporter) ImportJSONLReader(ctx context.Context, r io.Reader, conf
 				continue
 			}
 			return nil, fmt.Errorf("line %d: missing entity key", result.RowsProcessed)
+		}
+		if err := domain.ValidateEntityKey(entityKey); err != nil {
+			if config.SkipErrors {
+				result.RowsError++
+				result.Errors = append(result.Errors, fmt.Sprintf("line %d: %v", result.RowsProcessed, err))
+				continue
+			}
+			return nil, fmt.Errorf("line %d: %w", result.RowsProcessed, err)
 		}
 
 		timestamp := time.Now().UnixNano()
