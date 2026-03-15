@@ -14,6 +14,7 @@ import (
 func main() {
 	// Create client with default configuration
 	client := feather.NewClient("http://localhost:8080", "", nil)
+	defer client.Close()
 
 	ctx := context.Background()
 

@@ -87,6 +87,11 @@ func NewClient(baseURL, apiKey string, config *ClientConfig) *Client {
 	return c
 }
 
+// Close releases resources held by the client, including idle HTTP connections.
+func (c *Client) Close() {
+	c.httpClient.CloseIdleConnections()
+}
+
 // request performs an HTTP request with exponential backoff retry and jitter.
 func (c *Client) request(ctx context.Context, method, path string, body interface{}, result interface{}) error {
 	var bodyBytes []byte

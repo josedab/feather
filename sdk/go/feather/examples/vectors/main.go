@@ -16,6 +16,7 @@ const vectorDim = 128
 
 func main() {
 	client := feather.NewClient("http://localhost:8080", "", nil)
+	defer client.Close()
 	ctx := context.Background()
 
 	// Create a vector index
