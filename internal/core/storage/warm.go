@@ -180,17 +180,18 @@ func (w *WarmTier) GetAsOf(entityKey string, features []string, asOf time.Time) 
 			opts.Reverse = true
 			opts.PrefetchSize = 1
 			it := txn.NewIterator(opts)
-			defer it.Close()
 
 			it.Seek(seekKey)
 			if it.ValidForPrefix(prefix) {
 				item := it.Item()
 				val, err := decodeFeatureValue(item)
 				if err != nil {
+					it.Close()
 					return err
 				}
 				result[feature] = val
 			}
+			it.Close()
 		}
 		return nil
 	})

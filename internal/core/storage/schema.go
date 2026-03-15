@@ -31,8 +31,12 @@ func NewRegistry() *Registry {
 	}
 }
 
-// RegisterGroup registers a feature group.
+// RegisterGroup registers a feature group after validating its structure.
 func (r *Registry) RegisterGroup(group *domain.FeatureGroup) error {
+	if err := validateGroup(group); err != nil {
+		return err
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -59,8 +63,12 @@ func (r *Registry) RegisterGroup(group *domain.FeatureGroup) error {
 	return nil
 }
 
-// UpdateGroup updates a feature group.
+// UpdateGroup updates a feature group after validating its structure.
 func (r *Registry) UpdateGroup(group *domain.FeatureGroup) error {
+	if err := validateGroup(group); err != nil {
+		return err
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -351,6 +359,36 @@ func (r *Registry) validateFeatureNames(group *domain.FeatureGroup, allowGroup s
 		if existingGroup, exists := r.featureNames[featureName]; exists && existingGroup != allowGroup {
 			return fmt.Errorf("%w: feature %s already defined in group %s", domain.ErrAlreadyExists, featureName, existingGroup)
 		}
+	}
+	return nil
+}
+
+// validateGroup checks that a feature group has all required fields.
+func validateGroup(group *domain.FeatureGroup) error {
+	if group.Name == "" {
+		return &domain.ValidationError{Field: "name", Message: "group name is required"}
+	}
+	if group.EntityType == "" {
+		return &domain.ValidationError{Field: "entity_type", Message: "entity type is required"}
+	}
+	if len(group.Features) == 0 {
+		return &domain.ValidationError{Field: "features", Message: "at least one feature is required"}
+	}
+	seen := make(map[string]bool, len(group.Features))
+	for i, f := range group.Features {
+		if f.Name == "" {
+			return &domain.ValidationError{
+				Field:   fmt.Sprintf("features[%d].name", i),
+				Message: "feature name is required",
+			}
+		}
+		if seen[f.Name] {
+			return &domain.ValidationError{
+				Field:   fmt.Sprintf("features[%d].name", i),
+				Message: fmt.Sprintf("duplicate feature name %q within group", f.Name),
+			}
+		}
+		seen[f.Name] = true
 	}
 	return nil
 }

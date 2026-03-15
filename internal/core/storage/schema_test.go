@@ -41,8 +41,9 @@ func TestRegistry_RegisterGroup_Duplicate(t *testing.T) {
 	r := NewRegistry()
 
 	group := &domain.FeatureGroup{
-		Name:     "test",
-		Features: []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
+		Name:       "test",
+		EntityType: "test",
+		Features:   []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
 	}
 
 	err := r.RegisterGroup(group)
@@ -60,8 +61,9 @@ func TestRegistry_RegisterGroup_DuplicateFeatureName(t *testing.T) {
 	r := NewRegistry()
 
 	group1 := &domain.FeatureGroup{
-		Name:     "group1",
-		Features: []domain.FeatureSpec{{Name: "shared_feature", DataType: domain.DataTypeInt64}},
+		Name:       "group1",
+		EntityType: "test",
+		Features:   []domain.FeatureSpec{{Name: "shared_feature", DataType: domain.DataTypeInt64}},
 	}
 	err := r.RegisterGroup(group1)
 	if err != nil {
@@ -69,8 +71,9 @@ func TestRegistry_RegisterGroup_DuplicateFeatureName(t *testing.T) {
 	}
 
 	group2 := &domain.FeatureGroup{
-		Name:     "group2",
-		Features: []domain.FeatureSpec{{Name: "shared_feature", DataType: domain.DataTypeString}},
+		Name:       "group2",
+		EntityType: "test",
+		Features:   []domain.FeatureSpec{{Name: "shared_feature", DataType: domain.DataTypeString}},
 	}
 	err = r.RegisterGroup(group2)
 	if err == nil {
@@ -94,8 +97,9 @@ func TestRegistry_UpdateGroup(t *testing.T) {
 	r := NewRegistry()
 
 	group := &domain.FeatureGroup{
-		Name:     "updatable",
-		Features: []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
+		Name:       "updatable",
+		EntityType: "test",
+		Features:   []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
 	}
 	err := r.RegisterGroup(group)
 	if err != nil {
@@ -103,8 +107,9 @@ func TestRegistry_UpdateGroup(t *testing.T) {
 	}
 
 	updated := &domain.FeatureGroup{
-		Name:     "updatable",
-		Features: []domain.FeatureSpec{{Name: "f2", DataType: domain.DataTypeString}},
+		Name:       "updatable",
+		EntityType: "test",
+		Features:   []domain.FeatureSpec{{Name: "f2", DataType: domain.DataTypeString}},
 	}
 	err = r.UpdateGroup(updated)
 	if err != nil {
@@ -130,7 +135,7 @@ func TestRegistry_UpdateGroup(t *testing.T) {
 func TestRegistry_UpdateGroup_NotFound(t *testing.T) {
 	r := NewRegistry()
 
-	err := r.UpdateGroup(&domain.FeatureGroup{Name: "nonexistent"})
+	err := r.UpdateGroup(&domain.FeatureGroup{Name: "nonexistent", EntityType: "test"})
 	if err == nil {
 		t.Error("Expected error for updating nonexistent group")
 	}
@@ -140,8 +145,9 @@ func TestRegistry_RemoveGroup(t *testing.T) {
 	r := NewRegistry()
 
 	group := &domain.FeatureGroup{
-		Name:     "removable",
-		Features: []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
+		Name:       "removable",
+		EntityType: "test",
+		Features:   []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
 	}
 	r.RegisterGroup(group)
 
@@ -173,7 +179,8 @@ func TestRegistry_RemoveGroup_NotFound(t *testing.T) {
 func TestRegistry_GetFeatureSpec(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{Name: "age", DataType: domain.DataTypeInt64},
 		},
@@ -200,7 +207,8 @@ func TestRegistry_GetFeatureSpec_NotFound(t *testing.T) {
 func TestRegistry_GetFeatureGroup(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{Name: "age", DataType: domain.DataTypeInt64},
 		},
@@ -226,8 +234,8 @@ func TestRegistry_GetFeatureGroup_NotFound(t *testing.T) {
 
 func TestRegistry_ListGroups(t *testing.T) {
 	r := NewRegistry()
-	r.RegisterGroup(&domain.FeatureGroup{Name: "g1", Features: []domain.FeatureSpec{{Name: "f1"}}})
-	r.RegisterGroup(&domain.FeatureGroup{Name: "g2", Features: []domain.FeatureSpec{{Name: "f2"}}})
+	r.RegisterGroup(&domain.FeatureGroup{Name: "g1", EntityType: "test", Features: []domain.FeatureSpec{{Name: "f1"}}})
+	r.RegisterGroup(&domain.FeatureGroup{Name: "g2", EntityType: "test", Features: []domain.FeatureSpec{{Name: "f2"}}})
 
 	groups := r.ListGroups()
 	if len(groups) != 2 {
@@ -238,7 +246,8 @@ func TestRegistry_ListGroups(t *testing.T) {
 func TestRegistry_ListFeatures(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{Name: "f1"},
 			{Name: "f2"},
@@ -284,7 +293,8 @@ func TestRegistry_Validate_NumericRange(t *testing.T) {
 	min := 0.0
 	max := 100.0
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{
 				Name:     "score",
@@ -316,7 +326,8 @@ func TestRegistry_Validate_NumericRange(t *testing.T) {
 func TestRegistry_Validate_NotNull(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{
 				Name:     "required",
@@ -339,7 +350,8 @@ func TestRegistry_Validate_NotNull(t *testing.T) {
 func TestRegistry_Validate_NilValidation(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{Name: "novalidation", DataType: domain.DataTypeString},
 		},
@@ -355,7 +367,8 @@ func TestRegistry_Validate_NullPassesWhenNotRequired(t *testing.T) {
 	r := NewRegistry()
 	min := 0.0
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{
 				Name:     "optional",
@@ -376,7 +389,8 @@ func TestRegistry_Validate_NullPassesWhenNotRequired(t *testing.T) {
 func TestRegistry_Validate_OneOf(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{
 				Name:     "status",
@@ -399,7 +413,8 @@ func TestRegistry_Validate_OneOf(t *testing.T) {
 func TestRegistry_Validate_TypeMismatch(t *testing.T) {
 	r := NewRegistry()
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "test",
 		Features: []domain.FeatureSpec{
 			{Name: "num", DataType: domain.DataTypeFloat64, Validation: &domain.ValidationSpec{NotNull: true}},
 			{Name: "str", DataType: domain.DataTypeString, Validation: &domain.ValidationSpec{NotNull: true}},
@@ -473,7 +488,8 @@ func TestRegistry_Validate_IntForNumeric(t *testing.T) {
 	r := NewRegistry()
 	min := 0.0
 	r.RegisterGroup(&domain.FeatureGroup{
-		Name: "grp",
+		Name:       "grp",
+		EntityType: "user",
 		Features: []domain.FeatureSpec{
 			{
 				Name:     "count",
@@ -494,4 +510,58 @@ func TestRegistry_Validate_IntForNumeric(t *testing.T) {
 	if err := r.Validate("count", int64(-1)); err == nil {
 		t.Error("Expected error for value below min")
 	}
+}
+
+func TestRegistry_RegisterGroup_Validation(t *testing.T) {
+r := NewRegistry()
+
+// Missing name
+err := r.RegisterGroup(&domain.FeatureGroup{
+EntityType: "user",
+Features:   []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
+})
+if err == nil {
+t.Error("Expected error for empty group name")
+}
+
+// Missing entity type
+err = r.RegisterGroup(&domain.FeatureGroup{
+Name:     "grp",
+Features: []domain.FeatureSpec{{Name: "f1", DataType: domain.DataTypeInt64}},
+})
+if err == nil {
+t.Error("Expected error for empty entity type")
+}
+
+// No features
+err = r.RegisterGroup(&domain.FeatureGroup{
+Name:       "grp",
+EntityType: "user",
+})
+if err == nil {
+t.Error("Expected error for empty features")
+}
+
+// Duplicate feature name within group
+err = r.RegisterGroup(&domain.FeatureGroup{
+Name:       "grp",
+EntityType: "user",
+Features: []domain.FeatureSpec{
+{Name: "f1", DataType: domain.DataTypeInt64},
+{Name: "f1", DataType: domain.DataTypeFloat64},
+},
+})
+if err == nil {
+t.Error("Expected error for duplicate feature name within group")
+}
+
+// Empty feature name
+err = r.RegisterGroup(&domain.FeatureGroup{
+Name:       "grp",
+EntityType: "user",
+Features:   []domain.FeatureSpec{{Name: "", DataType: domain.DataTypeInt64}},
+})
+if err == nil {
+t.Error("Expected error for empty feature name")
+}
 }

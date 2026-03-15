@@ -373,6 +373,9 @@ func (h *HotTier) Delete(entityKey string) error {
 
 // ExpireOlderThan removes features older than the given duration.
 func (h *HotTier) ExpireOlderThan(maxAge time.Duration) int {
+	if maxAge <= 0 {
+		return 0
+	}
 	cutoff := time.Now().Add(-maxAge).UnixNano()
 	expired := 0
 
