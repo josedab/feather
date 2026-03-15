@@ -45,6 +45,14 @@ import (
 	"time"
 )
 
+// Batch operation limits shared across HTTP and gRPC APIs.
+const (
+	// MaxBatchEntities is the maximum number of entities in a batch request.
+	MaxBatchEntities = 10000
+	// MaxBatchFeatures is the maximum number of features per batch request.
+	MaxBatchFeatures = 1000
+)
+
 // DataType enumerates the supported feature data types in Feather.
 //
 // Each data type maps to a corresponding Go type for storage and validation:
