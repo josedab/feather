@@ -507,6 +507,17 @@ func (c *Config) Validate() error {
 		})
 	}
 
+	// Validate eviction policy
+	if c.Storage.Hot.EvictionPolicy != "" {
+		validPolicies := map[string]bool{"lru": true, "lfu": true, "fifo": true}
+		if !validPolicies[c.Storage.Hot.EvictionPolicy] {
+			errs = append(errs, ValidationError{
+				Field:   "storage.hot.eviction_policy",
+				Message: fmt.Sprintf("invalid eviction policy '%s', must be one of: lru, lfu, fifo", c.Storage.Hot.EvictionPolicy),
+			})
+		}
+	}
+
 	// Validate serving ports
 	if c.Serving.HTTP.Port < 0 || c.Serving.HTTP.Port > 65535 {
 		errs = append(errs, ValidationError{
@@ -662,11 +673,17 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// Validate timeouts are positive
+	// Validate timeouts are positive and within reasonable bounds
+	const maxTimeout = 5 * time.Minute
 	if c.Serving.HTTP.ReadTimeout < 0 {
 		errs = append(errs, ValidationError{
 			Field:   "serving.http.read_timeout",
 			Message: "read timeout must not be negative",
+		})
+	} else if c.Serving.HTTP.ReadTimeout > maxTimeout {
+		errs = append(errs, ValidationError{
+			Field:   "serving.http.read_timeout",
+			Message: fmt.Sprintf("read timeout %v exceeds maximum of %v", c.Serving.HTTP.ReadTimeout, maxTimeout),
 		})
 	}
 	if c.Serving.HTTP.WriteTimeout < 0 {
@@ -674,13 +691,24 @@ func (c *Config) Validate() error {
 			Field:   "serving.http.write_timeout",
 			Message: "write timeout must not be negative",
 		})
+	} else if c.Serving.HTTP.WriteTimeout > maxTimeout {
+		errs = append(errs, ValidationError{
+			Field:   "serving.http.write_timeout",
+			Message: fmt.Sprintf("write timeout %v exceeds maximum of %v", c.Serving.HTTP.WriteTimeout, maxTimeout),
+		})
 	}
 
 	// Validate gRPC max concurrent streams
+	const maxGRPCConcurrent = 100000
 	if c.Serving.GRPC.MaxConcurrent < 0 {
 		errs = append(errs, ValidationError{
 			Field:   "serving.grpc.max_concurrent",
 			Message: fmt.Sprintf("max concurrent must not be negative, got %d", c.Serving.GRPC.MaxConcurrent),
+		})
+	} else if c.Serving.GRPC.MaxConcurrent > maxGRPCConcurrent {
+		errs = append(errs, ValidationError{
+			Field:   "serving.grpc.max_concurrent",
+			Message: fmt.Sprintf("max concurrent %d exceeds maximum of %d", c.Serving.GRPC.MaxConcurrent, maxGRPCConcurrent),
 		})
 	}
 
