@@ -29,6 +29,9 @@ func (h *MigrationHandler) RegisterRoutes(mux *http.ServeMux) {
 	if wrap == nil {
 		wrap = func(next http.Handler) http.Handler { return next }
 	}
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
 	// Analysis endpoints
 	mux.Handle("POST /v1/migration/analyze", wrap(http.HandlerFunc(h.handleAnalyze)))
 	mux.Handle("POST /v1/migration/convert/schema", wrap(http.HandlerFunc(h.handleConvertSchema)))

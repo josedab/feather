@@ -118,10 +118,10 @@ func TestTenantHandler_CreateTenant(t *testing.T) {
 		"id":   "tenant-1",
 		"name": "Test Tenant",
 		"quotas": map[string]interface{}{
-			"max_entities":        10000,
-			"max_features":        100,
-			"max_storage_bytes":   1073741824,
-			"requests_per_second": 100,
+			"max_entity_count":        10000,
+			"max_features":            100,
+			"max_storage_bytes":       1073741824,
+			"max_requests_per_second": 100,
 		},
 	}
 
@@ -317,7 +317,7 @@ func TestTenantHandler_CreateAndGetTenant(t *testing.T) {
 		"id":   "test-tenant",
 		"name": "Test Tenant",
 		"quotas": map[string]interface{}{
-			"max_entities": 10000,
+			"max_entity_count": 10000,
 		},
 	}
 

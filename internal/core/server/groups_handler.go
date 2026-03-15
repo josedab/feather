@@ -24,6 +24,9 @@ func NewGroupsHandler() *GroupsHandler {
 // RegisterRoutes registers feature group API routes.
 func (h *GroupsHandler) RegisterRoutes(mux *http.ServeMux) {
 	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
 
 	// Group CRUD
 	mux.Handle("POST /v1/groups", wrap(http.HandlerFunc(h.handleCreateGroup)))

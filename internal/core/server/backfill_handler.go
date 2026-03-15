@@ -63,6 +63,9 @@ func NewBackfillHandler(store *storage.Store) *BackfillHandler {
 // RegisterRoutes registers backfill API routes.
 func (h *BackfillHandler) RegisterRoutes(mux *http.ServeMux) {
 	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
 
 	// Job management
 	mux.Handle("POST /v1/backfill/jobs", wrap(http.HandlerFunc(h.handleCreateJob)))

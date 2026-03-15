@@ -25,6 +25,9 @@ func (h *ValidationHandler) RegisterRoutes(mux *http.ServeMux) {
 	if wrap == nil {
 		wrap = func(next http.Handler) http.Handler { return next }
 	}
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
 	mux.Handle("GET /v1/validation/rules", wrap(http.HandlerFunc(h.handleListRules)))
 	mux.Handle("POST /v1/validation/rules", wrap(http.HandlerFunc(h.handleAddRule)))
 	mux.Handle("DELETE /v1/validation/rules/{name}", wrap(http.HandlerFunc(h.handleRemoveRule)))

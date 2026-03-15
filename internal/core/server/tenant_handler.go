@@ -51,6 +51,9 @@ func NewTenantHandlerWithRegistry(registry *tenant.TenantRegistry, totalHotTierS
 // RegisterRoutes registers tenant management API routes.
 func (h *TenantHandler) RegisterRoutes(mux *http.ServeMux) {
 	wrap := h.requireAuth
+	if wrap == nil {
+		wrap = func(next http.Handler) http.Handler { return next }
+	}
 
 	// Tenant CRUD routes - reads are open, writes require auth
 	mux.HandleFunc("GET /v1/tenants", h.handleListTenants)
