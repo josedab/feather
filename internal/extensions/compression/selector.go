@@ -47,22 +47,22 @@ func DefaultConfig() Config {
 
 // DataStats summarises the statistical properties of a data sample.
 type DataStats struct {
-	Cardinality     int
-	ValueRange      float64
-	TemporalPattern bool
-	RepeatRate      float64
-	MeanValue       float64
-	StdDev          float64
-	Size            int64
+	Cardinality     int     `json:"cardinality"`
+	ValueRange      float64 `json:"value_range"`
+	TemporalPattern bool    `json:"temporal_pattern"`
+	RepeatRate      float64 `json:"repeat_rate"`
+	MeanValue       float64 `json:"mean_value"`
+	StdDev          float64 `json:"std_dev"`
+	Size            int64   `json:"size"`
 }
 
 // CompressedBlock is the output of a compression operation.
 type CompressedBlock struct {
-	Data           []byte
-	Strategy       Strategy
-	OriginalSize   int64
-	CompressedSize int64
-	Ratio          float64
+	Data           []byte   `json:"data"`
+	Strategy       Strategy `json:"strategy"`
+	OriginalSize   int64    `json:"original_size"`
+	CompressedSize int64    `json:"compressed_size"`
+	Ratio          float64  `json:"ratio"`
 }
 
 // compressionRecord tracks a single compression result for adaptive re-encoding.

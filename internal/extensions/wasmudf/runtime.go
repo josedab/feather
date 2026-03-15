@@ -21,18 +21,20 @@ const (
 
 // Module represents a registered WASM transformation function.
 type Module struct {
-	ID            string
-	Name          string
-	Language      string
-	WasmBytes     []byte
-	InputSchema   map[string]string
-	OutputSchema  map[string]string
-	MemoryLimitMB int
-	TimeoutMs     int
-	Status        ModuleStatus
-	Version       string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Language      string            `json:"language"`
+	WasmBytes     []byte            `json:"wasm_bytes,omitempty"`
+	Source        string            `json:"source,omitempty"`
+	Function      string            `json:"function,omitempty"`
+	InputSchema   map[string]string `json:"input_schema,omitempty"`
+	OutputSchema  map[string]string `json:"output_schema,omitempty"`
+	MemoryLimitMB int               `json:"memory_limit_mb,omitempty"`
+	TimeoutMs     int               `json:"timeout_ms,omitempty"`
+	Status        ModuleStatus      `json:"status,omitempty"`
+	Version       string            `json:"version,omitempty"`
+	CreatedAt     time.Time         `json:"created_at,omitempty"`
+	UpdatedAt     time.Time         `json:"updated_at,omitempty"`
 }
 
 // ExecutionResult captures the output of a module execution.

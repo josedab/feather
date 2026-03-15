@@ -9,12 +9,12 @@ import (
 
 // DatasetConfig defines the parameters for creating a dataset.
 type DatasetConfig struct {
-	Name         string
-	FeatureGroup string
-	EntityType   string
-	StartTime    time.Time
-	EndTime      time.Time
-	CreatedAt    time.Time
+	Name         string    `json:"name"`
+	FeatureGroup string    `json:"feature_group"`
+	EntityType   string    `json:"entity_type"`
+	StartTime    time.Time `json:"start_time"`
+	EndTime      time.Time `json:"end_time"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // FeatureRow represents a single feature observation.

@@ -9,23 +9,23 @@ import (
 
 // FeatureDefinition describes a desired feature group.
 type FeatureDefinition struct {
-	Name        string
-	EntityType  string
-	Description string
-	TTL         string
-	Features    []FieldDef
-	Tags        map[string]string
-	Owner       string
-	Version     string
+	Name        string            `json:"name"`
+	EntityType  string            `json:"entity_type"`
+	Description string            `json:"description"`
+	TTL         string            `json:"ttl"`
+	Features    []FieldDef        `json:"features"`
+	Tags        map[string]string `json:"tags"`
+	Owner       string            `json:"owner"`
+	Version     string            `json:"version"`
 }
 
 // FieldDef describes a single field within a feature group.
 type FieldDef struct {
-	Name        string
-	Type        string
-	Description string
-	Required    bool
-	Default     string
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	Required    bool   `json:"required"`
+	Default     string `json:"default"`
 }
 
 // ReconcileAction indicates the action taken during reconciliation.

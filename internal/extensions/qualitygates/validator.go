@@ -49,18 +49,18 @@ func DefaultConfig() Config {
 
 // FeatureDefinition describes a single feature within a schema.
 type FeatureDefinition struct {
-	Name        string
-	DataType    string
-	Nullable    bool
-	Constraints map[string]interface{}
+	Name        string                 `json:"name"`
+	DataType    string                 `json:"data_type"`
+	Nullable    bool                   `json:"nullable"`
+	Constraints map[string]interface{} `json:"constraints"`
 }
 
 // SchemaDefinition describes a feature group schema.
 type SchemaDefinition struct {
-	Name       string
-	EntityType string
-	Features   []FeatureDefinition
-	Version    string
+	Name       string              `json:"name"`
+	EntityType string              `json:"entity_type"`
+	Features   []FeatureDefinition `json:"features"`
+	Version    string              `json:"version"`
 }
 
 // ValidationReport holds the result of a schema validation.

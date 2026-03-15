@@ -20,13 +20,13 @@ const (
 
 // Contract defines validation rules for a feature group.
 type Contract struct {
-	ID           string
-	Name         string
-	FeatureGroup string
-	Type         ContractType
-	Rules        map[string]interface{}
-	Severity     string // "warn" or "block"
-	CreatedAt    time.Time
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	FeatureGroup string                 `json:"feature_group"`
+	Type         ContractType           `json:"type"`
+	Rules        map[string]interface{} `json:"rules"`
+	Severity     string                 `json:"severity"` // "warn" or "block"
+	CreatedAt    time.Time              `json:"created_at"`
 }
 
 // TestResult represents the outcome of a contract validation.

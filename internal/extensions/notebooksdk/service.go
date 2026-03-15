@@ -39,9 +39,9 @@ const (
 
 // SessionConfig holds parameters for creating a new session.
 type SessionConfig struct {
-	Notebook      string
-	User          string
-	ConnectionURL string
+	Notebook      string `json:"notebook"`
+	User          string `json:"user"`
+	ConnectionURL string `json:"connection_url"`
 }
 
 // Session represents an active notebook session.

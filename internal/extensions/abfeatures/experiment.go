@@ -20,33 +20,33 @@ const (
 
 // Variant represents one arm of an experiment.
 type Variant struct {
-	ID             string
-	Name           string
-	FeatureVersion string
-	TrafficPercent float64
-	Metrics        VariantMetrics
+	ID             string         `json:"id"`
+	Name           string         `json:"name"`
+	FeatureVersion string         `json:"feature_version"`
+	TrafficPercent float64        `json:"traffic_percent"`
+	Metrics        VariantMetrics `json:"metrics"`
 }
 
 // VariantMetrics tracks performance metrics for a variant.
 type VariantMetrics struct {
-	Requests     int64
-	AvgLatencyMs float64
-	ErrorRate    float64
-	CustomScore  float64
-	ScoreCount   int64
+	Requests     int64   `json:"requests"`
+	AvgLatencyMs float64 `json:"avg_latency_ms"`
+	ErrorRate    float64 `json:"error_rate"`
+	CustomScore  float64 `json:"custom_score"`
+	ScoreCount   int64   `json:"score_count"`
 }
 
 // Experiment defines a multi-variant experiment.
 type Experiment struct {
-	ID           string
-	Name         string
-	FeatureGroup string
-	Status       ExperimentStatus
-	Variants     []Variant
-	WinnerID     string
-	StartedAt    *time.Time
-	ConcludedAt  *time.Time
-	CreatedAt    time.Time
+	ID           string           `json:"id"`
+	Name         string           `json:"name"`
+	FeatureGroup string           `json:"feature_group"`
+	Status       ExperimentStatus `json:"status"`
+	Variants     []Variant        `json:"variants"`
+	WinnerID     string           `json:"winner_id"`
+	StartedAt    *time.Time       `json:"started_at"`
+	ConcludedAt  *time.Time       `json:"concluded_at"`
+	CreatedAt    time.Time        `json:"created_at"`
 }
 
 // ExperimentConfig configures the experiment manager.

@@ -20,13 +20,13 @@ const (
 
 // BenchmarkConfig configures a single benchmark run.
 type BenchmarkConfig struct {
-	Name         string
-	Type         BenchmarkType
-	NumEntities  int
-	NumFeatures  int
-	Concurrency  int
-	DurationSecs int
-	WarmupSecs   int
+	Name         string        `json:"name"`
+	Type         BenchmarkType `json:"type"`
+	NumEntities  int           `json:"num_entities"`
+	NumFeatures  int           `json:"num_features"`
+	Concurrency  int           `json:"concurrency"`
+	DurationSecs int           `json:"duration_secs"`
+	WarmupSecs   int           `json:"warmup_secs"`
 }
 
 // BenchmarkResult captures the result of a benchmark run.
