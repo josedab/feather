@@ -112,18 +112,26 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	}
 
 	// Parse hot tier max memory
+	// Initialize aggregation engine (before store so we can wire eviction callback)
+	agg := aggregation.NewEngine()
+
 	maxMemory, err := config.ParseMemorySize(cfg.Storage.Hot.MaxMemory)
 	if err != nil {
 		return fmt.Errorf("parsing max memory: %w", err)
 	}
 
-	// Initialize storage
+	// Initialize storage with aggregation window eviction callback
 	store, err := storage.NewStore(ctx, storage.StoreOptions{
 		HotMaxSize:       maxMemory,
 		WarmPath:         cfg.Storage.Warm.Path,
 		WarmSyncInterval: cfg.Storage.Warm.SyncInterval,
 		WarmInMemory:     cfg.Storage.Warm.Path == "" || cfg.Storage.Warm.Path == ":memory:",
 		TTLCheckInterval: time.Minute,
+		OnTTLCycle: func() {
+			if evicted := agg.EvictInactive(time.Hour); evicted > 0 {
+				logger.Debug("evicted inactive aggregation windows", "count", evicted)
+			}
+		},
 	}, schema)
 	if err != nil {
 		return fmt.Errorf("creating store: %w", err)
@@ -133,9 +141,6 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 			logger.Error("store close error", "error", err)
 		}
 	}()
-
-	// Initialize aggregation engine
-	agg := aggregation.NewEngine()
 
 	// Initialize vector store
 	vectorStore := vector.NewStore(vector.StoreConfig{
