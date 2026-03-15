@@ -51,11 +51,21 @@ type Metrics struct {
 	gcPauseTotal      prometheus.Gauge
 }
 
-// NewMetrics creates a new Metrics instance.
+// NewMetrics creates a new Metrics instance using the default Prometheus registry.
 func NewMetrics(namespace string) *Metrics {
+	return newMetrics(namespace, promauto.With(prometheus.DefaultRegisterer))
+}
+
+// NewMetricsWithRegistry creates a new Metrics instance using a custom Prometheus registry.
+// This is useful for testing where metrics need to be gathered and asserted.
+func NewMetricsWithRegistry(namespace string, reg prometheus.Registerer) *Metrics {
+	return newMetrics(namespace, promauto.With(reg))
+}
+
+func newMetrics(namespace string, factory promauto.Factory) *Metrics {
 	return &Metrics{
 		// HTTP metrics
-		httpRequestsTotal: promauto.NewCounterVec(
+		httpRequestsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "http_requests_total",
@@ -63,7 +73,7 @@ func NewMetrics(namespace string) *Metrics {
 			},
 			[]string{"method", "path", "status"},
 		),
-		httpRequestDuration: promauto.NewHistogramVec(
+		httpRequestDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
 				Name:      "http_request_duration_seconds",
@@ -74,7 +84,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// gRPC metrics
-		grpcRequestsTotal: promauto.NewCounterVec(
+		grpcRequestsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "grpc_requests_total",
@@ -82,7 +92,7 @@ func NewMetrics(namespace string) *Metrics {
 			},
 			[]string{"method", "status"},
 		),
-		grpcRequestDuration: promauto.NewHistogramVec(
+		grpcRequestDuration: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
 				Name:      "grpc_request_duration_seconds",
@@ -93,35 +103,35 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Cache metrics
-		cacheHits: promauto.NewCounter(
+		cacheHits: factory.NewCounter(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "cache_hits_total",
 				Help:      "Total cache hits",
 			},
 		),
-		cacheMisses: promauto.NewCounter(
+		cacheMisses: factory.NewCounter(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "cache_misses_total",
 				Help:      "Total cache misses",
 			},
 		),
-		hotTierSize: promauto.NewGauge(
+		hotTierSize: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "hot_tier_bytes",
 				Help:      "Hot tier size in bytes",
 			},
 		),
-		warmTierSize: promauto.NewGauge(
+		warmTierSize: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "warm_tier_bytes",
 				Help:      "Warm tier size in bytes",
 			},
 		),
-		entityCount: promauto.NewGauge(
+		entityCount: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "entity_count",
@@ -130,7 +140,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Ingestion metrics
-		messagesReceived: promauto.NewCounterVec(
+		messagesReceived: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "ingestion_messages_received_total",
@@ -138,7 +148,7 @@ func NewMetrics(namespace string) *Metrics {
 			},
 			[]string{"source"},
 		),
-		messagesProcessed: promauto.NewCounterVec(
+		messagesProcessed: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "ingestion_messages_processed_total",
@@ -146,7 +156,7 @@ func NewMetrics(namespace string) *Metrics {
 			},
 			[]string{"source", "status"},
 		),
-		ingestionLag: promauto.NewGauge(
+		ingestionLag: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "ingestion_lag_seconds",
@@ -155,7 +165,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Feature metrics
-		featureFreshness: promauto.NewGaugeVec(
+		featureFreshness: factory.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "feature_freshness_seconds",
@@ -163,7 +173,7 @@ func NewMetrics(namespace string) *Metrics {
 			},
 			[]string{"feature_group"},
 		),
-		featureRequests: promauto.NewCounterVec(
+		featureRequests: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "feature_requests_total",
@@ -171,7 +181,7 @@ func NewMetrics(namespace string) *Metrics {
 			},
 			[]string{"feature"},
 		),
-		aggregationCompute: promauto.NewHistogramVec(
+		aggregationCompute: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
 				Name:      "aggregation_compute_seconds",
@@ -182,7 +192,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Warm tier operation latency
-		warmTierOps: promauto.NewHistogramVec(
+		warmTierOps: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
 				Name:      "warm_tier_operation_seconds",
@@ -193,7 +203,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Eviction events
-		evictionTotal: promauto.NewCounterVec(
+		evictionTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "evictions_total",
@@ -203,7 +213,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Shard contention
-		shardWaitTime: promauto.NewHistogramVec(
+		shardWaitTime: factory.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
 				Name:      "shard_wait_seconds",
@@ -214,7 +224,7 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Error categorization
-		errorsTotal: promauto.NewCounterVec(
+		errorsTotal: factory.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: namespace,
 				Name:      "errors_total",
@@ -224,35 +234,35 @@ func NewMetrics(namespace string) *Metrics {
 		),
 
 		// Runtime metrics
-		goroutineCount: promauto.NewGauge(
+		goroutineCount: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "goroutines",
 				Help:      "Current number of goroutines",
 			},
 		),
-		memoryAlloc: promauto.NewGauge(
+		memoryAlloc: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "memory_alloc_bytes",
 				Help:      "Bytes of allocated heap objects",
 			},
 		),
-		memoryTotalAlloc: promauto.NewGauge(
+		memoryTotalAlloc: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "memory_total_alloc_bytes",
 				Help:      "Cumulative bytes allocated for heap objects",
 			},
 		),
-		memoryHeapObjects: promauto.NewGauge(
+		memoryHeapObjects: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "memory_heap_objects",
 				Help:      "Number of allocated heap objects",
 			},
 		),
-		gcPauseTotal: promauto.NewGauge(
+		gcPauseTotal: factory.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Name:      "gc_pause_total_seconds",
