@@ -70,13 +70,10 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	closeErr := tmpFile.Close()
-	if closeErr != nil {
-		return fmt.Errorf("closing temp file: %w", closeErr)
-	}
-	defer func() {
-		_ = os.Remove(tmpPath)
-	}()
+	// Close the handle immediately — parquet writer will manage its own file handle.
+	// Cleanup: always remove the temp file when done.
+	tmpFile.Close()
+	defer os.Remove(tmpPath)
 
 	// Create parquet file writer
 	fw, err := local.NewLocalFileWriter(tmpPath)
@@ -135,16 +132,14 @@ func writeParquet(w io.Writer, rows []ParquetRow, featureNames []string) error {
 		return fmt.Errorf("closing parquet file: %w", err)
 	}
 
-	// Copy temp file to writer
-	tmpFile, err = os.Open(tmpPath)
+	// Reopen for reading and copy to output writer
+	readFile, err := os.Open(tmpPath)
 	if err != nil {
-		return fmt.Errorf("opening temp file: %w", err)
+		return fmt.Errorf("opening temp file for reading: %w", err)
 	}
-	defer func() {
-		_ = tmpFile.Close()
-	}()
+	defer readFile.Close()
 
-	if _, err := io.Copy(w, tmpFile); err != nil {
+	if _, err := io.Copy(w, readFile); err != nil {
 		return fmt.Errorf("copying to output: %w", err)
 	}
 
@@ -164,13 +159,8 @@ func writeEmptyParquet(w io.Writer) error {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	closeErr := tmpFile.Close()
-	if closeErr != nil {
-		return fmt.Errorf("closing temp file: %w", closeErr)
-	}
-	defer func() {
-		_ = os.Remove(tmpPath)
-	}()
+	tmpFile.Close()
+	defer os.Remove(tmpPath)
 
 	fw, err := local.NewLocalFileWriter(tmpPath)
 	if err != nil {
@@ -195,16 +185,14 @@ func writeEmptyParquet(w io.Writer) error {
 		return fmt.Errorf("closing parquet file: %w", err)
 	}
 
-	// Copy to writer
-	tmpFile, err = os.Open(tmpPath)
+	// Reopen for reading and copy to output writer
+	readFile, err := os.Open(tmpPath)
 	if err != nil {
-		return fmt.Errorf("opening temp file: %w", err)
+		return fmt.Errorf("opening temp file for reading: %w", err)
 	}
-	defer func() {
-		_ = tmpFile.Close()
-	}()
+	defer readFile.Close()
 
-	if _, err := io.Copy(w, tmpFile); err != nil {
+	if _, err := io.Copy(w, readFile); err != nil {
 		return fmt.Errorf("copying to output: %w", err)
 	}
 
