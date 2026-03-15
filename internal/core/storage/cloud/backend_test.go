@@ -519,7 +519,10 @@ func TestDynamoDBGetAsOf(t *testing.T) {
 	features := map[string]*domain.FeatureValue{
 		"score": {Value: 100, Timestamp: now.Add(-2 * time.Hour).UnixNano()},
 	}
-	item := backend.featuresToHistoryItem("user:1", features, now.Add(-2*time.Hour))
+	item, err := backend.featuresToHistoryItem("user:1", features, now.Add(-2*time.Hour))
+	if err != nil {
+		t.Fatalf("featuresToHistoryItem error: %v", err)
+	}
 	client.mu.Lock()
 	client.historyItems = append(client.historyItems, item)
 	client.mu.Unlock()
@@ -573,7 +576,10 @@ func TestDynamoDBFeaturesToHistoryItem(t *testing.T) {
 		"clicks": {Value: 42, Timestamp: ts.UnixNano()},
 	}
 
-	item := backend.featuresToHistoryItem("user:1", features, ts)
+	item, err := backend.featuresToHistoryItem("user:1", features, ts)
+	if err != nil {
+		t.Fatalf("featuresToHistoryItem error: %v", err)
+	}
 
 	if item["pk"] != "user:1" {
 		t.Errorf("expected pk user:1, got %v", item["pk"])
@@ -603,7 +609,10 @@ func TestDynamoDBFeaturesToHistoryItem_WithCompression(t *testing.T) {
 		"clicks": {Value: 42, Timestamp: time.Now().UnixNano()},
 	}
 
-	item := backend.featuresToHistoryItem("user:1", features, time.Now())
+	item, err := backend.featuresToHistoryItem("user:1", features, time.Now())
+	if err != nil {
+		t.Fatalf("featuresToHistoryItem error: %v", err)
+	}
 
 	if item["compressed"] != true {
 		t.Error("expected compressed=true when compression is enabled")

@@ -270,14 +270,18 @@ func (b *DynamoDBBackend) Put(ctx context.Context, entityKey string, features ma
 
 	// Store historical version if enabled
 	if b.config.HistoryEnabled && b.config.HistoryTableName != "" {
-		histItem := b.featuresToHistoryItem(entityKey, features, time.Now())
-		histInput := &PutItemInput{
-			TableName: b.config.HistoryTableName,
-			Item:      histItem,
-		}
-		// Best effort - don't fail main operation
-		if err := b.client.PutItem(ctx, histInput); err != nil {
+		histItem, err := b.featuresToHistoryItem(entityKey, features, time.Now())
+		if err != nil {
 			atomic.AddInt64(&b.stats.errors, 1)
+		} else {
+			histInput := &PutItemInput{
+				TableName: b.config.HistoryTableName,
+				Item:      histItem,
+			}
+			// Best effort - don't fail main operation
+			if err := b.client.PutItem(ctx, histInput); err != nil {
+				atomic.AddInt64(&b.stats.errors, 1)
+			}
 		}
 	}
 
@@ -540,15 +544,21 @@ func (b *DynamoDBBackend) featuresToItem(entityKey string, features map[string]*
 	return item, nil
 }
 
-func (b *DynamoDBBackend) featuresToHistoryItem(entityKey string, features map[string]*domain.FeatureValue, ts time.Time) map[string]interface{} {
+func (b *DynamoDBBackend) featuresToHistoryItem(entityKey string, features map[string]*domain.FeatureValue, ts time.Time) (map[string]interface{}, error) {
 	item := map[string]interface{}{
 		"pk": entityKey,
 		"sk": ts.UnixNano(),
 	}
 
-	featuresJSON, _ := json.Marshal(features)
+	featuresJSON, err := json.Marshal(features)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling features for history: %w", err)
+	}
 	if b.config.EnableCompression {
-		compressed, _ := b.compress(featuresJSON)
+		compressed, err := b.compress(featuresJSON)
+		if err != nil {
+			return nil, fmt.Errorf("compressing features for history: %w", err)
+		}
 		item["features"] = compressed
 		item["compressed"] = true
 	} else {
@@ -560,7 +570,7 @@ func (b *DynamoDBBackend) featuresToHistoryItem(entityKey string, features map[s
 		item["ttl"] = time.Now().Add(b.config.HistoryTTL).Unix()
 	}
 
-	return item
+	return item, nil
 }
 
 func (b *DynamoDBBackend) itemToFeatures(item map[string]interface{}, requestedFeatures []string) (map[string]*domain.FeatureValue, error) {
