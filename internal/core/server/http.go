@@ -317,10 +317,18 @@ func (s *HTTPServer) handleGetFeatures(w http.ResponseWriter, r *http.Request) {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity query parameter required")
 		return
 	}
+	if err := domain.ValidateEntityKey(entityKey); err != nil {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
+		return
+	}
 
 	featureNames := r.URL.Query()["feature"]
 	if len(featureNames) == 0 {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "at least one feature query parameter required")
+		return
+	}
+	if err := domain.ValidateFeatureNames(featureNames); err != nil {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -358,6 +366,17 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 	}
 	if len(req.Features) == 0 {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "features required")
+		return
+	}
+
+	for _, e := range req.Entities {
+		if err := domain.ValidateEntityKey(e); err != nil {
+			s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
+			return
+		}
+	}
+	if err := domain.ValidateFeatureNames(req.Features); err != nil {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -409,6 +428,10 @@ func (s *HTTPServer) handleGetFeaturesAsOf(w http.ResponseWriter, r *http.Reques
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity query parameter required")
 		return
 	}
+	if err := domain.ValidateEntityKey(entityKey); err != nil {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
+		return
+	}
 
 	asOfStr := r.URL.Query().Get("as_of")
 	if asOfStr == "" {
@@ -425,6 +448,10 @@ func (s *HTTPServer) handleGetFeaturesAsOf(w http.ResponseWriter, r *http.Reques
 	featureNames := r.URL.Query()["feature"]
 	if len(featureNames) == 0 {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "at least one feature query parameter required")
+		return
+	}
+	if err := domain.ValidateFeatureNames(featureNames); err != nil {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -468,6 +495,10 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 
 	if req.EntityKey == "" {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, "entity_key required")
+		return
+	}
+	if err := domain.ValidateEntityKey(req.EntityKey); err != nil {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -533,8 +564,26 @@ func (s *HTTPServer) handlePutFeatures(w http.ResponseWriter, r *http.Request) {
 
 // handleListGroups handles GET /v1/schema/groups
 func (s *HTTPServer) handleListGroups(w http.ResponseWriter, r *http.Request) {
-	groups := s.schema.ListGroups()
-	s.writeAPIResponse(w, r, http.StatusOK, groups)
+	allGroups := s.schema.ListGroups()
+
+	limit, offset := parsePagination(r, 100, 1000)
+	total := len(allGroups)
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	page := allGroups[offset:end]
+
+	setPaginationHeaders(w, total, limit, offset, r)
+	s.writeAPIResponse(w, r, http.StatusOK, map[string]interface{}{
+		"groups": page,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
+	})
 }
 
 // handleGetGroup handles GET /v1/schema/groups/{name}

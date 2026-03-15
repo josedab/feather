@@ -170,6 +170,14 @@ func (s *GRPCServer) GetFeatures(ctx context.Context, req *pb.GetFeaturesRequest
 	if len(req.GetEntities()) > maxGRPCEntities {
 		return nil, status.Errorf(codes.InvalidArgument, "too many entities: %d exceeds maximum %d", len(req.GetEntities()), maxGRPCEntities)
 	}
+	for _, e := range req.GetEntities() {
+		if err := domain.ValidateEntityKey(e); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid entity key: %s", err.Error())
+		}
+	}
+	if err := domain.ValidateFeatureNames(req.GetFeatures()); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid feature name: %s", err.Error())
+	}
 
 	result := &pb.GetFeaturesResponse{
 		Entities: make(map[string]*pb.EntityFeatures),
@@ -198,11 +206,23 @@ func (s *GRPCServer) GetFeaturesStream(req *pb.GetFeaturesRequest, stream grpc.S
 		}
 	}()
 
+	if len(req.GetEntities()) == 0 {
+		return status.Error(codes.InvalidArgument, "entities required")
+	}
+	if len(req.GetFeatures()) == 0 {
+		return status.Error(codes.InvalidArgument, "features required")
+	}
 	if len(req.GetEntities()) > maxGRPCEntities {
 		return status.Errorf(codes.InvalidArgument, "too many entities: %d exceeds maximum %d", len(req.GetEntities()), maxGRPCEntities)
 	}
+	if err := domain.ValidateFeatureNames(req.GetFeatures()); err != nil {
+		return status.Errorf(codes.InvalidArgument, "invalid feature name: %s", err.Error())
+	}
 
 	for _, entityKey := range req.GetEntities() {
+		if err := domain.ValidateEntityKey(entityKey); err != nil {
+			return status.Errorf(codes.InvalidArgument, "invalid entity key: %s", err.Error())
+		}
 		features, err := s.getFeaturesForEntity(stream.Context(), entityKey, req.GetFeatures())
 		if err != nil {
 			if domain.IsNotFound(err) {
@@ -230,6 +250,22 @@ func (s *GRPCServer) GetFeaturesAsOf(ctx context.Context, req *pb.GetFeaturesAsO
 			s.metrics.RecordGRPCLatency("GetFeaturesAsOf", time.Since(start))
 		}
 	}()
+
+	if req.GetEntityKey() == "" {
+		return nil, status.Error(codes.InvalidArgument, "entity_key required")
+	}
+	if err := domain.ValidateEntityKey(req.GetEntityKey()); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid entity key: %s", err.Error())
+	}
+	if len(req.GetFeatures()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "features required")
+	}
+	if err := domain.ValidateFeatureNames(req.GetFeatures()); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid feature name: %s", err.Error())
+	}
+	if req.GetAsOfTimestamp() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "as_of_timestamp required")
+	}
 
 	asOf := time.Unix(0, req.GetAsOfTimestamp())
 	features, err := s.store.GetAsOf(ctx, req.GetEntityKey(), req.GetFeatures(), asOf)
@@ -262,6 +298,16 @@ func (s *GRPCServer) PutFeatures(ctx context.Context, req *pb.PutFeaturesRequest
 			s.metrics.RecordGRPCLatency("PutFeatures", time.Since(start))
 		}
 	}()
+
+	if req.GetEntityKey() == "" {
+		return nil, status.Error(codes.InvalidArgument, "entity_key required")
+	}
+	if err := domain.ValidateEntityKey(req.GetEntityKey()); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid entity key: %s", err.Error())
+	}
+	if len(req.GetFeatures()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "features required")
+	}
 
 	features := make(map[string]*domain.FeatureValue)
 	timestamp := time.Now().UnixNano()

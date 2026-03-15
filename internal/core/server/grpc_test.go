@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/feather-store/feather/internal/core/aggregation"
 	"github.com/feather-store/feather/internal/core/domain"
 	"github.com/feather-store/feather/internal/core/storage"
+	"google.golang.org/grpc/metadata"
 )
 
 // testGRPCServer wraps a GRPCServer for testing.
@@ -160,6 +162,7 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 		name        string
 		request     *pb.PutFeaturesRequest
 		wantSuccess bool
+		wantErr     bool
 	}{
 		{
 			name: "put single feature",
@@ -203,13 +206,20 @@ func TestGRPCServer_PutFeatures(t *testing.T) {
 				Features:  map[string]*pb.FeatureValue{},
 				Version:   1,
 			},
-			wantSuccess: true,
+			wantSuccess: false,
+			wantErr:     true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := ts.PutFeatures(context.Background(), tt.request)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error")
+				}
+				return
+			}
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
@@ -512,3 +522,131 @@ func TestProtoToDomainValue(t *testing.T) {
 		})
 	}
 }
+
+func TestGRPCServer_GetFeaturesStream_Validation(t *testing.T) {
+	srv := newTestGRPCServer(t)
+
+	tests := []struct {
+		name    string
+		req     *pb.GetFeaturesRequest
+		wantErr string
+	}{
+		{
+			name:    "empty entities",
+			req:     &pb.GetFeaturesRequest{Entities: []string{}, Features: []string{"f1"}},
+			wantErr: "entities required",
+		},
+		{
+			name:    "empty features",
+			req:     &pb.GetFeaturesRequest{Entities: []string{"e1"}, Features: []string{}},
+			wantErr: "features required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stream := &mockStreamServer{ctx: context.Background()}
+			err := srv.GetFeaturesStream(tt.req, stream)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !containsSubstring(err.Error(), tt.wantErr) {
+				t.Errorf("error = %q, want containing %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGRPCServer_GetFeaturesAsOf_Validation(t *testing.T) {
+	srv := newTestGRPCServer(t)
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		req     *pb.GetFeaturesAsOfRequest
+		wantErr string
+	}{
+		{
+			name:    "empty entity key",
+			req:     &pb.GetFeaturesAsOfRequest{EntityKey: "", Features: []string{"f1"}, AsOfTimestamp: time.Now().UnixNano()},
+			wantErr: "entity_key required",
+		},
+		{
+			name:    "empty features",
+			req:     &pb.GetFeaturesAsOfRequest{EntityKey: "e1", Features: []string{}, AsOfTimestamp: time.Now().UnixNano()},
+			wantErr: "features required",
+		},
+		{
+			name:    "zero timestamp",
+			req:     &pb.GetFeaturesAsOfRequest{EntityKey: "e1", Features: []string{"f1"}, AsOfTimestamp: 0},
+			wantErr: "as_of_timestamp required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := srv.GetFeaturesAsOf(ctx, tt.req)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !containsSubstring(err.Error(), tt.wantErr) {
+				t.Errorf("error = %q, want containing %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGRPCServer_PutFeatures_Validation(t *testing.T) {
+	srv := newTestGRPCServer(t)
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		req     *pb.PutFeaturesRequest
+		wantErr string
+	}{
+		{
+			name:    "empty entity key",
+			req:     &pb.PutFeaturesRequest{EntityKey: "", Features: map[string]*pb.FeatureValue{"f": {Value: &pb.FeatureValue_IntValue{IntValue: 1}}}},
+			wantErr: "entity_key required",
+		},
+		{
+			name:    "empty features",
+			req:     &pb.PutFeaturesRequest{EntityKey: "e1", Features: map[string]*pb.FeatureValue{}},
+			wantErr: "features required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := srv.PutFeatures(ctx, tt.req)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !containsSubstring(err.Error(), tt.wantErr) {
+				t.Errorf("error = %q, want containing %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func containsSubstring(s, substr string) bool {
+	return len(s) >= len(substr) && strings.Contains(s, substr)
+}
+
+// mockStreamServer is a minimal mock for grpc.ServerStreamingServer.
+type mockStreamServer struct {
+	ctx      context.Context
+	sent     []*pb.EntityFeaturesResponse
+}
+
+func (m *mockStreamServer) Send(resp *pb.EntityFeaturesResponse) error {
+	m.sent = append(m.sent, resp)
+	return nil
+}
+func (m *mockStreamServer) SetHeader(_ metadata.MD) error  { return nil }
+func (m *mockStreamServer) SendHeader(_ metadata.MD) error { return nil }
+func (m *mockStreamServer) SetTrailer(_ metadata.MD)       {}
+func (m *mockStreamServer) Context() context.Context       { return m.ctx }
+func (m *mockStreamServer) SendMsg(_ interface{}) error    { return nil }
+func (m *mockStreamServer) RecvMsg(_ interface{}) error    { return nil }
