@@ -13,6 +13,7 @@ import (
 	"github.com/feather-store/feather/internal/extensions/wasm"
 	"github.com/feather-store/feather/internal/integrations/streamsql"
 	"github.com/feather-store/feather/internal/integrations/warehouse"
+	"github.com/feather-store/feather/internal/platform/cluster"
 	"github.com/feather-store/feather/internal/platform/consensus"
 	"github.com/feather-store/feather/internal/platform/contract"
 	"github.com/feather-store/feather/internal/platform/controlplane"
@@ -74,7 +75,18 @@ func init() {
 		return NewCostHandler(tracker, cost.NewBudgetManager(tracker), cost.NewChargebackManager(tracker))
 	})
 	registerHandler("cluster", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
-		return nil
+		ring := cluster.NewHashRing(150)
+		ring.AddNode(&cluster.Node{ID: "local", Address: "localhost", Zone: "default", VirtualNodes: 150})
+		membership := cluster.NewMembershipManager(cluster.MembershipConfig{
+			NodeID:       "local",
+			NodeName:     "local",
+			BindAddress:  "localhost",
+			Zone:         "default",
+			VirtualNodes: 150,
+		})
+		pm := cluster.NewPartitionMap(ring, 256, 1)
+		rebalancer := cluster.NewRebalancer(deps.Ctx, cluster.RebalancerConfig{}, membership, ring, pm)
+		return NewClusterHandler(membership, ring, pm, rebalancer)
 	})
 	registerHandler("scheduler", MaturityBeta, func(deps *handlerDeps) FeatureHandler {
 		return NewSchedulerHandler(warehouse.NewCronScheduler(nil, slog.Default()))

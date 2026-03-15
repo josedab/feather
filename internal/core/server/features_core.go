@@ -1,11 +1,16 @@
 package server
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/feather-store/feather/internal/extensions/drift"
 	"github.com/feather-store/feather/internal/extensions/freshness"
 	"github.com/feather-store/feather/internal/extensions/semantic"
+	"github.com/feather-store/feather/internal/extensions/sharding"
+	"github.com/feather-store/feather/internal/platform/cluster"
 	"github.com/feather-store/feather/internal/platform/quality"
 	"github.com/feather-store/feather/internal/platform/sla"
 )
@@ -81,9 +86,31 @@ func init() {
 		return NewQualityHandler(quality.NewValidator())
 	})
 	registerHandler("sharding", MaturityStable, func(deps *handlerDeps) FeatureHandler {
-		return nil
+		ring := cluster.NewHashRing(150)
+		ring.AddNode(&cluster.Node{ID: "local", Address: "localhost", Zone: "default", VirtualNodes: 150})
+		router := sharding.NewRouter(sharding.RouterConfig{
+			LocalNodeID:       "local",
+			ReplicationFactor: 1,
+			TotalPartitions:   256,
+			WriteConsistency:  sharding.WriteConsistencyOne,
+			ReadConsistency:   sharding.ReadConsistencyLocal,
+			WriteTimeout:      5 * time.Second,
+			ReadTimeout:       5 * time.Second,
+		}, ring, &localReplicaClient{})
+		return NewShardingHandler(router)
 	})
 	registerHandler("marketplace", MaturityStable, func(deps *handlerDeps) FeatureHandler {
 		return NewMarketplaceHandler()
 	})
+}
+
+// localReplicaClient is a no-op ReplicaClient for single-node mode.
+type localReplicaClient struct{}
+
+func (c *localReplicaClient) WriteFeature(_ context.Context, _ string, _ *sharding.WriteRequest) error {
+	return fmt.Errorf("single-node mode: direct store access required")
+}
+
+func (c *localReplicaClient) ReadFeature(_ context.Context, _ string, _ *sharding.ReadRequest) (*sharding.ReadResponse, error) {
+	return nil, fmt.Errorf("single-node mode: direct store access required")
 }
