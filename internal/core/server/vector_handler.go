@@ -90,9 +90,25 @@ func (h *VectorHandler) handleListIndexes(w http.ResponseWriter, r *http.Request
 		}
 	}()
 
-	indexes := h.store.ListIndexes()
+	allIndexes := h.store.ListIndexes()
+
+	limit, offset := parsePagination(r, 100, 1000)
+	total := len(allIndexes)
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	page := allIndexes[offset:end]
+
+	setPaginationHeaders(w, total, limit, offset, r)
 	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
-		"indexes": indexes,
+		"indexes": page,
+		"total":   total,
+		"limit":   limit,
+		"offset":  offset,
 	})
 }
 

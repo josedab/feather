@@ -8,6 +8,7 @@ import (
 
 	"github.com/feather-store/feather/internal/extensions/drift"
 	"github.com/feather-store/feather/internal/extensions/freshness"
+	"github.com/feather-store/feather/internal/extensions/marketplace"
 	"github.com/feather-store/feather/internal/extensions/semantic"
 	"github.com/feather-store/feather/internal/extensions/sharding"
 	"github.com/feather-store/feather/internal/platform/cluster"
@@ -100,7 +101,7 @@ func init() {
 		return NewShardingHandler(router)
 	})
 	registerHandler("marketplace", MaturityStable, func(deps *handlerDeps) FeatureHandler {
-		return NewMarketplaceHandler()
+		return NewMarketplaceHandler(marketplace.NewCatalog())
 	})
 }
 

@@ -127,11 +127,25 @@ func (h *GroupsHandler) handleListGroups(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	groupList := h.manager.ListGroups(filter)
+	allGroups := h.manager.ListGroups(filter)
 
+	limit, offset := parsePagination(r, 100, 1000)
+	total := len(allGroups)
+	if offset > total {
+		offset = total
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+	page := allGroups[offset:end]
+
+	setPaginationHeaders(w, total, limit, offset, r)
 	h.writeJSON(r.Context(), w, http.StatusOK, map[string]interface{}{
-		"groups": groupList,
-		"count":  len(groupList),
+		"groups": page,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
 	})
 }
 
