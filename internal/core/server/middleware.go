@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -110,12 +111,15 @@ func panicRecoveryMiddleware(next http.Handler) http.Handler {
 		ctx := r.Context()
 		defer func() {
 			if rec := recover(); rec != nil {
-				// Log the panic with request context
+				// Capture stack trace for debugging
+				stack := debug.Stack()
+
 				logger := logging.FromContext(ctx, nil)
 				logger.Error("panic recovered in HTTP handler",
 					"panic", rec,
 					"path", r.URL.Path,
 					"method", r.Method,
+					"stack", string(stack),
 				)
 
 				resp := domain.NewErrorResponse(domain.ErrCodeInternal, "internal server error")

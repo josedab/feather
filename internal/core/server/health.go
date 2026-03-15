@@ -90,6 +90,9 @@ func (h *HealthChecker) IsHealthy() bool {
 	return h.healthy
 }
 
+// componentCheckTimeout is the maximum time allowed for each health check component.
+const componentCheckTimeout = 5 * time.Second
+
 // Check performs a comprehensive health check.
 func (h *HealthChecker) Check(ctx context.Context) *HealthCheckResult {
 	result := &HealthCheckResult{
@@ -98,11 +101,61 @@ func (h *HealthChecker) Check(ctx context.Context) *HealthCheckResult {
 		Components: make(map[string]*ComponentHealth),
 	}
 
-	// Check all components
-	result.Components["hot_tier"] = h.checkHotTier(ctx)
-	result.Components["warm_tier"] = h.checkWarmTier(ctx)
-	result.Components["schema_registry"] = h.checkSchemaRegistry(ctx)
-	result.Components["aggregation_engine"] = h.checkAggregationEngine(ctx)
+	// Check all components with per-component timeout
+	type componentResult struct {
+		name   string
+		health *ComponentHealth
+	}
+	checks := []struct {
+		name string
+		fn   func(context.Context) *ComponentHealth
+	}{
+		{"hot_tier", h.checkHotTier},
+		{"warm_tier", h.checkWarmTier},
+		{"schema_registry", h.checkSchemaRegistry},
+		{"aggregation_engine", h.checkAggregationEngine},
+	}
+
+	var wg sync.WaitGroup
+	results := make(chan componentResult, len(checks))
+
+	for _, check := range checks {
+		wg.Add(1)
+		go func(name string, fn func(context.Context) *ComponentHealth) {
+			defer wg.Done()
+			checkCtx, cancel := context.WithTimeout(ctx, componentCheckTimeout)
+			defer cancel()
+
+			done := make(chan *ComponentHealth, 1)
+			go func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						done <- &ComponentHealth{
+							Status:  HealthStatusUnhealthy,
+							Message: fmt.Sprintf("health check panicked: %v", rec),
+						}
+					}
+				}()
+				done <- fn(checkCtx)
+			}()
+
+			select {
+			case health := <-done:
+				results <- componentResult{name: name, health: health}
+			case <-checkCtx.Done():
+				results <- componentResult{name: name, health: &ComponentHealth{
+					Status:  HealthStatusUnhealthy,
+					Message: "health check timed out",
+				}}
+			}
+		}(check.name, check.fn)
+	}
+
+	wg.Wait()
+	close(results)
+	for cr := range results {
+		result.Components[cr.name] = cr.health
+	}
 
 	// Aggregate status: use worst status from all components
 	result.Status = h.aggregateStatus(result.Components)
@@ -157,11 +210,16 @@ func (h *HealthChecker) checkHotTier(ctx context.Context) *ComponentHealth {
 		Latency: latency.String(),
 	}
 
-	// If hit rate is very low and we have many requests, might indicate issues
+	// Detect degraded cache performance using hit rate ratio.
+	// Only flag if we have enough data (>1000 requests) and hit rate is below 1%,
+	// which accounts for cold starts where hits are naturally zero.
 	totalRequests := metrics.Hits + metrics.Misses
-	if totalRequests > 1000 && metrics.Hits == 0 {
-		health.Status = HealthStatusDegraded
-		health.Message = "no cache hits detected"
+	if totalRequests > 1000 {
+		hitRate := float64(metrics.Hits) / float64(totalRequests)
+		if hitRate < 0.01 {
+			health.Status = HealthStatusDegraded
+			health.Message = fmt.Sprintf("low cache hit rate: %.1f%%", hitRate*100)
+		}
 	}
 
 	return health
@@ -227,9 +285,15 @@ func (h *HealthChecker) checkAggregationEngine(ctx context.Context) *ComponentHe
 		}
 	}
 
+	start := time.Now()
+	// Verify the engine responds to a spec lookup (lightweight operation)
+	_ = h.agg.GetSpec("__health_check__")
+	latency := time.Since(start)
+
 	return &ComponentHealth{
 		Status:  HealthStatusHealthy,
 		Message: "operational",
+		Latency: latency.String(),
 	}
 }
 
