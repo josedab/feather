@@ -5,8 +5,19 @@ import (
 	"container/heap"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"sync"
+)
+
+// Parameter bounds for HNSW configuration.
+const (
+	MinM            = 2
+	MaxM            = 64
+	MinEfConstruct  = 10
+	MaxEfConstruct  = 500
+	MinDim          = 1
+	MaxDim          = 4096
 )
 
 // Object pools for search operations to reduce GC pressure.
@@ -87,8 +98,8 @@ type HNSWConfig struct {
 	DistanceType DistanceType // Distance metric (default: cosine)
 }
 
-// NewHNSW creates a new HNSW index.
-func NewHNSW(config HNSWConfig) *HNSW {
+// NewHNSW creates a new HNSW index with validated parameters.
+func NewHNSW(config HNSWConfig) (*HNSW, error) {
 	if config.M == 0 {
 		config.M = 16
 	}
@@ -97,6 +108,16 @@ func NewHNSW(config HNSWConfig) *HNSW {
 	}
 	if config.DistanceType == "" {
 		config.DistanceType = DistanceCosine
+	}
+
+	if config.Dim < MinDim || config.Dim > MaxDim {
+		return nil, fmt.Errorf("dimension must be between %d and %d, got %d", MinDim, MaxDim, config.Dim)
+	}
+	if config.M < MinM || config.M > MaxM {
+		return nil, fmt.Errorf("M must be between %d and %d, got %d", MinM, MaxM, config.M)
+	}
+	if config.EfConstruct < MinEfConstruct || config.EfConstruct > MaxEfConstruct {
+		return nil, fmt.Errorf("EfConstruct must be between %d and %d, got %d", MinEfConstruct, MaxEfConstruct, config.EfConstruct)
 	}
 
 	var distFunc DistanceFunc
@@ -108,7 +129,7 @@ func NewHNSW(config HNSWConfig) *HNSW {
 	case DistanceDotProduct:
 		distFunc = dotProductDistance
 	default:
-		distFunc = cosineDistance
+		return nil, fmt.Errorf("unsupported distance type: %s", config.DistanceType)
 	}
 
 	return &HNSW{
@@ -120,7 +141,7 @@ func NewHNSW(config HNSWConfig) *HNSW {
 		nodes:       make(map[string]*node),
 		maxLevel:    -1,
 		distFunc:    distFunc,
-	}
+	}, nil
 }
 
 // Insert adds a vector to the index.

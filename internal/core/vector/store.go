@@ -82,12 +82,15 @@ func (s *Store) CreateIndex(name string, dim int, distType DistanceType) (*Index
 		distType = DistanceCosine
 	}
 
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          dim,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: distType,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("creating HNSW index: %w", err)
+	}
 
 	idx := &Index{
 		Name:         name,

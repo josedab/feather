@@ -10,12 +10,13 @@ import (
 )
 
 func TestHNSW_InsertAndSearch(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          3,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceCosine,
 	})
+	require.NoError(t, err)
 
 	// Insert some vectors
 	vectors := []struct {
@@ -62,10 +63,11 @@ func TestHNSW_InsertAndSearch(t *testing.T) {
 }
 
 func TestHNSW_DimensionMismatch(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{Dim: 3})
+	hnsw, err := NewHNSW(HNSWConfig{Dim: 3})
+	require.NoError(t, err)
 
 	// Insert with wrong dimension
-	err := hnsw.Insert("v1", []float32{1.0, 0.0})
+	err = hnsw.Insert("v1", []float32{1.0, 0.0})
 	if !errors.Is(err, ErrDimensionMismatch) {
 		t.Errorf("Insert with wrong dim: got %v, want ErrDimensionMismatch", err)
 	}
@@ -84,7 +86,8 @@ func TestHNSW_DimensionMismatch(t *testing.T) {
 }
 
 func TestHNSW_Delete(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{Dim: 3})
+	hnsw, err := NewHNSW(HNSWConfig{Dim: 3})
+	require.NoError(t, err)
 
 	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}))
 	require.NoError(t, hnsw.Insert("v2", []float32{0.0, 1.0, 0.0}))
@@ -118,7 +121,8 @@ func TestHNSW_Delete(t *testing.T) {
 }
 
 func TestHNSW_Update(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{Dim: 3})
+	hnsw, err := NewHNSW(HNSWConfig{Dim: 3})
+	require.NoError(t, err)
 
 	hnsw.Insert("v1", []float32{1.0, 0.0, 0.0})
 
@@ -137,10 +141,11 @@ func TestHNSW_Update(t *testing.T) {
 }
 
 func TestHNSW_EuclideanDistance(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	hnsw.Insert("origin", []float32{0.0, 0.0})
 	hnsw.Insert("one_one", []float32{1.0, 1.0})
@@ -162,10 +167,11 @@ func TestHNSW_EuclideanDistance(t *testing.T) {
 }
 
 func TestHNSW_DotProductDistance(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		DistanceType: DistanceDotProduct,
 	})
+	require.NoError(t, err)
 
 	// Normalized vectors
 	hnsw.Insert("v1", []float32{1.0, 0.0})
@@ -182,7 +188,8 @@ func TestHNSW_DotProductDistance(t *testing.T) {
 }
 
 func TestHNSW_EmptyIndex(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{Dim: 3})
+	hnsw, err := NewHNSW(HNSWConfig{Dim: 3})
+	require.NoError(t, err)
 
 	results, err := hnsw.Search([]float32{1.0, 0.0, 0.0}, 5, 0)
 	if err != nil {
@@ -196,11 +203,12 @@ func TestHNSW_EmptyIndex(t *testing.T) {
 
 func BenchmarkHNSW_Insert(b *testing.B) {
 	dim := 128
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:         dim,
 		M:           16,
 		EfConstruct: 100,
 	})
+	require.NoError(b, err)
 
 	vectors := make([][]float32, b.N)
 	for i := range vectors {
@@ -220,11 +228,12 @@ func BenchmarkHNSW_Insert(b *testing.B) {
 func BenchmarkHNSW_Search(b *testing.B) {
 	dim := 128
 	numVectors := 10000
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:         dim,
 		M:           16,
 		EfConstruct: 100,
 	})
+	require.NoError(b, err)
 
 	// Insert vectors
 	for i := 0; i < numVectors; i++ {
@@ -320,12 +329,13 @@ func TestEuclideanDistance(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_FewerCandidatesThanM(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          3,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	// Insert a few vectors
 	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}))
@@ -340,12 +350,13 @@ func TestHNSW_SelectNeighbors_FewerCandidatesThanM(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_ExactM(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          3,
 		M:            2,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0, 0.0}))
 	require.NoError(t, hnsw.Insert("v2", []float32{0.0, 1.0, 0.0}))
@@ -358,12 +369,13 @@ func TestHNSW_SelectNeighbors_ExactM(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_SelectsClosest(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	// Insert vectors at known positions
 	require.NoError(t, hnsw.Insert("close", []float32{1.0, 0.0}))
@@ -387,12 +399,13 @@ func TestHNSW_SelectNeighbors_SelectsClosest(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_SingleCandidate(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0}))
 
@@ -407,12 +420,13 @@ func TestHNSW_SelectNeighbors_SingleCandidate(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_DuplicateDistances(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	// Insert vectors at equal distances from origin
 	require.NoError(t, hnsw.Insert("v1", []float32{1.0, 0.0}))
@@ -428,12 +442,13 @@ func TestHNSW_SelectNeighbors_DuplicateDistances(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_EmptyCandidates(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	query := []float32{0.0, 0.0}
 	result := hnsw.selectNeighbors(query, []string{}, 5)
@@ -443,12 +458,13 @@ func TestHNSW_SelectNeighbors_EmptyCandidates(t *testing.T) {
 }
 
 func TestHNSW_SelectNeighbors_LargerSet(t *testing.T) {
-	hnsw := NewHNSW(HNSWConfig{
+	hnsw, err := NewHNSW(HNSWConfig{
 		Dim:          2,
 		M:            16,
 		EfConstruct:  200,
 		DistanceType: DistanceEuclidean,
 	})
+	require.NoError(t, err)
 
 	// Insert 10 vectors at increasing distances
 	for i := 0; i < 10; i++ {
@@ -468,4 +484,41 @@ func TestHNSW_SelectNeighbors_LargerSet(t *testing.T) {
 	if !resultSet["A"] || !resultSet["B"] || !resultSet["C"] {
 		t.Errorf("expected A, B, C in results, got %v", result)
 	}
+}
+
+func TestHNSW_ValidationErrors(t *testing.T) {
+	// Dim too small
+	_, err := NewHNSW(HNSWConfig{Dim: 0})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "dimension")
+
+	// Dim too large
+	_, err = NewHNSW(HNSWConfig{Dim: 5000})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "dimension")
+
+	// M too small
+	_, err = NewHNSW(HNSWConfig{Dim: 3, M: 1})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "M must be")
+
+	// M too large
+	_, err = NewHNSW(HNSWConfig{Dim: 3, M: 100})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "M must be")
+
+	// EfConstruct too small
+	_, err = NewHNSW(HNSWConfig{Dim: 3, EfConstruct: 5})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "EfConstruct")
+
+	// EfConstruct too large
+	_, err = NewHNSW(HNSWConfig{Dim: 3, EfConstruct: 1000})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "EfConstruct")
+
+	// Invalid distance type
+	_, err = NewHNSW(HNSWConfig{Dim: 3, DistanceType: "invalid"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unsupported distance type")
 }
