@@ -82,6 +82,20 @@ type ImportResult struct {
 	FeaturesImported int64
 	Duration         time.Duration
 	Errors           []string
+	ErrorsTruncated  bool // true if errors were capped
+}
+
+// maxImportErrors caps the number of error strings stored in ImportResult
+// to prevent unbounded memory growth on error-heavy imports.
+const maxImportErrors = 1000
+
+// appendImportError appends an error to the result if under the cap.
+func appendImportError(result *ImportResult, msg string) {
+	if len(result.Errors) < maxImportErrors {
+		result.Errors = append(result.Errors, msg)
+	} else if !result.ErrorsTruncated {
+		result.ErrorsTruncated = true
+	}
 }
 
 // ImportCSV imports features from a CSV file.
@@ -194,7 +208,7 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		if err != nil {
 			if config.SkipErrors {
 				result.RowsError++
-				result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
+				appendImportError(result, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
 				continue
 			}
 			return nil, fmt.Errorf("reading row %d: %w", result.RowsProcessed, err)
@@ -214,7 +228,7 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 		if err := domain.ValidateEntityKey(entityKey); err != nil {
 			if config.SkipErrors {
 				result.RowsError++
-				result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
+				appendImportError(result, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
 				continue
 			}
 			return nil, fmt.Errorf("row %d: %w", result.RowsProcessed, err)
@@ -273,7 +287,7 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 				if err := flushBatch(); err != nil {
 					if config.SkipErrors {
 						result.RowsError++
-						result.Errors = append(result.Errors, fmt.Sprintf("batch flush at row %d: %v", result.RowsProcessed, err))
+						appendImportError(result, fmt.Sprintf("batch flush at row %d: %v", result.RowsProcessed, err))
 						pending = pending[:0]
 						continue
 					}
@@ -296,7 +310,7 @@ func (b *BatchImporter) ImportCSVReader(ctx context.Context, r io.Reader, config
 				return nil, fmt.Errorf("flushing final batch: %w", err)
 			}
 			result.RowsError++
-			result.Errors = append(result.Errors, fmt.Sprintf("final batch flush: %v", err))
+			appendImportError(result, fmt.Sprintf("final batch flush: %v", err))
 		}
 	}
 
@@ -318,25 +332,41 @@ func (b *BatchImporter) ImportJSON(ctx context.Context, path string, config Impo
 	return b.ImportJSONReader(ctx, file, config)
 }
 
-// ImportJSONReader imports features from a JSON reader.
+// ImportJSONReader imports features from a JSON reader using streaming
+// decoding to avoid loading the entire array into memory.
 func (b *BatchImporter) ImportJSONReader(ctx context.Context, r io.Reader, config ImportConfig) (*ImportResult, error) {
 	start := time.Now()
 	result := &ImportResult{}
 
-	// Try to decode as array first
-	var records []map[string]interface{}
 	decoder := json.NewDecoder(r)
 
-	// Check if it's an array
-	if err := decoder.Decode(&records); err != nil {
+	// Expect opening bracket of JSON array
+	tok, err := decoder.Token()
+	if err != nil {
 		return nil, fmt.Errorf("decoding JSON: %w", err)
 	}
+	delim, ok := tok.(json.Delim)
+	if !ok || delim != '[' {
+		return nil, fmt.Errorf("expected JSON array, got %v", tok)
+	}
 
-	for _, record := range records {
+	// Stream objects one at a time
+	for decoder.More() {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
+		}
+
+		var record map[string]interface{}
+		if err := decoder.Decode(&record); err != nil {
+			if config.SkipErrors {
+				result.RowsProcessed++
+				result.RowsError++
+				appendImportError(result, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
+				continue
+			}
+			return nil, fmt.Errorf("decoding JSON object at row %d: %w", result.RowsProcessed+1, err)
 		}
 
 		result.RowsProcessed++
@@ -352,7 +382,7 @@ func (b *BatchImporter) ImportJSONReader(ctx context.Context, r io.Reader, confi
 		if err := domain.ValidateEntityKey(entityKey); err != nil {
 			if config.SkipErrors {
 				result.RowsError++
-				result.Errors = append(result.Errors, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
+				appendImportError(result, fmt.Sprintf("row %d: %v", result.RowsProcessed, err))
 				continue
 			}
 			return nil, fmt.Errorf("row %d: %w", result.RowsProcessed, err)
@@ -455,7 +485,7 @@ func (b *BatchImporter) ImportJSONLReader(ctx context.Context, r io.Reader, conf
 		if err := json.Unmarshal([]byte(line), &record); err != nil {
 			if config.SkipErrors {
 				result.RowsError++
-				result.Errors = append(result.Errors, fmt.Sprintf("line %d: %v", result.RowsProcessed, err))
+				appendImportError(result, fmt.Sprintf("line %d: %v", result.RowsProcessed, err))
 				continue
 			}
 			return nil, fmt.Errorf("parsing line %d: %w", result.RowsProcessed, err)
@@ -472,7 +502,7 @@ func (b *BatchImporter) ImportJSONLReader(ctx context.Context, r io.Reader, conf
 		if err := domain.ValidateEntityKey(entityKey); err != nil {
 			if config.SkipErrors {
 				result.RowsError++
-				result.Errors = append(result.Errors, fmt.Sprintf("line %d: %v", result.RowsProcessed, err))
+				appendImportError(result, fmt.Sprintf("line %d: %v", result.RowsProcessed, err))
 				continue
 			}
 			return nil, fmt.Errorf("line %d: %w", result.RowsProcessed, err)

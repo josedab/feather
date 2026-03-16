@@ -204,6 +204,14 @@ func (h *HTTPIngestion) HandleBulkPush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	const maxBulkUpdates = 10000
+	if len(updates) > maxBulkUpdates {
+		atomic.AddInt64(&h.metrics.RequestsError, 1)
+		writeError(r.Context(), w, http.StatusBadRequest,
+			fmt.Sprintf("too many updates: %d exceeds maximum %d", len(updates), maxBulkUpdates))
+		return
+	}
+
 	successCount := 0
 	errorCount := 0
 
