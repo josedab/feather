@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 	"time"
 )
@@ -116,6 +119,50 @@ type AuditLog struct {
 	Error     string                 `json:"error,omitempty"`
 }
 
+// AuditWriter persists audit log entries to durable storage.
+type AuditWriter interface {
+	// WriteAuditLog writes an audit log entry. Implementations must be safe for
+	// concurrent use.
+	WriteAuditLog(log AuditLog) error
+
+	// Close releases resources held by the writer.
+	Close() error
+}
+
+// FileAuditWriter writes audit logs as JSON lines to a file.
+type FileAuditWriter struct {
+	mu   sync.Mutex
+	w    io.WriteCloser
+	enc  *json.Encoder
+	path string
+}
+
+// NewFileAuditWriter creates a writer that appends JSON-line audit entries
+// to the given file path, creating it if necessary.
+func NewFileAuditWriter(path string) (*FileAuditWriter, error) {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("opening audit log file: %w", err)
+	}
+	return &FileAuditWriter{
+		w:    f,
+		enc:  json.NewEncoder(f),
+		path: path,
+	}, nil
+}
+
+func (fw *FileAuditWriter) WriteAuditLog(log AuditLog) error {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+	return fw.enc.Encode(log)
+}
+
+func (fw *FileAuditWriter) Close() error {
+	fw.mu.Lock()
+	defer fw.mu.Unlock()
+	return fw.w.Close()
+}
+
 // AccessController manages authentication and authorization.
 type AccessController struct {
 	apiKeys      map[string]*APIKey // keyHash -> APIKey
@@ -124,6 +171,7 @@ type AccessController struct {
 	roles        map[string]*Role
 	auditLogs    []AuditLog
 	maxAuditLogs int
+	auditWriter  AuditWriter // optional persistent writer
 	mu           sync.RWMutex
 }
 
@@ -144,6 +192,25 @@ func NewAccessController() *AccessController {
 	ac.roles["admin"] = RoleAdmin
 
 	return ac
+}
+
+// SetAuditWriter configures a persistent writer for audit logs. The writer
+// receives every entry in addition to the in-memory circular buffer.
+func (ac *AccessController) SetAuditWriter(w AuditWriter) {
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	ac.auditWriter = w
+}
+
+// CloseAuditWriter closes the persistent audit writer if one is configured.
+func (ac *AccessController) CloseAuditWriter() error {
+	ac.mu.RLock()
+	w := ac.auditWriter
+	ac.mu.RUnlock()
+	if w != nil {
+		return w.Close()
+	}
+	return nil
 }
 
 // CreateAPIKey creates a new API key and returns the raw key.
@@ -461,7 +528,8 @@ func (ac *AccessController) DeleteRole(name string) error {
 	return nil
 }
 
-// LogAudit records an audit log entry.
+// LogAudit records an audit log entry in memory and, if configured,
+// persists it via the AuditWriter.
 func (ac *AccessController) LogAudit(log AuditLog) {
 	id, err := generateID()
 	if err != nil {
@@ -471,13 +539,19 @@ func (ac *AccessController) LogAudit(log AuditLog) {
 	log.Timestamp = time.Now()
 
 	ac.mu.Lock()
-	defer ac.mu.Unlock()
-
 	ac.auditLogs = append(ac.auditLogs, log)
 
 	// Trim if over limit
 	if len(ac.auditLogs) > ac.maxAuditLogs {
 		ac.auditLogs = ac.auditLogs[len(ac.auditLogs)-ac.maxAuditLogs:]
+	}
+
+	w := ac.auditWriter
+	ac.mu.Unlock()
+
+	// Write to persistent storage outside the lock
+	if w != nil {
+		_ = w.WriteAuditLog(log)
 	}
 }
 

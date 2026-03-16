@@ -10,7 +10,9 @@ import (
 )
 
 // ManifestLoader loads and validates declarative feature manifests from YAML files.
-type ManifestLoader struct{}
+type ManifestLoader struct {
+	basePath string // allowed base directory; empty means cwd
+}
 
 // Manifest represents a parsed manifest file containing one or more specs.
 type Manifest struct {
@@ -40,9 +42,25 @@ func NewManifestLoader() *ManifestLoader {
 	return &ManifestLoader{}
 }
 
+// NewManifestLoaderWithBasePath creates a loader restricted to the given directory.
+func NewManifestLoaderWithBasePath(basePath string) *ManifestLoader {
+	return &ManifestLoader{basePath: basePath}
+}
+
 // LoadFile loads and parses a YAML manifest file, supporting multi-document YAML.
+// If a basePath is configured, the path is resolved relative to it and
+// traversal outside is rejected.
 func (ml *ManifestLoader) LoadFile(path string) (*Manifest, error) {
-	data, err := os.ReadFile(path)
+	resolvedPath := path
+	if ml.basePath != "" {
+		resolvedPath = filepath.Clean(filepath.Join(ml.basePath, path))
+		absBase, _ := filepath.Abs(ml.basePath)
+		absPath, _ := filepath.Abs(resolvedPath)
+		if !strings.HasPrefix(absPath, absBase+string(filepath.Separator)) && absPath != absBase {
+			return nil, fmt.Errorf("path traversal not allowed: %s", path)
+		}
+	}
+	data, err := os.ReadFile(resolvedPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading manifest %s: %w", path, err)
 	}

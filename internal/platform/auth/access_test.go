@@ -1,8 +1,12 @@
 package auth
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -881,5 +885,85 @@ func TestAPIKey_GeneratedFields(t *testing.T) {
 	}
 	if keyInfo.CreatedAt.IsZero() {
 		t.Error("CreatedAt should be set")
+	}
+}
+
+func TestFileAuditWriter(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "audit.jsonl")
+
+	w, err := NewFileAuditWriter(path)
+	if err != nil {
+		t.Fatalf("NewFileAuditWriter: %v", err)
+	}
+	defer w.Close()
+
+	entry := AuditLog{
+		ID:        "test-1",
+		Timestamp: time.Now(),
+		Tenant:    "tenant1",
+		Action:    "GET",
+		Resource:  "/v1/features",
+		Success:   true,
+	}
+
+	if err := w.WriteAuditLog(entry); err != nil {
+		t.Fatalf("WriteAuditLog: %v", err)
+	}
+
+	// Close and read back
+	w.Close()
+
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer f.Close()
+
+	var read AuditLog
+	scanner := bufio.NewScanner(f)
+	if !scanner.Scan() {
+		t.Fatal("expected one line in audit log file")
+	}
+	if err := json.Unmarshal(scanner.Bytes(), &read); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if read.ID != "test-1" || read.Tenant != "tenant1" {
+		t.Errorf("read back %+v, want ID=test-1, Tenant=tenant1", read)
+	}
+}
+
+func TestAccessController_AuditWriter_Integration(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "audit.jsonl")
+
+	w, err := NewFileAuditWriter(path)
+	if err != nil {
+		t.Fatalf("NewFileAuditWriter: %v", err)
+	}
+
+	ac := NewAccessController()
+	ac.SetAuditWriter(w)
+
+	ac.LogAudit(AuditLog{Tenant: "t1", Action: "PUT", Resource: "/v1/features", Success: true})
+	ac.LogAudit(AuditLog{Tenant: "t2", Action: "GET", Resource: "/v1/features", Success: false})
+
+	// Close writer to flush
+	ac.CloseAuditWriter()
+
+	// Verify file has 2 entries
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer f.Close()
+
+	count := 0
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		count++
+	}
+	if count != 2 {
+		t.Errorf("expected 2 audit entries in file, got %d", count)
 	}
 }
