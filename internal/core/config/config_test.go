@@ -39,6 +39,9 @@ func TestParseMemorySize(t *testing.T) {
 		{"too short", "1", 0, true},
 		{"invalid number", "abc", 0, true},
 		{"empty string", "", 0, true},
+		{"negative value", "-1GB", 0, true},
+		{"negative small", "-100KB", 0, true},
+		{"overflow TB", "9999999999TB", 0, true},
 	}
 
 	for _, tt := range tests {

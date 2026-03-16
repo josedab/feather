@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -391,6 +392,13 @@ func ParseMemorySize(s string) (int64, error) {
 		return 0, fmt.Errorf("parsing memory size: %w", err)
 	}
 
+	if val < 0 {
+		return 0, fmt.Errorf("memory size must not be negative: %d", val)
+	}
+	if multiplier > 1 && val > math.MaxInt64/multiplier {
+		return 0, fmt.Errorf("memory size overflows int64: %d * %d", val, multiplier)
+	}
+
 	return val * multiplier, nil
 }
 
@@ -552,6 +560,42 @@ func (c *Config) Validate() error {
 				Field:   "ingestion.kafka.consumer_group",
 				Message: "consumer_group required when Kafka is enabled",
 			})
+		}
+
+		// Validate Kafka security config
+		if proto := c.Ingestion.Kafka.Security.Protocol; proto != "" {
+			validProtocols := map[string]bool{
+				"PLAINTEXT": true, "SSL": true,
+				"SASL_PLAINTEXT": true, "SASL_SSL": true,
+			}
+			if !validProtocols[proto] {
+				errs = append(errs, ValidationError{
+					Field:   "ingestion.kafka.security.protocol",
+					Message: fmt.Sprintf("invalid protocol %q: must be PLAINTEXT, SSL, SASL_PLAINTEXT, or SASL_SSL", proto),
+				})
+			}
+			if strings.Contains(proto, "SASL") {
+				mech := c.Ingestion.Kafka.Security.SASLMechanism
+				validMechs := map[string]bool{"PLAIN": true, "SCRAM-SHA-256": true, "SCRAM-SHA-512": true}
+				if mech != "" && !validMechs[mech] {
+					errs = append(errs, ValidationError{
+						Field:   "ingestion.kafka.security.sasl_mechanism",
+						Message: fmt.Sprintf("invalid SASL mechanism %q: must be PLAIN, SCRAM-SHA-256, or SCRAM-SHA-512", mech),
+					})
+				}
+				if c.Ingestion.Kafka.Security.SASLUsername == "" {
+					errs = append(errs, ValidationError{
+						Field:   "ingestion.kafka.security.sasl_username",
+						Message: "SASL username required when protocol includes SASL",
+					})
+				}
+				if c.Ingestion.Kafka.Security.SASLPassword == "" {
+					errs = append(errs, ValidationError{
+						Field:   "ingestion.kafka.security.sasl_password",
+						Message: "SASL password required when protocol includes SASL",
+					})
+				}
+			}
 		}
 	}
 
