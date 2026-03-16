@@ -2,8 +2,10 @@ package metrics
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -42,6 +44,10 @@ type Metrics struct {
 
 	// Error metrics
 	errorsTotal *prometheus.CounterVec
+
+	// Storage backpressure metrics
+	warmWriteDrops  prometheus.Gauge
+	warmWriteErrors prometheus.Gauge
 
 	// Runtime metrics
 	goroutineCount    prometheus.Gauge
@@ -233,6 +239,22 @@ func newMetrics(namespace string, factory promauto.Factory) *Metrics {
 			[]string{"component", "code"},
 		),
 
+		// Warm tier backpressure
+		warmWriteDrops: factory.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "warm_write_drops_total",
+				Help:      "Total warm tier writes dropped due to buffer full or shutdown",
+			},
+		),
+		warmWriteErrors: factory.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "warm_write_errors_total",
+				Help:      "Total warm tier write errors",
+			},
+		),
+
 		// Runtime metrics
 		goroutineCount: factory.NewGauge(
 			prometheus.GaugeOpts{
@@ -337,8 +359,12 @@ func (m *Metrics) SetFeatureFreshness(featureGroup string, age time.Duration) {
 	m.featureFreshness.WithLabelValues(featureGroup).Set(age.Seconds())
 }
 
-// RecordFeatureRequest records a feature request.
+// RecordFeatureRequest records a feature request. Feature names exceeding 256
+// bytes are replaced with "unknown" to prevent cardinality explosion.
 func (m *Metrics) RecordFeatureRequest(feature string) {
+	if len(feature) > 256 {
+		feature = "unknown"
+	}
 	m.featureRequests.WithLabelValues(feature).Inc()
 }
 
@@ -367,6 +393,16 @@ func (m *Metrics) RecordError(component, code string) {
 	m.errorsTotal.WithLabelValues(component, code).Inc()
 }
 
+// SetWarmWriteDrops sets the warm write drops gauge.
+func (m *Metrics) SetWarmWriteDrops(count int64) {
+	m.warmWriteDrops.Set(float64(count))
+}
+
+// SetWarmWriteErrors sets the warm write errors gauge.
+func (m *Metrics) SetWarmWriteErrors(count int64) {
+	m.warmWriteErrors.Set(float64(count))
+}
+
 // UpdateRuntimeMetrics updates runtime-related metrics.
 // This should be called periodically (e.g., every 15 seconds).
 func (m *Metrics) UpdateRuntimeMetrics() {
@@ -387,12 +423,19 @@ func (m *Metrics) StartRuntimeMetricsCollector(interval time.Duration) func() {
 	done := make(chan struct{})
 
 	go func() {
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				m.UpdateRuntimeMetrics()
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							slog.Error("metrics collection panic", "error", r, "stack", string(debug.Stack()))
+						}
+					}()
+					m.UpdateRuntimeMetrics()
+				}()
 			case <-done:
-				ticker.Stop()
 				return
 			}
 		}
