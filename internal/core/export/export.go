@@ -62,6 +62,12 @@ type ExportRequest struct { //nolint:revive
 
 	// Output path
 	OutputPath string
+
+	// MaxEntities limits the number of entities exported (0 = unlimited).
+	MaxEntities int
+
+	// Timeout limits export duration. If zero, the caller's context deadline applies.
+	Timeout time.Duration
 }
 
 // ExportFormat defines the output format.
@@ -89,6 +95,13 @@ type ExportResult struct { //nolint:revive
 func (e *Exporter) Export(ctx context.Context, req ExportRequest) (*ExportResult, error) {
 	start := time.Now()
 
+	// Apply export timeout if configured
+	if req.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, req.Timeout)
+		defer cancel()
+	}
+
 	// Validate request
 	if len(req.Features) == 0 {
 		return nil, fmt.Errorf("at least one feature required")
@@ -96,6 +109,15 @@ func (e *Exporter) Export(ctx context.Context, req ExportRequest) (*ExportResult
 
 	if req.OutputPath == "" {
 		return nil, fmt.Errorf("output path required")
+	}
+
+	if req.MaxEntities < 0 {
+		return nil, fmt.Errorf("max_entities must be non-negative")
+	}
+
+	// Enforce entity limit if set
+	if req.MaxEntities > 0 && len(req.Entities) > req.MaxEntities {
+		return nil, fmt.Errorf("entity count %d exceeds max_entities limit %d", len(req.Entities), req.MaxEntities)
 	}
 
 	// Sanitize and validate output path against allowed base directory

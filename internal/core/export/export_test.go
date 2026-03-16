@@ -79,6 +79,48 @@ func TestExporter_Export_UnsupportedFormat(t *testing.T) {
 	}
 }
 
+func TestExporter_Export_MaxEntitiesExceeded(t *testing.T) {
+	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(nil, nil, tmpDir)
+
+	req := ExportRequest{
+		Entities:    []string{"user:1", "user:2", "user:3"},
+		Features:    []string{"age"},
+		Format:      FormatCSV,
+		OutputPath:  filepath.Join(tmpDir, "test.csv"),
+		MaxEntities: 2,
+	}
+
+	_, err := exporter.Export(context.Background(), req)
+	if err == nil {
+		t.Error("expected error for exceeding max entities")
+	}
+	if !strings.Contains(err.Error(), "exceeds max_entities") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestExporter_Export_NegativeMaxEntities(t *testing.T) {
+	tmpDir := t.TempDir()
+	exporter := NewExporterWithBaseDir(nil, nil, tmpDir)
+
+	req := ExportRequest{
+		Entities:    []string{"user:1"},
+		Features:    []string{"age"},
+		Format:      FormatCSV,
+		OutputPath:  filepath.Join(tmpDir, "test.csv"),
+		MaxEntities: -1,
+	}
+
+	_, err := exporter.Export(context.Background(), req)
+	if err == nil {
+		t.Error("expected error for negative max entities")
+	}
+	if !strings.Contains(err.Error(), "non-negative") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
 func TestGetPrivateTempDir(t *testing.T) {
 	dir, err := getPrivateTempDir()
 	if err != nil {
