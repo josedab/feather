@@ -282,4 +282,73 @@ func TestAPIError_Error(t *testing.T) {
 	if err.Error() != expected {
 		t.Errorf("expected %q, got %q", expected, err.Error())
 	}
+
+	errWithCode := &APIError{StatusCode: 400, Code: "VALIDATION_FAILED", Message: "entity required"}
+	if errWithCode.Code != "VALIDATION_FAILED" {
+		t.Errorf("expected code VALIDATION_FAILED, got %q", errWithCode.Code)
+	}
+}
+
+func TestClient_PostNoRetryOn5xx(t *testing.T) {
+	attempts := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"internal"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-key", &ClientConfig{
+		Timeout:         5 * time.Second,
+		MaxRetries:      3,
+		RetryBackoff:    1 * time.Millisecond,
+		MaxRetryBackoff: 10 * time.Millisecond,
+	})
+
+	// POST should NOT retry on 5xx (non-idempotent)
+	err := client.Features.Put(context.Background(), &PutRequest{
+		EntityID: "user:1",
+		Features: map[string]interface{}{"age": 25},
+	})
+	if err == nil {
+		t.Fatal("expected error for 500 response")
+	}
+	if attempts != 1 {
+		t.Errorf("POST should not retry: expected 1 attempt, got %d", attempts)
+	}
+}
+
+func TestClient_ErrorEnvelopeParsing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		// API envelope format
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error": map[string]string{
+				"code":    "VALIDATION_FAILED",
+				"message": "entity_key required",
+			},
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-key", &ClientConfig{
+		Timeout:    5 * time.Second,
+		MaxRetries: 0,
+	})
+	_, err := client.Features.Get(context.Background(), "", []string{"age"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected *APIError, got %T: %v", err, err)
+	}
+	if apiErr.Code != "VALIDATION_FAILED" {
+		t.Errorf("expected code VALIDATION_FAILED, got %q", apiErr.Code)
+	}
+	if apiErr.Message != "entity_key required" {
+		t.Errorf("expected message 'entity_key required', got %q", apiErr.Message)
+	}
 }

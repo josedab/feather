@@ -3,6 +3,7 @@ package feather
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -76,7 +77,7 @@ func (c *ComputeClient) CreatePipeline(ctx context.Context, pipeline *FeaturePip
 // GetPipeline retrieves a pipeline by name.
 func (c *ComputeClient) GetPipeline(ctx context.Context, name string) (*FeaturePipeline, error) {
 	var pipeline FeaturePipeline
-	err := c.client.request(ctx, "GET", "/v1/compute/pipelines/"+name, nil, &pipeline)
+	err := c.client.request(ctx, "GET", "/v1/compute/pipelines/"+url.PathEscape(name), nil, &pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func (c *ComputeClient) ListPipelines(ctx context.Context) ([]*FeaturePipeline, 
 
 // DeletePipeline deletes a pipeline.
 func (c *ComputeClient) DeletePipeline(ctx context.Context, name string) error {
-	return c.client.request(ctx, "DELETE", "/v1/compute/pipelines/"+name, nil, nil)
+	return c.client.request(ctx, "DELETE", "/v1/compute/pipelines/"+url.PathEscape(name), nil, nil)
 }
 
 // ExecutionRequest represents a pipeline execution request.
@@ -160,7 +161,7 @@ func (c *ComputeClient) ExecuteAndWait(ctx context.Context, req *ExecutionReques
 // GetExecution gets the status of an execution.
 func (c *ComputeClient) GetExecution(ctx context.Context, executionID string) (*ExecutionResult, error) {
 	var result ExecutionResult
-	err := c.client.request(ctx, "GET", "/v1/compute/executions/"+executionID, nil, &result)
+	err := c.client.request(ctx, "GET", "/v1/compute/executions/"+url.PathEscape(executionID), nil, &result)
 	if err != nil {
 		return nil, err
 	}

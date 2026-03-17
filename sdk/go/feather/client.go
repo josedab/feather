@@ -92,7 +92,12 @@ func (c *Client) Close() {
 	c.httpClient.CloseIdleConnections()
 }
 
-// request performs an HTTP request with exponential backoff retry and jitter.
+// isRetryable returns true if the HTTP method is safe to retry.
+func isRetryable(method string) bool {
+	return method == http.MethodGet || method == http.MethodHead
+}
+
+// request performs an HTTP request with retry for idempotent methods only.
 func (c *Client) request(ctx context.Context, method, path string, body interface{}, result interface{}) error {
 	var bodyBytes []byte
 	if body != nil {
@@ -103,8 +108,13 @@ func (c *Client) request(ctx context.Context, method, path string, body interfac
 		}
 	}
 
+	maxAttempts := 1
+	if isRetryable(method) {
+		maxAttempts = c.config.MaxRetries + 1
+	}
+
 	var lastErr error
-	for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		if attempt > 0 {
 			delay := c.calculateBackoff(attempt)
 			select {
@@ -153,13 +163,7 @@ func (c *Client) request(ctx context.Context, method, path string, body interfac
 		}
 
 		if resp.StatusCode >= 400 {
-			var errResp struct {
-				Error string `json:"error"`
-			}
-			if err := json.Unmarshal(respBody, &errResp); err != nil {
-				return fmt.Errorf("unmarshal error response: %w", err)
-			}
-			return &APIError{StatusCode: resp.StatusCode, Message: errResp.Error}
+			return parseErrorResponse(respBody, resp.StatusCode)
 		}
 
 		if result != nil {
@@ -172,6 +176,32 @@ func (c *Client) request(ctx context.Context, method, path string, body interfac
 	}
 
 	return lastErr
+}
+
+// parseErrorResponse parses the API error envelope.
+// The server returns: {"success":false,"error":{"code":"...","message":"..."}}
+func parseErrorResponse(body []byte, statusCode int) error {
+	var envelope struct {
+		Error *struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &envelope); err == nil && envelope.Error != nil {
+		return &APIError{
+			StatusCode: statusCode,
+			Code:       envelope.Error.Code,
+			Message:    envelope.Error.Message,
+		}
+	}
+	// Fallback: try flat {"error":"message"} format
+	var flat struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &flat); err == nil && flat.Error != "" {
+		return &APIError{StatusCode: statusCode, Message: flat.Error}
+	}
+	return &APIError{StatusCode: statusCode, Message: string(body)}
 }
 
 // calculateBackoff calculates the delay for exponential backoff with jitter.
@@ -209,10 +239,14 @@ func jitterFloat64() float64 {
 // APIError represents an API error response.
 type APIError struct {
 	StatusCode int
+	Code       string // Server error code (e.g., "VALIDATION_FAILED")
 	Message    string
 }
 
 func (e *APIError) Error() string {
+	if e.Code != "" {
+		return fmt.Sprintf("API error %d [%s]: %s", e.StatusCode, e.Code, e.Message)
+	}
 	return fmt.Sprintf("API error %d: %s", e.StatusCode, e.Message)
 }
 
@@ -338,7 +372,7 @@ func (c *CatalogClient) Register(ctx context.Context, def *FeatureDefinition) er
 // Get retrieves a feature definition.
 func (c *CatalogClient) Get(ctx context.Context, name string) (*FeatureDefinition, error) {
 	var def FeatureDefinition
-	err := c.client.request(ctx, "GET", "/v1/catalog/features/"+name, nil, &def)
+	err := c.client.request(ctx, "GET", "/v1/catalog/features/"+url.PathEscape(name), nil, &def)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +448,7 @@ func (c *CatalogClient) Search(ctx context.Context, query string, limit int) ([]
 
 // Delete deletes a feature definition.
 func (c *CatalogClient) Delete(ctx context.Context, name string) error {
-	return c.client.request(ctx, "DELETE", "/v1/catalog/features/"+name, nil, nil)
+	return c.client.request(ctx, "DELETE", "/v1/catalog/features/"+url.PathEscape(name), nil, nil)
 }
 
 // TransformClient handles transform operations.
@@ -449,7 +483,7 @@ func (t *TransformClient) Execute(ctx context.Context, name string, inputs map[s
 		Result interface{} `json:"result"`
 	}
 
-	err := t.client.request(ctx, "POST", "/v1/transforms/"+name+"/execute", req, &resp)
+	err := t.client.request(ctx, "POST", "/v1/transforms/"+url.PathEscape(name)+"/execute", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +532,7 @@ func (v *VectorClient) Upsert(ctx context.Context, indexName string, vectors map
 		Metadata: metadata,
 	}
 
-	return v.client.request(ctx, "POST", "/v1/vectors/"+indexName+"/upsert", req, nil)
+	return v.client.request(ctx, "POST", "/v1/vectors/"+url.PathEscape(indexName)+"/upsert", req, nil)
 }
 
 // SearchResult represents a vector search result.
@@ -522,7 +556,7 @@ func (v *VectorClient) Search(ctx context.Context, indexName string, vector []fl
 		Results []*SearchResult `json:"results"`
 	}
 
-	err := v.client.request(ctx, "POST", "/v1/vectors/"+indexName+"/search", req, &resp)
+	err := v.client.request(ctx, "POST", "/v1/vectors/"+url.PathEscape(indexName)+"/search", req, &resp)
 	if err != nil {
 		return nil, err
 	}

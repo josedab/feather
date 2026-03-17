@@ -106,14 +106,17 @@ func demonstrateAsyncClient(ctx context.Context, client *feather.Client) {
 	// Start async operations
 	fmt.Println("Starting parallel async requests...")
 	start := time.Now()
-	results := async.ParallelGet(ctx, requests)
+	result := async.ParallelGet(ctx, requests)
 	elapsed := time.Since(start)
 
-	fmt.Printf("Completed %d parallel requests in %v\n", len(results), elapsed)
-	for entityID, data := range results {
+	fmt.Printf("Completed %d parallel requests in %v\n", len(result.Results), elapsed)
+	for entityID, data := range result.Results {
 		if data != nil {
 			fmt.Printf("  %s: %d features\n", entityID, len(data.Features))
 		}
+	}
+	for entityID, err := range result.Errors {
+		fmt.Printf("  %s: error: %v\n", entityID, err)
 	}
 
 	// Single async get with channel
@@ -124,11 +127,11 @@ func demonstrateAsyncClient(ctx context.Context, client *feather.Client) {
 	fmt.Println("  Doing other work...")
 
 	// Get result when ready
-	result := <-resultCh
-	if result.Err != nil {
-		fmt.Printf("  Error: %v\n", result.Err)
+	asyncResult := <-resultCh
+	if asyncResult.Err != nil {
+		fmt.Printf("  Error: %v\n", asyncResult.Err)
 	} else {
-		fmt.Printf("  Got result: %d features\n", len(result.Value.Features))
+		fmt.Printf("  Got result: %d features\n", len(asyncResult.Value.Features))
 	}
 }
 

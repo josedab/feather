@@ -206,9 +206,20 @@ func (ac *AsyncClient) PutAsync(ctx context.Context, req *PutRequest) <-chan err
 	return ch
 }
 
+// ParallelGetResult holds results and any per-entity errors from ParallelGet.
+type ParallelGetResult struct {
+	Results map[string]*GetResponse
+	Errors  map[string]error
+}
+
 // ParallelGet retrieves features for multiple entities in parallel.
-func (ac *AsyncClient) ParallelGet(ctx context.Context, requests []GetRequest) map[string]*GetResponse {
-	results := make(map[string]*GetResponse)
+// Returns both successful results and per-entity errors so callers can
+// distinguish "not found" from "request failed".
+func (ac *AsyncClient) ParallelGet(ctx context.Context, requests []GetRequest) *ParallelGetResult {
+	result := &ParallelGetResult{
+		Results: make(map[string]*GetResponse),
+		Errors:  make(map[string]error),
+	}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
@@ -218,16 +229,18 @@ func (ac *AsyncClient) ParallelGet(ctx context.Context, requests []GetRequest) m
 			defer wg.Done()
 
 			resp, err := ac.client.Features.Get(ctx, r.EntityID, r.Features)
-			if err == nil {
-				mu.Lock()
-				results[r.EntityID] = resp
-				mu.Unlock()
+			mu.Lock()
+			if err != nil {
+				result.Errors[r.EntityID] = err
+			} else {
+				result.Results[r.EntityID] = resp
 			}
+			mu.Unlock()
 		}(req)
 	}
 
 	wg.Wait()
-	return results
+	return result
 }
 
 // RetryConfig configures retry behavior.

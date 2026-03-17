@@ -169,9 +169,12 @@ func TestAsyncClient_ParallelGet(t *testing.T) {
 		{EntityID: "user:2", Features: []string{"age"}},
 	}
 
-	results := ac.ParallelGet(context.Background(), requests)
-	if len(results) != 2 {
-		t.Errorf("expected 2 results, got %d", len(results))
+	result := ac.ParallelGet(context.Background(), requests)
+	if len(result.Results) != 2 {
+		t.Errorf("expected 2 results, got %d", len(result.Results))
+	}
+	if len(result.Errors) != 0 {
+		t.Errorf("expected 0 errors, got %d", len(result.Errors))
 	}
 }
 
