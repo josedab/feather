@@ -342,7 +342,9 @@ func TestHTTPServer_SchemaEndpoints(t *testing.T) {
 		body := map[string]interface{}{
 			"name":        "user_features", // Already exists
 			"entity_type": "user",
-			"features":    []map[string]interface{}{},
+			"features": []map[string]interface{}{
+				{"name": "some_feature", "data_type": "string"},
+			},
 		}
 		rr := ts.post("/v1/schema/groups", body)
 		assertStatus(t, rr, http.StatusConflict)

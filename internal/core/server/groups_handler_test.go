@@ -122,8 +122,12 @@ func TestGroupsHandler_ListGroups_Empty(t *testing.T) {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
 
-	if result["count"].(float64) != 0 {
-		t.Errorf("Expected count=0, got %v", result["count"])
+	total, ok := result["total"]
+	if !ok {
+		t.Fatal("Expected 'total' field in response")
+	}
+	if total.(float64) != 0 {
+		t.Errorf("Expected total=0, got %v", total)
 	}
 }
 

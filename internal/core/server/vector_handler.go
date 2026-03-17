@@ -131,8 +131,9 @@ func (h *VectorHandler) handleCreateIndex(w http.ResponseWriter, r *http.Request
 		h.writeError(r.Context(), w, http.StatusBadRequest, "name is required")
 		return
 	}
-	if req.Dimension <= 0 {
-		h.writeError(r.Context(), w, http.StatusBadRequest, "dimension must be positive")
+	if req.Dimension < vector.MinDim || req.Dimension > vector.MaxDim {
+		h.writeError(r.Context(), w, http.StatusBadRequest,
+			fmt.Sprintf("dimension must be between %d and %d", vector.MinDim, vector.MaxDim))
 		return
 	}
 

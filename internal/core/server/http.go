@@ -380,10 +380,15 @@ func (s *HTTPServer) handleGetFeaturesBatch(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	const maxBatchEntities = 10000
+	const maxBatchEntities = domain.MaxBatchEntities
 	if len(req.Entities) > maxBatchEntities {
 		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed,
 			fmt.Sprintf("too many entities: %d exceeds maximum %d", len(req.Entities), maxBatchEntities))
+		return
+	}
+	if len(req.Features) > domain.MaxBatchFeatures {
+		s.writeErrorWithCode(r.Context(), w, http.StatusBadRequest, domain.ErrCodeValidationFailed,
+			fmt.Sprintf("too many features: %d exceeds maximum %d", len(req.Features), domain.MaxBatchFeatures))
 		return
 	}
 

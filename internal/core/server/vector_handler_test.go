@@ -158,6 +158,21 @@ func TestVectorHandler_CreateIndex_InvalidDimension(t *testing.T) {
 	}
 }
 
+func TestVectorHandler_CreateIndex_DimensionTooLarge(t *testing.T) {
+	ts := newTestVectorServer(t)
+
+	body := CreateIndexRequest{
+		Name:      "test-index",
+		Dimension: 5000,
+	}
+
+	rr := ts.postJSON("/v1/vectors", body)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusBadRequest, rr.Code, rr.Body.String())
+	}
+}
+
 func TestVectorHandler_CreateIndex_Duplicate(t *testing.T) {
 	ts := newTestVectorServer(t)
 

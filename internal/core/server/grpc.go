@@ -150,7 +150,7 @@ func (s *GRPCServer) IsTLSEnabled() bool {
 }
 
 // maxGRPCEntities is the maximum number of entities allowed per gRPC request.
-const maxGRPCEntities = 10000
+const maxGRPCEntities = domain.MaxBatchEntities
 
 // GetFeatures retrieves features for one or more entities.
 func (s *GRPCServer) GetFeatures(ctx context.Context, req *pb.GetFeaturesRequest) (*pb.GetFeaturesResponse, error) {
@@ -169,6 +169,9 @@ func (s *GRPCServer) GetFeatures(ctx context.Context, req *pb.GetFeaturesRequest
 	}
 	if len(req.GetEntities()) > maxGRPCEntities {
 		return nil, status.Errorf(codes.InvalidArgument, "too many entities: %d exceeds maximum %d", len(req.GetEntities()), maxGRPCEntities)
+	}
+	if len(req.GetFeatures()) > domain.MaxBatchFeatures {
+		return nil, status.Errorf(codes.InvalidArgument, "too many features: %d exceeds maximum %d", len(req.GetFeatures()), domain.MaxBatchFeatures)
 	}
 	for _, e := range req.GetEntities() {
 		if err := domain.ValidateEntityKey(e); err != nil {
@@ -214,6 +217,9 @@ func (s *GRPCServer) GetFeaturesStream(req *pb.GetFeaturesRequest, stream grpc.S
 	}
 	if len(req.GetEntities()) > maxGRPCEntities {
 		return status.Errorf(codes.InvalidArgument, "too many entities: %d exceeds maximum %d", len(req.GetEntities()), maxGRPCEntities)
+	}
+	if len(req.GetFeatures()) > domain.MaxBatchFeatures {
+		return status.Errorf(codes.InvalidArgument, "too many features: %d exceeds maximum %d", len(req.GetFeatures()), domain.MaxBatchFeatures)
 	}
 	if err := domain.ValidateFeatureNames(req.GetFeatures()); err != nil {
 		return status.Errorf(codes.InvalidArgument, "invalid feature name: %s", err.Error())
@@ -266,6 +272,9 @@ func (s *GRPCServer) GetFeaturesAsOf(ctx context.Context, req *pb.GetFeaturesAsO
 	if req.GetAsOfTimestamp() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "as_of_timestamp required")
 	}
+	if req.GetAsOfTimestamp() < 0 {
+		return nil, status.Error(codes.InvalidArgument, "as_of_timestamp must be positive")
+	}
 
 	asOf := time.Unix(0, req.GetAsOfTimestamp())
 	features, err := s.store.GetAsOf(ctx, req.GetEntityKey(), req.GetFeatures(), asOf)
@@ -307,6 +316,16 @@ func (s *GRPCServer) PutFeatures(ctx context.Context, req *pb.PutFeaturesRequest
 	}
 	if len(req.GetFeatures()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "features required")
+	}
+	if len(req.GetFeatures()) > domain.MaxBatchFeatures {
+		return nil, status.Errorf(codes.InvalidArgument, "too many features: %d exceeds maximum %d", len(req.GetFeatures()), domain.MaxBatchFeatures)
+	}
+	putFeatureNames := make([]string, 0, len(req.GetFeatures()))
+	for name := range req.GetFeatures() {
+		putFeatureNames = append(putFeatureNames, name)
+	}
+	if err := domain.ValidateFeatureNames(putFeatureNames); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid feature name: %s", err.Error())
 	}
 
 	features := make(map[string]*domain.FeatureValue)
@@ -384,6 +403,9 @@ func (s *GRPCServer) getFeaturesForEntity(ctx context.Context, entityKey string,
 
 // domainToProtoValue converts a domain FeatureValue to a protobuf FeatureValue.
 func domainToProtoValue(val *domain.FeatureValue) *pb.FeatureValue {
+	if val == nil {
+		return &pb.FeatureValue{}
+	}
 	pv := &pb.FeatureValue{
 		Timestamp: val.Timestamp,
 	}
