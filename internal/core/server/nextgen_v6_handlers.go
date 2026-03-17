@@ -40,6 +40,10 @@ func (h *PythonRuntimeHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *PythonRuntimeHandler) handleStart(w http.ResponseWriter, r *http.Request) {
+	if h.executor == nil {
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "Python executor not configured")
+		return
+	}
 	if err := h.executor.Start(); err != nil {
 		writeJSONError(r.Context(), w, http.StatusInternalServerError, "starting workers: "+err.Error())
 		return
@@ -51,12 +55,20 @@ func (h *PythonRuntimeHandler) handleStart(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *PythonRuntimeHandler) handleList(w http.ResponseWriter, r *http.Request) {
+	if h.executor == nil {
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "Python executor not configured")
+		return
+	}
 	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"worker_count": h.executor.WorkerCount(),
 	})
 }
 
 func (h *PythonRuntimeHandler) handleReload(w http.ResponseWriter, r *http.Request) {
+	if h.executor == nil {
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "Python executor not configured")
+		return
+	}
 	transformID := r.PathValue("transformID")
 	// Stop and restart workers to pick up code changes.
 	h.executor.Stop()
@@ -71,6 +83,10 @@ func (h *PythonRuntimeHandler) handleReload(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *PythonRuntimeHandler) handleStats(w http.ResponseWriter, r *http.Request) {
+	if h.executor == nil {
+		writeJSONError(r.Context(), w, http.StatusServiceUnavailable, "Python executor not configured")
+		return
+	}
 	writeJSONResponse(r.Context(), w, http.StatusOK, map[string]interface{}{
 		"worker_count": h.executor.WorkerCount(),
 	})

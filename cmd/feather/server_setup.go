@@ -361,8 +361,8 @@ func run(ctx context.Context, cfg *config.Config, logger *slog.Logger) error {
 	<-ctx.Done()
 	logger.Info("received shutdown signal, initiating graceful shutdown")
 
-	// Graceful shutdown with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
+	// Graceful shutdown with timeout — use Background since ctx is already cancelled
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
 	// Shutdown all managed servers in parallel
